@@ -3,7 +3,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { audit, type Issue } from './audit'
 
 /**
- * Đi qua mọi màn hình và mở từng modal / ngăn kéo trên iPhone 11 Pro, ghi lại lỗi giao diện + ảnh chụp.
+ * Đi qua mọi màn hình và mở từng modal / ngăn kéo trên iPhone 11 Pro, ghi lại lỗi giao diện + ảnh chụp;
+ * màn hình nào có lỗi thì test đó thất bại.
  * Cần E2E_TOKEN (JWT của một tài khoản có dữ liệu) để vào các trang cần đăng nhập.
  */
 const OUT = 'e2e-results'
@@ -86,5 +87,7 @@ for (const s of scenarios) {
     results[s.name] = issues
     await page.screenshot({ path: `${OUT}/${s.name}.png` })
     if (!s.act) await page.screenshot({ path: `${OUT}/${s.name}-full.png`, fullPage: true })
+    // Lỗi giao diện / JavaScript tìm được làm test thất bại (ảnh chụp và mobile-audit.json vẫn được ghi để xem)
+    expect(issues, issues.map((i) => `${i.kind}: ${i.detail}`).join('\n')).toEqual([])
   })
 }
