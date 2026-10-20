@@ -38,6 +38,11 @@ export interface HistoryPoint {
    * Hiệu quả theo kỳ coi tài sản đầu kỳ được đưa vào theo giá thị trường nên trừ phần này ra.
    */
   preTrackingGain: number;
+  /**
+   * Tài sản khai báo đầu kỳ (luỹ kế) mà ngày khai báo không có giá thị trường đáng tin (thiếu giá, giá cũ, tỷ giá
+   * ước tính): chưa tách được phần lãi/lỗ có từ trước khi theo dõi, nên mọi kỳ chứa ngày khai báo chỉ là ước tính.
+   */
+  uncertainOpenings: string[];
   status: DayStatus;
   /** Tài sản thiếu giá trong ngày */
   missing: string[];
@@ -58,6 +63,7 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
 
   const points: HistoryPoint[] = [];
   let preTrackingGain = 0;
+  const uncertainOpenings: string[] = [];
   let idx = 0;
   let ledger: LedgerResult = computeLedger([]);
   for (let d = start; d <= input.to; d = addDays(d, 1)) {
@@ -67,8 +73,13 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
       const t = txs[idx];
       if (t.type === 'opening' && t.assetType && t.assetType !== 'cash' && t.symbol && t.quantity) {
         const px = input.price(t.assetType, t.symbol, t.date);
+        const fx = t.currency === 'USDT' ? input.usdt(t.date) : null;
+        if (px.value === null || px.estimated || fx?.estimated) {
+          const name = input.displayName(t.assetType, t.symbol);
+          if (!uncertainOpenings.includes(name)) uncertainOpenings.push(name);
+        }
         if (px.value !== null) {
-          const toVnd = t.currency === 'USDT' ? input.usdt(t.date).rate : 1;
+          const toVnd = fx ? fx.rate : 1;
           const cost = t.quantity
             .mul(t.price ?? 0)
             .add(t.fee)
@@ -109,6 +120,7 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
       netContributions,
       profit: value - netContributions,
       preTrackingGain,
+      uncertainOpenings: [...uncertainOpenings],
       status: missing.length ? 'partial' : estimated ? 'estimated' : 'complete',
       missing,
     });
@@ -147,6 +159,7 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
         value: 0,
         netContributions: 0,
         preTrackingGain: 0,
+        uncertainOpenings: [] as string[],
         status: 'complete' as DayStatus,
       }
     : points[0];
@@ -182,8 +195,16 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
   if (startedInPeriod && firstTxDate > from) {
     notes.push(`Danh mục có dữ liệu từ ${points[0].date.split('-').reverse().join('/')}; kỳ được tính từ ngày đó.`);
   }
-  const isEstimate = base.status !== 'complete' || end.status !== 'complete';
-  if (isEstimate) notes.push('Giá ở đầu hoặc cuối kỳ có phần ước tính / thiếu nên kết quả chỉ là ước tính.');
+  const edgesUncertain = base.status !== 'complete' || end.status !== 'complete';
+  if (edgesUncertain) notes.push('Giá ở đầu hoặc cuối kỳ có phần ước tính / thiếu nên kết quả chỉ là ước tính.');
+  // Tài sản khai báo trong kỳ mà ngày khai báo không có giá: lãi/lỗ có từ trước bị tính lẫn vào kỳ
+  const newUncertain = end.uncertainOpenings.filter((n) => !base.uncertainOpenings.includes(n));
+  if (newUncertain.length) {
+    notes.push(
+      `Chưa có giá thị trường đáng tin ở ngày khai báo ${newUncertain.join(', ')} nên chưa tách được lãi/lỗ có từ trước khi theo dõi; lãi trong kỳ có thể gồm cả phần đó.`,
+    );
+  }
+  const isEstimate = edgesUncertain || newUncertain.length > 0;
 
   return {
     start: startedInPeriod ? points[0].date : base.date,

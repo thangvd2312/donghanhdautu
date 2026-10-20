@@ -138,20 +138,29 @@ export class HistoryService implements OnApplicationBootstrap {
       }),
     );
     const fx = await this.storedSeries('fx', 'USDTVND', loadFrom);
-    fx.set(today, this.market.usdtVnd.rate);
+    if (!fx.size) fx.set(today, this.market.usdtVnd.rate);
     const fxDates = [...fx.keys()].sort();
 
     const price = (assetType: string, symbol: string, date: string): DayPrice => {
       if (date === today) {
-        const v = this.market.priceInfo(assetType as AssetType, symbol).value;
-        if (v !== null) return { value: assetType === 'crypto' ? v / this.market.usdtVnd.rate : v, estimated: false };
+        // Giá hiện tại cũ / dự phòng (vd nguồn lỗi, chỉ còn bộ nhớ đệm) vẫn dùng nhưng là ước tính
+        const info = this.market.priceInfo(assetType as AssetType, symbol);
+        if (info.value !== null) {
+          return {
+            value: assetType === 'crypto' ? info.value / this.market.usdtVnd.rate : info.value,
+            estimated: info.status !== 'fresh',
+          };
+        }
       }
       const s = series.get(`${assetType}:${symbol}`);
       const hit = s ? lastOnOrBefore(s, date) : null;
       if (!hit) return { value: null, estimated: false };
       return { value: hit.value, estimated: daysBetween(hit.date, date) > (MAX_GAP[assetType] ?? 3) };
     };
+    const usdtToday = this.market.usdtVnd;
     const usdt = (date: string) => {
+      // Tỷ giá hôm nay từ nguồn cũ hoặc tỷ giá dự phòng (USD Vietcombank) không phải tỷ giá USDT thật của ngày
+      if (date === today) return { rate: usdtToday.rate, estimated: usdtToday.status !== 'fresh' };
       const hit = lastOnOrBefore(fx, date, fxDates);
       // Trước khi app lưu tỷ giá: dùng tỷ giá sớm nhất đã biết, đánh dấu ước tính
       if (!hit) return { rate: fx.get(fxDates[0])!, estimated: true };

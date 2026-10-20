@@ -135,6 +135,7 @@ describe('periodPerformance', () => {
           netContributions: 0,
           profit: 0,
           preTrackingGain: 0,
+          uncertainOpenings: [],
           status: 'complete',
           missing: [],
         },
@@ -165,5 +166,56 @@ describe('periodPerformance', () => {
     const pts = run(txs, '2026-10-01', '2026-10-11', {});
     const p = periodPerformance(pts, '2026-10-01', '2026-10-01')!;
     expect(p.isEstimate).toBe(true);
+  });
+
+  it('ngày khai báo chưa có giá: lãi có sẵn chưa tách được nên kết quả kỳ là ước tính', () => {
+    // Khai báo 100 FPT giá vốn 10k; ngày khai báo chưa có giá, hôm sau giá 11k
+    const opening = [
+      tx({ type: 'opening', assetType: 'stock', symbol: 'FPT', q: 100, px: 10_000, date: '2026-10-01' }),
+    ];
+    const pts = run(opening, '2026-10-01', '2026-10-02', { '2026-10-02': 11_000 });
+    expect(pts.map((x) => x.status)).toEqual(['partial', 'complete']);
+    const p = periodPerformance(pts, '2026-09-01', '2026-10-01')!;
+    expect(p.profit).toBe(100_000);
+    expect(p.isEstimate).toBe(true);
+    expect(p.notes.join(' ')).toContain('chưa tách được lãi/lỗ có từ trước');
+  });
+
+  it('kỳ sau ngày khai báo không bị ảnh hưởng bởi việc thiếu giá lúc khai báo', () => {
+    const opening = [
+      tx({ type: 'opening', assetType: 'stock', symbol: 'FPT', q: 100, px: 10_000, date: '2026-10-01' }),
+    ];
+    const pts = run(opening, '2026-10-01', '2026-10-05', { '2026-10-02': 11_000, '2026-10-05': 12_000 });
+    const p = periodPerformance(
+      pts.filter((x) => x.date >= '2026-10-03'),
+      '2026-10-03',
+      '2026-10-01',
+    )!;
+    expect(p.isEstimate).toBe(false);
+    expect(p.profit).toBe(100_000);
+  });
+
+  it('giá ngày khai báo là giá cũ / tỷ giá ước tính cũng làm kết quả kỳ thành ước tính', () => {
+    const coin = [
+      tx({
+        type: 'opening',
+        assetType: 'crypto',
+        symbol: 'BTCUSDT',
+        q: 1,
+        px: 60_000,
+        currency: 'USDT',
+        date: '2026-10-01',
+      }),
+    ];
+    const pts = buildHistory({
+      txs: coin,
+      from: '2026-10-01',
+      to: '2026-10-03',
+      price: () => ({ value: 70_000, estimated: false }),
+      usdt: (d) => ({ rate: 26_000, estimated: d === '2026-10-01' }),
+      displayName: (_t, s) => s,
+    });
+    expect(pts[0].uncertainOpenings).toEqual(['BTCUSDT']);
+    expect(periodPerformance(pts, '2026-09-01', '2026-10-01')!.isEstimate).toBe(true);
   });
 });

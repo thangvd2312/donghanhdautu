@@ -21,6 +21,7 @@ const base: WeekSummary = {
     netContributions: 105_000_000,
     profit: 7_000_000,
     preTrackingGain: 0,
+    uncertainOpenings: [],
     status: 'complete',
     missing: [],
   },
