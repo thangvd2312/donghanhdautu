@@ -33,7 +33,7 @@ const STATUS_LABEL: Record<HistoryPoint['status'], string> = {
  * Tổng tài sản theo ngày cạnh vốn đã đưa vào: khoảng cách giữa hai đường là lãi/lỗ,
  * nên tăng do nạp tiền không bị nhầm thành tăng do đầu tư. Ngày thiếu / ước tính giá vẽ màu nhạt.
  */
-export default function HistoryPanel({ refreshKey }: { refreshKey?: unknown }) {
+export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?: unknown; portfolioId?: string }) {
   const [range, setRange] = useState('3m')
   const [data, setData] = useState<PortfolioHistory | null>(null)
   const [error, setError] = useState('')
@@ -45,13 +45,13 @@ export default function HistoryPanel({ refreshKey }: { refreshKey?: unknown }) {
   useEffect(() => {
     let alive = true
     setError('')
-    api<PortfolioHistory>(`/portfolio/history?range=${range}`)
+    api<PortfolioHistory>(`/portfolio/history?range=${range}${portfolioId ? `&portfolioId=${portfolioId}` : ''}`)
       .then((d) => alive && setData(d))
       .catch((e: Error) => alive && setError(e.message))
     return () => {
       alive = false
     }
-  }, [range, refreshKey])
+  }, [range, refreshKey, portfolioId])
 
   const points = useMemo(() => data?.points ?? [], [data])
   useEffect(() => {

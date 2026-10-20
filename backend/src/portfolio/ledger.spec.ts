@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { computeLedger, LedgerError, LedgerTx, performance } from './ledger';
+import { computeLedger, LedgerError, ledgerOfAll, LedgerTx, performance } from './ledger';
 
 const D = (v: number | string) => new Prisma.Decimal(v);
 let seq = 0;
@@ -241,5 +241,49 @@ describe('computeLedger — coin và tỷ giá', () => {
   it('bán coin có tỷ giá: lãi đã chốt VND theo tỷ giá lúc bán', () => {
     const l = computeLedger([coin('buy', 1, 100), coin('sell', 1, 150, { fxRate: 25_500 })]);
     expect(l.positions[0].realizedVnd?.toNumber()).toBe(50 * 25_500);
+  });
+});
+
+describe('nhiều danh mục', () => {
+  const inPf = (pf: string, t: LedgerTx): LedgerTx => ({ ...t, portfolioId: pf });
+
+  it('không bán được cổ phiếu đang nằm ở danh mục khác, lỗi ghi rõ tên danh mục', () => {
+    const txs = [inPf('ssi', stock('buy', 100, 20_000)), inPf('vps', stock('sell', 50, 25_000))];
+    expect(() => ledgerOfAll(txs, (id) => (id === 'vps' ? 'TK VPS' : 'TK SSI'))).toThrow(/^\[TK VPS\] Bán 50 FPT/);
+    // Một danh mục duy nhất thì không cần tên
+    expect(() => ledgerOfAll([inPf('ssi', stock('sell', 1, 1))], () => 'TK SSI')).toThrow(/^Bán 1 FPT/);
+  });
+
+  it('gộp: cộng số lượng, giá vốn, lãi đã chốt, tiền mặt, vốn đưa vào', () => {
+    const l = ledgerOfAll([
+      inPf('a', tx({ type: 'deposit', amount: 10_000_000 })),
+      inPf('a', stock('buy', 100, 20_000)),
+      inPf('b', stock('buy', 100, 30_000)),
+      inPf('b', stock('sell', 50, 40_000)),
+    ]);
+    const fpt = l.positions.find((p) => p.symbol === 'FPT')!;
+    expect(fpt.quantity.toNumber()).toBe(150);
+    expect(fpt.costBasis.toNumber()).toBe(2_000_000 + 1_500_000);
+    expect(fpt.realized.toNumber()).toBe(500_000);
+    expect(l.cash.VND.toNumber()).toBe(8_000_000 + 2_000_000);
+    // Danh mục b mua khi chưa ghi nạp tiền: phần thiếu là nạp ngầm định của riêng danh mục đó
+    expect(l.implicitDeposits.VND.toNumber()).toBe(3_000_000);
+  });
+
+  it('chuyển tiền giữa hai danh mục (rút A, nạp B) không làm tăng vốn đưa vào khi gộp', () => {
+    const txs = [
+      inPf('a', tx({ type: 'deposit', amount: 10_000_000, date: '2026-10-01' })),
+      inPf('a', tx({ type: 'withdraw', amount: 4_000_000, date: '2026-10-02' })),
+      inPf('b', tx({ type: 'deposit', amount: 4_000_000, date: '2026-10-02' })),
+    ];
+    const p = performance({
+      ledger: ledgerOfAll(txs),
+      totalValueVnd: 10_000_000,
+      unrealizedVnd: null,
+      totalIsEstimate: false,
+      usdtVnd: 26000,
+    });
+    expect(p.netContributions).toBe(10_000_000);
+    expect(p.totalProfit).toBe(0);
   });
 });

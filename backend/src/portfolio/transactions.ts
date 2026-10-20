@@ -4,7 +4,7 @@ import { IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'c
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
-import { computeLedger, LedgerError, TX_TYPES } from './ledger';
+import { LedgerError, ledgerOfAll, TX_TYPES } from './ledger';
 import type { Currency, LedgerResult, LedgerTx, TxType } from './ledger';
 
 type Db = Prisma.TransactionClient | PrismaService;
@@ -22,6 +22,8 @@ export class TransactionDto {
   @IsOptional() @IsIn(['VND', 'USDT']) currency?: Currency;
   @IsOptional() @IsNumber() @Min(0) fxRate?: number;
   @IsOptional() @IsString() @MaxLength(500) note?: string;
+  /** Danh mục ghi giao dịch; bỏ trống = danh mục chính */
+  @IsOptional() @IsString() @MaxLength(40) portfolioId?: string;
 }
 
 const CASH_ONLY: TxType[] = ['deposit', 'withdraw', 'fee'];
@@ -47,6 +49,7 @@ export function toLedgerTx(t: Transaction): LedgerTx {
     currency: t.currency as Currency,
     fxRate: t.fxRate,
     note: t.note,
+    portfolioId: t.portfolioId,
   };
 }
 
@@ -137,14 +140,34 @@ export class TransactionsService {
     };
   }
 
-  async list(userId: string) {
+  async list(userId: string, portfolioId?: string) {
     await this.ensureMigrated(this.prisma, userId);
     const rows = await this.prisma.transaction.findMany({
-      where: { userId, deletedAt: null },
+      where: { userId, deletedAt: null, ...(portfolioId ? { portfolioId } : {}) },
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-      include: { _count: { select: { revisions: true } } },
+      include: { _count: { select: { revisions: true } }, portfolio: { select: { name: true } } },
     });
-    return rows.map((t) => this.present(t, t._count.revisions));
+    return rows.map((t) => ({ ...this.present(t, t._count.revisions), portfolioName: t.portfolio?.name ?? null }));
+  }
+
+  /** Danh mục của người dùng; người chưa có thì tạo "Danh mục chính" */
+  async portfolios(db: Db, userId: string) {
+    const list = await db.portfolio.findMany({
+      where: { userId },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+    });
+    if (list.length) return list;
+    return [
+      await db.portfolio.create({ data: { id: `pf_${userId}`, userId, name: 'Danh mục chính', isDefault: true } }),
+    ];
+  }
+
+  /** Danh mục ghi giao dịch: đúng của người dùng, bỏ trống thì là danh mục chính */
+  async resolvePortfolio(db: Db, userId: string, portfolioId?: string | null) {
+    const list = await this.portfolios(db, userId);
+    if (!portfolioId) return (list.find((p) => p.isDefault) ?? list[0]).id;
+    if (!list.some((p) => p.id === portfolioId)) throw new NotFoundException('Không tìm thấy danh mục');
+    return portfolioId;
   }
 
   async revisions(userId: string, id: string) {
@@ -157,7 +180,8 @@ export class TransactionsService {
     // Kiểm tra mã với nguồn giá trước, ngoài transaction DB
     const data = await this.normalize(dto);
     return this.write(userId, async (db, txs) => {
-      const row = await db.transaction.create({ data: { ...data, userId } });
+      const portfolioId = await this.resolvePortfolio(db, userId, dto.portfolioId);
+      const row = await db.transaction.create({ data: { ...data, userId, portfolioId } });
       return { result: this.present(row, 0), txs: [...txs, row] };
     });
   }
@@ -168,7 +192,11 @@ export class TransactionsService {
       const before = txs.find((t) => t.id === id);
       if (!before) throw new NotFoundException('Không tìm thấy giao dịch');
       await db.transactionRevision.create({ data: { transactionId: id, action: 'update', before: snapshot(before) } });
-      const row = await db.transaction.update({ where: { id }, data });
+      // Không gửi danh mục thì giữ nguyên danh mục cũ
+      const portfolioId = dto.portfolioId
+        ? await this.resolvePortfolio(db, userId, dto.portfolioId)
+        : before.portfolioId;
+      const row = await db.transaction.update({ where: { id }, data: { ...data, portfolioId } });
       return { result: this.present(row, 1), txs: txs.map((t) => (t.id === id ? row : t)) };
     });
   }
@@ -190,13 +218,21 @@ export class TransactionsService {
   commitImport(
     userId: string,
     rows: NormalizedTx[],
-    meta: { hash: string; fileName: string | null; rowCount: number },
+    meta: { hash: string; fileName: string | null; rowCount: number; portfolioId: string },
   ) {
     return this.write(userId, async (db, txs) => {
       const existing = await db.importBatch.findFirst({ where: { userId, hash: meta.hash, undoneAt: null } });
       if (existing) return { result: { batch: existing, alreadyImported: true }, txs };
+      const portfolioId = await this.resolvePortfolio(db, userId, meta.portfolioId);
       const batch = await db.importBatch.create({
-        data: { userId, hash: meta.hash, fileName: meta.fileName, rowCount: meta.rowCount, importedCount: rows.length },
+        data: {
+          userId,
+          hash: meta.hash,
+          fileName: meta.fileName,
+          rowCount: meta.rowCount,
+          importedCount: rows.length,
+          portfolioId,
+        },
       });
       const base = Date.now();
       // createdAt tăng dần theo thứ tự dòng để giao dịch cùng ngày giữ đúng thứ tự trong file
@@ -204,6 +240,7 @@ export class TransactionsService {
         data: rows.map((r, i) => ({
           ...r,
           userId,
+          portfolioId,
           source: 'csv',
           importBatchId: batch.id,
           createdAt: new Date(base + i),
@@ -239,16 +276,17 @@ export class TransactionsService {
   }
 
   /** Giao dịch hiện có (chưa huỷ) để so trùng khi nhập */
-  async activeTransactions(userId: string) {
+  async activeTransactions(userId: string, portfolioId?: string) {
     await this.ensureMigrated(this.prisma, userId);
-    return this.prisma.transaction.findMany({ where: { userId, deletedAt: null } });
+    return this.prisma.transaction.findMany({
+      where: { userId, deletedAt: null, ...(portfolioId ? { portfolioId } : {}) },
+    });
   }
 
-  /** Sổ hiện tại của người dùng (đã chuyển đổi dữ liệu cũ nếu cần) */
-  async ledger(userId: string): Promise<LedgerResult> {
-    await this.ensureMigrated(this.prisma, userId);
-    const txs = await this.prisma.transaction.findMany({ where: { userId, deletedAt: null } });
-    return computeLedger(txs.map(toLedgerTx));
+  /** Sổ hiện tại của người dùng (gộp mọi danh mục) hoặc của một danh mục */
+  async ledger(userId: string, portfolioId?: string): Promise<LedgerResult> {
+    const txs = await this.activeTransactions(userId, portfolioId);
+    return ledgerOfAll(txs.map(toLedgerTx));
   }
 
   /**
@@ -265,9 +303,10 @@ export class TransactionsService {
         await this.ensureMigrated(db, userId);
         const current = await db.transaction.findMany({ where: { userId, deletedAt: null } });
         const { result, txs } = await change(db, current);
+        const names = new Map((await this.portfolios(db, userId)).map((p) => [p.id, p.name]));
         let ledger: LedgerResult;
         try {
-          ledger = computeLedger(txs.map(toLedgerTx));
+          ledger = ledgerOfAll(txs.map(toLedgerTx), (id) => (id ? (names.get(id) ?? null) : null));
         } catch (e) {
           if (e instanceof LedgerError) throw new BadRequestException(e.message);
           throw e;
@@ -288,11 +327,13 @@ export class TransactionsService {
     if (hasTx) return;
     const holdings = await db.holding.findMany({ where: { userId, quantity: { gt: 0 } } });
     if (!holdings.length) return;
+    const portfolioId = await this.resolvePortfolio(db, userId);
     await db.transaction.createMany({
       skipDuplicates: true,
       data: holdings.map((h) => ({
         id: `mig_${h.id}`,
         userId,
+        portfolioId,
         type: 'opening',
         date: new Date(`${vnDateKey(h.createdAt)}T00:00:00Z`),
         assetType: h.assetType,
@@ -373,6 +414,7 @@ export class TransactionsService {
       fxRate: t.fxRate?.toNumber() ?? null,
       /** Giá trị giao dịch theo đồng tiền gốc: số lượng × giá, hoặc số tiền */
       grossValue: t.amount?.toNumber() ?? (qty !== null && price !== null ? qty * price : null),
+      portfolioId: t.portfolioId,
       note: t.note,
       source: t.source,
       edited: revisionCount > 0,

@@ -270,6 +270,7 @@ export class AdvisorTools {
       this.prisma.investmentPlan.findMany({ where: { userId, status: 'active' } }),
       this.prisma.goal.findMany({ where: { userId, status: 'active' }, include: { allocations: true } }),
     ]);
+    const accounts = await this.portfolio.listPortfolios(userId).catch(() => []);
     return {
       name: user.name,
       profile: profile
@@ -311,6 +312,11 @@ export class AdvisorTools {
           }))
         : 'Chưa có kế hoạch nào',
       // Mục tiêu tài chính người dùng tự đặt; expectedReturnPct là GIẢ ĐỊNH của họ, không phải dự báo
+      // Các danh mục / tài khoản riêng (số liệu phía trên là gộp tất cả)
+      accounts:
+        accounts.length > 1
+          ? accounts.map((a) => ({ name: a.name, totalValueVnd: Math.round(a.totalValue) }))
+          : undefined,
       financialGoals: goals.length
         ? goals.map((g) => ({
             name: g.name,

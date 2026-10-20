@@ -128,6 +128,8 @@ export interface HoldingRow {
   pnlNative: number | null
   dayChangePct: number | null
   weightPct: number
+  /** Khi xem gộp nhiều danh mục: tài sản đang nằm ở danh mục nào, bao nhiêu */
+  portfolios?: { portfolioId: string; name: string; quantity: number }[]
 }
 
 export interface DataQuality {
@@ -432,8 +434,10 @@ export interface Transaction {
   currency: 'VND' | 'USDT'
   fxRate: number | null
   grossValue: number | null
+  portfolioId: string | null
+  portfolioName?: string | null
   note: string | null
-  source: 'manual' | 'migration'
+  source: 'manual' | 'migration' | 'csv'
   edited: boolean
   createdAt: string
 }
@@ -610,4 +614,13 @@ export interface GoalAsset {
   displayName: string
   value: number
   usedPct: number
+}
+
+/** Một danh mục / tài khoản (TK chứng khoán, ví crypto…) */
+export interface PortfolioAccount {
+  id: string
+  name: string
+  isDefault: boolean
+  transactionCount: number
+  totalValue: number
 }

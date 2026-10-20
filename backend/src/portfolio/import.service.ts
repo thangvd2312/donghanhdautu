@@ -7,6 +7,7 @@ import { autoMapping, dupKey, FIELD_LABEL, FIELDS, MAX_BYTES, MAX_ROWS, parseCsv
 import type { Field, Mapping } from './csv-import';
 import { computeLedger, LedgerError, LedgerResult, LedgerTx } from './ledger';
 import type { Currency, TxType } from './ledger';
+import { PrismaService } from '../prisma/prisma.module';
 import { NormalizedTx, toLedgerTx, TransactionsService } from './transactions';
 
 export class ImportDto {
@@ -16,6 +17,8 @@ export class ImportDto {
   @IsOptional() @IsIn(['.', ',']) decimal?: '.' | ',';
   /** Số dòng (theo file) của các dòng nghi trùng mà người dùng vẫn muốn nhập */
   @IsOptional() @IsArray() @IsInt({ each: true }) includeDuplicates?: number[];
+  /** Danh mục nhận giao dịch; bỏ trống = danh mục chính */
+  @IsOptional() @IsString() @MaxLength(40) portfolioId?: string;
 }
 
 type RowStatus = 'ok' | 'error' | 'duplicate';
@@ -69,6 +72,7 @@ export class ImportService {
   constructor(
     private transactions: TransactionsService,
     private market: MarketService,
+    private prisma: PrismaService,
   ) {}
 
   async preview(userId: string, dto: ImportDto) {
@@ -98,7 +102,7 @@ export class ImportService {
     const res = await this.transactions.commitImport(
       userId,
       r.toImport.map((x) => x.data),
-      { hash: r.hash, fileName: dto.fileName ?? null, rowCount: r.rows.length },
+      { hash: r.hash, fileName: dto.fileName ?? null, rowCount: r.rows.length, portfolioId: r.portfolioId },
     );
     return {
       batchId: res.batch.id,
@@ -173,7 +177,9 @@ export class ImportService {
     }
 
     // Nghi trùng: trùng giao dịch đã có, hoặc trùng một dòng phía trên trong file. Không tự bỏ: người dùng chọn.
-    const existing = await this.transactions.activeTransactions(userId);
+    // So trùng và kiểm tra sổ trong đúng danh mục nhận giao dịch
+    const portfolioId = await this.transactions.resolvePortfolio(this.prisma, userId, dto.portfolioId);
+    const existing = await this.transactions.activeTransactions(userId, portfolioId);
     const existingKeys = new Map<string, string>();
     for (const t of existing) {
       existingKeys.set(
@@ -228,7 +234,7 @@ export class ImportService {
       .filter((r) => r.status === 'ok' || (r.status === 'duplicate' && r.included))
       .map((r) => ({ line: r.line, data: normalized.get(r.line)! }));
     const hash = createHash('sha256')
-      .update(JSON.stringify({ userId, rows: toImport.map((x) => [x.line, x.data]) }))
+      .update(JSON.stringify({ userId, portfolioId, rows: toImport.map((x) => [x.line, x.data]) }))
       .digest('hex');
 
     const counts = {
@@ -248,6 +254,7 @@ export class ImportService {
       impact: after && toImport.length ? this.impact(computeLedger(base), after) : null,
       toImport,
       hash,
+      portfolioId,
     };
   }
 

@@ -19,7 +19,7 @@ import { fmtNum } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import { parseNum, todayVn } from '../lib/num'
 import { TX_LABEL } from '../lib/tx'
-import type { AssetType, Transaction, TxType } from '../lib/types'
+import type { AssetType, PortfolioAccount, Transaction, TxType } from '../lib/types'
 import StockSearch from './StockSearch'
 
 type TradeAsset = Exclude<AssetType, 'cash'>
@@ -32,6 +32,8 @@ export interface TxPreset {
   assetType?: TradeAsset
   symbol?: string
   label?: string
+  /** Danh mục ghi giao dịch (vd bán từ đúng tài khoản đang giữ) */
+  portfolioId?: string
 }
 
 /**
@@ -44,12 +46,17 @@ export default function TransactionDialog({
   onSaved,
   editing,
   preset,
+  accounts = [],
+  defaultPortfolioId,
 }: {
   open: boolean
   onClose: () => void
   onSaved: () => void
   editing?: Transaction | null
   preset?: TxPreset | null
+  /** Danh mục của người dùng; có từ 2 trở lên thì hiện ô chọn */
+  accounts?: PortfolioAccount[]
+  defaultPortfolioId?: string
 }) {
   const { snapshot } = useMarket()
   const [type, setType] = useState<TxType>('buy')
@@ -64,6 +71,7 @@ export default function TransactionDialog({
   const [currency, setCurrency] = useState<'VND' | 'USDT'>('VND')
   const [fxRate, setFxRate] = useState('')
   const [note, setNote] = useState('')
+  const [portfolioId, setPortfolioId] = useState('')
   const [gold, setGold] = useState<{ code: string; name: string }[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -85,6 +93,9 @@ export default function TransactionDialog({
     setCurrency(t?.currency ?? 'VND')
     setFxRate(t?.fxRate != null ? String(t.fxRate) : '')
     setNote(t?.note ?? '')
+    setPortfolioId(
+      t?.portfolioId ?? preset?.portfolioId ?? defaultPortfolioId ?? accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? '',
+    )
     // Chỉ khởi tạo khi mở hộp thoại
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -103,7 +114,14 @@ export default function TransactionDialog({
   const submit = async () => {
     setError('')
     const n = (s: string) => (s.trim() ? parseNum(s) : undefined)
-    const body: Record<string, unknown> = { type, date, note: note.trim() || undefined, fee: n(fee), tax: n(tax) }
+    const body: Record<string, unknown> = {
+      type,
+      date,
+      note: note.trim() || undefined,
+      fee: n(fee),
+      tax: n(tax),
+      portfolioId: portfolioId || undefined,
+    }
     if (cashOpening) {
       if (!(qtyN > 0)) return setError('Số tiền phải lớn hơn 0')
       Object.assign(body, { assetType: 'cash', symbol: editing!.symbol, quantity: qtyN, price: 1 })
@@ -165,6 +183,16 @@ export default function TransactionDialog({
             <Typography variant="caption" color="text.secondary">
               Tài sản bạn đã có từ trước, khai báo theo giá vốn bình quân. Không trừ tiền mặt và không tính là lãi.
             </Typography>
+          )}
+
+          {accounts.length > 1 && (
+            <TextField select size="small" label="Danh mục" value={portfolioId} onChange={(e) => setPortfolioId(e.target.value)}>
+              {accounts.map((a) => (
+                <MenuItem key={a.id} value={a.id}>
+                  {a.name}
+                </MenuItem>
+              ))}
+            </TextField>
           )}
 
           <TextField

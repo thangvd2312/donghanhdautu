@@ -2,7 +2,7 @@
  * Lịch sử tài sản theo ngày và hiệu quả theo kỳ, dựng lại từ sổ giao dịch + giá đóng cửa từng ngày.
  * Thuần: nguồn giá truyền vào. Tính lại mỗi lần gọi nên giao dịch nhập lùi ngày tự động làm thay đổi các kỳ bị ảnh hưởng.
  */
-import { computeLedger, LedgerResult, LedgerTx, sortTxs } from './ledger';
+import { computeLedger, ledgerOfAll, LedgerResult, LedgerTx, sortTxs } from './ledger';
 import { addDays, daysBetween } from '../plans/plan-rules';
 
 export type DayStatus = 'complete' | 'estimated' | 'partial';
@@ -80,7 +80,8 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
       idx++;
       moved = true;
     }
-    if (moved || d === start) ledger = computeLedger(txs.slice(0, idx));
+    // Mỗi danh mục tính riêng rồi gộp (giống trang Danh mục)
+    if (moved || d === start) ledger = ledgerOfAll(txs.slice(0, idx));
 
     const fx = input.usdt(d);
     let value = ledger.cash.VND.toNumber() + ledger.cash.USDT.toNumber() * fx.rate;

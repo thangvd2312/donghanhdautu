@@ -26,7 +26,7 @@ import { useEffect, useState } from 'react'
 import { api, getToken, post } from '../lib/api'
 import { fmtDate, fmtNum, fmtVndShort } from '../lib/format'
 import { TX_LABEL } from '../lib/tx'
-import type { TxType } from '../lib/types'
+import type { PortfolioAccount, TxType } from '../lib/types'
 
 const FIELDS = ['date', 'type', 'assetType', 'symbol', 'quantity', 'price', 'amount', 'fee', 'tax', 'currency', 'fxRate', 'note'] as const
 type Field = (typeof FIELDS)[number]
@@ -89,7 +89,19 @@ interface Batch {
 }
 
 /** Nhập giao dịch từ CSV: chọn file → xem trước (chưa ghi gì) → xác nhận. Có hoàn tác theo đợt. */
-export default function ImportDialog({ open, onClose, onImported }: { open: boolean; onClose: () => void; onImported: () => void }) {
+export default function ImportDialog({
+  open,
+  onClose,
+  onImported,
+  accounts = [],
+  defaultPortfolioId,
+}: {
+  open: boolean
+  onClose: () => void
+  onImported: () => void
+  accounts?: PortfolioAccount[]
+  defaultPortfolioId?: string
+}) {
   const [csv, setCsv] = useState('')
   const [fileName, setFileName] = useState('')
   const [decimal, setDecimal] = useState<'.' | ','>('.')
@@ -101,6 +113,7 @@ export default function ImportDialog({ open, onClose, onImported }: { open: bool
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
   const [batches, setBatches] = useState<Batch[]>([])
+  const [portfolioId, setPortfolioId] = useState('')
 
   const loadBatches = () => api<Batch[]>('/portfolio/import/batches').then(setBatches).catch(() => {})
 
@@ -113,7 +126,9 @@ export default function ImportDialog({ open, onClose, onImported }: { open: bool
     setPreview(null)
     setError('')
     setDone('')
+    setPortfolioId(defaultPortfolioId ?? accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? '')
     void loadBatches()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Xem trước lại mỗi khi đổi file / ánh xạ / dấu thập phân / chọn dòng nghi trùng
@@ -122,7 +137,14 @@ export default function ImportDialog({ open, onClose, onImported }: { open: bool
     let alive = true
     setBusy(true)
     setError('')
-    post<Preview>('/portfolio/import/preview', { csv, fileName, decimal, mapping, includeDuplicates: include })
+    post<Preview>('/portfolio/import/preview', {
+      csv,
+      fileName,
+      decimal,
+      mapping,
+      includeDuplicates: include,
+      portfolioId: portfolioId || undefined,
+    })
       .then((p) => {
         if (!alive) return
         setPreview(p)
@@ -133,7 +155,7 @@ export default function ImportDialog({ open, onClose, onImported }: { open: bool
     return () => {
       alive = false
     }
-  }, [csv, fileName, decimal, mapping, include])
+  }, [csv, fileName, decimal, mapping, include, portfolioId])
 
   const pickFile = (f: File | undefined) => {
     if (!f) return
@@ -165,7 +187,7 @@ export default function ImportDialog({ open, onClose, onImported }: { open: bool
     try {
       const r = await post<{ alreadyImported: boolean; imported: number; skippedErrors: number; skippedDuplicates: number }>(
         '/portfolio/import/commit',
-        { csv, fileName, decimal, mapping, includeDuplicates: include },
+        { csv, fileName, decimal, mapping, includeDuplicates: include, portfolioId: portfolioId || undefined },
       )
       setDone(
         r.alreadyImported
@@ -230,6 +252,22 @@ export default function ImportDialog({ open, onClose, onImported }: { open: bool
               </Typography>
             )}
             <Box sx={{ flex: 1 }} />
+            {accounts.length > 1 && (
+              <TextField
+                select
+                size="small"
+                label="Nhập vào danh mục"
+                value={portfolioId}
+                onChange={(e) => setPortfolioId(e.target.value)}
+                sx={{ minWidth: 180 }}
+              >
+                {accounts.map((a) => (
+                  <MenuItem key={a.id} value={a.id}>
+                    {a.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
             <TextField
               select
               size="small"

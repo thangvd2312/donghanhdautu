@@ -26,6 +26,8 @@ export interface LedgerTx {
   currency: Currency;
   fxRate: Dec | null;
   note: string | null;
+  /** Danh mục chứa giao dịch; sổ được kiểm tra riêng cho từng danh mục */
+  portfolioId?: string | null;
 }
 
 export class LedgerError extends Error {
@@ -329,4 +331,86 @@ export function performance({ ledger, totalValueVnd, unrealizedVnd, totalIsEstim
 
 export function num(d: Dec) {
   return d.toNumber();
+}
+
+/**
+ * Sổ của từng danh mục (mỗi danh mục kiểm tra riêng: không bán được tài sản đang nằm ở danh mục khác).
+ * Ném LedgerError của danh mục sai đầu tiên.
+ */
+export function computeByPortfolio(txs: LedgerTx[]): Map<string, LedgerResult> {
+  const groups = new Map<string, LedgerTx[]>();
+  for (const t of txs) {
+    const k = t.portfolioId ?? '';
+    groups.set(k, [...(groups.get(k) ?? []), t]);
+  }
+  return new Map([...groups].map(([k, g]) => [k, computeLedger(g)]));
+}
+
+/** Gộp sổ nhiều danh mục thành một (tổng số lượng, giá vốn, tiền mặt, vốn đưa vào…) */
+export function mergeLedgers(results: LedgerResult[]): LedgerResult {
+  const positions = new Map<string, Position>();
+  const sumFlow = (a: Flow, b: Flow): Flow => ({
+    amount: a.amount.add(b.amount),
+    vndKnown: a.vndKnown.add(b.vndKnown),
+    unknownFx: a.unknownFx.add(b.unknownFx),
+  });
+  const out: LedgerResult = {
+    positions: [],
+    cash: { VND: ZERO, USDT: ZERO },
+    contributions: { VND: emptyFlow(), USDT: emptyFlow() },
+    implicitDeposits: { VND: ZERO, USDT: ZERO },
+    fees: { VND: ZERO, USDT: ZERO },
+    taxes: { VND: ZERO, USDT: ZERO },
+    dividends: ZERO,
+    warnings: [],
+  };
+  for (const r of results) {
+    for (const p of r.positions) {
+      const k = `${p.assetType}:${p.symbol}`;
+      const cur = positions.get(k);
+      if (!cur) {
+        positions.set(k, { ...p });
+        continue;
+      }
+      positions.set(k, {
+        ...cur,
+        quantity: cur.quantity.add(p.quantity),
+        costBasis: cur.costBasis.add(p.costBasis),
+        realized: cur.realized.add(p.realized),
+        realizedVnd: cur.realizedVnd !== null && p.realizedVnd !== null ? cur.realizedVnd.add(p.realizedVnd) : null,
+        dividends: cur.dividends.add(p.dividends),
+        note: p.note ?? cur.note,
+      });
+    }
+    for (const c of ['VND', 'USDT'] as const) {
+      out.cash[c] = out.cash[c].add(r.cash[c]);
+      out.contributions[c] = sumFlow(out.contributions[c], r.contributions[c]);
+      out.implicitDeposits[c] = out.implicitDeposits[c].add(r.implicitDeposits[c]);
+      out.fees[c] = out.fees[c].add(r.fees[c]);
+      out.taxes[c] = out.taxes[c].add(r.taxes[c]);
+    }
+    out.dividends = out.dividends.add(r.dividends);
+    out.warnings.push(...r.warnings);
+  }
+  out.positions = [...positions.values()];
+  return out;
+}
+
+/**
+ * Sổ gộp của nhiều danh mục: kiểm tra từng danh mục riêng (ném LedgerError kèm tên danh mục nếu có nhiều danh mục)
+ * rồi cộng lại.
+ */
+export function ledgerOfAll(txs: LedgerTx[], nameOf: (portfolioId: string | null) => string | null = () => null) {
+  const groups = new Map<string, LedgerTx[]>();
+  for (const t of txs) groups.set(t.portfolioId ?? '', [...(groups.get(t.portfolioId ?? '') ?? []), t]);
+  const results = [...groups].map(([k, g]) => {
+    try {
+      return computeLedger(g);
+    } catch (e) {
+      const name = nameOf(k || null);
+      if (e instanceof LedgerError && name && groups.size > 1) throw new LedgerError(`[${name}] ${e.message}`, e.txId);
+      throw e;
+    }
+  });
+  return results.length === 1 ? results[0] : mergeLedgers(results);
 }

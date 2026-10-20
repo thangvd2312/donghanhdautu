@@ -6,7 +6,7 @@ import { VN_TZ, vnDateKey } from '../market/types';
 import { addDays, daysBetween } from '../plans/plan-rules';
 import { PrismaService } from '../prisma/prisma.module';
 import { assetBreakdown, buildHistory, DayPrice, periodPerformance } from './history';
-import { computeLedger } from './ledger';
+import { ledgerOfAll } from './ledger';
 import { toLedgerTx, TransactionsService } from './transactions';
 
 export const RANGES = { '1m': 30, '3m': 90, '6m': 180, '1y': 365, all: 1100 } as const;
@@ -38,10 +38,12 @@ export class HistoryService implements OnApplicationBootstrap {
     setTimeout(() => void this.recordDaily().catch((e: Error) => this.log.warn(e.message)), 90_000).unref();
   }
 
-  async history(userId: string, range: string) {
+  async history(userId: string, range: string, portfolioId?: string) {
     if (!(range in RANGES)) throw new BadRequestException('Khoảng thời gian không hợp lệ');
-    const r = await this.compute(userId, (firstTx, today) =>
-      range === 'all' ? firstTx : addDays(today, -RANGES[range as Range]),
+    const r = await this.compute(
+      userId,
+      (firstTx, today) => (range === 'all' ? firstTx : addDays(today, -RANGES[range as Range])),
+      portfolioId,
     );
     if (!r) return { range, points: [], period: null, notes: [] };
     return { range, points: r.points, period: r.period, notes: r.notes };
@@ -56,7 +58,7 @@ export class HistoryService implements OnApplicationBootstrap {
     if (!r || !r.points.length) return null;
     const end = r.today;
     const start = r.points[0].date > r.from ? null : r.from;
-    const ledgerAt = (d: string) => computeLedger(r.txs.filter((t) => t.date <= d));
+    const ledgerAt = (d: string) => ledgerOfAll(r.txs.filter((t) => t.date <= d));
     const name = (t: string, sym: string) => this.displayName(t, sym);
     const after = assetBreakdown(ledgerAt(end), end, r.price, r.usdt, name);
     const before = start ? assetBreakdown(ledgerAt(start), start, r.price, r.usdt, name) : [];
@@ -104,8 +106,8 @@ export class HistoryService implements OnApplicationBootstrap {
   }
 
   /** Dựng lịch sử từ ngày `fromOf(ngày giao dịch đầu, hôm nay)` tới hôm nay */
-  private async compute(userId: string, fromOf: (firstTx: string, today: string) => string) {
-    const txs = (await this.transactions.activeTransactions(userId)).map(toLedgerTx);
+  private async compute(userId: string, fromOf: (firstTx: string, today: string) => string, portfolioId?: string) {
+    const txs = (await this.transactions.activeTransactions(userId, portfolioId)).map(toLedgerTx);
     const today = vnDateKey();
     if (!txs.length) return null;
     const firstTx = txs.reduce((m, t) => (t.date < m ? t.date : m), txs[0].date);

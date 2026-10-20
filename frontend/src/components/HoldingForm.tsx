@@ -43,7 +43,15 @@ const COST_LABEL: Record<AssetType, string> = {
 }
 
 /** Khai báo nhanh một tài sản đang có (ghi thành giao dịch số dư đầu kỳ trong sổ) */
-export default function HoldingForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => void }) {
+export default function HoldingForm({
+  onDone,
+  onCancel,
+  portfolioId,
+}: {
+  onDone: () => void
+  onCancel?: () => void
+  portfolioId?: string
+}) {
   const [assetType, setAssetType] = useState<AssetType>('stock')
   const [symbol, setSymbol] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -68,6 +76,7 @@ export default function HoldingForm({ onDone, onCancel }: { onDone: () => void; 
       symbol: assetType === 'cash' ? 'VND' : symbol,
       quantity: parseNum(quantity),
       avgCost: assetType === 'cash' ? 1 : parseNum(avgCost),
+      portfolioId: portfolioId || undefined,
     }
     if (!body.symbol) return setError('Chọn mã tài sản')
     if (!(body.quantity > 0)) return setError('Số lượng phải lớn hơn 0')

@@ -1,0 +1,156 @@
+import AddIcon from '@mui/icons-material/Add'
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
+import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import Typography from '@mui/material/Typography'
+import { useState } from 'react'
+import { api, del, post } from '../lib/api'
+import { fmtVndShort } from '../lib/format'
+import type { PortfolioAccount } from '../lib/types'
+
+/** Chọn xem gộp hoặc từng danh mục; thêm / đổi tên / xoá danh mục */
+export default function PortfolioSwitcher({
+  accounts,
+  value,
+  onChange,
+  onChanged,
+}: {
+  accounts: PortfolioAccount[]
+  /** '' = tất cả */
+  value: string
+  onChange: (id: string) => void
+  onChanged: () => void
+}) {
+  const [adding, setAdding] = useState(false)
+  const [managing, setManaging] = useState(false)
+  const [name, setName] = useState('')
+  const [names, setNames] = useState<Record<string, string>>({})
+  const [error, setError] = useState('')
+
+  const create = async () => {
+    setError('')
+    try {
+      const p = await post<{ id: string }>('/portfolio/portfolios', { name })
+      setAdding(false)
+      setName('')
+      onChanged()
+      onChange(p.id)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const rename = async (id: string) => {
+    setError('')
+    try {
+      await api(`/portfolio/portfolios/${id}`, { method: 'PATCH', body: JSON.stringify({ name: names[id] }) })
+      onChanged()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const remove = async (id: string) => {
+    setError('')
+    try {
+      await del(`/portfolio/portfolios/${id}`)
+      if (value === id) onChange('')
+      onChanged()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  return (
+    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+      {accounts.length > 1 && (
+        <Chip label="Tất cả" color={value === '' ? 'primary' : 'default'} onClick={() => onChange('')} />
+      )}
+      {accounts.map((a) => (
+        <Chip
+          key={a.id}
+          label={`${a.name} · ${fmtVndShort(a.totalValue)}`}
+          color={value === a.id || (accounts.length === 1 && value === '') ? 'primary' : 'default'}
+          variant={value === a.id ? 'filled' : 'outlined'}
+          onClick={() => onChange(accounts.length === 1 ? '' : a.id)}
+        />
+      ))}
+      <Button size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
+        Thêm danh mục
+      </Button>
+      {accounts.length > 0 && (
+        <Tooltip title="Đổi tên / xoá danh mục">
+          <IconButton
+            size="small"
+            onClick={() => {
+              setNames(Object.fromEntries(accounts.map((a) => [a.id, a.name])))
+              setManaging(true)
+            }}
+          >
+            <SettingsOutlined fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+
+      <Dialog open={adding} onClose={() => setAdding(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Thêm danh mục</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Tách theo tài khoản / nơi giữ tài sản, vd "TK SSI", "Ví Binance", "Vàng cất nhà". Mỗi danh mục có sổ giao dịch
+            và tiền mặt riêng.
+          </Typography>
+          <TextField autoFocus fullWidth size="small" label="Tên danh mục" value={name} onChange={(e) => setName(e.target.value)} />
+          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAdding(false)}>Huỷ</Button>
+          <Button variant="contained" disabled={!name.trim()} onClick={() => void create()}>
+            Tạo
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={managing} onClose={() => setManaging(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Quản lý danh mục</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ pt: 1 }}>
+            {accounts.map((a) => (
+              <Stack key={a.id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  value={names[a.id] ?? a.name}
+                  onChange={(e) => setNames((m) => ({ ...m, [a.id]: e.target.value }))}
+                  helperText={`${a.transactionCount} giao dịch${a.isDefault ? ' · danh mục chính' : ''}`}
+                />
+                <Button size="small" disabled={!names[a.id]?.trim() || names[a.id] === a.name} onClick={() => void rename(a.id)}>
+                  Lưu
+                </Button>
+                <Button size="small" color="error" disabled={a.isDefault} onClick={() => void remove(a.id)}>
+                  Xoá
+                </Button>
+              </Stack>
+            ))}
+            <Typography variant="caption" color="text.secondary">
+              Chỉ xoá được danh mục không còn giao dịch. Chuyển tiền giữa hai danh mục: ghi "Rút tiền" ở danh mục này và
+              "Nạp tiền" ở danh mục kia — khi xem gộp, hai giao dịch triệt tiêu nên không bị tính thành vốn mới.
+            </Typography>
+            {error && <Alert severity="error">{error}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setManaging(false)}>Đóng</Button>
+        </DialogActions>
+      </Dialog>
+    </Stack>
+  )
+}

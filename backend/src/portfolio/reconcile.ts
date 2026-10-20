@@ -4,7 +4,7 @@
  * Không sửa dữ liệu; thoát mã 1 nếu có chênh lệch.
  */
 import { PrismaClient } from '@prisma/client';
-import { computeLedger } from './ledger';
+import { ledgerOfAll } from './ledger';
 import { toLedgerTx } from './transactions';
 
 async function main() {
@@ -17,7 +17,8 @@ async function main() {
       db.transaction.findMany({ where: { userId: id, deletedAt: null } }),
     ]);
     if (!holdings.length && !txs.length) continue;
-    const ledger = computeLedger(txs.map(toLedgerTx));
+    // Mỗi danh mục tính riêng rồi gộp, giống cách ghi bảng Holding
+    const ledger = ledgerOfAll(txs.map(toLedgerTx));
     const fromHoldings = new Map<string, { q: number; c: number }>();
     for (const h of holdings) {
       const k = `${h.assetType}:${h.symbol}`;

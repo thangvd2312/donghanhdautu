@@ -19,13 +19,14 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink, useSearchParams } from 'react-router-dom'
 import { NotificationSettingsPanel, PriceAlertsPanel } from '../components/AlertsPanels'
 import AllocationBar from '../components/AllocationBar'
 import { DataQualityAlert, PriceStatusChip } from '../components/DataStatus'
 import HoldingForm from '../components/HoldingForm'
 import HistoryPanel from '../components/HistoryPanel'
 import LedgerPanel from '../components/LedgerPanel'
+import PortfolioSwitcher from '../components/PortfolioSwitcher'
 import PushPanel from '../components/PushPanel'
 import TelegramPanel from '../components/TelegramPanel'
 import TransactionDialog, { type TxPreset } from '../components/TransactionDialog'
@@ -33,7 +34,7 @@ import { KV, Panel, Stat } from '../components/ui'
 import { api, patch } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../lib/format'
-import { RISK_LABEL, type Performance, type Portfolio, type Transaction } from '../lib/types'
+import { RISK_LABEL, type Performance, type Portfolio, type PortfolioAccount, type Transaction } from '../lib/types'
 
 type TxAsset = NonNullable<TxPreset['assetType']>
 
@@ -51,29 +52,49 @@ export default function PortfolioPage() {
   const [version, setVersion] = useState(0)
   const [threshold, setThreshold] = useState(String(me?.profile?.alertThresholdPct ?? 3))
   const [saved, setSaved] = useState(false)
+  const [accounts, setAccounts] = useState<PortfolioAccount[]>([])
+  // Danh mục đang xem nằm trên URL (?p=…) để tải lại / chia sẻ link vẫn đúng chỗ; trống = tất cả
+  const [params, setParams] = useSearchParams()
+  const pf = params.get('p') ?? ''
+  const q = pf ? `?portfolioId=${encodeURIComponent(pf)}` : ''
+  const setPf = (id: string) => setParams(id ? { p: id } : {}, { replace: true })
 
+  const loadAccounts = useCallback(() => api<PortfolioAccount[]>('/portfolio/portfolios').then(setAccounts).catch(() => {}), [])
   const load = useCallback(
     () =>
       Promise.all([
-        api<Portfolio>('/portfolio').then(setP),
-        api<Performance>('/portfolio/performance')
+        api<Portfolio>(`/portfolio${q}`).then(setP),
+        api<Performance>(`/portfolio/performance${q}`)
           .then(setPerf)
           .catch(() => setPerf(null)),
       ]),
-    [],
+    [q],
   )
-  const loadTxs = useCallback(() => api<Transaction[]>('/portfolio/transactions').then(setTxs).catch(() => setTxs([])), [])
+  const loadTxs = useCallback(
+    () =>
+      api<Transaction[]>(`/portfolio/transactions${q}`)
+        .then(setTxs)
+        .catch(() => setTxs([])),
+    [q],
+  )
   const changed = () => {
     void load()
     void loadTxs()
+    void loadAccounts()
     setVersion((v) => v + 1)
   }
+  useEffect(() => {
+    void loadAccounts()
+  }, [loadAccounts])
   useEffect(() => {
     void load()
     void loadTxs()
     const t = setInterval(() => void load(), 15000)
     return () => clearInterval(t)
   }, [load, loadTxs])
+  // Mua / bán từ dòng tài sản: đang xem một danh mục thì dùng danh mục đó; xem gộp mà tài sản chỉ nằm ở một nơi thì chọn sẵn nơi đó
+  const pfFor = (h: { portfolios?: { portfolioId: string }[] }) =>
+    pf || (h.portfolios?.length === 1 ? h.portfolios[0].portfolioId : undefined)
 
   const saveThreshold = async () => {
     await patch('/profile/settings', { alertThresholdPct: Number(threshold) })
@@ -86,10 +107,11 @@ export default function PortfolioPage() {
 
   return (
     <Stack spacing={2.5}>
+      <PortfolioSwitcher accounts={accounts} value={pf} onChange={setPf} onChanged={() => void loadAccounts()} />
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, lg: 8 }}>
           <Panel
-            title="Tổng quan danh mục"
+            title={pf ? `Tổng quan · ${accounts.find((a) => a.id === pf)?.name ?? ''}` : 'Tổng quan danh mục'}
             sx={{ height: '100%' }}
             action={
               <Button
@@ -223,7 +245,7 @@ export default function PortfolioPage() {
         </Grid>
       </Grid>
 
-      <HistoryPanel refreshKey={version} />
+      <HistoryPanel refreshKey={version} portfolioId={pf || undefined} />
 
       <Panel
         title="Tài sản đang nắm giữ"
@@ -248,6 +270,7 @@ export default function PortfolioPage() {
               / bán sau đó hãy dùng "Ghi giao dịch".
             </Typography>
             <HoldingForm
+              portfolioId={pf || undefined}
               onDone={() => {
                 setDeclaring(false)
                 changed()
@@ -293,6 +316,18 @@ export default function PortfolioPage() {
                       )}
                       <Typography variant="caption" color="text.secondary" component="div">
                         {h.typeLabel}
+                        {!pf && accounts.length > 1 && h.portfolios && h.portfolios.length > 0 && (
+                          <>
+                            {' · '}
+                            {h.portfolios
+                              .map((x) =>
+                                h.portfolios!.length > 1
+                                  ? `${x.name} ${fmtNum(x.quantity, h.assetType === 'stock' || h.assetType === 'cash' ? 0 : 4)}`
+                                  : x.name,
+                              )
+                              .join(' · ')}
+                          </>
+                        )}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
@@ -344,10 +379,14 @@ export default function PortfolioPage() {
                     <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                       {h.assetType === 'cash' ? (
                         <>
-                          <Button size="small" onClick={() => setPreset({ type: 'deposit' })}>
+                          <Button size="small" onClick={() => setPreset({ type: 'deposit', portfolioId: pfFor(h) })}>
                             Nạp
                           </Button>
-                          <Button size="small" color="inherit" onClick={() => setPreset({ type: 'withdraw' })}>
+                          <Button
+                            size="small"
+                            color="inherit"
+                            onClick={() => setPreset({ type: 'withdraw', portfolioId: pfFor(h) })}
+                          >
                             Rút
                           </Button>
                         </>
@@ -356,7 +395,13 @@ export default function PortfolioPage() {
                           <Button
                             size="small"
                             onClick={() =>
-                              setPreset({ type: 'buy', assetType: h.assetType as TxAsset, symbol: h.symbol, label: h.displayName })
+                              setPreset({
+                                type: 'buy',
+                                assetType: h.assetType as TxAsset,
+                                symbol: h.symbol,
+                                label: h.displayName,
+                                portfolioId: pfFor(h),
+                              })
                             }
                           >
                             Mua thêm
@@ -365,7 +410,13 @@ export default function PortfolioPage() {
                             size="small"
                             color="error"
                             onClick={() =>
-                              setPreset({ type: 'sell', assetType: h.assetType as TxAsset, symbol: h.symbol, label: h.displayName })
+                              setPreset({
+                                type: 'sell',
+                                assetType: h.assetType as TxAsset,
+                                symbol: h.symbol,
+                                label: h.displayName,
+                                portfolioId: pfFor(h),
+                              })
                             }
                           >
                             Bán
@@ -394,7 +445,7 @@ export default function PortfolioPage() {
         </Alert>
       </Panel>
 
-      <LedgerPanel txs={txs} onChanged={changed} />
+      <LedgerPanel txs={txs} onChanged={changed} accounts={accounts} portfolioId={pf || undefined} />
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, lg: 7 }}>
@@ -409,7 +460,14 @@ export default function PortfolioPage() {
         </Grid>
       </Grid>
 
-      <TransactionDialog open={!!preset} preset={preset} onClose={() => setPreset(null)} onSaved={changed} />
+      <TransactionDialog
+        open={!!preset}
+        preset={preset}
+        onClose={() => setPreset(null)}
+        onSaved={changed}
+        accounts={accounts}
+        defaultPortfolioId={pf || undefined}
+      />
     </Stack>
   )
 }

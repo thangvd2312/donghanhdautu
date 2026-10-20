@@ -22,7 +22,7 @@ import { useState } from 'react'
 import { api, del } from '../lib/api'
 import { fmtNum } from '../lib/format'
 import { TX_LABEL } from '../lib/tx'
-import type { Transaction, TransactionRevision } from '../lib/types'
+import type { PortfolioAccount, Transaction, TransactionRevision } from '../lib/types'
 import ImportDialog from './ImportDialog'
 import TransactionDialog from './TransactionDialog'
 import { Panel } from './ui'
@@ -51,7 +51,19 @@ function describe(t: Transaction) {
 }
 
 /** Sổ giao dịch: mọi thay đổi số dư đều đi qua đây; sửa / huỷ được lưu lịch sử */
-export default function LedgerPanel({ txs, onChanged }: { txs: Transaction[] | null; onChanged: () => void }) {
+export default function LedgerPanel({
+  txs,
+  onChanged,
+  accounts = [],
+  portfolioId,
+}: {
+  txs: Transaction[] | null
+  onChanged: () => void
+  accounts?: PortfolioAccount[]
+  /** Danh mục đang xem ('' / undefined = tất cả) */
+  portfolioId?: string
+}) {
+  const showPortfolio = accounts.length > 1 && !portfolioId
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
@@ -100,6 +112,7 @@ export default function LedgerPanel({ txs, onChanged }: { txs: Transaction[] | n
                 <TableCell>Ngày</TableCell>
                 <TableCell>Loại</TableCell>
                 <TableCell>Tài sản</TableCell>
+                {showPortfolio && <TableCell>Danh mục</TableCell>}
                 <TableCell align="right">Số lượng × giá / số tiền</TableCell>
                 <TableCell align="right">Phí + thuế</TableCell>
                 <TableCell>Ghi chú</TableCell>
@@ -114,6 +127,7 @@ export default function LedgerPanel({ txs, onChanged }: { txs: Transaction[] | n
                     <Chip size="small" variant="outlined" color={TYPE_COLOR[t.type]} label={TX_LABEL[t.type]} />
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{t.displayName ?? (t.currency === 'USDT' ? 'Tiền USDT' : 'Tiền mặt')}</TableCell>
+                  {showPortfolio && <TableCell sx={{ whiteSpace: 'nowrap' }}>{t.portfolioName ?? '—'}</TableCell>}
                   <TableCell align="right" className="num" sx={{ whiteSpace: 'nowrap' }}>
                     {describe(t)}
                   </TableCell>
@@ -166,9 +180,27 @@ export default function LedgerPanel({ txs, onChanged }: { txs: Transaction[] | n
         </Typography>
       )}
 
-      <TransactionDialog open={adding} onClose={() => setAdding(false)} onSaved={onChanged} />
-      <ImportDialog open={importing} onClose={() => setImporting(false)} onImported={onChanged} />
-      <TransactionDialog open={!!editing} editing={editing} onClose={() => setEditing(null)} onSaved={onChanged} />
+      <TransactionDialog
+        open={adding}
+        onClose={() => setAdding(false)}
+        onSaved={onChanged}
+        accounts={accounts}
+        defaultPortfolioId={portfolioId || undefined}
+      />
+      <ImportDialog
+        open={importing}
+        onClose={() => setImporting(false)}
+        onImported={onChanged}
+        accounts={accounts}
+        defaultPortfolioId={portfolioId || undefined}
+      />
+      <TransactionDialog
+        open={!!editing}
+        editing={editing}
+        onClose={() => setEditing(null)}
+        onSaved={onChanged}
+        accounts={accounts}
+      />
 
       <Dialog open={!!removing} onClose={() => setRemoving(null)}>
         <DialogTitle>Huỷ giao dịch này?</DialogTitle>

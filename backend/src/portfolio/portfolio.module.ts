@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,13 +7,15 @@ import {
   Header,
   Injectable,
   Module,
+  NotFoundException,
   Param,
+  Patch,
   Post,
   Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
@@ -23,9 +26,10 @@ import { PrismaService } from '../prisma/prisma.module';
 import { TEMPLATE_CSV } from './csv-import';
 import { HistoryService } from './history.service';
 import { ImportDto, ImportService } from './import.service';
-import { performance } from './ledger';
-import { TransactionDto, TransactionsService } from './transactions';
-import { valuePortfolio } from './valuation';
+import { computeLedger, performance } from './ledger';
+import type { LedgerResult } from './ledger';
+import { toLedgerTx, TransactionDto, TransactionsService } from './transactions';
+import { HoldingInput, valuePortfolio } from './valuation';
 
 /** Khai báo nhanh một tài sản đang có (onboarding / "khai báo tài sản đang có") = giao dịch số dư đầu kỳ */
 class HoldingDto {
@@ -34,6 +38,11 @@ class HoldingDto {
   @IsNumber() @Min(0) quantity!: number;
   @IsNumber() @Min(0) avgCost!: number;
   @IsOptional() @IsString() note?: string;
+  @IsOptional() @IsString() @MaxLength(40) portfolioId?: string;
+}
+
+class PortfolioNameDto {
+  @IsString() @MinLength(1) @MaxLength(60) name!: string;
 }
 
 @Injectable()
@@ -44,12 +53,18 @@ export class PortfolioService {
     private transactions: TransactionsService,
   ) {}
 
-  /** Định giá danh mục theo giá thị trường hiện tại, tất cả quy ra VND, kèm trạng thái dữ liệu */
-  async valuation(userId: string) {
-    const holdings = await this.prisma.holding.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-    });
+  /**
+   * Định giá theo giá thị trường hiện tại, quy ra VND, kèm trạng thái dữ liệu.
+   * Không truyền danh mục = gộp mọi danh mục (bảng Holding); có danh mục = tính từ sổ của riêng danh mục đó.
+   */
+  async valuation(userId: string, portfolioId?: string) {
+    const holdings: HoldingInput[] = portfolioId
+      ? holdingsFromLedger(await this.transactions.ledger(userId, portfolioId), portfolioId, this.market.usdtVnd.rate)
+      : await this.prisma.holding.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+    return this.value(holdings);
+  }
+
+  private async value(holdings: HoldingInput[]) {
     // Mã cổ phiếu mới thêm có thể chưa có trong bộ nhớ đệm
     await Promise.all(
       holdings.filter((h) => h.assetType === 'stock').map((h) => this.market.stockQuote(h.symbol).catch(() => null)),
@@ -68,9 +83,9 @@ export class PortfolioService {
   }
 
   /** Hiệu quả đầu tư từ sổ giao dịch: vốn đưa vào, lãi đã / chưa chốt, cổ tức, phí, tổng lãi */
-  async performance(userId: string) {
-    const ledger = await this.transactions.ledger(userId);
-    const v = await this.valuation(userId);
+  async performance(userId: string, portfolioId?: string) {
+    const ledger = await this.transactions.ledger(userId, portfolioId);
+    const v = await this.valuation(userId, portfolioId);
     // Lãi chưa chốt chỉ tính trên tài sản đầu tư (tiền mặt USDT đổi giá theo tỷ giá không phải lãi đầu tư)
     const invested = v.holdings.filter((h) => h.assetType !== 'cash');
     const unrealized = invested.some((h) => h.pnl !== null) ? invested.reduce((s, h) => s + (h.pnl ?? 0), 0) : null;
@@ -92,8 +107,103 @@ export class PortfolioService {
       quantity: dto.quantity,
       price: dto.assetType === 'cash' ? 1 : dto.avgCost,
       note: dto.note,
+      portfolioId: dto.portfolioId,
     });
   }
+
+  /** Danh mục kèm giá trị hiện tại và số giao dịch */
+  async listPortfolios(userId: string) {
+    const [list, txs] = await Promise.all([
+      this.transactions.portfolios(this.prisma, userId),
+      this.transactions.activeTransactions(userId),
+    ]);
+    const rate = this.market.usdtVnd.rate;
+    return Promise.all(
+      list.map(async (p) => {
+        const own = txs.filter((t) => t.portfolioId === p.id);
+        let totalValue = 0;
+        if (own.length) {
+          const v = await this.value(holdingsFromLedger(computeLedger(own.map(toLedgerTx)), p.id, rate));
+          totalValue = v.totalValue;
+        }
+        return { id: p.id, name: p.name, isDefault: p.isDefault, transactionCount: own.length, totalValue };
+      }),
+    );
+  }
+
+  /** Mỗi tài sản đang nằm ở danh mục nào, bao nhiêu (để biết bán từ đâu) */
+  async breakdown(userId: string) {
+    const [list, txs] = await Promise.all([
+      this.transactions.portfolios(this.prisma, userId),
+      this.transactions.activeTransactions(userId),
+    ]);
+    const out: Record<string, { portfolioId: string; name: string; quantity: number }[]> = {};
+    if (list.length < 2) return out;
+    for (const p of list) {
+      const own = txs.filter((t) => t.portfolioId === p.id);
+      if (!own.length) continue;
+      const l = computeLedger(own.map(toLedgerTx));
+      const add = (key: string, q: number) => (out[key] ??= []).push({ portfolioId: p.id, name: p.name, quantity: q });
+      for (const pos of l.positions)
+        if (pos.quantity.gt(0)) add(`${pos.assetType}:${pos.symbol}`, pos.quantity.toNumber());
+      for (const c of ['VND', 'USDT'] as const) if (l.cash[c].gt(0)) add(`cash:${c}`, l.cash[c].toNumber());
+    }
+    return out;
+  }
+
+  async createPortfolio(userId: string, name: string) {
+    await this.transactions.portfolios(this.prisma, userId);
+    const p = await this.prisma.portfolio.create({ data: { userId, name: name.trim() } });
+    return { id: p.id, name: p.name, isDefault: false };
+  }
+
+  async renamePortfolio(userId: string, id: string, name: string) {
+    const p = await this.prisma.portfolio.findFirst({ where: { id, userId } });
+    if (!p) throw new NotFoundException('Không tìm thấy danh mục');
+    await this.prisma.portfolio.update({ where: { id }, data: { name: name.trim() } });
+    return { id, name: name.trim() };
+  }
+
+  /** Chỉ xoá được danh mục trống (không còn giao dịch) và không phải danh mục chính */
+  async deletePortfolio(userId: string, id: string) {
+    const p = await this.prisma.portfolio.findFirst({ where: { id, userId } });
+    if (!p) throw new NotFoundException('Không tìm thấy danh mục');
+    if (p.isDefault) throw new BadRequestException('Không xoá được danh mục chính');
+    const used = await this.prisma.transaction.count({ where: { portfolioId: id, deletedAt: null } });
+    if (used) throw new BadRequestException(`Danh mục còn ${used} giao dịch — huỷ hoặc chuyển giao dịch trước khi xoá`);
+    await this.prisma.$transaction([
+      // Giao dịch đã huỷ vẫn giữ lịch sử, chỉ bỏ liên kết tới danh mục bị xoá
+      this.prisma.transaction.updateMany({ where: { portfolioId: id }, data: { portfolioId: null } }),
+      this.prisma.portfolio.delete({ where: { id } }),
+    ]);
+    return { ok: true };
+  }
+}
+
+/** Vị thế và tiền mặt của một sổ → đầu vào định giá */
+function holdingsFromLedger(l: LedgerResult, portfolioId: string, usdtRate: number): HoldingInput[] {
+  const out: HoldingInput[] = l.positions
+    .filter((p) => p.quantity.gt(0))
+    .map((p) => ({
+      id: `${portfolioId}:${p.assetType}:${p.symbol}`,
+      assetType: p.assetType,
+      symbol: p.symbol,
+      quantity: p.quantity.toNumber(),
+      avgCost: p.costBasis.div(p.quantity).toNumber(),
+      note: p.note,
+    }));
+  for (const c of ['VND', 'USDT'] as const) {
+    if (!l.cash[c].gt(0)) continue;
+    out.push({
+      id: `${portfolioId}:cash:${c}`,
+      assetType: 'cash',
+      symbol: c,
+      quantity: l.cash[c].toNumber(),
+      avgCost: c === 'VND' ? 1 : usdtRate,
+      note: null,
+    });
+  }
+  return out;
 }
 
 @UseGuards(JwtAuthGuard)
@@ -105,22 +215,58 @@ class PortfolioController {
     private imports: ImportService,
     private historyService: HistoryService,
     private market: MarketService,
+    private prisma: PrismaService,
   ) {}
 
+  /** ?portfolioId=… để xem riêng một danh mục; bỏ trống = gộp, kèm tài sản nằm ở danh mục nào */
   @Get()
-  get(@CurrentUser() user: AuthUser) {
-    return this.portfolio.valuation(user.id);
+  async get(@CurrentUser() user: AuthUser, @Query('portfolioId') portfolioId?: string) {
+    if (portfolioId) {
+      await this.transactions.resolvePortfolio(this.prisma, user.id, portfolioId);
+      return this.portfolio.valuation(user.id, portfolioId);
+    }
+    const [v, breakdown] = await Promise.all([this.portfolio.valuation(user.id), this.portfolio.breakdown(user.id)]);
+    return {
+      ...v,
+      holdings: v.holdings.map((h) => ({ ...h, portfolios: breakdown[`${h.assetType}:${h.symbol}`] ?? [] })),
+    };
   }
 
   /** Tổng tài sản và vốn đưa vào theo ngày + hiệu quả trong kỳ. range: 1m | 3m | 6m | 1y | all */
   @Get('history')
-  history(@CurrentUser() user: AuthUser, @Query('range') range = '3m') {
-    return this.historyService.history(user.id, range);
+  async history(
+    @CurrentUser() user: AuthUser,
+    @Query('range') range = '3m',
+    @Query('portfolioId') portfolioId?: string,
+  ) {
+    if (portfolioId) await this.transactions.resolvePortfolio(this.prisma, user.id, portfolioId);
+    return this.historyService.history(user.id, range, portfolioId);
   }
 
   @Get('performance')
-  performance(@CurrentUser() user: AuthUser) {
-    return this.portfolio.performance(user.id);
+  async performance(@CurrentUser() user: AuthUser, @Query('portfolioId') portfolioId?: string) {
+    if (portfolioId) await this.transactions.resolvePortfolio(this.prisma, user.id, portfolioId);
+    return this.portfolio.performance(user.id, portfolioId);
+  }
+
+  @Get('portfolios')
+  portfolios(@CurrentUser() user: AuthUser) {
+    return this.portfolio.listPortfolios(user.id);
+  }
+
+  @Post('portfolios')
+  createPortfolio(@CurrentUser() user: AuthUser, @Body() dto: PortfolioNameDto) {
+    return this.portfolio.createPortfolio(user.id, dto.name);
+  }
+
+  @Patch('portfolios/:id')
+  renamePortfolio(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: PortfolioNameDto) {
+    return this.portfolio.renamePortfolio(user.id, id, dto.name);
+  }
+
+  @Delete('portfolios/:id')
+  deletePortfolio(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.portfolio.deletePortfolio(user.id, id);
   }
 
   /** Danh sách loại vàng hợp lệ để chọn khi nhập tài sản */
@@ -138,8 +284,8 @@ class PortfolioController {
   }
 
   @Get('transactions')
-  listTransactions(@CurrentUser() user: AuthUser) {
-    return this.transactions.list(user.id);
+  listTransactions(@CurrentUser() user: AuthUser, @Query('portfolioId') portfolioId?: string) {
+    return this.transactions.list(user.id, portfolioId || undefined);
   }
 
   @Post('transactions')

@@ -31,6 +31,7 @@ model User {
   telegram      TelegramLink?
   pushSettings  PushSettings?
   pushSubscriptions PushSubscription[]
+  portfolios    Portfolio[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -270,6 +271,9 @@ model Transaction {
   /// Số VND cho 1 USDT lúc giao dịch, nếu người dùng nhập
   fxRate    Decimal?  @db.Decimal(30, 10)
   note      String?
+  /// Danh mục / tài khoản chứa giao dịch (sổ được kiểm tra riêng cho từng danh mục)
+  portfolioId String?
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id])
   /// manual | migration | csv
   source    String    @default("manual")
   importBatchId String?
@@ -281,6 +285,7 @@ model Transaction {
 
   @@index([userId, date])
   @@index([importBatchId])
+  @@index([portfolioId])
 }
 
 model TransactionRevision {
@@ -368,6 +373,7 @@ model ImportBatch {
   fileName      String?
   rowCount      Int
   importedCount Int
+  portfolioId   String?
   undoneAt      DateTime?
   createdAt     DateTime      @default(now())
   transactions  Transaction[]
@@ -522,4 +528,17 @@ model PushDelivery {
 
   @@index([status, nextAttemptAt])
   @@index([userId, sentAt])
+}
+
+/// Một danh mục / tài khoản của người dùng (TK chứng khoán, ví crypto, vàng cất nhà…). Mỗi người có ít nhất một
+model Portfolio {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  isDefault    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+
+  @@index([userId])
 }
