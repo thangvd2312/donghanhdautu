@@ -17,6 +17,7 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { api, del, post } from '../lib/api'
 import { fmtVndShort } from '../lib/format'
+import { useIsMobile } from '../lib/useIsMobile'
 import type { PortfolioAccount } from '../lib/types'
 
 /** Chọn xem gộp hoặc từng danh mục; thêm / đổi tên / xoá danh mục */
@@ -32,6 +33,7 @@ export default function PortfolioSwitcher({
   onChange: (id: string) => void
   onChanged: () => void
 }) {
+  const mobile = useIsMobile()
   const [adding, setAdding] = useState(false)
   const [managing, setManaging] = useState(false)
   const [name, setName] = useState('')
@@ -73,35 +75,66 @@ export default function PortfolioSwitcher({
   }
 
   return (
-    <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
-      {accounts.length > 1 && (
-        <Chip label="Tất cả" color={value === '' ? 'primary' : 'default'} onClick={() => onChange('')} />
-      )}
-      {accounts.map((a) => (
-        <Chip
-          key={a.id}
-          label={`${a.name} · ${fmtVndShort(a.totalValue)}`}
-          color={value === a.id || (accounts.length === 1 && value === '') ? 'primary' : 'default'}
-          variant={value === a.id ? 'filled' : 'outlined'}
-          onClick={() => onChange(accounts.length === 1 ? '' : a.id)}
-        />
-      ))}
-      <Button size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
-        Thêm danh mục
-      </Button>
-      {accounts.length > 0 && (
-        <Tooltip title="Đổi tên / xoá danh mục">
-          <IconButton
-            aria-label="Đổi tên / xoá danh mục"
-            onClick={() => {
-              setNames(Object.fromEntries(accounts.map((a) => [a.id, a.name])))
-              setManaging(true)
-            }}
-          >
-            <SettingsOutlined fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      )}
+    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      {/* Điện thoại: các danh mục cuộn ngang trên một dòng, nút thêm / cài đặt luôn nằm cuối dòng */}
+      <Stack
+        useFlexGap
+        direction="row"
+        spacing={1}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          alignItems: 'center',
+          flexWrap: { xs: 'nowrap', md: 'wrap' },
+          rowGap: 1,
+          overflowX: { xs: 'auto', md: 'visible' },
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          '& > *': { flexShrink: 0 },
+          // Mép phải mờ dần để thấy còn danh mục khi cuộn ngang
+          maskImage: { xs: 'linear-gradient(to right, #000 calc(100% - 24px), transparent)', md: 'none' },
+        }}
+      >
+        {accounts.length > 1 && (
+          <Chip label="Tất cả" color={value === '' ? 'primary' : 'default'} onClick={() => onChange('')} />
+        )}
+        {accounts.map((a) => (
+          <Chip
+            key={a.id}
+            label={`${a.name} · ${fmtVndShort(a.totalValue)}`}
+            color={value === a.id || (accounts.length === 1 && value === '') ? 'primary' : 'default'}
+            variant={value === a.id ? 'filled' : 'outlined'}
+            onClick={() => onChange(accounts.length === 1 ? '' : a.id)}
+          />
+        ))}
+        {!mobile && (
+          <Button size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
+            Thêm danh mục
+          </Button>
+        )}
+      </Stack>
+      <Stack direction="row" sx={{ flexShrink: 0, alignItems: 'center' }}>
+        {mobile && (
+          <Tooltip title="Thêm danh mục">
+            <IconButton color="primary" aria-label="Thêm danh mục" onClick={() => setAdding(true)}>
+              <AddIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+        {accounts.length > 0 && (
+          <Tooltip title="Đổi tên / xoá danh mục">
+            <IconButton
+              aria-label="Đổi tên / xoá danh mục"
+              onClick={() => {
+                setNames(Object.fromEntries(accounts.map((a) => [a.id, a.name])))
+                setManaging(true)
+              }}
+            >
+              <SettingsOutlined fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Stack>
 
       <Dialog open={adding} onClose={() => setAdding(false)} fullWidth maxWidth="xs">
         <DialogTitle>Thêm danh mục</DialogTitle>

@@ -26,6 +26,16 @@ export function fmtVndShort(v: number | null | undefined) {
   return `${sign}${vn.format(Math.round(a))} ₫`
 }
 
+/** Nhãn trục biểu đồ gọn để không chiếm bề ngang trên điện thoại: 1,25 tỷ · 275tr · 27,5tr · 850k */
+export function fmtVndAxis(v: number) {
+  const a = Math.abs(v)
+  const sign = v < 0 ? '-' : ''
+  if (a >= 1e9) return `${sign}${fmtNum(a / 1e9, a >= 1e10 ? 1 : 2)} tỷ`
+  if (a >= 1e6) return `${sign}${fmtNum(a / 1e6, a >= 1e8 ? 0 : 1)}tr`
+  if (a >= 1e3) return `${sign}${fmtNum(a / 1e3, 0)}k`
+  return `${sign}${fmtNum(a, 0)}`
+}
+
 export function fmtPct(v: number | null | undefined, digits = 2, signed = true) {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—'
   const s = fmtNum(v, digits)

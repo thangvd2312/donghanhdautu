@@ -1,5 +1,4 @@
 import Box from '@mui/material/Box'
-import Chip from '@mui/material/Chip'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
@@ -78,7 +77,7 @@ export default function MarketPage() {
     tab === 'stocks'
       ? snapshot.stockSessionOpen
         ? 'Đang trong phiên'
-        : 'Ngoài giờ giao dịch · giá phiên gần nhất'
+        : 'Đã đóng cửa · giá phiên gần nhất'
       : tab === 'crypto'
         ? 'Realtime · Binance'
         : tab === 'gold'
@@ -134,12 +133,25 @@ export default function MarketPage() {
             <Tab value="crypto" label="Crypto" />
             <Tab value="fx" label="Tỷ giá" />
           </Tabs>
-          <Chip
-            size="small"
-            variant="outlined"
-            color={problem ? 'warning' : tab === 'stocks' && snapshot.stockSessionOpen ? 'success' : 'default'}
-            label={problem ?? status}
-          />
+          {/* Trạng thái nguồn giá: chấm màu + chữ nhỏ; trên điện thoại nằm thành một dòng riêng dưới các tab */}
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{ alignItems: 'center', width: { xs: '100%', md: 'auto' }, pb: { xs: 1, md: 0 }, minWidth: 0 }}
+          >
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                flexShrink: 0,
+                bgcolor: problem ? 'warning.main' : tab === 'stocks' && !snapshot.stockSessionOpen ? 'text.disabled' : 'success.main',
+              }}
+            />
+            <Typography variant="caption" color={problem ? 'warning.main' : 'text.secondary'} noWrap>
+              {problem ?? status}
+            </Typography>
+          </Stack>
         </Stack>
         {tab === 'stocks' && <StockBoard snapshot={snapshot} />}
         {tab === 'gold' && <GoldBoard snapshot={snapshot} />}

@@ -11,8 +11,9 @@ import Typography from '@mui/material/Typography'
 import { ColorType, createChart, LineSeries, LineStyle, type MouseEventParams, type Time } from 'lightweight-charts'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api'
-import { changeColor, fmtDate, fmtPct, fmtVndShort } from '../lib/format'
+import { changeColor, fmtDate, fmtPct, fmtVndAxis, fmtVndShort } from '../lib/format'
 import type { HistoryPoint, PortfolioHistory } from '../lib/types'
+import { useIsMobile } from '../lib/useIsMobile'
 import { Panel, Stat } from './ui'
 
 const RANGES = [
@@ -41,6 +42,8 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
   const ref = useRef<HTMLDivElement>(null)
   const { mode, systemMode } = useColorScheme()
   const dark = (mode === 'system' ? systemMode : mode) === 'dark'
+  const mobile = useIsMobile()
+  const height = mobile ? 230 : 280
 
   useEffect(() => {
     let alive = true
@@ -58,17 +61,20 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
     if (!ref.current || points.length < 2) return
     const grid = dark ? '#222a37' : '#eef1f5'
     const chart = createChart(ref.current, {
-      height: 280,
+      height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: dark ? '#949db0' : '#5b6475',
         fontFamily: 'Inter, system-ui, sans-serif',
       },
       grid: { vertLines: { color: grid }, horzLines: { color: grid } },
-      rightPriceScale: { borderColor: grid },
-      timeScale: { borderColor: grid },
+      rightPriceScale: { borderColor: grid, scaleMargins: { top: 0.1, bottom: 0.08 } },
+      timeScale: { borderColor: grid, fixLeftEdge: true, fixRightEdge: true },
       crosshair: { mode: 0 },
-      localization: { locale: 'vi-VN', priceFormatter: (v: number) => fmtVndShort(v) },
+      localization: { locale: 'vi-VN', priceFormatter: fmtVndAxis },
+      // Điện thoại: vuốt trên biểu đồ phải cuộn trang, không kéo / zoom biểu đồ (luôn hiện trọn kỳ đã chọn)
+      handleScroll: !mobile,
+      handleScale: !mobile,
       autoSize: true,
     })
     const main = dark ? '#60a5fa' : '#2563eb'
@@ -105,7 +111,7 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
       chart.unsubscribeCrosshairMove(onMove)
       chart.remove()
     }
-  }, [points, dark])
+  }, [points, dark, mobile, height])
 
   const shown = hover ?? points[points.length - 1]
   const p = data?.period
@@ -113,7 +119,7 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
   return (
     <Panel
       title="Tài sản theo thời gian"
-      subtitle="Đường liền: tổng tài sản · đường đứt: vốn đã đưa vào — khoảng cách là lãi/lỗ"
+      subtitle="Khoảng cách giữa tài sản và vốn đã đưa vào là lãi/lỗ"
       action={
         <ToggleButtonGroup exclusive size="small" value={range} onChange={(_, v: string | null) => v && setRange(v)}>
           {RANGES.map((r) => (
@@ -125,7 +131,7 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
       }
     >
       {error && <Alert severity="error">{error}</Alert>}
-      {!data && !error && <Skeleton variant="rounded" height={280} />}
+      {!data && !error && <Skeleton variant="rounded" height={height} />}
       {data && points.length < 2 && (
         <Typography color="text.secondary">
           {points.length
@@ -164,9 +170,11 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
               <Typography variant="caption" sx={{ fontWeight: 600 }}>
                 {fmtDate(shown.date)}
               </Typography>
-              <Typography variant="caption">Tài sản {fmtVndShort(shown.value)}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                Vốn {fmtVndShort(shown.netContributions)}
+              <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                <Swatch color={dark ? '#60a5fa' : '#2563eb'} /> Tài sản {fmtVndShort(shown.value)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                <Swatch color={dark ? '#94a3b8' : '#64748b'} dashed /> Vốn {fmtVndShort(shown.netContributions)}
               </Typography>
               <Typography variant="caption" sx={{ color: changeColor(shown.profit) }}>
                 Lãi/lỗ {fmtVndShort(shown.profit)}
@@ -179,7 +187,7 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
               )}
             </Stack>
           )}
-          <Box ref={ref} sx={{ height: 280 }} onMouseLeave={() => setHover(null)} />
+          <Box ref={ref} sx={{ height }} onMouseLeave={() => setHover(null)} />
           {[...(p?.notes ?? []), ...data.notes].length > 0 && (
             <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
               {[...(p?.notes ?? []), ...data.notes].join(' ')}
@@ -189,4 +197,9 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
       )}
     </Panel>
   )
+}
+
+/** Mẫu nét vẽ cho chú thích: liền = tổng tài sản, đứt = vốn đã đưa vào */
+function Swatch({ color, dashed }: { color: string; dashed?: boolean }) {
+  return <Box component="span" sx={{ width: 14, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${color}`, display: 'inline-block' }} />
 }
