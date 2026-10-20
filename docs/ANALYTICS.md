@@ -22,7 +22,8 @@ Sự kiện lưu trong bảng `AnalyticsEvent` của PostgreSQL hiện có. Khô
 | `onboarding_completed` | server | Lưu khảo sát khẩu vị lần đầu | — | Một lần / người |
 | `onboarding_skipped` | client | Bấm "Để sau" ở khảo sát | — | Một lần / người |
 | `first_real_asset_added` | server | Giao dịch hoặc số dư thật đầu tiên, ghi tay hoặc qua CSV; không tính dữ liệu chuyển đổi | `via` | Một lần / người |
-| `import_completed` | server | Xác nhận nhập CSV, trừ trường hợp gửi lại cùng file | `rows` | Theo đợt nhập |
+| `import_completed` | server | Xác nhận nhập CSV, trừ trường hợp gửi lại cùng file | `rows`, `errors`, `total` | Theo đợt nhập |
+| `import_rejected` | server | Xác nhận nhập CSV nhưng không dòng nào nhập được | `reason` (mapping / errors / duplicates), `errors`, `total` | Không |
 | `portfolio_viewed` | client | Mở trang Danh mục | — | Một lần / người / ngày |
 | `portfolio_valued` | server | Mở danh mục (gộp) có tài sản; ghi trạng thái giá | `status` | Một lần / người / ngày |
 | `app_active` | client | Mở app khi đã đăng nhập | — | Một lần / người / ngày |
@@ -47,6 +48,8 @@ Sự kiện lưu trong bảng `AnalyticsEvent` của PostgreSQL hiện có. Khô
 - **DAU / WAU / MAU**: số người dùng có hoạt động trong 1 / 7 / 30 ngày gần nhất.
 - **Bản tin**: trong 30 ngày, đếm số bản đã tạo (không tính "Gửi thử"), số bản được mở và số bản có hỏi tiếp.
 
+- **Phễu người mới**: trong khoảng báo cáo, số thiết bị xem trang mẫu → bấm đăng ký / đăng nhập từ trang mẫu → số người đăng ký → làm khảo sát / bỏ qua khảo sát → có giao dịch thật trong 7 ngày. Hai bước đầu là thiết bị khách ẩn danh, không nối được với tài khoản sau đăng ký, nên chỉ so tương đối.
+- **Lỗi nhập dữ liệu**: trong 30 ngày, số lần nhập CSV thành công, số dòng được nhập trên tổng số dòng trong file, số dòng lỗi bị bỏ, và số lần không nhập được gì (theo lý do).
 - **Thời gian tới giá trị đầu tiên**: từ lúc đăng ký tới lần đầu xem danh mục sau khi đã có giao dịch thật (trung vị và p90, theo giờ), cho người đăng ký trong khoảng báo cáo.
 - **Duy trì nhật ký**: trong số người có kế hoạch, tỷ lệ người có ít nhất một lần xem lại kế hoạch trong 30 ngày; kèm số kế hoạch đang theo dõi đã quá hạn xem lại hơn 7 ngày.
 - **Chất lượng dữ liệu**: tỷ lệ lượt mở danh mục (ngày-người, sự kiện `portfolio_valued`) có giá đầy đủ và còn mới (`ok`), so với thiếu giá (`partial`) hoặc giá cũ / tỷ giá dự phòng (`degraded`).

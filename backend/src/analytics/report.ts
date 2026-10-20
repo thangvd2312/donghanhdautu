@@ -193,6 +193,51 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
     GROUP BY 1 ORDER BY 1
   `);
 
+  // Lỗi nhập dữ liệu: dòng CSV bị bỏ vì lỗi, lần nhập không ghi được gì (theo lý do)
+  const [imports] = await prisma.$queryRaw<
+    { imports: number; rows_imported: number; rows_in_files: number; error_rows: number; rejected: number }[]
+  >(Prisma.sql`
+    SELECT
+      count(*) FILTER (WHERE name = 'import_completed')::int AS imports,
+      coalesce(sum((props->>'rows')::int) FILTER (WHERE name = 'import_completed'), 0)::int AS rows_imported,
+      coalesce(sum((props->>'total')::int), 0)::int AS rows_in_files,
+      coalesce(sum((props->>'errors')::int), 0)::int AS error_rows,
+      count(*) FILTER (WHERE name = 'import_rejected')::int AS rejected
+    FROM "AnalyticsEvent"
+    WHERE name IN ('import_completed', 'import_rejected') AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+  `);
+  const rejectedBy = await prisma.$queryRaw<{ reason: string; count: number }[]>(Prisma.sql`
+    SELECT props->>'reason' AS reason, count(*)::int AS count FROM "AnalyticsEvent"
+    WHERE name = 'import_rejected' AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+    GROUP BY 1 ORDER BY 2 DESC
+  `);
+
+  // Phễu người mới trong khoảng báo cáo: trang mẫu (thiết bị ẩn danh) → đăng ký → khảo sát → giao dịch thật.
+  // Hai bước đầu là thiết bị khách, không nối được với tài khoản sau đăng ký nên chỉ so tương đối.
+  const [funnel] = await prisma.$queryRaw<
+    {
+      demo_viewers: number;
+      demo_cta: number;
+      signups: number;
+      onboarded: number;
+      skipped_survey: number;
+      activated_7d: number;
+    }[]
+  >(Prisma.sql`
+    WITH u AS (SELECT id, "createdAt" AS signup_at FROM "User" WHERE "createdAt" >= ${ts(since)} AND "createdAt" <= ${ts(now)}),
+    first_tx AS (SELECT "userId", min("createdAt") AS at FROM "Transaction" WHERE source IN ('manual', 'csv') GROUP BY "userId")
+    SELECT
+      (SELECT count(DISTINCT actor) FROM "AnalyticsEvent" WHERE name = 'demo_viewed'
+        AND "createdAt" >= ${ts(since)} AND "createdAt" <= ${ts(now)})::int AS demo_viewers,
+      (SELECT count(DISTINCT actor) FROM "AnalyticsEvent" WHERE name = 'demo_signup_clicked'
+        AND "createdAt" >= ${ts(since)} AND "createdAt" <= ${ts(now)})::int AS demo_cta,
+      (SELECT count(*) FROM u)::int AS signups,
+      (SELECT count(*) FROM u WHERE EXISTS (SELECT 1 FROM "InvestorProfile" p WHERE p."userId" = u.id))::int AS onboarded,
+      (SELECT count(*) FROM u WHERE EXISTS (SELECT 1 FROM "AnalyticsEvent" e WHERE e."userId" = u.id
+        AND e.name = 'onboarding_skipped'))::int AS skipped_survey,
+      (SELECT count(*) FROM u JOIN first_tx f ON f."userId" = u.id WHERE f.at <= u.signup_at + interval '7 days')::int AS activated_7d
+  `);
+
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : null);
   return {
     generatedAt: now.toISOString(),
@@ -211,6 +256,18 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
     last30Days: counts,
     aiCost30Days: ai,
     timeToFirstValue: ttfv,
+    funnel: {
+      ...funnel,
+      ctaPct: pct(funnel.demo_cta, funnel.demo_viewers),
+      onboardedPct: pct(funnel.onboarded, funnel.signups),
+      skippedPct: pct(funnel.skipped_survey, funnel.signups),
+      activatedPct: pct(funnel.activated_7d, funnel.signups),
+    },
+    importQuality30Days: {
+      ...imports,
+      errorRowPct: pct(imports.error_rows, imports.rows_in_files),
+      rejectedBy,
+    },
     planReviews30Days: { ...plans, reviewedPct: pct(plans.users_reviewed, plans.users_with_plans) },
     dataQuality30Days: {
       byStatus: quality,

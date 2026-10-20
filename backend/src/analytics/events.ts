@@ -40,8 +40,18 @@ export const EVENTS = {
   import_completed: {
     source: 'server',
     description: 'Xác nhận nhập CSV thành công (không tính gửi lại cùng file)',
-    props: { rows: 'số giao dịch được nhập' },
+    props: { rows: 'số giao dịch được nhập', errors: 'số dòng lỗi bị bỏ', total: 'số dòng trong file' },
     dedupe: 'Theo đợt nhập',
+  },
+  import_rejected: {
+    source: 'server',
+    description: 'Xác nhận nhập CSV nhưng không có dòng nào nhập được (file sai cột / mọi dòng lỗi / đã nhập rồi)',
+    props: {
+      reason: 'mapping | errors | duplicates',
+      errors: 'số dòng lỗi',
+      total: 'số dòng trong file',
+    },
+    dedupe: 'Không chống trùng',
   },
   portfolio_viewed: {
     source: 'client',

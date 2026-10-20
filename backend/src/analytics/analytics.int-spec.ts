@@ -31,6 +31,12 @@ describe('đo hành vi (PostgreSQL)', () => {
   });
 
   it('báo cáo: kích hoạt, giữ chân D7/D30, lượt mở bản tin', async () => {
+    // Báo cáo tính trên toàn DB: dọn dữ liệu giả của các lần chạy trước (đều đặt ở năm 2001–2020, chỉ có trong DB test)
+    const past = { lt: new Date('2021-01-01') };
+    await prisma.analyticsEvent.deleteMany({ where: { createdAt: past } });
+    await prisma.aiUsage.deleteMany({ where: { createdAt: past } });
+    await prisma.investmentPlan.deleteMany({ where: { createdAt: past } });
+    await prisma.user.deleteMany({ where: { createdAt: past } });
     // Một tuần ngẫu nhiên trong quá khứ để không lẫn dữ liệu của lần chạy khác
     const monday = new Date(Date.UTC(2001, 0, 1) + Math.floor(Math.random() * 1000) * 7 * DAY);
     const signupAt = new Date(monday.getTime() + 3 * 3600_000); // 10h sáng thứ 2 giờ VN
@@ -114,8 +120,6 @@ describe('đo hành vi (PostgreSQL)', () => {
           createdAt: at(1),
         },
       });
-    // Chỉ số kế hoạch tính trên toàn DB: bỏ kế hoạch giả của các lần chạy trước (đều đặt ở năm 2001–2020)
-    await prisma.investmentPlan.deleteMany({ where: { createdAt: { lt: new Date('2021-01-01') } } });
     const pa = await planOf(a.id, 90);
     await planOf(b.id, 40);
     await prisma.planReview.create({ data: { planId: pa.id, decision: 'keep', createdAt: at(55) } });
@@ -162,6 +166,51 @@ describe('đo hành vi (PostgreSQL)', () => {
       reportPct: 25,
       byReason: [{ reason: 'wrong_number', reports: 1 }],
       verification: [{ status: 'issues', answers: 1 }],
+    });
+
+    // Phễu: 2 thiết bị xem trang mẫu, 1 bấm đăng ký; 3 người đăng ký, A làm khảo sát, B bỏ qua, A có giao dịch thật
+    const anon = (id: string, name: string, day: number) =>
+      prisma.analyticsEvent.create({
+        data: { anonId: id, actor: `anon:${id}`, name, sample: true, createdAt: at(day), dedupeKey: `${name}:${day}` },
+      });
+    const tag = Math.random().toString(36).slice(2);
+    await anon(`d1-${tag}`, 'demo_viewed', -1);
+    await anon(`d2-${tag}`, 'demo_viewed', -1);
+    await anon(`d1-${tag}`, 'demo_signup_clicked', -1);
+    await prisma.investorProfile.create({
+      data: {
+        userId: a.id,
+        answers: {},
+        riskScore: 50,
+        riskType: 'balanced',
+        goal: 'g',
+        horizon: 'h',
+        maxDrawdownPct: 20,
+        fomoProne: false,
+      },
+    });
+    await ev(b.id, 'onboarding_skipped', 0, 'onboarding_skipped');
+    // Nhập CSV: 1 lần thành công (8/10 dòng, 2 lỗi), 1 lần không nhập được vì mọi dòng lỗi (5 dòng)
+    await ev(a.id, 'import_completed', 50, 'import:1', { rows: 8, errors: 2, total: 10 });
+    await ev(a.id, 'import_rejected', 51, undefined, { reason: 'errors', errors: 5, total: 5 });
+
+    const withFunnel = await usageReport(prisma, { weeks: 10, now: at(62) });
+    expect(withFunnel.funnel).toMatchObject({
+      demo_viewers: 2,
+      demo_cta: 1,
+      ctaPct: 50,
+      signups: 3,
+      onboarded: 1,
+      skipped_survey: 1,
+      activated_7d: 1,
+    });
+    expect(withFunnel.importQuality30Days).toMatchObject({
+      imports: 1,
+      rows_imported: 8,
+      rows_in_files: 15,
+      error_rows: 7,
+      rejected: 1,
+      rejectedBy: [{ reason: 'errors', count: 1 }],
     });
 
     const c = (await usageReport(prisma, { weeks: 10, now: at(62) })).aiCostPerUser30Days;

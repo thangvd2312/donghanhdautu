@@ -24,6 +24,20 @@ async function main() {
     console.log(
       `Thời gian tới giá trị đầu tiên (đăng ký → xem danh mục có dữ liệu thật): ${r.timeToFirstValue.users} người, trung vị ${h(r.timeToFirstValue.median_hours)}, p90 ${h(r.timeToFirstValue.p90_hours)}`,
     );
+    const f = r.funnel;
+    console.log('Phễu người mới (trong khoảng báo cáo; 2 bước đầu là thiết bị khách ẩn danh)');
+    console.table([
+      { bước: 'Xem trang mẫu', số: f.demo_viewers, tỷ_lệ: '' },
+      { bước: 'Bấm đăng ký / đăng nhập từ trang mẫu', số: f.demo_cta, tỷ_lệ: `${f.ctaPct ?? '–'}% người xem mẫu` },
+      { bước: 'Đăng ký', số: f.signups, tỷ_lệ: '' },
+      { bước: 'Làm khảo sát', số: f.onboarded, tỷ_lệ: `${f.onboardedPct ?? '–'}% người đăng ký` },
+      { bước: 'Bỏ qua khảo sát', số: f.skipped_survey, tỷ_lệ: `${f.skippedPct ?? '–'}% người đăng ký` },
+      { bước: 'Có giao dịch thật trong 7 ngày', số: f.activated_7d, tỷ_lệ: `${f.activatedPct ?? '–'}% người đăng ký` },
+    ]);
+    const iq = r.importQuality30Days;
+    console.log(
+      `Nhập CSV 30 ngày: ${iq.imports} lần thành công, ${iq.rows_imported}/${iq.rows_in_files} dòng được nhập; ${iq.error_rows} dòng lỗi (${iq.errorRowPct ?? '–'}%); ${iq.rejected} lần không nhập được (${iq.rejectedBy.map((x) => `${x.reason} ${x.count}`).join(', ') || 'không có'})`,
+    );
     const pr = r.planReviews30Days;
     console.log(
       `Duy trì nhật ký: ${pr.users_reviewed}/${pr.users_with_plans} người có kế hoạch đã xem lại trong 30 ngày (${pr.reviewedPct ?? '–'}%); ${pr.overdue_plans} kế hoạch quá hạn xem lại > 7 ngày`,

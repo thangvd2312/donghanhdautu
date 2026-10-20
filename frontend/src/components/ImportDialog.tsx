@@ -235,8 +235,9 @@ export default function ImportDialog({
         <Stack spacing={2}>
           {!preview && (
             <Typography variant="body2" color="text.secondary">
-              Mỗi dòng một giao dịch: ngày, loại (mua / bán / nạp / rút / cổ tức / phí / số dư đầu kỳ), loại tài sản, mã, số
-              lượng, giá hoặc số tiền, phí, thuế. Ngày dạng YYYY-MM-DD hoặc DD/MM/YYYY. Excel: lưu dạng "CSV UTF-8".{' '}
+              Mỗi dòng một giao dịch: ngày, loại (mua / bán / nạp / rút / cổ tức / cổ phiếu thưởng — gồm cả cổ tức bằng cổ
+              phiếu và chia tách / phí / số dư đầu kỳ), loại tài sản, mã, số lượng, giá hoặc số tiền, phí, thuế. Cổ phiếu
+              thưởng chỉ cần mã và số cổ phiếu nhận thêm. Ngày dạng YYYY-MM-DD hoặc DD/MM/YYYY. Excel: lưu dạng "CSV UTF-8".{' '}
               <Link component="button" onClick={() => void downloadTemplate()}>
                 Tải file mẫu
               </Link>

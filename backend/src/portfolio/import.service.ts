@@ -125,8 +125,19 @@ export class ImportService {
     const done = await this.prisma.importBatch.findFirst({ where: { userId, hash, undoneAt: null } });
     if (done) return alreadyDone(done);
     const r = await this.analyze(userId, dto);
-    if (r.mappingErrors.length) throw new BadRequestException(r.mappingErrors.join(' '));
+    // Đo lỗi nhập dữ liệu (chỉ số lượng dòng, không ghi nội dung file)
+    // Chờ ghi xong trước khi báo lỗi (một lệnh insert), để số liệu không lệch với điều người dùng thấy
+    const reject = (reason: 'mapping' | 'errors' | 'duplicates') =>
+      this.analytics?.track('import_rejected', {
+        userId,
+        props: { reason, errors: r.counts.errors, total: r.counts.total },
+      });
+    if (r.mappingErrors.length) {
+      await reject('mapping');
+      throw new BadRequestException(r.mappingErrors.join(' '));
+    }
     if (!r.toImport.length) {
+      await reject(r.counts.duplicates && !r.counts.errors ? 'duplicates' : 'errors');
       throw new BadRequestException(
         r.counts.duplicates && !r.counts.errors
           ? 'Mọi dòng trong file đều giống giao dịch đã có trong sổ — có thể file này đã được nhập rồi.'
@@ -140,9 +151,9 @@ export class ImportService {
     );
     if (res.alreadyImported) return alreadyDone(res.batch);
     this.transactions.firstRealAsset(userId, 'csv');
-    void this.analytics?.track('import_completed', {
+    await this.analytics?.track('import_completed', {
       userId,
-      props: { rows: r.toImport.length },
+      props: { rows: r.toImport.length, errors: r.counts.errors, total: r.counts.total },
       dedupeKey: `import:${res.batch.id}`,
     });
     return {

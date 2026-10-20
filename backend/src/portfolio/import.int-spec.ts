@@ -1,3 +1,4 @@
+import { AnalyticsService } from '../analytics/analytics.service';
 import type { MarketService } from '../market/market.service';
 import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
 import { ImportService } from './import.service';
@@ -65,5 +66,19 @@ describe('nhập CSV (PostgreSQL)', () => {
     expect(p.counts).toMatchObject({ toImport: 1, errors: 0 });
     expect(await prisma.portfolio.count({ where: { userId: u.id } })).toBe(0);
     expect(await prisma.transaction.count({ where: { userId: u.id } })).toBe(0);
+  });
+
+  it('đo lỗi nhập: lần nhập thành công ghi số dòng lỗi; không dòng nào hợp lệ thì ghi lần bị từ chối', async () => {
+    const tracked = new ImportService(transactions, market, prisma, new AnalyticsService(prisma));
+    const u = await testUser(prisma, 'import-metrics');
+    await tracked.commit(u.id, { csv: 'date,type,amount\n2026-10-01,deposit,1000000\nkhong-phai-ngay,deposit,5\n' });
+    await expect(tracked.commit(u.id, { csv: 'date,type,amount\nsai,deposit,1\n' })).rejects.toThrow();
+    const events = await prisma.analyticsEvent.findMany({ where: { userId: u.id }, orderBy: { createdAt: 'asc' } });
+    expect(events.map((e) => [e.name, e.props])).toEqual(
+      expect.arrayContaining([
+        ['import_completed', { rows: 1, errors: 1, total: 2 }],
+        ['import_rejected', { reason: 'errors', errors: 1, total: 1 }],
+      ]),
+    );
   });
 });
