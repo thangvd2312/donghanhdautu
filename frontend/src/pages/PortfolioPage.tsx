@@ -24,6 +24,7 @@ import { NotificationSettingsPanel, PriceAlertsPanel } from '../components/Alert
 import AllocationBar from '../components/AllocationBar'
 import { DataQualityAlert, PriceStatusChip } from '../components/DataStatus'
 import HoldingForm from '../components/HoldingForm'
+import HistoryPanel from '../components/HistoryPanel'
 import LedgerPanel from '../components/LedgerPanel'
 import TransactionDialog, { type TxPreset } from '../components/TransactionDialog'
 import { KV, Panel, Stat } from '../components/ui'
@@ -44,6 +45,8 @@ export default function PortfolioPage() {
   const [txs, setTxs] = useState<Transaction[] | null>(null)
   const [declaring, setDeclaring] = useState(false)
   const [preset, setPreset] = useState<TxPreset | null>(null)
+  /** Đổi mỗi khi sổ thay đổi để biểu đồ lịch sử tải lại */
+  const [version, setVersion] = useState(0)
   const [threshold, setThreshold] = useState(String(me?.profile?.alertThresholdPct ?? 3))
   const [saved, setSaved] = useState(false)
 
@@ -61,6 +64,7 @@ export default function PortfolioPage() {
   const changed = () => {
     void load()
     void loadTxs()
+    setVersion((v) => v + 1)
   }
   useEffect(() => {
     void load()
@@ -216,6 +220,8 @@ export default function PortfolioPage() {
           </Panel>
         </Grid>
       </Grid>
+
+      <HistoryPanel refreshKey={version} />
 
       <Panel
         title="Tài sản đang nắm giữ"

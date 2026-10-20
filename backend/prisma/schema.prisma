@@ -26,6 +26,7 @@ model User {
   feedback      AnswerFeedback[]
   transactions  Transaction[]
   plans         InvestmentPlan[]
+  importBatches ImportBatch[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -261,14 +262,17 @@ model Transaction {
   /// Số VND cho 1 USDT lúc giao dịch, nếu người dùng nhập
   fxRate    Decimal?  @db.Decimal(30, 10)
   note      String?
-  /// manual | migration
+  /// manual | migration | csv
   source    String    @default("manual")
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   revisions TransactionRevision[]
 
   @@index([userId, date])
+  @@index([importBatchId])
 }
 
 model TransactionRevision {
@@ -344,4 +348,35 @@ model PlanReview {
   createdAt      DateTime       @default(now())
 
   @@index([planId])
+}
+
+/// Một lần nhập giao dịch từ file CSV. Cùng nội dung (hash) chỉ nhập một lần; hoàn tác = huỷ mọi giao dịch của đợt
+model ImportBatch {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Băm nội dung các dòng sẽ nhập (đã chuẩn hoá) để bấm lại / gửi lại không tạo trùng
+  hash          String
+  fileName      String?
+  rowCount      Int
+  importedCount Int
+  undoneAt      DateTime?
+  createdAt     DateTime      @default(now())
+  transactions  Transaction[]
+
+  @@index([userId, hash])
+}
+
+/// Giá đóng cửa theo ngày (lịch VN) để dựng lịch sử tài sản. fx/USDTVND: tỷ giá USDT
+model PriceDaily {
+  /// stock | crypto | gold | fx
+  assetType String
+  symbol    String
+  date      DateTime @db.Date
+  /// VND/cp, USDT/coin, VND/lượng (giá mua vào), VND/USDT
+  close     Float
+  source    String
+  createdAt DateTime @default(now())
+
+  @@id([assetType, symbol, date])
 }

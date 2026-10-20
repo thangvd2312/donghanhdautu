@@ -23,6 +23,7 @@ import { api, del } from '../lib/api'
 import { fmtNum } from '../lib/format'
 import { TX_LABEL } from '../lib/tx'
 import type { Transaction, TransactionRevision } from '../lib/types'
+import ImportDialog from './ImportDialog'
 import TransactionDialog from './TransactionDialog'
 import { Panel } from './ui'
 
@@ -52,6 +53,7 @@ function describe(t: Transaction) {
 /** Sổ giao dịch: mọi thay đổi số dư đều đi qua đây; sửa / huỷ được lưu lịch sử */
 export default function LedgerPanel({ txs, onChanged }: { txs: Transaction[] | null; onChanged: () => void }) {
   const [adding, setAdding] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [removing, setRemoving] = useState<Transaction | null>(null)
   const [history, setHistory] = useState<{ tx: Transaction; rows: TransactionRevision[] } | null>(null)
@@ -80,9 +82,14 @@ export default function LedgerPanel({ txs, onChanged }: { txs: Transaction[] | n
       subtitle="Mua, bán, nạp, rút, cổ tức, phí — số dư và lãi/lỗ được tính từ đây"
       noPadding
       action={
-        <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
-          Thêm giao dịch
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button size="small" onClick={() => setImporting(true)}>
+            Nhập từ CSV
+          </Button>
+          <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
+            Thêm giao dịch
+          </Button>
+        </Stack>
       }
     >
       {txs && txs.length > 0 ? (
@@ -155,11 +162,12 @@ export default function LedgerPanel({ txs, onChanged }: { txs: Transaction[] | n
         </TableContainer>
       ) : (
         <Typography color="text.secondary" sx={{ p: 3 }}>
-          {txs ? 'Chưa có giao dịch nào. Ghi lần mua/bán đầu tiên, hoặc khai báo tài sản bạn đang có.' : 'Đang tải…'}
+          {txs ? 'Chưa có giao dịch nào. Ghi lần mua/bán đầu tiên, nhập từ file CSV, hoặc khai báo tài sản bạn đang có.' : 'Đang tải…'}
         </Typography>
       )}
 
       <TransactionDialog open={adding} onClose={() => setAdding(false)} onSaved={onChanged} />
+      <ImportDialog open={importing} onClose={() => setImporting(false)} onImported={onChanged} />
       <TransactionDialog open={!!editing} editing={editing} onClose={() => setEditing(null)} onSaved={onChanged} />
 
       <Dialog open={!!removing} onClose={() => setRemoving(null)}>

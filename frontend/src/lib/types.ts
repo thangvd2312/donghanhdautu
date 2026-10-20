@@ -545,3 +545,33 @@ export interface PlanDraft {
   stopPrice: number | null
   caveat: string
 }
+
+export interface HistoryPoint {
+  date: string
+  value: number
+  netContributions: number
+  profit: number
+  preTrackingGain: number
+  status: 'complete' | 'estimated' | 'partial'
+  missing: string[]
+}
+
+export interface PeriodResult {
+  start: string
+  end: string
+  startValue: number
+  endValue: number
+  netFlows: number
+  profit: number
+  returnPct: number | null
+  method: string
+  isEstimate: boolean
+  notes: string[]
+}
+
+export interface PortfolioHistory {
+  range: string
+  points: HistoryPoint[]
+  period: PeriodResult | null
+  notes: string[]
+}

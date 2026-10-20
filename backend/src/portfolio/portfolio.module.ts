@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Injectable, Module, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Injectable, Module, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
@@ -7,6 +7,9 @@ import { MarketService } from '../market/market.service';
 import type { AssetType } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
+import { TEMPLATE_CSV } from './csv-import';
+import { HistoryService } from './history.service';
+import { ImportDto, ImportService } from './import.service';
 import { performance } from './ledger';
 import { TransactionDto, TransactionsService } from './transactions';
 import { valuePortfolio } from './valuation';
@@ -90,12 +93,20 @@ class PortfolioController {
   constructor(
     private portfolio: PortfolioService,
     private transactions: TransactionsService,
+    private imports: ImportService,
+    private historyService: HistoryService,
     private market: MarketService,
   ) {}
 
   @Get()
   get(@CurrentUser() user: AuthUser) {
     return this.portfolio.valuation(user.id);
+  }
+
+  /** Tổng tài sản và vốn đưa vào theo ngày + hiệu quả trong kỳ. range: 1m | 3m | 6m | 1y | all */
+  @Get('history')
+  history(@CurrentUser() user: AuthUser, @Query('range') range = '3m') {
+    return this.historyService.history(user.id, range);
   }
 
   @Get('performance')
@@ -137,6 +148,35 @@ class PortfolioController {
     return this.transactions.remove(user.id, id);
   }
 
+  /** File CSV mẫu để nhập giao dịch */
+  @Get('import/template')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="mau-giao-dich.csv"')
+  importTemplate() {
+    return `\uFEFF${TEMPLATE_CSV}`;
+  }
+
+  /** Xem trước file CSV: không ghi gì vào sổ */
+  @Post('import/preview')
+  importPreview(@CurrentUser() user: AuthUser, @Body() dto: ImportDto) {
+    return this.imports.preview(user.id, dto);
+  }
+
+  @Post('import/commit')
+  importCommit(@CurrentUser() user: AuthUser, @Body() dto: ImportDto) {
+    return this.imports.commit(user.id, dto);
+  }
+
+  @Get('import/batches')
+  importBatches(@CurrentUser() user: AuthUser) {
+    return this.transactions.importBatches(user.id);
+  }
+
+  @Post('import/batches/:id/undo')
+  undoImport(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.transactions.undoImport(user.id, id);
+  }
+
   @Get('transactions/:id/revisions')
   revisions(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.transactions.revisions(user.id, id);
@@ -146,7 +186,7 @@ class PortfolioController {
 @Module({
   imports: [MarketModule],
   controllers: [PortfolioController],
-  providers: [PortfolioService, TransactionsService],
+  providers: [PortfolioService, TransactionsService, ImportService, HistoryService],
   exports: [PortfolioService, TransactionsService],
 })
 export class PortfolioModule {}

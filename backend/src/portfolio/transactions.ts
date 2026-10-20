@@ -24,11 +24,12 @@ export class TransactionDto {
   @IsOptional() @IsString() @MaxLength(500) note?: string;
 }
 
-const NEEDS_ASSET: TxType[] = ['opening', 'buy', 'sell'];
 const CASH_ONLY: TxType[] = ['deposit', 'withdraw', 'fee'];
 
 const dec = (v: number | undefined | null) => (v === undefined || v === null ? null : new Prisma.Decimal(String(v)));
 const dateKey = (d: Date) => d.toISOString().slice(0, 10);
+
+export type NormalizedTx = Awaited<ReturnType<TransactionsService['normalize']>>;
 
 export function toLedgerTx(t: Transaction): LedgerTx {
   return {
@@ -157,7 +158,7 @@ export class TransactionsService {
     const data = await this.normalize(dto);
     return this.write(userId, async (db, txs) => {
       const row = await db.transaction.create({ data: { ...data, userId } });
-      return { row, txs: [...txs, row] };
+      return { result: this.present(row, 0), txs: [...txs, row] };
     });
   }
 
@@ -168,7 +169,7 @@ export class TransactionsService {
       if (!before) throw new NotFoundException('Không tìm thấy giao dịch');
       await db.transactionRevision.create({ data: { transactionId: id, action: 'update', before: snapshot(before) } });
       const row = await db.transaction.update({ where: { id }, data });
-      return { row, txs: txs.map((t) => (t.id === id ? row : t)) };
+      return { result: this.present(row, 1), txs: txs.map((t) => (t.id === id ? row : t)) };
     });
   }
 
@@ -178,8 +179,56 @@ export class TransactionsService {
       if (!before) throw new NotFoundException('Không tìm thấy giao dịch');
       await db.transactionRevision.create({ data: { transactionId: id, action: 'delete', before: snapshot(before) } });
       const row = await db.transaction.update({ where: { id }, data: { deletedAt: new Date() } });
-      return { row, txs: txs.filter((t) => t.id !== id) };
+      return { result: this.present(row, 1), txs: txs.filter((t) => t.id !== id) };
     });
+  }
+
+  /**
+   * Ghi một đợt nhập CSV. Cùng nội dung (hash) đã nhập và chưa hoàn tác thì trả lại đợt cũ,
+   * không tạo thêm giao dịch — bấm lại / gửi lại an toàn.
+   */
+  commitImport(userId: string, rows: NormalizedTx[], meta: { hash: string; fileName: string | null; rowCount: number }) {
+    return this.write(userId, async (db, txs) => {
+      const existing = await db.importBatch.findFirst({ where: { userId, hash: meta.hash, undoneAt: null } });
+      if (existing) return { result: { batch: existing, alreadyImported: true }, txs };
+      const batch = await db.importBatch.create({
+        data: { userId, hash: meta.hash, fileName: meta.fileName, rowCount: meta.rowCount, importedCount: rows.length },
+      });
+      const base = Date.now();
+      // createdAt tăng dần theo thứ tự dòng để giao dịch cùng ngày giữ đúng thứ tự trong file
+      await db.transaction.createMany({
+        data: rows.map((r, i) => ({ ...r, userId, source: 'csv', importBatchId: batch.id, createdAt: new Date(base + i) })),
+      });
+      const created = await db.transaction.findMany({ where: { importBatchId: batch.id } });
+      return { result: { batch, alreadyImported: false }, txs: [...txs, ...created] };
+    });
+  }
+
+  /** Hoàn tác một đợt nhập: huỷ mọi giao dịch của đợt (có lưu lịch sử), chặn nếu làm sổ sai */
+  undoImport(userId: string, batchId: string) {
+    return this.write(userId, async (db, txs) => {
+      const batch = await db.importBatch.findFirst({ where: { id: batchId, userId } });
+      if (!batch) throw new NotFoundException('Không tìm thấy đợt nhập');
+      if (batch.undoneAt) throw new BadRequestException('Đợt nhập này đã được hoàn tác');
+      const inBatch = txs.filter((t) => t.importBatchId === batchId);
+      const now = new Date();
+      for (const t of inBatch) {
+        await db.transactionRevision.create({ data: { transactionId: t.id, action: 'delete', before: snapshot(t) } });
+      }
+      await db.transaction.updateMany({ where: { id: { in: inBatch.map((t) => t.id) } }, data: { deletedAt: now } });
+      const undone = await db.importBatch.update({ where: { id: batchId }, data: { undoneAt: now } });
+      return { result: { batch: undone, removed: inBatch.length }, txs: txs.filter((t) => t.importBatchId !== batchId) };
+    });
+  }
+
+  async importBatches(userId: string) {
+    return this.prisma.importBatch.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 });
+  }
+
+  /** Giao dịch hiện có (chưa huỷ) để so trùng khi nhập */
+  async activeTransactions(userId: string) {
+    await this.ensureMigrated(this.prisma, userId);
+    return this.prisma.transaction.findMany({ where: { userId, deletedAt: null } });
   }
 
   /** Sổ hiện tại của người dùng (đã chuyển đổi dữ liệu cũ nếu cần) */
@@ -193,16 +242,16 @@ export class TransactionsService {
    * Chạy một thay đổi trong transaction DB có khoá theo người dùng; kiểm tra toàn bộ sổ sau thay đổi
    * (sổ sai thì huỷ cả thay đổi), rồi tính lại bảng Holding.
    */
-  private async write(
+  private async write<T>(
     userId: string,
-    change: (db: Prisma.TransactionClient, txs: Transaction[]) => Promise<{ row: Transaction; txs: Transaction[] }>,
-  ) {
+    change: (db: Prisma.TransactionClient, txs: Transaction[]) => Promise<{ result: T; txs: Transaction[] }>,
+  ): Promise<T> {
     return this.prisma.$transaction(
       async (db) => {
         await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
         await this.ensureMigrated(db, userId);
         const current = await db.transaction.findMany({ where: { userId, deletedAt: null } });
-        const { row, txs } = await change(db, current);
+        const { result, txs } = await change(db, current);
         let ledger: LedgerResult;
         try {
           ledger = computeLedger(txs.map(toLedgerTx));
@@ -211,7 +260,7 @@ export class TransactionsService {
           throw e;
         }
         await this.syncHoldings(db, userId, ledger);
-        return this.present(row, 0);
+        return result;
       },
       { timeout: 20_000 },
     );
