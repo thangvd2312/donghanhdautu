@@ -23,6 +23,7 @@ class SettingsDto {
   @IsOptional() @IsNumber() @Min(1) @Max(20) alertThresholdPct?: number;
   @IsOptional() @IsBoolean() morningBrief?: boolean;
   @IsOptional() @IsBoolean() closingBrief?: boolean;
+  @IsOptional() @IsBoolean() weeklyBrief?: boolean;
   @IsOptional() @IsBoolean() macroAlerts?: boolean;
 }
 

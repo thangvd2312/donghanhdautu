@@ -187,6 +187,6 @@ class PortfolioController {
   imports: [MarketModule],
   controllers: [PortfolioController],
   providers: [PortfolioService, TransactionsService, ImportService, HistoryService],
-  exports: [PortfolioService, TransactionsService],
+  exports: [PortfolioService, TransactionsService, HistoryService],
 })
 export class PortfolioModule {}

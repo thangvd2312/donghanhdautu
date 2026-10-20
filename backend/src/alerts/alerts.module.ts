@@ -33,6 +33,7 @@ import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
 import { NotifierService } from './notifier.service';
 import type { NotificationInput } from './notifier.service';
+import { WeeklyBriefService } from './weekly.service';
 
 interface AlertDraft {
   title: string;
@@ -387,6 +388,7 @@ class AlertsController {
     private market: MarketService,
     private alerts: AlertsService,
     private briefs: BriefsService,
+    private weekly: WeeklyBriefService,
   ) {}
 
   @Get('price')
@@ -428,7 +430,12 @@ class AlertsController {
   /** Gửi thử bản tin ngay cho chính mình */
   @Post('brief/:kind')
   async briefNow(@CurrentUser() user: AuthUser, @Param('kind') kind: string) {
-    if (kind !== 'morning' && kind !== 'closing') throw new BadRequestException('kind phải là morning hoặc closing');
+    if (kind === 'weekly') {
+      const w = await this.weekly.generate(user.id, true);
+      if (!w) throw new BadRequestException('Chưa có giao dịch nào trong sổ để tổng kết tuần');
+      return w;
+    }
+    if (kind !== 'morning' && kind !== 'closing') throw new BadRequestException('kind phải là morning, closing hoặc weekly');
     const n = await this.briefs.generate(user.id, kind as BriefKind, true);
     if (!n) throw new BadRequestException('Không tạo được bản tin');
     return n;
@@ -469,7 +476,7 @@ class NotificationsController {
 @Module({
   imports: [MarketModule, NewsModule, PortfolioModule, MacroModule],
   controllers: [NotificationsController, AlertsController],
-  providers: [AlertsService, BriefsService, LlmService, NewsTaggerService, NotifierService],
+  providers: [AlertsService, BriefsService, WeeklyBriefService, LlmService, NewsTaggerService, NotifierService],
   exports: [LlmService, NotifierService],
 })
 export class AlertsModule {}

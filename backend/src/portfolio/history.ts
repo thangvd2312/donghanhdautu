@@ -183,3 +183,53 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
     notes,
   };
 }
+
+/** Giá trị từng tài sản (và tiền mặt) theo sổ tại cuối một ngày; thiếu giá thì tính theo giá vốn */
+export function assetBreakdown(
+  ledger: LedgerResult,
+  date: string,
+  price: HistoryInput['price'],
+  usdt: HistoryInput['usdt'],
+  displayName: HistoryInput['displayName'],
+) {
+  const fx = usdt(date).rate;
+  const out: {
+    key: string;
+    assetType: string;
+    symbol: string;
+    name: string;
+    currency: 'VND' | 'USDT';
+    quantity: number;
+    value: number;
+    priced: boolean;
+  }[] = [];
+  for (const p of ledger.positions) {
+    if (!p.quantity.gt(0)) continue;
+    const px = price(p.assetType, p.symbol, date).value;
+    const toVnd = p.currency === 'USDT' ? fx : 1;
+    out.push({
+      key: `${p.assetType}:${p.symbol}`,
+      assetType: p.assetType,
+      symbol: p.symbol,
+      name: displayName(p.assetType, p.symbol),
+      currency: p.currency,
+      quantity: p.quantity.toNumber(),
+      value: (px === null ? p.costBasis.toNumber() : p.quantity.toNumber() * px) * toVnd,
+      priced: px !== null,
+    });
+  }
+  for (const cur of ['VND', 'USDT'] as const) {
+    if (!ledger.cash[cur].gt(0)) continue;
+    out.push({
+      key: `cash:${cur}`,
+      assetType: 'cash',
+      symbol: cur,
+      name: cur === 'VND' ? 'Tiền mặt' : 'USDT',
+      currency: cur,
+      quantity: ledger.cash[cur].toNumber(),
+      value: ledger.cash[cur].toNumber() * (cur === 'USDT' ? fx : 1),
+      priced: true,
+    });
+  }
+  return out;
+}

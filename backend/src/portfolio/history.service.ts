@@ -5,7 +5,8 @@ import type { AssetType } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { addDays, daysBetween } from '../plans/plan-rules';
 import { PrismaService } from '../prisma/prisma.module';
-import { buildHistory, DayPrice, periodPerformance } from './history';
+import { assetBreakdown, buildHistory, DayPrice, periodPerformance } from './history';
+import { computeLedger } from './ledger';
 import { toLedgerTx, TransactionsService } from './transactions';
 
 export const RANGES = { '1m': 30, '3m': 90, '6m': 180, '1y': 365, all: 1100 } as const;
@@ -39,11 +40,71 @@ export class HistoryService implements OnApplicationBootstrap {
 
   async history(userId: string, range: string) {
     if (!(range in RANGES)) throw new BadRequestException('Khoảng thời gian không hợp lệ');
+    const r = await this.compute(userId, (firstTx, today) => (range === 'all' ? firstTx : addDays(today, -RANGES[range as Range])));
+    if (!r) return { range, points: [], period: null, notes: [] };
+    return { range, points: r.points, period: r.period, notes: r.notes };
+  }
+
+  /**
+   * Số liệu một tuần (7 ngày tới hôm nay) cho bản tổng kết: hiệu quả trong kỳ, giá trị và tỷ trọng từng tài sản
+   * đầu / cuối tuần, tài sản có giao dịch trong tuần. Mọi con số tính ở đây; AI chỉ diễn giải.
+   */
+  async weekSummary(userId: string) {
+    const r = await this.compute(userId, (_first, today) => addDays(today, -7));
+    if (!r || !r.points.length) return null;
+    const end = r.today;
+    const start = r.points[0].date > r.from ? null : r.from;
+    const ledgerAt = (d: string) => computeLedger(r.txs.filter((t) => t.date <= d));
+    const name = (t: string, sym: string) => this.displayName(t, sym);
+    const after = assetBreakdown(ledgerAt(end), end, r.price, r.usdt, name);
+    const before = start ? assetBreakdown(ledgerAt(start), start, r.price, r.usdt, name) : [];
+    const traded = new Set(r.txs.filter((t) => t.date > (start ?? '') && t.symbol).map((t) => `${t.assetType}:${t.symbol}`));
+    const keys = [...new Set([...before, ...after].map((a) => a.key))];
+    const assets = keys.map((k) => {
+      const b = before.find((a) => a.key === k);
+      const a = after.find((x) => x.key === k);
+      const ref = (a ?? b)!;
+      const pStart = start && ref.assetType !== 'cash' ? r.price(ref.assetType, ref.symbol, start).value : null;
+      const pEnd = ref.assetType !== 'cash' ? r.price(ref.assetType, ref.symbol, end).value : null;
+      return {
+        name: ref.name,
+        assetType: ref.assetType,
+        valueStart: b?.value ?? 0,
+        valueEnd: a?.value ?? 0,
+        /** % đổi giá trong tuần (theo giá, không tính mua/bán) */
+        priceChangePct: pStart && pEnd ? ((pEnd - pStart) / pStart) * 100 : null,
+        /** Ảnh hưởng của biến động giá lên số đang giữ đầu tuần (VND) */
+        priceEffect: b && pStart && pEnd ? b.quantity * (pEnd - pStart) * (ref.currency === 'USDT' ? r.usdt(end).rate : 1) : null,
+        tradedThisWeek: traded.has(k),
+        priced: (a?.priced ?? true) && (b?.priced ?? true),
+      };
+    });
+    const totalStart = before.reduce((s, a) => s + a.value, 0);
+    const totalEnd = after.reduce((s, a) => s + a.value, 0);
+    const byType = (list: typeof after, total: number) => {
+      const m: Record<string, number> = {};
+      for (const a of list) m[a.assetType] = (m[a.assetType] ?? 0) + (total ? (a.value / total) * 100 : 0);
+      return m;
+    };
+    return {
+      from: start ?? r.points[0].date,
+      to: end,
+      period: r.period,
+      endPoint: r.points[r.points.length - 1],
+      assets,
+      allocationStart: start ? byType(before, totalStart) : null,
+      allocationEnd: byType(after, totalEnd),
+      notes: r.notes,
+    };
+  }
+
+  /** Dựng lịch sử từ ngày `fromOf(ngày giao dịch đầu, hôm nay)` tới hôm nay */
+  private async compute(userId: string, fromOf: (firstTx: string, today: string) => string) {
     const txs = (await this.transactions.activeTransactions(userId)).map(toLedgerTx);
     const today = vnDateKey();
-    if (!txs.length) return { range, points: [], period: null, notes: [] };
+    if (!txs.length) return null;
     const firstTx = txs.reduce((m, t) => (t.date < m ? t.date : m), txs[0].date);
-    const from = range === 'all' ? firstTx : addDays(today, -RANGES[range as Range]);
+    const from = fromOf(firstTx, today);
     const loadFrom = from > firstTx ? from : firstTx;
     const days = daysBetween(loadFrom, today) + 1;
 
@@ -108,7 +169,7 @@ export class HistoryService implements OnApplicationBootstrap {
     if (assets.some((a) => a.assetType === 'crypto')) {
       notes.push('Coin: giá đóng cửa ngày theo giờ UTC của Binance.');
     }
-    return { range, points, period, notes };
+    return { txs, from, today, points, period, notes, price, usdt };
   }
 
   private async loadSeries(assetType: string, symbol: string, from: string, days: number): Promise<Series> {

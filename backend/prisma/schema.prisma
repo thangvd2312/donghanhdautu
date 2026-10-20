@@ -54,6 +54,8 @@ model InvestorProfile {
   morningBrief      Boolean @default(true)
   /// Tổng kết cuối phiên 15:10 (thứ 2–6)
   closingBrief      Boolean @default(true)
+  /// Tổng kết tuần, sáng thứ 7
+  weeklyBrief       Boolean @default(true)
   /// Cảnh báo tin vĩ mô quan trọng, biến động tỷ giá
   macroAlerts       Boolean @default(true)
   updatedAt       DateTime @updatedAt

@@ -170,6 +170,7 @@ export interface InvestorProfile {
   alertThresholdPct: number
   morningBrief: boolean
   closingBrief: boolean
+  weeklyBrief: boolean
   macroAlerts: boolean
 }
 
