@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import AllocationBar from '../components/AllocationBar'
 import Flash from '../components/Flash'
+import WatchlistPanel from '../components/WatchlistPanel'
 import { Stat } from '../components/ui'
 import { api } from '../lib/api'
 import {
@@ -124,6 +125,8 @@ export default function DashboardPage() {
       </Grid>
 
       <PortfolioStrip />
+
+      <WatchlistPanel />
 
       <Paper>
         <Stack

@@ -336,3 +336,21 @@ export const RISK_LABEL: Record<string, string> = {
   growth: 'Tăng trưởng',
   aggressive: 'Mạo hiểm',
 }
+
+export interface WatchItem {
+  id: string
+  assetType: 'stock' | 'crypto' | 'gold'
+  symbol: string
+  displayName: string
+  priceVnd: number | null
+  /** Coin: USDT; còn lại: VND */
+  priceNative: number | null
+  currency: 'VND' | 'USDT'
+  dayChangePct: number | null
+  price: PriceMeta
+  /** Trang chi tiết trong app; null với vàng */
+  link: string | null
+  /** Đang có trong danh mục */
+  held: boolean
+  createdAt: string
+}

@@ -10,6 +10,7 @@ import { NewsModule } from './news/news.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
+import { WatchlistModule } from './watchlist/watchlist.module';
 
 @Controller('health')
 class HealthController {
@@ -30,6 +31,7 @@ class HealthController {
     NewsModule,
     ProfileModule,
     PortfolioModule,
+    WatchlistModule,
     AdvisorModule,
     AlertsModule,
   ],

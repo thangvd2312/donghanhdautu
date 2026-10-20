@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import PriceAlertDialog from '../components/PriceAlertDialog'
+import WatchButton from '../components/WatchButton'
 import PriceChart from '../components/PriceChart'
 import TechnicalsPanel from '../components/TechnicalsPanel'
 import { Panel } from '../components/ui'
@@ -55,7 +56,7 @@ export default function CryptoPage() {
               <Typography variant="h4">{base}</Typography>
               <Chip size="small" label={`${base}/USDT · Binance`} />
             </Stack>
-            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
             <Button
               variant="contained"
               component={RouterLink}
@@ -66,6 +67,7 @@ export default function CryptoPage() {
             <Button variant="outlined" color="inherit" startIcon={<NotificationsActiveOutlined />} onClick={() => setAlertOpen(true)}>
               Đặt cảnh báo giá
             </Button>
+            <WatchButton assetType="crypto" symbol={`${base}USDT`} />
             </Stack>
           </Box>
           {q && (
