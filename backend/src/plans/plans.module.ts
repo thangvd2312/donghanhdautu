@@ -26,6 +26,7 @@ import { MarketModule } from '../market/market.module';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { addDays, DEFAULT_REVIEW_DAYS, displaySymbol, distancePct, planSignals } from './plan-rules';
@@ -109,6 +110,7 @@ export class PlansService {
     private portfolio: PortfolioService,
     private llm: LlmService,
     private notifier: NotifierService,
+    private analytics: AnalyticsService,
   ) {}
 
   /** Giá hiện tại theo đơn vị của kế hoạch: VND/cp, USDT/coin, VND/lượng (giá mua vào) */
@@ -236,6 +238,7 @@ export class PlansService {
     const plan = await this.prisma.investmentPlan.create({
       data: { userId, assetType: dto.assetType, symbol, ...this.fields(dto, vnDateKey()) },
     });
+    void this.analytics.track('plan_created', { userId });
     return this.present(plan);
   }
 
@@ -262,7 +265,7 @@ export class PlansService {
     const next = dto.nextReviewAt ?? addDays(today, plan.reviewEveryDays ?? DEFAULT_REVIEW_DAYS);
     if (dto.decision !== 'close' && next <= today)
       throw new BadRequestException('Ngày xem lại tiếp theo phải sau hôm nay');
-    return this.prisma.$transaction(async (db) => {
+    const saved = await this.prisma.$transaction(async (db) => {
       const review = await db.planReview.create({
         data: {
           planId: id,
@@ -281,6 +284,8 @@ export class PlansService {
       });
       return review;
     });
+    void this.analytics.track('plan_reviewed', { userId, props: { decision: dto.decision } });
+    return saved;
   }
 
   /** AI viết nháp kế hoạch từ hồ sơ, vị thế đang có và dữ liệu thị trường; không lưu gì */

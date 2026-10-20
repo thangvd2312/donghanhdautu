@@ -18,6 +18,7 @@ import { Logo } from '../components/ui'
 import { api, put } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
 import { safeNext, skipOnboarding } from '../lib/nav'
+import { track } from '../lib/track'
 import { fmtVndShort } from '../lib/format'
 import { RISK_LABEL, type InvestorProfile, type Portfolio, type QuizQuestion } from '../lib/types'
 
@@ -77,6 +78,7 @@ export default function OnboardingPage() {
   /** Chưa muốn làm khảo sát: vào app luôn; cố vấn sẽ nói rõ là chưa biết khẩu vị rủi ro của bạn */
   const later = () => {
     skipOnboarding()
+    track('onboarding_skipped')
     nav(next, { replace: true })
   }
 

@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Holding, Prisma, Transaction } from '@prisma/client';
 import { IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
@@ -63,6 +64,7 @@ export class TransactionsService {
   constructor(
     private prisma: PrismaService,
     private market: MarketService,
+    @Optional() private analytics?: AnalyticsService,
   ) {}
 
   /** Chuẩn hoá đầu vào theo loại giao dịch; mã tài sản được kiểm tra với nguồn giá */
@@ -179,11 +181,13 @@ export class TransactionsService {
   async create(userId: string, dto: TransactionDto) {
     // Kiểm tra mã với nguồn giá trước, ngoài transaction DB
     const data = await this.normalize(dto);
-    return this.write(userId, async (db, txs) => {
+    const result = await this.write(userId, async (db, txs) => {
       const portfolioId = await this.resolvePortfolio(db, userId, dto.portfolioId);
       const row = await db.transaction.create({ data: { ...data, userId, portfolioId } });
       return { result: this.present(row, 0), txs: [...txs, row] };
     });
+    this.firstRealAsset(userId, 'manual');
+    return result;
   }
 
   async update(userId: string, id: string, dto: TransactionDto) {
@@ -248,6 +252,15 @@ export class TransactionsService {
       });
       const created = await db.transaction.findMany({ where: { importBatchId: batch.id } });
       return { result: { batch, alreadyImported: false }, txs: [...txs, ...created] };
+    });
+  }
+
+  /** Đo kích hoạt: giao dịch thật đầu tiên (chống trùng theo người dùng nên gọi mỗi lần ghi cũng được) */
+  firstRealAsset(userId: string, via: 'manual' | 'csv') {
+    void this.analytics?.track('first_real_asset_added', {
+      userId,
+      props: { via },
+      dedupeKey: 'first_real_asset_added',
     });
   }
 

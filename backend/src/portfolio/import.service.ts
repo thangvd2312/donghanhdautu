@@ -1,7 +1,8 @@
-import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { IsArray, IsIn, IsInt, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService } from '../market/market.service';
 import { autoMapping, dupKey, FIELD_LABEL, FIELDS, MAX_BYTES, MAX_ROWS, parseCsv, rowToDto } from './csv-import';
 import type { Field, Mapping } from './csv-import';
@@ -100,6 +101,7 @@ export class ImportService {
     private transactions: TransactionsService,
     private market: MarketService,
     private prisma: PrismaService,
+    @Optional() private analytics?: AnalyticsService,
   ) {}
 
   async preview(userId: string, dto: ImportDto) {
@@ -137,6 +139,12 @@ export class ImportService {
       { hash, fileName: dto.fileName ?? null, rowCount: r.rows.length, portfolioId: r.portfolioId },
     );
     if (res.alreadyImported) return alreadyDone(res.batch);
+    this.transactions.firstRealAsset(userId, 'csv');
+    void this.analytics?.track('import_completed', {
+      userId,
+      props: { rows: r.toImport.length },
+      dedupeKey: `import:${res.batch.id}`,
+    });
     return {
       batchId: res.batch.id,
       alreadyImported: false,

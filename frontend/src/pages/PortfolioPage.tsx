@@ -35,6 +35,7 @@ import { useIsMobile } from '../lib/useIsMobile'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../lib/format'
 import { type HoldingRow, type Performance, type Portfolio, type PortfolioAccount, type Transaction } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
+import { track } from '../lib/track'
 
 type TxAsset = NonNullable<TxPreset['assetType']>
 
@@ -81,6 +82,7 @@ export default function PortfolioPage() {
   useEffect(() => {
     void loadAccounts()
   }, [loadAccounts])
+  useEffect(() => track('portfolio_viewed'), [])
   useEffect(() => {
     void load()
     void loadTxs()

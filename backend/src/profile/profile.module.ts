@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, Module, Patch, Put, UseGuar
 import { IsBoolean, IsNumber, IsObject, IsOptional, Max, Min } from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { QUIZ, scoreQuiz } from './quiz';
 import type { QuizAnswers } from './quiz';
@@ -21,7 +22,10 @@ class SettingsDto {
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 class ProfileController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private analytics: AnalyticsService,
+  ) {}
 
   @Get('quiz')
   quiz() {
@@ -40,11 +44,14 @@ class ProfileController {
       throw new BadRequestException((e as Error).message);
     }
     const data = { ...result, answers: dto.answers };
-    return this.prisma.investorProfile.upsert({
+    const saved = await this.prisma.investorProfile.upsert({
       where: { userId: user.id },
       create: { userId: user.id, ...data },
       update: data,
     });
+    // Lần đầu (làm lại khảo sát không tính: chống trùng theo người dùng)
+    void this.analytics.track('onboarding_completed', { userId: user.id, dedupeKey: 'onboarding_completed' });
+    return saved;
   }
 
   @Patch('settings')

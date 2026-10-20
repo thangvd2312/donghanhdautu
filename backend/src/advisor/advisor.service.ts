@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { compatMode, createAnthropicClient } from '../common/anthropic';
 import { Prisma } from '@prisma/client';
 import { VN_TZ } from '../market/types';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { stripEmoji } from '../common/text';
 import { ADVISOR_SYSTEM_PROMPT } from './prompt';
@@ -37,6 +38,7 @@ export class AdvisorService {
     private prisma: PrismaService,
     private tools: AdvisorTools,
     private verifier: VerifierService,
+    private analytics: AnalyticsService,
   ) {
     this.client = createAnthropicClient();
     this.model = config.get<string>('LLM_MODEL_ADVISOR') || config.get<string>('LLM_MODEL') || 'claude-opus-5-5';
@@ -67,6 +69,15 @@ export class AdvisorService {
       include: { messages: { orderBy: { seq: 'asc' } } },
     });
     if (!conv) throw new NotFoundException('Không tìm thấy cuộc trò chuyện');
+    void this.analytics.briefOf(id).then((b) =>
+      b
+        ? this.analytics.track('brief_opened', {
+            userId,
+            props: { kind: b.kind },
+            dedupeKey: `brief_opened:${b.key}`,
+          })
+        : undefined,
+    );
     const out: {
       id?: string;
       role: 'user' | 'assistant';
@@ -191,6 +202,7 @@ export class AdvisorService {
         });
     if (!conv) throw new NotFoundException('Không tìm thấy cuộc trò chuyện');
     emit({ type: 'conversation', id: conv.id, title: conv.title });
+    void this.trackQuestion(userId, conversationId);
 
     const stored = await this.prisma.chatMessage.findMany({
       where: { conversationId: conv.id },
@@ -225,6 +237,19 @@ export class AdvisorService {
 
     await this.prisma.conversation.update({ where: { id: conv.id }, data: { updatedAt: new Date() } });
     emit({ type: 'done', answerId: ctx.firstAssistantId });
+  }
+
+  /** Đo câu hỏi (không ghi nội dung); hỏi trong cuộc trò chuyện của bản tin = hỏi tiếp bản tin */
+  private async trackQuestion(userId: string, conversationId: string | undefined) {
+    const brief = conversationId ? await this.analytics.briefOf(conversationId) : null;
+    await this.analytics.track('advisor_asked', { userId, props: { inBrief: !!brief } });
+    if (brief) {
+      await this.analytics.track('brief_followup', {
+        userId,
+        props: { kind: brief.kind },
+        dedupeKey: `brief_followup:${brief.key}`,
+      });
+    }
   }
 
   private async verifyAndCorrect(ctx: TurnContext) {

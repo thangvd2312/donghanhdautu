@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import { useAuth } from './lib/auth-context'
 import { ChatProvider } from './lib/chat'
 import { MarketProvider } from './lib/market'
 import { onboardingSkipped } from './lib/nav'
+import { track } from './lib/track'
 import AdvisorPage from './pages/AdvisorPage'
 import AuthPage from './pages/AuthPage'
 import CryptoPage from './pages/CryptoPage'
@@ -22,6 +24,12 @@ import StockPage from './pages/StockPage'
 export default function App() {
   const { me, loading } = useAuth()
   const loc = useLocation()
+
+  // Một lần mỗi lần mở app khi đã đăng nhập (máy chủ chống trùng theo ngày) — để đo người dùng hoạt động
+  useEffect(() => {
+    if (me) track('app_active')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me?.id])
 
   if (loading) return <div className="grid h-screen place-items-center text-muted">Đang tải…</div>
 

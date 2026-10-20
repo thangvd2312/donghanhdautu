@@ -566,4 +566,26 @@ model BriefRun {
   updatedAt      DateTime @updatedAt
 
   @@unique([userId, key])
+  @@index([conversationId])
+}
+
+/// Sự kiện đo hành vi (từ điển: src/analytics/events.ts). Không lưu nội dung chat, ghi chú, email hay giá trị danh mục.
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  name       String
+  /// Người dùng đã đăng nhập; null với khách (dùng anonId)
+  userId     String?
+  /// Mã ngẫu nhiên của trình duyệt khách, không gắn với danh tính
+  anonId     String?
+  /// userId hoặc "anon:<anonId>" — dùng cho khoá chống trùng
+  actor      String
+  /// true khi phát từ danh mục mẫu (/demo), tách khỏi số liệu thật
+  sample     Boolean  @default(false)
+  props      Json     @default("{}")
+  dedupeKey  String?
+  createdAt  DateTime @default(now())
+
+  @@unique([actor, dedupeKey])
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
 }

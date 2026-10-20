@@ -17,6 +17,7 @@ import { api } from '../lib/api'
 import { changeColor, fmtPct, fmtPrice, fmtVndShort } from '../lib/format'
 import type { HomeFeed, HomeToday, ReviewPoint } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
+import { track } from '../lib/track'
 
 interface Demo {
   sample: true
@@ -46,6 +47,7 @@ export default function DemoPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    track('demo_viewed')
     api<Demo>('/demo')
       .then(setD)
       .catch((e: Error) => setError(e.message))
@@ -59,10 +61,21 @@ export default function DemoPage() {
             <Logo size={28} />
             <Typography sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>Đồng Hành Đầu Tư</Typography>
             <Box sx={{ flex: 1 }} />
-            <Button component={RouterLink} to="/login" size="small">
+            <Button
+              component={RouterLink}
+              to="/login"
+              size="small"
+              onClick={() => track('demo_signup_clicked', { target: 'login' })}
+            >
               Đăng nhập
             </Button>
-            <Button component={RouterLink} to="/register" variant="contained" size="small">
+            <Button
+              component={RouterLink}
+              to="/register"
+              variant="contained"
+              size="small"
+              onClick={() => track('demo_signup_clicked', { target: 'register' })}
+            >
               Tạo tài khoản
             </Button>
           </Stack>
@@ -173,10 +186,19 @@ export default function DemoPage() {
                   và cố vấn AI trả lời có dẫn nguồn.
                 </Typography>
                 <Stack useFlexGap direction="row" spacing={1} sx={{ justifyContent: 'center', flexWrap: 'wrap', rowGap: 1 }}>
-                  <Button component={RouterLink} to="/register" variant="contained">
+                  <Button
+                    component={RouterLink}
+                    to="/register"
+                    variant="contained"
+                    onClick={() => track('demo_signup_clicked', { target: 'register' })}
+                  >
                     Tạo tài khoản miễn phí
                   </Button>
-                  <Button component={RouterLink} to="/login">
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    onClick={() => track('demo_signup_clicked', { target: 'login' })}
+                  >
                     Tôi đã có tài khoản
                   </Button>
                 </Stack>

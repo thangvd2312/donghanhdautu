@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { NotificationInput, NotifierService } from './notifier.service';
 
@@ -27,6 +28,7 @@ export class BriefRunService {
   constructor(
     private prisma: PrismaService,
     private notifier: NotifierService,
+    @Optional() private analytics?: AnalyticsService,
   ) {}
 
   async run(userId: string, key: string, build: () => Promise<BriefContent | null>, now = new Date()) {
@@ -73,6 +75,9 @@ export class BriefRunService {
       where: { id: run.id },
       data: { status: 'done', notificationId: sent?.id ?? null },
     });
+    // key: brief:<kind>:<ngày>[:<thời điểm gửi thử>]
+    const [, kind, , test] = key.split(':');
+    void this.analytics?.track('brief_generated', { userId, props: { kind, test: !!test }, dedupeKey: key });
     return sent;
   }
 

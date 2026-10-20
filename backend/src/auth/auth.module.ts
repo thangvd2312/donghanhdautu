@@ -18,6 +18,7 @@ import * as bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import { IsEmail, IsString, MinLength } from 'class-validator';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
 
 export interface AuthUser {
@@ -31,6 +32,14 @@ export const CurrentUser = createParamDecorator(
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {}
+
+/** Có token hợp lệ thì gắn người dùng, không có thì vẫn cho qua với user = null (trang công khai) */
+@Injectable()
+export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
+  handleRequest<T>(_err: unknown, user: T): T {
+    return (user || null) as T;
+  }
+}
 
 @Injectable()
 class JwtStrategy extends PassportStrategy(Strategy) {
@@ -71,6 +80,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     config: ConfigService,
+    private analytics: AnalyticsService,
   ) {
     this.googleClientId = config.get<string>('GOOGLE_CLIENT_ID') || null;
     this.google = this.googleClientId ? new OAuth2Client(this.googleClientId) : null;
@@ -88,6 +98,7 @@ export class AuthService {
         passwordHash: await bcrypt.hash(dto.password, 10),
       },
     });
+    void this.analytics.track('signup', { userId: user.id, props: { method: 'password' }, dedupeKey: 'signup' });
     return this.issue(user.id, user.email);
   }
 
@@ -130,14 +141,17 @@ export class AuthService {
     let user = await this.prisma.user.findUnique({ where: { googleId: payload.sub } });
     if (!user) {
       const byEmail = await this.prisma.user.findUnique({ where: { email } });
-      user = byEmail
-        ? await this.prisma.user.update({
-            where: { id: byEmail.id },
-            data: { googleId: payload.sub, avatarUrl: byEmail.avatarUrl ?? avatarUrl },
-          })
-        : await this.prisma.user.create({
-            data: { email, googleId: payload.sub, avatarUrl, name: payload.name || email.split('@')[0] },
-          });
+      if (byEmail) {
+        user = await this.prisma.user.update({
+          where: { id: byEmail.id },
+          data: { googleId: payload.sub, avatarUrl: byEmail.avatarUrl ?? avatarUrl },
+        });
+      } else {
+        user = await this.prisma.user.create({
+          data: { email, googleId: payload.sub, avatarUrl, name: payload.name || email.split('@')[0] },
+        });
+        void this.analytics.track('signup', { userId: user.id, props: { method: 'google' }, dedupeKey: 'signup' });
+      }
     }
     return this.issue(user.id, user.email);
   }
