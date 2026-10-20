@@ -1,0 +1,13 @@
+{
+  "name": "donghanhdautu",
+  "private": true,
+  "description": "Đồng Hành Đầu Tư — NestJS API + React app",
+  "scripts": {
+    "install:all": "npm ci --prefix backend --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund",
+    "build": "npm run build --prefix frontend && cd backend && npx prisma generate && npm run build",
+    "check": "npm run build"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

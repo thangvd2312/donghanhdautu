@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Controller, Get, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdvisorModule } from './advisor/advisor.module';
@@ -10,6 +10,14 @@ import { NewsModule } from './news/news.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
+
+@Controller('health')
+class HealthController {
+  @Get()
+  health() {
+    return { ok: true };
+  }
+}
 
 @Module({
   imports: [
@@ -25,5 +33,6 @@ import { ProfileModule } from './profile/profile.module';
     AdvisorModule,
     AlertsModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

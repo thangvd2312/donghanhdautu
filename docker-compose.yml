@@ -1,16 +1,25 @@
+# Local: chạy thẳng `docker compose up -d` (dùng giá trị mặc định, cổng 5434).
+# Server: đọc biến từ .env ở thư mục gốc (POSTGRES_PASSWORD bắt buộc đổi).
 services:
   postgres:
     image: postgres:16-alpine
     container_name: dautu-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: dautu
-      POSTGRES_PASSWORD: dautu
-      POSTGRES_DB: dautu
+      POSTGRES_USER: ${POSTGRES_USER:-dautu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dautu}
+      POSTGRES_DB: ${POSTGRES_DB:-dautu}
+      TZ: Asia/Ho_Chi_Minh
     ports:
-      - "5434:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5434}:5432" # chỉ máy này truy cập được
     volumes:
       - dautu-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   dautu-pg:
+    name: dautuchungkhoan_dautu-pg # tên cố định (giữ đúng volume local cũ), không phụ thuộc tên thư mục

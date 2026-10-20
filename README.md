@@ -35,6 +35,16 @@ Không có `GOOGLE_CLIENT_ID` thì nút Google tự ẩn. Email đã đăng ký 
 
 Không có `LLM_API_KEY` thì mọi thứ vẫn chạy, trừ chat cố vấn; thông báo biến động vẫn bắn nhưng dùng câu chữ mẫu thay vì lời khuyên cá nhân hoá.
 
+## Deploy (production)
+
+Push lên `main` → GitHub Actions build kiểm tra, rồi self-hosted runner (label `dautu`) trên server tự deploy vào `/home/thangvv/apps/dautu`: rsync code, `docker compose up` Postgres, build, `prisma migrate deploy`, `pm2 startOrReload`, health check `http://127.0.0.1:4200/api/health`. Xem `.github/workflows/deploy.yml`.
+
+- Một process NestJS (pm2 `dautu`, `ecosystem.config.cjs`) phục vụ cả `/api`, socket.io và `frontend/dist`.
+- `.env` ở thư mục gốc trên server (không nằm trong git): biến `POSTGRES_*` cho docker compose + toàn bộ biến của backend (`PORT=4200`, `FRONTEND_ORIGIN=https://dautu.thangvu.io.vn`…).
+- Postgres 16 trong Docker, chỉ mở `127.0.0.1:5434`, dữ liệu ở volume cố định `dautuchungkhoan_dautu-pg`.
+- Sao lưu: cron 3:00 hằng ngày chạy `scripts/backup-db.sh` → `~/backups/dautu/`, giữ 14 bản.
+- Domain `dautu.thangvu.io.vn` đi qua Cloudflare Tunnel (`cloudflared` trên server) → `http://localhost:4200`.
+
 ## Tính năng
 
 | Phần | Nội dung |
