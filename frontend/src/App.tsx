@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import { useAuth } from './lib/auth-context'
@@ -6,20 +6,27 @@ import { ChatProvider } from './lib/chat'
 import { MarketProvider } from './lib/market'
 import { onboardingSkipped } from './lib/nav'
 import { track } from './lib/track'
-import AdvisorPage from './pages/AdvisorPage'
 import AuthPage from './pages/AuthPage'
-import CryptoPage from './pages/CryptoPage'
-import DemoPage from './pages/DemoPage'
-import GoalsPage from './pages/GoalsPage'
 import HomePage from './pages/HomePage'
-import MarketPage from './pages/MarketPage'
-import NewsPage from './pages/NewsPage'
-import OnboardingPage from './pages/OnboardingPage'
-import PlanDetailPage from './pages/PlanDetailPage'
-import PlansPage from './pages/PlansPage'
-import PortfolioPage from './pages/PortfolioPage'
-import SettingsPage from './pages/SettingsPage'
-import StockPage from './pages/StockPage'
+
+// Mỗi trang một chunk, tải khi mở: trang đăng nhập / trang chủ không phải tải biểu đồ, markdown… của trang khác
+const AdvisorPage = lazy(() => import('./pages/AdvisorPage'))
+const CryptoPage = lazy(() => import('./pages/CryptoPage'))
+const DemoPage = lazy(() => import('./pages/DemoPage'))
+const GoalsPage = lazy(() => import('./pages/GoalsPage'))
+const MarketPage = lazy(() => import('./pages/MarketPage'))
+const NewsPage = lazy(() => import('./pages/NewsPage'))
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
+const PlanDetailPage = lazy(() => import('./pages/PlanDetailPage'))
+const PlansPage = lazy(() => import('./pages/PlansPage'))
+const PortfolioPage = lazy(() => import('./pages/PortfolioPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const StockPage = lazy(() => import('./pages/StockPage'))
+
+/** Chỗ giữ trong lúc tải chunk của trang (thanh điều hướng vẫn giữ nguyên) */
+const page = (el: ReactNode) => (
+  <Suspense fallback={<div className="grid min-h-[40vh] place-items-center text-muted">Đang tải…</div>}>{el}</Suspense>
+)
 
 export default function App() {
   const { me, loading } = useAuth()
@@ -38,7 +45,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
-        <Route path="/demo" element={<DemoPage />} />
+        <Route path="/demo" element={page(<DemoPage />)} />
         <Route
           path="*"
           element={<Navigate to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />}
@@ -57,20 +64,20 @@ export default function App() {
     <MarketProvider>
       <ChatProvider>
         <Routes>
-          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/onboarding" element={page(<OnboardingPage />)} />
           <Route element={<Layout />}>
             <Route path="/" element={<HomePage />} />
-            <Route path="/market" element={<MarketPage />} />
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/advisor" element={<AdvisorPage />} />
-            <Route path="/advisor/:id" element={<AdvisorPage />} />
-            <Route path="/stock/:symbol" element={<StockPage />} />
-            <Route path="/crypto/:symbol" element={<CryptoPage />} />
-            <Route path="/news" element={<NewsPage />} />
-            <Route path="/plans" element={<PlansPage />} />
-            <Route path="/plans/:id" element={<PlanDetailPage />} />
-            <Route path="/goals" element={<GoalsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/market" element={page(<MarketPage />)} />
+            <Route path="/portfolio" element={page(<PortfolioPage />)} />
+            <Route path="/advisor" element={page(<AdvisorPage />)} />
+            <Route path="/advisor/:id" element={page(<AdvisorPage />)} />
+            <Route path="/stock/:symbol" element={page(<StockPage />)} />
+            <Route path="/crypto/:symbol" element={page(<CryptoPage />)} />
+            <Route path="/news" element={page(<NewsPage />)} />
+            <Route path="/plans" element={page(<PlansPage />)} />
+            <Route path="/plans/:id" element={page(<PlanDetailPage />)} />
+            <Route path="/goals" element={page(<GoalsPage />)} />
+            <Route path="/settings" element={page(<SettingsPage />)} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

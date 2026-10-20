@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { extname, join, resolve } from 'node:path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -20,11 +20,40 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000, process.env.HOST ?? '0.0.0.0');
 }
 
+const CONTENT_TYPES: Record<string, string> = {
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.json': 'application/json; charset=utf-8',
+};
+
 /** Production: một process phục vụ cả API lẫn bản build React (có SPA fallback). Dev: Vite lo frontend. */
 function serveFrontend(app: NestExpressApplication, webDist: string) {
   const indexHtml = join(webDist, 'index.html');
   if (!existsSync(indexHtml)) return;
 
+  // Bản nén sẵn lúc build (.br / .gz): trả thẳng nếu trình duyệt nhận, không nén lại mỗi request.
+  // Chỉ áp cho /assets nên luồng SSE của cố vấn không bị ảnh hưởng.
+  const assets = resolve(webDist, 'assets');
+  app.use('/assets', (req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    const accept = String(req.headers['accept-encoding'] ?? '');
+    const type = CONTENT_TYPES[extname(req.path)];
+    if (!type || req.path.includes('..')) return next();
+    for (const [enc, ext] of [
+      ['br', '.br'],
+      ['gzip', '.gz'],
+    ] as const) {
+      const file = join(assets, `${req.path}${ext}`);
+      if (!accept.includes(enc) || !existsSync(file)) continue;
+      res.setHeader('Content-Encoding', enc);
+      res.setHeader('Content-Type', type);
+      res.setHeader('Vary', 'Accept-Encoding');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.sendFile(file);
+    }
+    next();
+  });
   // File trong assets/ có hash trong tên nên cache vĩnh viễn được
   app.useStaticAssets(join(webDist, 'assets'), { prefix: '/assets', immutable: true, maxAge: '1y' });
   app.useStaticAssets(webDist, { index: false, maxAge: '1h' });
