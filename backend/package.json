@@ -20,8 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:int": "jest --config ./test/jest-int.json --runInBand",
     "eval": "nest build && node dist/eval/run-eval.js",
-    "report:usage": "node --env-file-if-exists=.env dist/analytics/report-cli.js",
-    "briefs:jobs": "node --env-file-if-exists=.env dist/alerts/brief-jobs-cli.js",
+    "report:usage": "node --env-file-if-exists=../.env --env-file-if-exists=.env dist/analytics/report-cli.js",
+    "briefs:jobs": "node --env-file-if-exists=../.env --env-file-if-exists=.env dist/alerts/brief-jobs-cli.js",
     "seed:e2e": "node scripts/seed-e2e.js",
     "lint:check": "eslint \"src/**/*.ts\""
   },

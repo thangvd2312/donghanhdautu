@@ -57,7 +57,7 @@ npm run report:usage        # 8 tuần gần nhất
 npm run report:usage -- 26  # 26 tuần
 ```
 
-Lệnh dùng `DATABASE_URL` trong `backend/.env` và in ra các bảng cohort, người dùng hoạt động, bản tin và số sự kiện 30 ngày.
+Lệnh đọc `DATABASE_URL` từ `.env` ở thư mục gốc (server) hoặc `backend/.env` (local) và in ra các bảng cohort, người dùng hoạt động, bản tin và số sự kiện 30 ngày.
 
 ## Lưu giữ
 
