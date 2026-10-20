@@ -82,5 +82,25 @@ describe('đo hành vi (PostgreSQL)', () => {
     ]);
     // Bản tin hệ thống tự tạo không tính là hoạt động: chỉ A (mở bản tin ngày 61, hoạt động ngày 35)
     expect(r.active).toEqual({ dau: 1, wau: 1, mau: 1 });
+
+    // Chi phí AI mỗi người: A tốn 0,3 USD, B 0,1 USD; chi phí chung 0,2 USD chia cho 1 người hoạt động
+    await prisma.aiUsage.createMany({
+      data: [
+        { userId: a.id, feature: 'chat', model: 'm', costUsd: 0.3, durationMs: 1, outcome: 'ok', createdAt: at(60) },
+        {
+          userId: b.id,
+          feature: 'brief_weekly',
+          model: 'm',
+          costUsd: 0.1,
+          durationMs: 1,
+          outcome: 'ok',
+          createdAt: at(60),
+        },
+        { feature: 'news_tag', model: 'm', costUsd: 0.2, durationMs: 1, outcome: 'ok', createdAt: at(60) },
+      ],
+    });
+    const c = (await usageReport(prisma, { weeks: 10, now: at(62) })).aiCostPerUser30Days;
+    expect(c).toMatchObject({ users: 2, max_usd: 0.3, sharedUsd: 0.2, sharedPerActiveUserUsd: 0.2 });
+    expect(c.avg_usd).toBeCloseTo(0.2);
   });
 });

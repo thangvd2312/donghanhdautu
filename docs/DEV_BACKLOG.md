@@ -20,7 +20,7 @@
 | PLAN-01 | tự động | Giao dịch được ghi rõ là trước / trong / sau thời gian kế hoạch |
 | NT-01 | tự động | Thông báo và việc gửi được lưu cùng transaction; test giao thức Telegram / Web Push với server giả ([NOTIFICATIONS_TEST.md](NOTIFICATIONS_TEST.md)). Còn bước thử trên thiết bị thật ở production |
 | GOAL-01 | tự động | Phân bổ không vượt 100% khi tạo/sửa đồng thời |
-| BIZ-01 | chưa | Việc của product: phỏng vấn, giá, mô hình chi phí (có số liệu từ OBS-01 / AI-01) |
+| BIZ-01 | chưa (phần product) | Đã có số liệu và cơ chế hỗ trợ: chi phí AI mỗi người, quota thực thi được ([BIZ_COST_MODEL.md](BIZ_COST_MODEL.md)). Còn phỏng vấn, giá, tiêu chí thử nghiệm |
 - Các lựa chọn dưới đây là phạm vi đề xuất. Khi chia ticket, dev ghi rõ quyết định kỹ thuật, phụ thuộc và phần được hoãn.
 
 ## Quy ước triển khai

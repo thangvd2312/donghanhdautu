@@ -26,6 +26,8 @@ async function main() {
     console.table(r.last30Days);
     console.log('Chi phí AI 30 ngày qua (USD ước tính; unknown_cost_calls = lượt không tính được chi phí)');
     console.table(r.aiCost30Days);
+    console.log('Chi phí AI trên mỗi người dùng 30 ngày (USD, phần tính được; shared = chi phí chung không gắn người)');
+    console.table([r.aiCostPerUser30Days]);
   } finally {
     await prisma.$disconnect();
   }

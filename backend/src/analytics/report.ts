@@ -118,6 +118,27 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
     GROUP BY feature ORDER BY cost_usd DESC NULLS LAST
   `);
 
+  // Chi phí AI trên mỗi người dùng 30 ngày (cho mô hình chi phí / gói trả phí): chỉ tính phần chi phí đã biết
+  const [perUser] = await prisma.$queryRaw<
+    { users: number; avg_usd: number | null; p50_usd: number | null; p90_usd: number | null; max_usd: number | null }[]
+  >(Prisma.sql`
+    WITH u AS (
+      SELECT "userId", sum("costUsd")::float AS cost FROM "AiUsage"
+      WHERE "userId" IS NOT NULL AND "costUsd" IS NOT NULL AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+      GROUP BY "userId"
+    )
+    SELECT count(*)::int AS users, avg(cost) AS avg_usd,
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY cost) AS p50_usd,
+      percentile_cont(0.9) WITHIN GROUP (ORDER BY cost) AS p90_usd,
+      max(cost) AS max_usd
+    FROM u
+  `);
+  // Chi phí chung không gắn người dùng (đọc tin, …) chia đều cho người dùng hoạt động trong tháng
+  const [shared] = await prisma.$queryRaw<{ cost_usd: number | null }[]>(Prisma.sql`
+    SELECT sum("costUsd")::float AS cost_usd FROM "AiUsage"
+    WHERE "userId" IS NULL AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+  `);
+
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : null);
   return {
     generatedAt: now.toISOString(),
@@ -135,5 +156,10 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
     })),
     last30Days: counts,
     aiCost30Days: ai,
+    aiCostPerUser30Days: {
+      ...perUser,
+      sharedUsd: shared.cost_usd,
+      sharedPerActiveUserUsd: shared.cost_usd !== null && active.mau ? shared.cost_usd / active.mau : null,
+    },
   };
 }
