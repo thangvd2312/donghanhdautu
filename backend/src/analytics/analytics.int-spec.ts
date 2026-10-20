@@ -114,6 +114,8 @@ describe('đo hành vi (PostgreSQL)', () => {
           createdAt: at(1),
         },
       });
+    // Chỉ số kế hoạch tính trên toàn DB: bỏ kế hoạch giả của các lần chạy trước (đều đặt ở năm 2001–2020)
+    await prisma.investmentPlan.deleteMany({ where: { createdAt: { lt: new Date('2021-01-01') } } });
     const pa = await planOf(a.id, 90);
     await planOf(b.id, 40);
     await prisma.planReview.create({ data: { planId: pa.id, decision: 'keep', createdAt: at(55) } });

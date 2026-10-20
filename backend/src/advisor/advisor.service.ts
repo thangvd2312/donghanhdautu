@@ -391,7 +391,7 @@ export class AdvisorService {
       try {
         response = await stream.finalMessage();
         jsonRetries = 0;
-        void this.aiUsage.record({
+        await this.aiUsage.record({
           feature: 'chat',
           userId,
           model: response.model || this.model,
@@ -402,7 +402,7 @@ export class AdvisorService {
         });
       } catch (err) {
         // Huỷ / lỗi: không có usage cuối cùng → chi phí "không rõ"
-        void this.aiUsage.record({
+        await this.aiUsage.record({
           feature: 'chat',
           userId,
           model: this.model,
