@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Notification, Prisma } from '@prisma/client';
 import { stripEmoji } from '../common/text';
 import { MarketGateway } from '../market/market.gateway';
 import { PrismaService } from '../prisma/prisma.module';
@@ -16,6 +17,8 @@ export interface NotificationInput {
 /** Lưu thông báo (mỗi dedupeKey một lần / người dùng) và đẩy realtime xuống trình duyệt */
 @Injectable()
 export class NotifierService {
+  private log = new Logger(NotifierService.name);
+
   constructor(
     private prisma: PrismaService,
     private gateway: MarketGateway,
@@ -30,30 +33,41 @@ export class NotifierService {
     return this.prisma.notification.count({ where: { userId, kind, createdAt: { gte: since } } });
   }
 
+  /**
+   * Lưu thông báo cùng các việc gửi ngoài ứng dụng (Telegram, Web Push) trong một transaction: không có trường hợp
+   * thông báo đã lưu (chặn gửi lại vì trùng dedupeKey) mà việc gửi bị mất. Lỗi thì không lưu gì, lượt quét sau thử lại.
+   * Trả null khi trùng dedupeKey (đã báo rồi) hoặc lỗi.
+   */
   async send(userId: string, n: NotificationInput) {
+    let created: Notification;
     try {
-      const created = await this.prisma.notification.create({
-        data: {
-          userId,
-          ...n,
-          title: stripEmoji(n.title).trim(),
-          body: stripEmoji(n.body).trim(),
-          sources: n.sources ?? [],
-        },
+      created = await this.prisma.$transaction(async (db) => {
+        const row = await db.notification.create({
+          data: {
+            userId,
+            ...n,
+            title: stripEmoji(n.title).trim(),
+            body: stripEmoji(n.body).trim(),
+            sources: n.sources ?? [],
+          },
+        });
+        // Người dùng đã chủ động kết nối Telegram: đưa vào hàng đợi gửi (loại tin / giờ yên lặng kiểm tra lúc gửi)
+        if (await db.telegramLink.findFirst({ where: { userId, active: true }, select: { userId: true } })) {
+          await db.telegramDelivery.create({ data: { userId, notificationId: row.id } });
+        }
+        // Thiết bị đã bật thông báo trình duyệt (Web Push)
+        if (await db.pushSubscription.findFirst({ where: { userId }, select: { id: true } })) {
+          await db.pushDelivery.create({ data: { userId, notificationId: row.id } });
+        }
+        return row;
       });
-      this.gateway.notifyUser(userId, 'notification', created);
-      // Người dùng đã chủ động kết nối Telegram: đưa vào hàng đợi gửi (loại tin / giờ yên lặng kiểm tra lúc gửi)
-      if (await this.prisma.telegramLink.findFirst({ where: { userId, active: true }, select: { userId: true } })) {
-        await this.prisma.telegramDelivery.create({ data: { userId, notificationId: created.id } }).catch(() => null);
-      }
-      // Thiết bị đã bật thông báo trình duyệt (Web Push)
-      if (await this.prisma.pushSubscription.findFirst({ where: { userId }, select: { id: true } })) {
-        await this.prisma.pushDelivery.create({ data: { userId, notificationId: created.id } }).catch(() => null);
-      }
-      return created;
-    } catch {
-      // Trùng dedupeKey do hai lượt quét chạy chồng — bỏ qua
+    } catch (e) {
+      // Trùng dedupeKey do hai lượt quét chạy chồng — đã báo rồi
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return null;
+      this.log.warn(`Không lưu được thông báo ${n.dedupeKey}: ${(e as Error).message}`);
       return null;
     }
+    this.gateway.notifyUser(userId, 'notification', created);
+    return created;
   }
 }
