@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Transaction } from '@prisma/client';
+import { Holding, Prisma, Transaction } from '@prisma/client';
 import { IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { vnDateKey } from '../market/types';
@@ -328,24 +328,42 @@ export class TransactionsService {
     const holdings = await db.holding.findMany({ where: { userId, quantity: { gt: 0 } } });
     if (!holdings.length) return;
     const portfolioId = await this.resolvePortfolio(db, userId);
-    await db.transaction.createMany({
-      skipDuplicates: true,
-      data: holdings.map((h) => ({
-        id: `mig_${h.id}`,
-        userId,
-        portfolioId,
-        type: 'opening',
-        date: new Date(`${vnDateKey(h.createdAt)}T00:00:00Z`),
-        assetType: h.assetType,
-        symbol: h.symbol,
-        quantity: new Prisma.Decimal(String(h.quantity)),
-        price: new Prisma.Decimal(h.assetType === 'cash' ? 1 : String(h.avgCost)),
-        currency: h.assetType === 'crypto' ? 'USDT' : 'VND',
-        note: h.note,
-        source: 'migration',
-        createdAt: h.createdAt,
-      })),
+    await db.transaction.createMany({ skipDuplicates: true, data: migrationRows(holdings, userId, portfolioId) });
+  }
+
+  /**
+   * Bản chỉ đọc của danh mục nhận giao dịch và sổ hiện có, cho các bước "xem trước" không được ghi gì:
+   * chưa có danh mục thì dùng id danh mục chính sẽ được tạo; chưa có sổ thì dựng số dư đầu kỳ từ Holding
+   * giống hệt lúc chuyển đổi nhưng không lưu.
+   */
+  async peekPortfolio(userId: string, portfolioId?: string | null) {
+    const list = await this.prisma.portfolio.findMany({
+      where: { userId },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
+    if (!list.length) {
+      if (portfolioId && portfolioId !== `pf_${userId}`) throw new NotFoundException('Không tìm thấy danh mục');
+      return `pf_${userId}`;
+    }
+    if (!portfolioId) return (list.find((p) => p.isDefault) ?? list[0]).id;
+    if (!list.some((p) => p.id === portfolioId)) throw new NotFoundException('Không tìm thấy danh mục');
+    return portfolioId;
+  }
+
+  async peekTransactions(userId: string, portfolioId: string): Promise<Transaction[]> {
+    const hasTx = await this.prisma.transaction.count({ where: { userId } });
+    if (hasTx) return this.prisma.transaction.findMany({ where: { userId, deletedAt: null, portfolioId } });
+    const holdings = await this.prisma.holding.findMany({ where: { userId, quantity: { gt: 0 } } });
+    return migrationRows(holdings, userId, portfolioId).map((r) => ({
+      ...r,
+      amount: null,
+      fee: new Prisma.Decimal(0),
+      tax: new Prisma.Decimal(0),
+      fxRate: null,
+      importBatchId: null,
+      deletedAt: null,
+      updatedAt: r.createdAt,
+    }));
   }
 
   /** Ghi lại bảng Holding từ sổ: chỉ cập nhật dòng thay đổi để giữ id và mốc updatedAt có ý nghĩa */
@@ -421,6 +439,25 @@ export class TransactionsService {
       createdAt: t.createdAt,
     };
   }
+}
+
+/** Số dư đầu kỳ dựng từ bảng Holding cũ: mỗi tài sản một giao dịch opening, id cố định theo holding */
+function migrationRows(holdings: Holding[], userId: string, portfolioId: string) {
+  return holdings.map((h) => ({
+    id: `mig_${h.id}`,
+    userId,
+    portfolioId,
+    type: 'opening',
+    date: new Date(`${vnDateKey(h.createdAt)}T00:00:00Z`),
+    assetType: h.assetType,
+    symbol: h.symbol,
+    quantity: new Prisma.Decimal(String(h.quantity)),
+    price: new Prisma.Decimal(h.assetType === 'cash' ? 1 : String(h.avgCost)),
+    currency: h.assetType === 'crypto' ? 'USDT' : 'VND',
+    note: h.note,
+    source: 'migration',
+    createdAt: h.createdAt,
+  }));
 }
 
 function same(a: number, b: number) {

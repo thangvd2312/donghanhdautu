@@ -66,6 +66,33 @@ function normalizedToLedger(n: NormalizedTx, id: string, createdAt: Date): Ledge
   };
 }
 
+/** Băm nội dung yêu cầu nhập: cùng file, cách đọc cột, danh mục và lựa chọn dòng nghi trùng = cùng một lần nhập */
+export function requestHash(userId: string, dto: ImportDto) {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        v: 2,
+        userId,
+        portfolioId: dto.portfolioId || null,
+        csv: dto.csv.replace(/\r\n?/g, '\n').trimEnd(),
+        mapping: dto.mapping ? Object.entries(dto.mapping).sort(([a], [b]) => a.localeCompare(b)) : null,
+        decimal: dto.decimal ?? '.',
+        includeDuplicates: [...new Set(dto.includeDuplicates ?? [])].sort((a, b) => a - b),
+      }),
+    )
+    .digest('hex');
+}
+
+function alreadyDone(batch: { id: string; importedCount: number }) {
+  return {
+    batchId: batch.id,
+    alreadyImported: true,
+    imported: batch.importedCount,
+    skippedErrors: 0,
+    skippedDuplicates: 0,
+  };
+}
+
 /** Nhập giao dịch từ CSV: xem trước (không ghi gì) → xác nhận (ghi một đợt, chống trùng khi gửi lại) */
 @Injectable()
 export class ImportService {
@@ -90,6 +117,11 @@ export class ImportService {
   }
 
   async commit(userId: string, dto: ImportDto) {
+    // Nhận diện lần nhập theo chính yêu cầu (file + lựa chọn của người dùng), tính trước khi so với sổ:
+    // gửi lại sau khi đã nhập thì các dòng đã thành "trùng sổ", tập dòng sẽ nhập đổi theo, không dùng để nhận diện được
+    const hash = requestHash(userId, dto);
+    const done = await this.prisma.importBatch.findFirst({ where: { userId, hash, undoneAt: null } });
+    if (done) return alreadyDone(done);
     const r = await this.analyze(userId, dto);
     if (r.mappingErrors.length) throw new BadRequestException(r.mappingErrors.join(' '));
     if (!r.toImport.length) {
@@ -102,12 +134,13 @@ export class ImportService {
     const res = await this.transactions.commitImport(
       userId,
       r.toImport.map((x) => x.data),
-      { hash: r.hash, fileName: dto.fileName ?? null, rowCount: r.rows.length, portfolioId: r.portfolioId },
+      { hash, fileName: dto.fileName ?? null, rowCount: r.rows.length, portfolioId: r.portfolioId },
     );
+    if (res.alreadyImported) return alreadyDone(res.batch);
     return {
       batchId: res.batch.id,
-      alreadyImported: res.alreadyImported,
-      imported: res.alreadyImported ? 0 : r.toImport.length,
+      alreadyImported: false,
+      imported: r.toImport.length,
       skippedErrors: r.counts.errors,
       skippedDuplicates: r.counts.duplicates - r.counts.duplicatesIncluded,
     };
@@ -178,8 +211,9 @@ export class ImportService {
 
     // Nghi trùng: trùng giao dịch đã có, hoặc trùng một dòng phía trên trong file. Không tự bỏ: người dùng chọn.
     // So trùng và kiểm tra sổ trong đúng danh mục nhận giao dịch
-    const portfolioId = await this.transactions.resolvePortfolio(this.prisma, userId, dto.portfolioId);
-    const existing = await this.transactions.activeTransactions(userId, portfolioId);
+    // Chỉ đọc: xem trước không được tạo danh mục hay chuyển Holding cũ thành sổ (việc đó làm lúc xác nhận nhập)
+    const portfolioId = await this.transactions.peekPortfolio(userId, dto.portfolioId);
+    const existing = await this.transactions.peekTransactions(userId, portfolioId);
     const existingKeys = new Map<string, string>();
     for (const t of existing) {
       existingKeys.set(
@@ -233,10 +267,6 @@ export class ImportService {
     const toImport = rows
       .filter((r) => r.status === 'ok' || (r.status === 'duplicate' && r.included))
       .map((r) => ({ line: r.line, data: normalized.get(r.line)! }));
-    const hash = createHash('sha256')
-      .update(JSON.stringify({ userId, portfolioId, rows: toImport.map((x) => [x.line, x.data]) }))
-      .digest('hex');
-
     const counts = {
       total: rows.length,
       errors: rows.filter((r) => r.status === 'error').length,
@@ -253,7 +283,6 @@ export class ImportService {
       counts,
       impact: after && toImport.length ? this.impact(computeLedger(base), after) : null,
       toImport,
-      hash,
       portfolioId,
     };
   }
