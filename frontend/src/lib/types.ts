@@ -538,6 +538,8 @@ export interface PlanDetail extends Plan {
     price: number | null
     amount: number | null
     currency: 'VND' | 'USDT'
+    /** So với thời gian của kế hoạch này (từ ngày lập tới ngày kết thúc) */
+    period: 'before' | 'during' | 'after'
   }[]
 }
 

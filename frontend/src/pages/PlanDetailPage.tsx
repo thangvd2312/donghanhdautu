@@ -225,13 +225,13 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
           </Panel>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Panel title="Giao dịch liên quan" subtitle="Từ sổ giao dịch của bạn">
+          <Panel title="Giao dịch liên quan" subtitle="Từ sổ giao dịch; giao dịch ngoài thời gian kế hoạch được ghi rõ">
             {p.transactions.length ? (
               <Stack spacing={0.5}>
                 {p.transactions.map((t) => (
                   <KV
                     key={t.id}
-                    k={`${fmtDate(t.date)} · ${TX_LABEL[t.type]}`}
+                    k={`${fmtDate(t.date)} · ${TX_LABEL[t.type]}${t.period === 'before' ? ' · trước khi lập kế hoạch' : t.period === 'after' ? ' · sau khi kết thúc' : ''}`}
                     v={
                       t.quantity !== null && t.price !== null
                         ? `${fmtNum(t.quantity, p.assetType === 'stock' ? 0 : 4)} × ${fmtPrice(t.price, p.currency)}`

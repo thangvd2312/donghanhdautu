@@ -197,6 +197,11 @@ export class PlansService {
     ]);
     const price = this.priceNative(p.assetType, p.symbol);
     const held = v.holdings.find((h) => h.assetType === p.assetType && h.symbol === p.symbol);
+    // Cùng mã có thể có nhiều kế hoạch nối tiếp: giao dịch thuộc kế hoạch này là giao dịch trong khoảng
+    // từ ngày lập tới ngày kết thúc (giờ VN); giao dịch ngoài khoảng vẫn hiện để đối chiếu nhưng được ghi rõ
+    const from = vnDateKey(p.createdAt);
+    const to = p.closedAt ? vnDateKey(p.closedAt) : null;
+    const period = (date: string) => (date < from ? 'before' : to && date > to ? 'after' : 'during');
     return {
       ...this.present(p),
       price,
@@ -225,6 +230,7 @@ export class PlansService {
         price: t.price?.toNumber() ?? null,
         amount: t.amount?.toNumber() ?? null,
         currency: t.currency,
+        period: period(t.date.toISOString().slice(0, 10)),
       })),
     };
   }
