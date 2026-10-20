@@ -71,13 +71,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
       this.log.log('Chưa cấu hình TELEGRAM_BOT_TOKEN, tắt gửi Telegram');
       return;
     }
-    try {
-      const me = await this.call<{ username: string }>('getMe', {});
-      this.botUsername = me.username;
-      this.log.log(`Telegram bot @${me.username} sẵn sàng`);
-    } catch (e) {
-      this.log.warn(`Telegram getMe lỗi: ${(e as Error).message}`);
-    }
+    await this.resolveBot();
     if (process.env.TELEGRAM_POLLING !== 'false') void this.poll();
     this.timer = setInterval(() => void this.processQueue(), 10_000);
     this.timer.unref();
@@ -86,6 +80,19 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
   onModuleDestroy() {
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
+  }
+
+  /** Lấy tên bot từ Telegram; lỗi mạng lúc khởi động thì các lần sau gọi lại */
+  private async resolveBot() {
+    if (this.botUsername) return this.botUsername;
+    try {
+      const me = await this.call<{ username: string }>('getMe', {});
+      this.botUsername = me.username;
+      this.log.log(`Telegram bot @${me.username} sẵn sàng`);
+    } catch (e) {
+      this.log.warn(`Telegram getMe lỗi: ${(e as Error).message} — kiểm tra máy chủ có kết nối được ${process.env.TELEGRAM_API_BASE || 'api.telegram.org'}`);
+    }
+    return this.botUsername;
   }
 
   private async call<T>(method: string, body: Record<string, unknown>, timeoutMs = 15_000): Promise<T> {
@@ -266,7 +273,10 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
 
   /** Tạo mã một lần và link mở bot */
   async createLink(userId: string) {
-    if (!this.enabled || !this.botUsername) throw new ServiceUnavailableException('Telegram chưa được cấu hình trên máy chủ');
+    if (!this.enabled) throw new ServiceUnavailableException('Telegram chưa được cấu hình trên máy chủ');
+    if (!(await this.resolveBot())) {
+      throw new ServiceUnavailableException('Máy chủ chưa kết nối được tới Telegram, vui lòng thử lại sau');
+    }
     const code = randomBytes(18).toString('base64url');
     await this.prisma.telegramLinkCode.create({ data: { code, userId, expiresAt: new Date(Date.now() + 15 * 60_000) } });
     return { url: `https://t.me/${this.botUsername}?start=${code}` };
