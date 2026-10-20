@@ -10,8 +10,11 @@ function fakePrisma(items: Item[] = [], holdings: { userId: string; assetType: s
   let seq = items.length;
   const match = (w: Item, k: { userId: string; assetType: string; symbol: string }) =>
     w.userId === k.userId && w.assetType === k.assetType && w.symbol === k.symbol;
-  return {
+  const fake = {
     items,
+    /** Transaction giả: chạy thẳng trên chính bộ nhớ này, khoá không cần thiết vì test chạy tuần tự */
+    $transaction: <T>(fn: (db: unknown) => Promise<T>) => fn(fake),
+    $executeRaw: () => Promise.resolve(0),
     watchItem: {
       findMany: ({ where }: { where: { userId: string } }) =>
         Promise.resolve(items.filter((w) => w.userId === where.userId)),
@@ -19,10 +22,9 @@ function fakePrisma(items: Item[] = [], holdings: { userId: string; assetType: s
         Promise.resolve(items.find((w) => match(w, where.userId_assetType_symbol)) ?? null),
       count: ({ where }: { where: { userId: string } }) =>
         Promise.resolve(items.filter((w) => w.userId === where.userId).length),
-      upsert: ({ create }: { create: Omit<Item, 'id' | 'createdAt'> }) => {
-        const found = items.find((w) => match(w, create as Item));
-        if (found) return Promise.resolve(found);
-        const row = { ...create, id: `w${++seq}`, createdAt: new Date() };
+      create: ({ data }: { data: Omit<Item, 'id' | 'createdAt'> }) => {
+        if (items.some((w) => match(w, data))) return Promise.reject(new Error('Unique constraint'));
+        const row = { ...data, id: `w${++seq}`, createdAt: new Date() };
         items.push(row);
         return Promise.resolve(row);
       },
@@ -38,6 +40,7 @@ function fakePrisma(items: Item[] = [], holdings: { userId: string; assetType: s
         Promise.resolve(holdings.filter((h) => h.userId === where.userId)),
     },
   };
+  return fake;
 }
 
 function fakeMarket() {

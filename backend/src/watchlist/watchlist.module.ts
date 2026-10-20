@@ -96,16 +96,19 @@ export class WatchlistService {
   async add(userId: string, dto: WatchDto) {
     const symbol = await this.normalize(dto.assetType, dto.symbol);
     const key = { userId, assetType: dto.assetType, symbol };
-    const existing = await this.prisma.watchItem.findUnique({ where: { userId_assetType_symbol: key } });
-    if (existing) return existing;
-    const count = await this.prisma.watchItem.count({ where: { userId } });
-    if (count >= MAX_WATCH_ITEMS) {
-      throw new BadRequestException(
-        `Danh sách theo dõi tối đa ${MAX_WATCH_ITEMS} mã — hãy bỏ bớt mã không còn quan tâm`,
-      );
-    }
-    // upsert để hai yêu cầu thêm cùng lúc không lỗi trùng khoá
-    return this.prisma.watchItem.upsert({ where: { userId_assetType_symbol: key }, create: key, update: {} });
+    // Đếm và thêm trong cùng transaction có khoá theo người dùng: nhiều yêu cầu thêm cùng lúc không vượt giới hạn
+    return this.prisma.$transaction(async (db) => {
+      await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`watch:${userId}`}))`;
+      const existing = await db.watchItem.findUnique({ where: { userId_assetType_symbol: key } });
+      if (existing) return existing;
+      const count = await db.watchItem.count({ where: { userId } });
+      if (count >= MAX_WATCH_ITEMS) {
+        throw new BadRequestException(
+          `Danh sách theo dõi tối đa ${MAX_WATCH_ITEMS} mã — hãy bỏ bớt mã không còn quan tâm`,
+        );
+      }
+      return db.watchItem.create({ data: key });
+    });
   }
 
   async remove(userId: string, id: string) {
