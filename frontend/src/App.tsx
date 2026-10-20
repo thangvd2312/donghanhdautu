@@ -15,6 +15,7 @@ import OnboardingPage from './pages/OnboardingPage'
 import PlanDetailPage from './pages/PlanDetailPage'
 import PlansPage from './pages/PlansPage'
 import PortfolioPage from './pages/PortfolioPage'
+import SettingsPage from './pages/SettingsPage'
 import StockPage from './pages/StockPage'
 
 export default function App() {
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/plans" element={<PlansPage />} />
             <Route path="/plans/:id" element={<PlanDetailPage />} />
             <Route path="/goals" element={<GoalsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

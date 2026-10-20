@@ -2,19 +2,36 @@ import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined'
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined'
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined'
 import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined'
-import AccountCircleOutlined from '@mui/icons-material/AccountCircleOutlined'
+import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined'
+import FlagOutlined from '@mui/icons-material/FlagOutlined'
+import ForumOutlined from '@mui/icons-material/ForumOutlined'
+import HomeOutlined from '@mui/icons-material/HomeOutlined'
+import MenuOutlined from '@mui/icons-material/MenuOutlined'
+import NewspaperOutlined from '@mui/icons-material/NewspaperOutlined'
+import SavingsOutlined from '@mui/icons-material/SavingsOutlined'
+import SearchOutlined from '@mui/icons-material/SearchOutlined'
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
+import ShowChartOutlined from '@mui/icons-material/ShowChartOutlined'
 import AppBar from '@mui/material/AppBar'
 import Avatar from '@mui/material/Avatar'
 import Badge from '@mui/material/Badge'
+import BottomNavigation from '@mui/material/BottomNavigation'
+import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
+import Dialog from '@mui/material/Dialog'
 import Divider from '@mui/material/Divider'
+import Drawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
 import Link from '@mui/material/Link'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
+import Paper from '@mui/material/Paper'
 import Popover from '@mui/material/Popover'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
@@ -31,6 +48,7 @@ import { useAuth } from '../lib/auth-context'
 import { useChat } from '../lib/chat-context'
 import { timeAgo } from '../lib/format'
 import { useMarket } from '../lib/market-context'
+import { useIsMobile } from '../lib/useIsMobile'
 import type { Notification } from '../lib/types'
 import StockSearch from './StockSearch'
 import { Logo } from './ui'
@@ -55,78 +73,247 @@ const KIND_LABEL: Record<string, string> = {
   price_target: 'Mốc giá',
 }
 
+/** Thanh đáy trên điện thoại: 4 trang dùng nhiều nhất + "Thêm" */
+const BOTTOM = [
+  { to: '/', label: 'Hôm nay', icon: <HomeOutlined /> },
+  { to: '/portfolio', label: 'Danh mục', icon: <AccountBalanceWalletOutlined /> },
+  { to: '/plans', label: 'Kế hoạch', icon: <FlagOutlined /> },
+  { to: '/advisor', label: 'Cố vấn', icon: <ForumOutlined /> },
+]
+
+const MORE = [
+  { to: '/market', label: 'Bảng giá', icon: <ShowChartOutlined /> },
+  { to: '/goals', label: 'Mục tiêu tài chính', icon: <SavingsOutlined /> },
+  { to: '/news', label: 'Tin tức', icon: <NewspaperOutlined /> },
+  { to: '/settings', label: 'Cài đặt & thông báo', icon: <SettingsOutlined /> },
+]
+
+/** Chiều cao thanh đáy (chưa tính vùng an toàn của iPhone) */
+const BOTTOM_NAV_HEIGHT = 60
+
+const DISCLAIMER =
+  'Dữ liệu: Vietcap, DNSE, Binance, vang.today, Vietcombank, CafeF, VnExpress. Phân tích của cố vấn chỉ mang tính tham khảo, không phải khuyến nghị đầu tư được cấp phép — quyết định cuối cùng là của bạn.'
+
+const matches = (pathname: string, to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to))
+
 export default function Layout() {
   const loc = useLocation()
   const nav = useNavigate()
+  const mobile = useIsMobile()
   const chatBusy = !!useChat().active?.busy
   const current = NAV.slice()
     .reverse()
-    .find((n) => (n.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(n.to)))?.to
+    .find((n) => matches(loc.pathname, n.to))?.to
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const bottomValue =
+    BOTTOM.find((n) => matches(loc.pathname, n.to))?.to ??
+    (MORE.some((n) => matches(loc.pathname, n.to)) || loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto')
+      ? 'more'
+      : false)
+  const pageTitle = [...BOTTOM, ...MORE].find((n) => matches(loc.pathname, n.to))?.label
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <AppBar position="sticky">
+      <AppBar position="sticky" sx={{ pt: 'env(safe-area-inset-top)' }}>
         <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{ gap: 2, minHeight: { xs: 56 } }}>
+          <Toolbar disableGutters sx={{ gap: { xs: 1, md: 2 }, minHeight: { xs: 52, md: 56 } }}>
             <Stack
               direction="row"
               spacing={1.25}
               component={RouterLink}
               to="/"
-              sx={{ alignItems: 'center', color: 'text.primary', textDecoration: 'none', flexShrink: 0 }}
+              sx={{ alignItems: 'center', color: 'text.primary', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}
             >
               <Logo size={28} />
-              <Typography sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>Đồng Hành Đầu Tư</Typography>
+              <Typography sx={{ fontWeight: 700, display: { xs: 'none', md: 'block' } }}>Đồng Hành Đầu Tư</Typography>
+              {mobile && pageTitle && (
+                <Typography sx={{ fontWeight: 700, fontSize: 17 }} noWrap>
+                  {pageTitle}
+                </Typography>
+              )}
             </Stack>
-            <Tabs
-              value={current ?? false}
-              sx={{ display: { xs: 'none', md: 'flex' }, ml: 2, '& .MuiTabs-indicator': { height: 3 } }}
-            >
-              {NAV.map((n) => (
-                <Tab
-                  key={n.to}
-                  value={n.to}
-                  component={RouterLink}
-                  to={n.to}
-                  sx={{ minHeight: 56 }}
-                  label={
-                    <Badge color="primary" variant="dot" invisible={!(n.to === '/advisor' && chatBusy)}>
-                      {n.label}
-                    </Badge>
-                  }
-                />
-              ))}
-            </Tabs>
+            {!mobile && (
+              <Tabs value={current ?? false} sx={{ ml: 2, '& .MuiTabs-indicator': { height: 3 } }}>
+                {NAV.map((n) => (
+                  <Tab
+                    key={n.to}
+                    value={n.to}
+                    component={RouterLink}
+                    to={n.to}
+                    sx={{ minHeight: 56 }}
+                    label={
+                      <Badge color="primary" variant="dot" invisible={!(n.to === '/advisor' && chatBusy)}>
+                        {n.label}
+                      </Badge>
+                    }
+                  />
+                ))}
+              </Tabs>
+            )}
             <Box sx={{ flex: 1 }} />
             <Box sx={{ width: 240, display: { xs: 'none', lg: 'block' } }}>
               <StockSearch onPick={(s) => nav(`/stock/${s}`)} />
             </Box>
+            <Tooltip title="Tìm mã cổ phiếu">
+              <IconButton onClick={() => setSearchOpen(true)} sx={{ display: { lg: 'none' } }}>
+                <SearchOutlined />
+              </IconButton>
+            </Tooltip>
             <LiveDot />
-            <ThemeToggle />
+            {!mobile && <ThemeToggle />}
             <Bell />
-            <UserMenu />
+            {!mobile && <UserMenu />}
           </Toolbar>
-          <Tabs
-            value={current ?? false}
-            variant="scrollable"
-            sx={{ display: { xs: 'flex', md: 'none' }, minHeight: 40 }}
-          >
-            {NAV.map((n) => (
-              <Tab key={n.to} value={n.to} component={RouterLink} to={n.to} label={n.label} sx={{ minHeight: 40 }} />
-            ))}
-          </Tabs>
         </Container>
       </AppBar>
-      <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
+      <Container
+        maxWidth="xl"
+        sx={{
+          py: { xs: 2, md: 3 },
+          px: { xs: 1.5, sm: 2, md: 3 },
+          flex: 1,
+          // Chừa chỗ cho thanh đáy + vùng an toàn của iPhone
+          pb: { xs: `calc(${BOTTOM_NAV_HEIGHT + 16}px + env(safe-area-inset-bottom))`, md: 3 },
+        }}
+      >
         <Outlet />
       </Container>
-      <Container maxWidth="xl" sx={{ pb: 4 }}>
-        <Typography variant="caption" color="text.secondary" component="p">
-          Dữ liệu: Vietcap, DNSE, Binance, vang.today, Vietcombank, CafeF, VnExpress. Phân tích của cố vấn chỉ mang tính
-          tham khảo, không phải khuyến nghị đầu tư được cấp phép — quyết định cuối cùng là của bạn.
-        </Typography>
-      </Container>
+      {!mobile && (
+        <Container maxWidth="xl" sx={{ pb: 4 }}>
+          <Typography variant="caption" color="text.secondary" component="p">
+            {DISCLAIMER}
+          </Typography>
+        </Container>
+      )}
+
+      {mobile && (
+        <Paper
+          elevation={0}
+          sx={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: (t) => t.zIndex.appBar,
+            borderTop: 1,
+            borderColor: 'divider',
+            pb: 'env(safe-area-inset-bottom)',
+            borderRadius: 0,
+          }}
+        >
+          <BottomNavigation
+            showLabels
+            value={bottomValue}
+            sx={{ height: BOTTOM_NAV_HEIGHT, bgcolor: 'transparent' }}
+            onChange={(_, v: string) => (v === 'more' ? setMoreOpen(true) : nav(v))}
+          >
+            {BOTTOM.map((n) => (
+              <BottomNavigationAction
+                key={n.to}
+                value={n.to}
+                label={n.label}
+                icon={
+                  <Badge color="primary" variant="dot" invisible={!(n.to === '/advisor' && chatBusy)}>
+                    {n.icon}
+                  </Badge>
+                }
+                sx={{ minWidth: 0, px: 0.5 }}
+              />
+            ))}
+            <BottomNavigationAction value="more" label="Thêm" icon={<MenuOutlined />} sx={{ minWidth: 0, px: 0.5 }} />
+          </BottomNavigation>
+        </Paper>
+      )}
+
+      <Drawer
+        anchor="bottom"
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        slotProps={{ paper: { sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, pb: 'env(safe-area-inset-bottom)' } } }}
+      >
+        <MoreSheet onClose={() => setMoreOpen(false)} />
+      </Drawer>
+
+      <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} fullScreen={mobile} fullWidth maxWidth="sm">
+        <Box sx={{ p: 2, pt: mobile ? 'calc(16px + env(safe-area-inset-top))' : 2 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Box sx={{ flex: 1 }}>
+              <StockSearch
+                autoFocus
+                size="medium"
+                onPick={(s) => {
+                  setSearchOpen(false)
+                  nav(`/stock/${s}`)
+                }}
+              />
+            </Box>
+            <Button onClick={() => setSearchOpen(false)}>Đóng</Button>
+          </Stack>
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
+            Gõ mã hoặc tên công ty, ví dụ FPT, Hòa Phát, ngân hàng…
+          </Typography>
+        </Box>
+      </Dialog>
       <Toast />
+    </Box>
+  )
+}
+
+/** Bảng "Thêm" trên điện thoại: các trang ít dùng hơn, giao diện sáng/tối, tài khoản */
+function MoreSheet({ onClose }: { onClose: () => void }) {
+  const nav = useNavigate()
+  const { me, logout } = useAuth()
+  const { mode, systemMode, setMode } = useColorScheme()
+  const dark = (mode === 'system' ? systemMode : mode) === 'dark'
+  const go = (to: string) => {
+    onClose()
+    nav(to)
+  }
+  return (
+    <Box sx={{ pt: 1 }}>
+      <Box sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: 'divider', mx: 'auto', mb: 1 }} />
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', px: 2, py: 1 }}>
+        <Avatar src={me?.avatarUrl ?? undefined} sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}>
+          {me?.name?.[0]?.toUpperCase()}
+        </Avatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="subtitle2" noWrap>
+            {me?.name}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap component="div">
+            {me?.email}
+          </Typography>
+        </Box>
+      </Stack>
+      <Divider />
+      <List disablePadding>
+        {MORE.map((n) => (
+          <ListItemButton key={n.to} onClick={() => go(n.to)} sx={{ py: 1.5 }}>
+            <ListItemIcon>{n.icon}</ListItemIcon>
+            <ListItemText primary={n.label} />
+          </ListItemButton>
+        ))}
+        <ListItemButton onClick={() => setMode(dark ? 'light' : 'dark')} sx={{ py: 1.5 }}>
+          <ListItemIcon>{dark ? <LightModeOutlined /> : <DarkModeOutlined />}</ListItemIcon>
+          <ListItemText primary={dark ? 'Giao diện sáng' : 'Giao diện tối'} />
+        </ListItemButton>
+        <ListItemButton
+          onClick={() => {
+            onClose()
+            logout()
+          }}
+          sx={{ py: 1.5 }}
+        >
+          <ListItemIcon>
+            <LogoutOutlined />
+          </ListItemIcon>
+          <ListItemText primary="Đăng xuất" />
+        </ListItemButton>
+      </List>
+      <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 2, py: 1.5 }}>
+        {DISCLAIMER}
+      </Typography>
     </Box>
   )
 }
@@ -177,13 +364,13 @@ function UserMenu() {
         <MenuItem
           onClick={() => {
             setAnchor(null)
-            nav('/portfolio')
+            nav('/settings')
           }}
         >
           <ListItemIcon>
-            <AccountCircleOutlined fontSize="small" />
+            <SettingsOutlined fontSize="small" />
           </ListItemIcon>
-          Hồ sơ & danh mục
+          Cài đặt & thông báo
         </MenuItem>
         <MenuItem onClick={logout}>
           <ListItemIcon>
@@ -213,6 +400,7 @@ function Bell() {
         anchorEl={anchor}
         onClose={() => setAnchor(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      sx={{ bottom: { xs: `calc(${BOTTOM_NAV_HEIGHT + 12}px + env(safe-area-inset-bottom))`, md: 24 } }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{ paper: { sx: { width: 'min(92vw, 400px)', maxHeight: '70vh', display: 'flex', flexDirection: 'column' } } }}
       >
@@ -296,6 +484,7 @@ function Toast() {
       autoHideDuration={12000}
       onClose={(_, reason) => reason !== 'clickaway' && dismissLatest()}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      sx={{ bottom: { xs: `calc(${BOTTOM_NAV_HEIGHT + 12}px + env(safe-area-inset-bottom))`, md: 24 } }}
     >
       {latest ? (
         <Alert

@@ -14,6 +14,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { api, post } from '../lib/api'
 import { fmtNum } from '../lib/format'
+import { useIsMobile } from '../lib/useIsMobile'
 import StockSearch from './StockSearch'
 
 type AlertAsset = 'stock' | 'crypto' | 'gold'
@@ -42,6 +43,7 @@ export default function PriceAlertDialog({
   fixed?: { assetType: AlertAsset; symbol: string; label: string; currentPrice: number | null }
 }) {
   const [assetType, setAssetType] = useState<AlertAsset>(fixed?.assetType ?? 'stock')
+  const mobile = useIsMobile()
   const [symbol, setSymbol] = useState(fixed?.symbol ?? '')
   const [direction, setDirection] = useState<'above' | 'below'>('below')
   const [price, setPrice] = useState('')
@@ -86,7 +88,7 @@ export default function PriceAlertDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+    <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle>Cảnh báo giá {fixed ? fixed.label : ''}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>

@@ -41,6 +41,9 @@ const INDEX_NAME: Record<string, string> = {
 
 type Tab = 'stocks' | 'gold' | 'crypto' | 'fx'
 
+/** Cột phụ: ẩn trên điện thoại để giữ các cột chính (mã, giá, %) không bị cắt */
+const HIDE_XS = { display: { xs: 'none', md: 'table-cell' } } as const
+
 /** Lần gọi nguồn gần nhất bị lỗi (đang hiển thị dữ liệu cũ) hoặc chưa từng lấy được */
 function sourceProblem(s: SourceStatus | undefined) {
   if (!s) return null
@@ -154,7 +157,7 @@ function StockBoard({ snapshot }: { snapshot: MarketSnapshot }) {
   )
   return (
     <TableContainer>
-      <Table size="small" stickyHeader sx={{ minWidth: 860 }}>
+      <Table size="small" stickyHeader sx={{ minWidth: { md: 860 } }}>
         <TableHead>
           <TableRow>
             <TableCell>
@@ -162,23 +165,23 @@ function StockBoard({ snapshot }: { snapshot: MarketSnapshot }) {
                 Mã
               </TableSortLabel>
             </TableCell>
-            <TableCell align="right">Trần</TableCell>
-            <TableCell align="right">Sàn</TableCell>
-            <TableCell align="right">TC</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>Trần</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>Sàn</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>TC</TableCell>
             <TableCell align="right">Giá</TableCell>
-            <TableCell align="right">+/-</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>+/-</TableCell>
             <TableCell align="right">
               <TableSortLabel active={sort === 'changePct'} direction="desc" onClick={() => setSort('changePct')}>
                 %
               </TableSortLabel>
             </TableCell>
-            <TableCell align="right">Tổng KL</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>Tổng KL</TableCell>
             <TableCell align="right">
               <TableSortLabel active={sort === 'valueBn'} direction="desc" onClick={() => setSort('valueBn')}>
                 GT (tỷ)
               </TableSortLabel>
             </TableCell>
-            <TableCell align="right">NN ròng (KL)</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>NN ròng (KL)</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -188,27 +191,29 @@ function StockBoard({ snapshot }: { snapshot: MarketSnapshot }) {
             return (
               <TableRow key={q.symbol} hover onClick={() => nav(`/stock/${q.symbol}`)} sx={{ cursor: 'pointer' }}>
                 <TableCell sx={{ color, fontWeight: 700 }}>{q.symbol}</TableCell>
-                <TableCell align="right" sx={{ color: 'price.ceil' }}>
+                <TableCell align="right" sx={{ color: 'price.ceil', ...HIDE_XS }}>
                   {fmtStockPrice(q.ceiling)}
                 </TableCell>
-                <TableCell align="right" sx={{ color: 'price.floor' }}>
+                <TableCell align="right" sx={{ color: 'price.floor', ...HIDE_XS }}>
                   {fmtStockPrice(q.floor)}
                 </TableCell>
-                <TableCell align="right" sx={{ color: 'price.ref' }}>
+                <TableCell align="right" sx={{ color: 'price.ref', ...HIDE_XS }}>
                   {fmtStockPrice(q.ref)}
                 </TableCell>
                 <TableCell align="right" sx={{ color, fontWeight: 700 }}>
                   <Flash value={q.price}>{fmtStockPrice(q.price)}</Flash>
                 </TableCell>
-                <TableCell align="right" sx={{ color }}>
+                <TableCell align="right" sx={{ color, ...HIDE_XS }}>
                   {fmtNum(q.change / 1000, 2)}
                 </TableCell>
                 <TableCell align="right" sx={{ color }}>
                   {fmtPct(q.changePct)}
                 </TableCell>
-                <TableCell align="right">{fmtNum(q.volume)}</TableCell>
+                <TableCell align="right" sx={HIDE_XS}>
+                  {fmtNum(q.volume)}
+                </TableCell>
                 <TableCell align="right">{fmtNum(q.valueBn, 1)}</TableCell>
-                <TableCell align="right" sx={{ color: changeColor(net) }}>
+                <TableCell align="right" sx={{ color: changeColor(net), ...HIDE_XS }}>
                   {fmtNum(net)}
                 </TableCell>
               </TableRow>
@@ -243,14 +248,14 @@ function GoldBoard({ snapshot }: { snapshot: MarketSnapshot }) {
         </Grid>
       </Grid>
       <TableContainer>
-        <Table size="small" sx={{ minWidth: 640 }}>
+        <Table size="small" sx={{ minWidth: { md: 640 } }}>
           <TableHead>
             <TableRow>
               <TableCell>Loại vàng (VND/lượng)</TableCell>
               <TableCell align="right">Mua vào</TableCell>
               <TableCell align="right">Bán ra</TableCell>
-              <TableCell align="right">Chênh mua–bán</TableCell>
-              <TableCell align="right">Thay đổi (bán)</TableCell>
+              <TableCell align="right" sx={HIDE_XS}>Chênh mua–bán</TableCell>
+              <TableCell align="right" sx={HIDE_XS}>Thay đổi (bán)</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -263,10 +268,10 @@ function GoldBoard({ snapshot }: { snapshot: MarketSnapshot }) {
                 <TableCell align="right" sx={{ fontWeight: 600 }}>
                   <Flash value={g.sell}>{fmtVnd(g.sell)}</Flash>
                 </TableCell>
-                <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                <TableCell align="right" sx={{ color: 'text.secondary', ...HIDE_XS }}>
                   {g.sell ? fmtVnd(g.sell - g.buy) : '—'}
                 </TableCell>
-                <TableCell align="right" sx={{ color: changeColor(g.changeSell) }}>
+                <TableCell align="right" sx={{ color: changeColor(g.changeSell), ...HIDE_XS }}>
                   {g.changeSell > 0 ? '+' : ''}
                   {fmtNum(g.changeSell)}
                 </TableCell>
@@ -284,18 +289,21 @@ function CryptoBoard({ snapshot }: { snapshot: MarketSnapshot }) {
   const usdt = snapshot.usdt?.mid ?? snapshot.fx.find((f) => f.code === 'USD')?.transfer ?? 0
   return (
     <TableContainer>
-      <Table size="small" sx={{ minWidth: 720 }}>
+      <Table size="small" sx={{ minWidth: { md: 720 } }}>
         <TableHead>
           <TableRow>
             <TableCell>Coin</TableCell>
             <TableCell align="right">Giá (USDT)</TableCell>
             <TableCell align="right">24h</TableCell>
             <TableCell align="right">
-              Giá (VND){snapshot.usdt ? ` · 1 USDT = ${fmtNum(snapshot.usdt.mid)} ₫` : ''}
+              Giá (VND)
+              <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                {snapshot.usdt ? ` · 1 USDT = ${fmtNum(snapshot.usdt.mid)} ₫` : ''}
+              </Box>
             </TableCell>
-            <TableCell align="right">Cao 24h</TableCell>
-            <TableCell align="right">Thấp 24h</TableCell>
-            <TableCell align="right">KL 24h (USDT)</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>Cao 24h</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>Thấp 24h</TableCell>
+            <TableCell align="right" sx={HIDE_XS}>KL 24h (USDT)</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -309,9 +317,15 @@ function CryptoBoard({ snapshot }: { snapshot: MarketSnapshot }) {
                 {fmtPct(c.changePct)}
               </TableCell>
               <TableCell align="right">{usdt ? fmtVnd(c.price * usdt) : '—'}</TableCell>
-              <TableCell align="right">{fmtUsd(c.high)}</TableCell>
-              <TableCell align="right">{fmtUsd(c.low)}</TableCell>
-              <TableCell align="right">{fmtVndShort(c.quoteVolume).replace(' ₫', '')}</TableCell>
+              <TableCell align="right" sx={HIDE_XS}>
+                {fmtUsd(c.high)}
+              </TableCell>
+              <TableCell align="right" sx={HIDE_XS}>
+                {fmtUsd(c.low)}
+              </TableCell>
+              <TableCell align="right" sx={HIDE_XS}>
+                {fmtVndShort(c.quoteVolume).replace(' ₫', '')}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

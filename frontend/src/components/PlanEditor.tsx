@@ -16,6 +16,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { api, post, put } from '../lib/api'
+import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum } from '../lib/num'
 import type { Plan, PlanDraft } from '../lib/types'
 import StockSearch from './StockSearch'
@@ -41,6 +42,7 @@ export default function PlanEditor({
   fixed?: { assetType: PlanAsset; symbol: string; label: string } | null
 }) {
   const [assetType, setAssetType] = useState<PlanAsset>('stock')
+  const mobile = useIsMobile()
   const [symbol, setSymbol] = useState('')
   const [thesis, setThesis] = useState('')
   const [horizon, setHorizon] = useState('')
@@ -126,7 +128,7 @@ export default function PlanEditor({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{editing ? `Sửa kế hoạch ${label}` : label ? `Kế hoạch cho ${label}` : 'Lập kế hoạch đầu tư'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>

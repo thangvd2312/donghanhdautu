@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 import { api, post, put } from '../lib/api'
 import { fmtNum } from '../lib/format'
 import { useMarket } from '../lib/market-context'
+import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum, todayVn } from '../lib/num'
 import { TX_LABEL } from '../lib/tx'
 import type { AssetType, PortfolioAccount, Transaction, TxType } from '../lib/types'
@@ -59,6 +60,7 @@ export default function TransactionDialog({
   defaultPortfolioId?: string
 }) {
   const { snapshot } = useMarket()
+  const mobile = useIsMobile()
   const [type, setType] = useState<TxType>('buy')
   const [date, setDate] = useState(todayVn())
   const [assetType, setAssetType] = useState<TradeAsset>('stock')
@@ -166,7 +168,7 @@ export default function TransactionDialog({
       : 'Thêm giao dịch'
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>

@@ -27,6 +27,7 @@ import { api, getToken, post } from '../lib/api'
 import { fmtDate, fmtNum, fmtVndShort } from '../lib/format'
 import { TX_LABEL } from '../lib/tx'
 import type { PortfolioAccount, TxType } from '../lib/types'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const FIELDS = ['date', 'type', 'assetType', 'symbol', 'quantity', 'price', 'amount', 'fee', 'tax', 'currency', 'fxRate', 'note'] as const
 type Field = (typeof FIELDS)[number]
@@ -103,6 +104,7 @@ export default function ImportDialog({
   defaultPortfolioId?: string
 }) {
   const [csv, setCsv] = useState('')
+  const mobile = useIsMobile()
   const [fileName, setFileName] = useState('')
   const [decimal, setDecimal] = useState<'.' | ','>('.')
   const [mapping, setMapping] = useState<Partial<Record<Field, number>> | undefined>(undefined)
@@ -227,7 +229,7 @@ export default function ImportDialog({
   const c = preview?.counts
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>Nhập giao dịch từ file CSV</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>

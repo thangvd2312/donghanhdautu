@@ -168,8 +168,8 @@ function BriefCard({ brief }: { brief: HomeFeed['brief'] }) {
       <Typography variant="body2" color="text.secondary">
         Chưa có bản tin mới. Bản tin sáng gửi lúc 8:30 và tổng kết cuối phiên lúc 15:10, thứ 2 đến thứ 6. Bật/tắt trong
         trang{' '}
-        <Link component={RouterLink} to="/portfolio">
-          Danh mục
+        <Link component={RouterLink} to="/settings">
+          Cài đặt
         </Link>
         .
       </Typography>

@@ -25,6 +25,7 @@ import { KV } from '../components/ui'
 import { api, del, post, put } from '../lib/api'
 import { changeColor, fmtDate, fmtNum, fmtVndShort } from '../lib/format'
 import { project, requiredMonthly } from '../lib/goalMath'
+import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum, todayVn } from '../lib/num'
 import type { Goal, GoalAsset, GoalAssetType } from '../lib/types'
 
@@ -286,6 +287,7 @@ function GoalEditor({
   onSaved: () => void
 }) {
   const [name, setName] = useState('')
+  const mobile = useIsMobile()
   const [target, setTarget] = useState('')
   const [date, setDate] = useState('')
   const [monthly, setMonthly] = useState('')
@@ -350,7 +352,7 @@ function GoalEditor({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{goal ? `Sửa mục tiêu "${goal.name}"` : 'Thêm mục tiêu tài chính'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>

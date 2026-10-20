@@ -1,3 +1,4 @@
+import HistoryOutlined from '@mui/icons-material/HistoryOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowDownward from '@mui/icons-material/ArrowDownward'
 import ArrowUpward from '@mui/icons-material/ArrowUpward'
@@ -28,6 +29,7 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
+import Drawer from '@mui/material/Drawer'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
@@ -39,6 +41,7 @@ import { api, del, post } from '../lib/api'
 import { type ChatMsg as Msg, type Verification } from '../lib/chat'
 import { useChat } from '../lib/chat-context'
 import { timeAgo } from '../lib/format'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const SUGGESTIONS = [
   'Nhận xét danh mục hiện tại của tôi và cho tôi lời khuyên',
@@ -54,6 +57,8 @@ export default function AdvisorPage() {
   const [params, setParams] = useSearchParams()
   const nav = useNavigate()
   const chat = useChat()
+  const mobile = useIsMobile()
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [convs, setConvs] = useState<{ id: string; title: string; updatedAt: string }[]>([])
   const [loaded, setLoaded] = useState<Msg[]>([])
   const [input, setInput] = useState('')
@@ -176,15 +181,7 @@ export default function AdvisorPage() {
     void loadConvs()
   }
 
-  return (
-    <Grid container spacing={2.5} sx={{ height: { md: 'calc(100vh - 170px)' }, minHeight: 540 }}>
-      <Grid size={{ xs: 12, md: 3 }} sx={{ display: { xs: 'none', md: 'block' }, height: '100%' }}>
-        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-            <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => nav('/advisor')}>
-              Cuộc trò chuyện mới
-            </Button>
-          </Box>
+  const conversationList = (
           <List dense sx={{ flex: 1, overflowY: 'auto', py: 0.5 }}>
             {convs.length === 0 && (
               <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
@@ -197,6 +194,7 @@ export default function AdvisorPage() {
                 selected={c.id === id}
                 component={RouterLink}
                 to={`/advisor/${c.id}`}
+                onClick={() => setHistoryOpen(false)}
                 sx={{ mx: 0.75, borderRadius: 1, '&:hover .del': { opacity: 1 } }}
               >
                 <ListItemText
@@ -207,7 +205,7 @@ export default function AdvisorPage() {
                 <IconButton
                   className="del"
                   size="small"
-                  sx={{ opacity: 0, ml: 0.5 }}
+                  sx={{ opacity: { xs: 1, md: 0 }, ml: 0.5 }}
                   onClick={(e) => {
                     e.preventDefault()
                     setRemoving(c.id)
@@ -218,11 +216,49 @@ export default function AdvisorPage() {
               </ListItemButton>
             ))}
           </List>
+  )
+
+  return (
+    <Grid
+      container
+      spacing={2.5}
+      sx={{
+        // Điện thoại: khung chat vừa màn hình (trừ thanh trên, thanh đáy, vùng an toàn) để ô nhập luôn hiện
+        height: {
+          xs: 'calc(100dvh - 148px - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+          md: 'calc(100vh - 170px)',
+        },
+        minHeight: { md: 540 },
+      }}
+    >
+      <Grid size={{ xs: 12, md: 3 }} sx={{ display: { xs: 'none', md: 'block' }, height: '100%' }}>
+        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+            <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => nav('/advisor')}>
+              Cuộc trò chuyện mới
+            </Button>
+          </Box>
+          {conversationList}
         </Paper>
       </Grid>
 
-      <Grid size={{ xs: 12, md: 9 }} sx={{ height: { md: '100%' } }}>
-        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 540 }}>
+      <Grid size={{ xs: 12, md: 9 }} sx={{ height: '100%' }}>
+        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: { md: 540 } }}>
+          {mobile && (
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ px: 1, py: 0.5, borderBottom: 1, borderColor: 'divider', alignItems: 'center' }}
+            >
+              <Button size="small" startIcon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
+                Lịch sử
+              </Button>
+              <Box sx={{ flex: 1 }} />
+              <Button size="small" startIcon={<AddIcon />} onClick={() => nav('/advisor')}>
+                Mới
+              </Button>
+            </Stack>
+          )}
           <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {!atBottom && messages.length > 0 && (
               <Button
@@ -349,6 +385,20 @@ export default function AdvisorPage() {
           </Box>
         </Paper>
       </Grid>
+
+      <Drawer
+        anchor="bottom"
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        slotProps={{
+          paper: { sx: { maxHeight: '75vh', borderTopLeftRadius: 16, borderTopRightRadius: 16, pb: 'env(safe-area-inset-bottom)' } },
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ px: 2, pt: 2, pb: 1 }}>
+          Cuộc trò chuyện
+        </Typography>
+        {conversationList}
+      </Drawer>
 
       <Dialog open={!!removing} onClose={() => setRemoving(null)}>
         <DialogTitle>Xoá cuộc trò chuyện này?</DialogTitle>

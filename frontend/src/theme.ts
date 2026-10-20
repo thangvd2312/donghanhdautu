@@ -85,6 +85,8 @@ export const theme = createTheme({
       },
     },
     MuiButton: { defaultProps: { disableElevation: true } },
+    // Hộp thoại toàn màn hình trên iPhone: chừa thanh vuốt home ở đáy
+    MuiDialogActions: { styleOverrides: { root: { paddingBottom: 'max(8px, env(safe-area-inset-bottom))' } } },
     MuiTableCell: {
       styleOverrides: {
         root: { fontVariantNumeric: 'tabular-nums', borderColor: 'var(--mui-palette-divider)' },

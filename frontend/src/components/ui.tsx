@@ -24,10 +24,21 @@ export function Panel({
       {(title || action) && (
         <Stack
           direction="row"
-          spacing={2}
-          sx={{ px: 2, py: 1.5, alignItems: 'center', justifyContent: 'space-between', borderBottom: 1, borderColor: 'divider' }}
+          useFlexGap
+          spacing={1.5}
+          sx={{
+            px: 2,
+            py: 1.5,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: 1,
+            borderColor: 'divider',
+            // Màn hình hẹp: nút hành động xuống dòng dưới tiêu đề thay vì bị bóp méo
+            flexWrap: 'wrap',
+            rowGap: 1,
+          }}
         >
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, flex: '1 1 200px' }}>
             {title && <Typography variant="subtitle2">{title}</Typography>}
             {subtitle && (
               <Typography variant="caption" color="text.secondary">
@@ -62,7 +73,13 @@ export function Stat({
       </Typography>
       <Typography
         className="num"
-        sx={{ color, fontWeight: 600, fontSize: size === 'lg' ? 26 : size === 'md' ? 18 : 14, lineHeight: 1.3 }}
+        sx={{
+          color,
+          fontWeight: 600,
+          // Số lớn nhỏ lại một chút trên điện thoại để không bị ngắt dòng
+          fontSize: size === 'lg' ? { xs: 22, sm: 26 } : size === 'md' ? { xs: 17, sm: 18 } : 14,
+          lineHeight: 1.3,
+        }}
       >
         {value}
       </Typography>

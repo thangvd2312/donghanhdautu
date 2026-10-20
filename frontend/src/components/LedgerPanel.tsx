@@ -4,10 +4,12 @@ import EditOutlined from '@mui/icons-material/EditOutlined'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Box from '@mui/material/Box'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
+import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -22,6 +24,7 @@ import { useState } from 'react'
 import { api, del } from '../lib/api'
 import { fmtNum } from '../lib/format'
 import { TX_LABEL } from '../lib/tx'
+import { useIsMobile } from '../lib/useIsMobile'
 import type { PortfolioAccount, Transaction, TransactionRevision } from '../lib/types'
 import ImportDialog from './ImportDialog'
 import TransactionDialog from './TransactionDialog'
@@ -64,6 +67,7 @@ export default function LedgerPanel({
   portfolioId?: string
 }) {
   const showPortfolio = accounts.length > 1 && !portfolioId
+  const mobile = useIsMobile()
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
@@ -104,7 +108,41 @@ export default function LedgerPanel({
         </Stack>
       }
     >
-      {txs && txs.length > 0 ? (
+      {txs && txs.length > 0 && mobile ? (
+        <Stack divider={<Divider flexItem />}>
+          {txs.map((t) => (
+            <Stack key={t.id} direction="row" spacing={1} sx={{ px: 2, py: 1.25, alignItems: 'center' }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
+                  <Chip size="small" variant="outlined" color={TYPE_COLOR[t.type]} label={TX_LABEL[t.type]} sx={{ height: 22 }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {t.displayName ?? (t.currency === 'USDT' ? 'Tiền USDT' : 'Tiền mặt')}
+                  </Typography>
+                  {t.edited && (
+                    <Chip size="small" label="Đã sửa" variant="outlined" onClick={() => void showHistory(t)} sx={{ height: 20, fontSize: 11 }} />
+                  )}
+                </Stack>
+                <Typography variant="caption" color="text.secondary" component="div" className="num">
+                  {t.date.split('-').reverse().join('/')} · {describe(t)}
+                  {t.fee + t.tax ? ` · phí ${money(t.fee + t.tax, t.currency)}` : ''}
+                  {showPortfolio && t.portfolioName ? ` · ${t.portfolioName}` : ''}
+                </Typography>
+                {t.note && (
+                  <Typography variant="caption" color="text.secondary" component="div" noWrap>
+                    {t.note}
+                  </Typography>
+                )}
+              </Box>
+              <IconButton onClick={() => setEditing(t)} aria-label="Sửa">
+                <EditOutlined fontSize="small" />
+              </IconButton>
+              <IconButton onClick={() => setRemoving(t)} aria-label="Huỷ giao dịch">
+                <DeleteOutlined fontSize="small" />
+              </IconButton>
+            </Stack>
+          ))}
+        </Stack>
+      ) : txs && txs.length > 0 ? (
         <TableContainer sx={{ maxHeight: 480 }}>
           <Table size="small" stickyHeader sx={{ minWidth: 720 }}>
             <TableHead>

@@ -58,7 +58,7 @@ Push lên `main` → GitHub Actions build kiểm tra, rồi self-hosted runner (
 2. Server ở Việt Nam bị chặn `api.telegram.org`: tạo Cloudflare Worker chuyển tiếp (chỉ cho đúng bot của app) rồi đặt `TELEGRAM_API_BASE=https://<worker>.workers.dev`. Log đúng: `Telegram bot @<tên> sẵn sàng`.
 3. Link trong tin dùng `APP_URL`, không có thì dùng `FRONTEND_ORIGIN`. Chạy nhiều instance thì đặt `TELEGRAM_POLLING=false` cho các instance phụ.
 
-Người dùng tự kết nối ở Danh mục → "Nhận thông báo qua Telegram".
+Người dùng tự kết nối ở Cài đặt → "Nhận thông báo qua Telegram".
 
 ## Tính năng
 
