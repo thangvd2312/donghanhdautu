@@ -11,6 +11,7 @@ import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
 import { BriefQueueService } from './brief-queue.service';
+import { writeChecked } from './number-check';
 import { BriefContent, BriefRunService } from './brief-run.service';
 
 export type BriefKind = 'morning' | 'closing';
@@ -81,17 +82,24 @@ export class BriefsService {
 
   private async build(userId: string, kind: BriefKind): Promise<BriefContent> {
     const context = await this.context(userId, kind);
-    const result = await this.llm.json<{ headline: string; markdown: string }>({
-      tier: 'brief',
-      feature: kind === 'morning' ? 'brief_morning' : 'brief_closing',
-      userId,
-      system: BRIEF_PROMPT,
-      user: JSON.stringify(context),
-      schema: BRIEF_SCHEMA,
-      effort: 'medium',
-      maxTokens: 8000,
-    });
+    const { result, unmatched } = await writeChecked(context, (feedback) =>
+      this.llm.json<{ headline: string; markdown: string }>({
+        tier: 'brief',
+        feature: kind === 'morning' ? 'brief_morning' : 'brief_closing',
+        userId,
+        system: BRIEF_PROMPT,
+        user: JSON.stringify(context) + feedback,
+        schema: BRIEF_SCHEMA,
+        effort: 'medium',
+        maxTokens: 8000,
+      }),
+    );
     if (!result?.markdown) throw new Error('AI không trả về bản tin');
+    // Bản tin sáng / chiều không có bảng số riêng: vẫn gửi nhưng nêu rõ số chưa đối chiếu được với dữ liệu
+    if (unmatched.length) this.log.warn(`${LABEL[kind]} (${userId}): số chưa đối chiếu được: ${unmatched.join(', ')}`);
+    const caution = unmatched.length
+      ? `\n\n> Lưu ý: chưa đối chiếu được các con số sau với dữ liệu thị trường / danh mục đã dùng: ${unmatched.join(', ')}. Hãy kiểm tra lại trước khi dựa vào.`
+      : '';
 
     const [, mm, dd] = vnDateKey().split('-');
     const dateLabel = `${dd}/${mm}`;
@@ -99,7 +107,7 @@ export class BriefsService {
     return {
       title,
       prompt: `[Thời điểm hiện tại: ${nowVn()}]\n${title}`,
-      body: result.markdown,
+      body: result.markdown + caution,
       notification: {
         kind: 'brief',
         severity: 'info',

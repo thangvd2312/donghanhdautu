@@ -13,6 +13,7 @@ import { mentionsCompany } from './aliases';
 import { LlmService } from './llm.service';
 import { BriefQueueService } from './brief-queue.service';
 import { BriefContent, BriefRunService } from './brief-run.service';
+import { writeChecked } from './number-check';
 import { weeklyTable } from './weekly';
 
 const WEEKLY_PROMPT = `Bạn là cố vấn đầu tư đồng hành, viết phần NHẬN ĐỊNH cho bản tổng kết tuần của một nhà đầu tư cá nhân người Việt.
@@ -98,46 +99,57 @@ export class WeeklyBriefService {
 
     let headline = `Danh mục tuần ${summary.from.split('-').reverse().slice(0, 2).join('/')} – ${summary.to.split('-').reverse().slice(0, 2).join('/')}`;
     let narrative = '';
+    let droppedNote = '';
     if (this.llm.enabled) {
-      const ai = await this.llm.json<{ headline: string; markdown: string }>({
-        tier: 'brief',
-        feature: 'brief_weekly',
-        userId,
-        system: WEEKLY_PROMPT,
-        user: JSON.stringify({
-          numbersTable: table,
-          week: summary,
-          investor: profile
-            ? {
-                type: RISK_TYPE_LABEL[profile.riskType],
-                goal: profile.goal,
-                horizon: profile.horizon,
-                maxDrawdownPct: profile.maxDrawdownPct,
-                fomoProne: profile.fomoProne,
-              }
-            : 'chưa khảo sát',
-          plansDueSoon: plans.map((p) => ({
-            asset: p.symbol.replace(/USDT$/, ''),
-            nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10),
-            exitConditions: p.exitConditions,
-            stopPrice: p.stopPrice,
-            targetPrice: p.targetPrice,
-          })),
-          reviewPoints: review,
-          newsThisWeek: related,
+      const input = {
+        numbersTable: table,
+        week: summary,
+        investor: profile
+          ? {
+              type: RISK_TYPE_LABEL[profile.riskType],
+              goal: profile.goal,
+              horizon: profile.horizon,
+              maxDrawdownPct: profile.maxDrawdownPct,
+              fomoProne: profile.fomoProne,
+            }
+          : 'chưa khảo sát',
+        plansDueSoon: plans.map((p) => ({
+          asset: p.symbol.replace(/USDT$/, ''),
+          nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10),
+          exitConditions: p.exitConditions,
+          stopPrice: p.stopPrice,
+          targetPrice: p.targetPrice,
+        })),
+        reviewPoints: review,
+        newsThisWeek: related,
+      };
+      const ai = await writeChecked(input, (feedback) =>
+        this.llm.json<{ headline: string; markdown: string }>({
+          tier: 'brief',
+          feature: 'brief_weekly',
+          userId,
+          system: WEEKLY_PROMPT,
+          user: JSON.stringify(input) + feedback,
+          schema: SCHEMA,
+          effort: 'medium',
+          maxTokens: 4000,
         }),
-        schema: SCHEMA,
-        effort: 'medium',
-        maxTokens: 4000,
-      });
-      if (ai?.markdown) {
-        headline = ai.headline || headline;
-        narrative = ai.markdown;
+      );
+      if (ai.result && !ai.unmatched.length) {
+        headline = ai.result.headline || headline;
+        narrative = ai.result.markdown;
+      } else if (ai.unmatched.length) {
+        // Hai lần vẫn có số không khớp bảng: chỉ gửi bảng số đã tính, không gửi nhận định có thể sai số
+        this.log.warn(`Tổng kết tuần (${userId}): bỏ nhận định AI vì số không khớp: ${ai.unmatched.join(', ')}`);
+        droppedNote =
+          '\n\n_Phần nhận định của AI tuần này đã được bỏ vì có con số không khớp với số liệu đã tính ở bảng trên._';
       }
     }
     const body = [
       table,
-      narrative ? `\n\n---\n\n**Nhận định của cố vấn** (AI, tham khảo)\n\n${narrative}` : '',
+      narrative
+        ? `\n\n---\n\n**Nhận định của cố vấn** (AI, tham khảo — các con số đã được đối chiếu với bảng trên)\n\n${narrative}`
+        : droppedNote,
       related.length
         ? `\n\n**Tin liên quan trong tuần**\n${related.map((n) => `- [${n.title}](${n.url}) — ${n.source}`).join('\n')}`
         : '',
