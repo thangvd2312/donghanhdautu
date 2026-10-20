@@ -395,6 +395,7 @@ export class AdvisorService {
           feature: 'chat',
           userId,
           model: response.model || this.model,
+          requestedModel: this.model,
           usage: response.usage,
           durationMs: Date.now() - started,
           outcome: response.stop_reason === 'refusal' ? 'refused' : 'ok',

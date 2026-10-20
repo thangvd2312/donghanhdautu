@@ -53,8 +53,19 @@ describe('quota AI (PostgreSQL)', () => {
       durationMs: 5,
       outcome: 'ok',
     });
+    // Router đổi tên model khi trả lời: tra giá theo tên đã cấu hình
+    await ai.record({
+      feature: 'alert',
+      userId: u.id,
+      model: 'router-renamed-model',
+      requestedModel: 'claude-haiku-5-5',
+      usage: { input_tokens: 1_000_000, output_tokens: 0 },
+      durationMs: 5,
+      outcome: 'ok',
+    });
     const rows = await prisma.aiUsage.findMany({ where: { userId: u.id }, orderBy: { feature: 'asc' } });
     expect(rows.map((r) => [r.feature, r.costUsd?.toNumber() ?? null, r.priceVersion])).toEqual([
+      ['alert', 0.1, '2026-10-06'],
       ['chat', null, null],
       ['verifier', 0.1, '2026-10-06'],
     ]);

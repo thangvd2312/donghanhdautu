@@ -16,13 +16,17 @@ Chi phí ước tính theo bảng giá có phiên bản trong [pricing.ts](../ba
 
 - Bảng giá mặc định là giá API trực tiếp của Anthropic, phiên bản `2026-10-06`.
 - Thiếu usage (lỗi, huỷ giữa chừng) hoặc model chưa có giá thì `costUsd = null`, tức "không rõ", không tính là 0.
-- Model đi qua router dùng tên khác (vd `cx/gpt-6.1-sol(high)`, `ag/gemini-3.8-flash-low`) cần khai giá trong `.env`, theo USD / 1 triệu token:
+- Model đi qua router dùng tên khác nên giá được khai trong `.env` (USD / 1 triệu token). Router có thể đổi tên model khi trả lời (gọi `ag/gemini-3.8-flash-low` nhưng phản hồi ghi `gemini-3.8-flash-n`). Hệ thống tra giá theo tên trả về trước, không có thì tra theo tên đã cấu hình, nên chỉ cần khai theo tên trong `LLM_MODEL_*`.
+
+  Production đang dùng giá niêm yết chính thức của model gốc, khai ngày 21/10/2026:
 
   ```
-  AI_PRICES={"cx/gpt-6.1-sol(high)":{"input":1.25,"output":10},"ag/gemini-3.8-flash-low":{"input":0.3,"output":2.5}}
+  AI_PRICES={"cx/gpt-6.1-sol(high)":{"input":2,"output":10,"cacheRead":0.1},"ag/gemini-3.8-flash-low":{"input":0.75,"output":3.75,"cacheRead":0.075}}
   ```
 
-  Các con số trên chỉ là ví dụ, phải thay bằng giá thật của router. Khi có giá tự khai, phiên bản giá được ghi thêm hậu tố `+env`.
+  - GPT-6.1 Sol: giá chuẩn $2 / $10, cache $0,10. Prompt trên 272K token có giá cao hơn nhưng app không dùng tới.
+  - Gemini 3.8 Flash: giá ưu đãi $0,75 / $3,75 tới 31/12/2026; từ 1/1/2027 tăng lên $1,50 / $7,50, **cần cập nhật `AI_PRICES` lúc đó**.
+  - Đây là giá tham chiếu. Chi phí thật qua 9router có thể khác (router của công ty, có thể tính theo gói), nên số liệu là ước tính để so sánh giữa các chức năng và đặt ngân sách. Khi có giá thực của router thì thay vào. Phiên bản giá được ghi thêm hậu tố `+env`.
 
 ## Quota phía server
 

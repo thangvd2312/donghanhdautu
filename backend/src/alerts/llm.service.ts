@@ -76,6 +76,7 @@ export class LlmService {
         feature: opts.feature,
         userId: opts.userId,
         model: res.model || model,
+        requestedModel: model,
         usage: res.usage,
         durationMs: Date.now() - started,
         outcome: res.stop_reason === 'refusal' ? 'refused' : 'ok',

@@ -50,12 +50,15 @@ export class AiUsageService {
   async record(e: {
     feature: AiFeature;
     userId?: string | null;
+    /** Model thực sự trả lời (router có thể đổi tên, vd gemini-3.8-flash-n) */
     model: string;
+    /** Model đã cấu hình để gọi (vd ag/gemini-3.8-flash-low) — dùng tra giá khi tên trả về chưa có trong bảng */
+    requestedModel?: string;
     usage?: UsageLike | null;
     durationMs: number;
     outcome: 'ok' | 'error' | 'aborted' | 'refused';
   }) {
-    const cost = estimateCost(e.model, e.usage);
+    const cost = estimateCost(e.model, e.usage) ?? (e.requestedModel ? estimateCost(e.requestedModel, e.usage) : null);
     try {
       await this.prisma.aiUsage.create({
         data: {
