@@ -16,50 +16,110 @@ export function holdingLink(h: { assetType: AssetType; symbol: string }) {
   return null;
 }
 
+/** Giao dịch trong ngày của một tài sản, quy VND theo tỷ giá hiện tại (cùng cơ sở với giá hiện tại) */
+export interface DayTrade {
+  assetType: AssetType;
+  symbol: string;
+  side: 'buy' | 'sell';
+  quantity: number;
+  /** Số lượng × giá khớp */
+  valueVnd: number;
+  /** Phí + thuế */
+  costsVnd: number;
+}
+
+/** Tài sản đã bán hết trong ngày: không còn trong định giá nhưng vẫn có lãi/lỗ hôm nay */
+export interface ClosedToday {
+  assetType: AssetType;
+  symbol: string;
+  displayName: string;
+  /** Giá hiện tại quy VND; null khi thiếu */
+  priceVnd: number | null;
+  dayChangePct: number | null;
+}
+
+/** Vị thế đầu ngày và giao dịch trong ngày, dựng từ sổ giao dịch */
+export interface DayLedger {
+  /** Số lượng nắm giữ đầu ngày theo `assetType:symbol` (gồm cả số dư khai báo hôm nay — xem openedToday) */
+  startQty: Map<string, number>;
+  trades: DayTrade[];
+  /** Tài sản khai báo số dư đầu kỳ hôm nay: không biết mua lúc nào nên coi như đã giữ từ đầu ngày */
+  openedToday: Set<string>;
+  closed: ClosedToday[];
+}
+
+const keyOf = (h: { assetType: string; symbol: string }) => `${h.assetType}:${h.symbol}`;
+
 /**
- * Danh mục tăng/giảm bao nhiêu hôm nay và do tài sản nào, tính từ % thay đổi trong ngày của từng tài sản.
- * Chưa có sổ giao dịch nên giả định số lượng nắm giữ không đổi trong ngày; tài sản sửa/thêm hôm nay được nêu rõ.
+ * Danh mục tăng/giảm bao nhiêu hôm nay và do tài sản nào. Với mỗi tài sản:
+ * lãi/lỗ hôm nay = giá trị cuối − giá trị đầu ngày (theo giá mốc) − tiền bỏ ra mua hôm nay + tiền thu về khi bán hôm nay.
+ * Mua hôm nay chỉ tính phần giá chạy sau lúc mua; bán hôm nay tính theo giá bán thực tế; tiền nạp/rút không phải lãi.
+ * Không có sổ (`ledger` bỏ trống) thì giả định số lượng không đổi trong ngày.
  */
-export function dayChange(v: Valuation, changedTodayIds: Set<string> = new Set()) {
-  const rows = v.holdings.map((h) => {
-    const value = h.marketValue;
-    // Giá trị lúc đầu kỳ = giá trị hiện tại / (1 + %thay đổi)
-    const change =
-      h.assetType === 'cash'
-        ? 0
-        : value !== null && h.dayChangePct !== null && h.dayChangePct > -100
-          ? value - value / (1 + h.dayChangePct / 100)
-          : null;
-    return { h, change };
+export function dayChange(v: Valuation, ledger?: DayLedger) {
+  const tradesOf = (k: string) => ledger?.trades.filter((t) => keyOf(t) === k) ?? [];
+  const assets = [
+    ...v.holdings.map((h) => ({
+      h,
+      key: keyOf(h),
+      quantity: h.quantity,
+      priceVnd: h.marketValue !== null && h.quantity > 0 ? h.marketValue / h.quantity : null,
+      valueNow: h.marketValue,
+    })),
+    ...(ledger?.closed ?? []).map((c) => ({
+      h: { ...c, id: `closed:${keyOf(c)}`, weightPct: 0 },
+      key: keyOf(c),
+      quantity: 0,
+      priceVnd: c.priceVnd,
+      valueNow: 0,
+    })),
+  ];
+  const rows = assets.map((a) => {
+    if (a.h.assetType === 'cash') return { ...a, change: 0 };
+    const pct = a.h.dayChangePct;
+    if (a.priceVnd === null || pct === null || pct <= -100) return { ...a, change: null };
+    const refPrice = a.priceVnd / (1 + pct / 100);
+    const startQty = ledger ? (ledger.startQty.get(a.key) ?? 0) : a.quantity;
+    const trades = tradesOf(a.key);
+    const bought = trades.filter((t) => t.side === 'buy').reduce((s, t) => s + t.valueVnd + t.costsVnd, 0);
+    const sold = trades.filter((t) => t.side === 'sell').reduce((s, t) => s + t.valueVnd - t.costsVnd, 0);
+    const change = a.quantity * a.priceVnd - startQty * refPrice - bought + sold;
+    return { ...a, change };
   });
   const known = rows.filter((r) => r.change !== null);
-  const changeVnd = known.reduce((s, r) => s + r.change!, 0);
-  const valueNow = known.reduce((s, r) => s + (r.h.marketValue ?? 0), 0);
+  const changeVnd = known.reduce((s, r) => s + r.change, 0);
+  const valueNow = known.reduce((s, r) => s + (r.valueNow ?? 0), 0);
+  // Gốc tính %: giá trị hiện tại trừ phần lãi/lỗ hôm nay = giá trị đầu ngày + tiền nạp ròng trong ngày
   const base = valueNow - changeVnd;
 
   const contributors = known
-    .filter((r) => r.h.assetType !== 'cash' && Math.round(r.change!) !== 0)
+    .filter((r) => r.h.assetType !== 'cash' && Math.round(r.change) !== 0)
     .map((r) => ({
       id: r.h.id,
       assetType: r.h.assetType,
       symbol: r.h.symbol,
       displayName: r.h.displayName,
       link: holdingLink(r.h),
-      changeVnd: r.change!,
+      changeVnd: r.change,
       dayChangePct: r.h.dayChangePct!,
       weightPct: r.h.weightPct,
       basis: DAY_BASIS[r.h.assetType],
     }));
 
   const missing = rows.filter((r) => r.change === null).map((r) => r.h.displayName);
-  const changedToday = v.holdings
-    .filter((h) => h.assetType !== 'cash' && changedTodayIds.has(h.id))
-    .map((h) => h.displayName);
+  const nameOf = (k: string) => assets.find((a) => a.key === k)?.h.displayName ?? k.split(':')[1];
+  const changedToday = ledger ? [...ledger.openedToday].filter((k) => !k.startsWith('cash:')).map(nameOf) : [];
+  const traded = ledger ? [...new Set(ledger.trades.map(keyOf))].map(nameOf) : [];
   const notes: string[] = [];
   if (missing.length) notes.push(`Chưa có dữ liệu thay đổi trong ngày của ${missing.join(', ')} nên chưa tính vào.`);
+  if (traded.length) {
+    notes.push(
+      `${traded.join(', ')} có mua/bán hôm nay: phần mua chỉ tính biến động sau giá mua, phần bán tính theo giá bán thực tế (đã trừ phí/thuế).`,
+    );
+  }
   if (changedToday.length) {
     notes.push(
-      `${changedToday.join(', ')} vừa được thêm/sửa hôm nay: con số giả định bạn đã nắm giữ số lượng hiện tại từ đầu ngày.`,
+      `${changedToday.join(', ')} vừa khai báo hôm nay: con số giả định bạn đã nắm giữ số lượng đó từ đầu ngày.`,
     );
   }
 

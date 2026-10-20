@@ -1,6 +1,7 @@
 import type { PriceInfo } from '../market/freshness';
 import { HoldingInput, valuePortfolio } from '../portfolio/valuation';
 import { dayChange, reviewPoints } from './today';
+import type { DayLedger, DayTrade } from './today';
 
 const holding = (id: string, assetType: string, symbol: string, quantity: number, avgCost: number): HoldingInput => ({
   id,
@@ -71,11 +72,89 @@ describe('dayChange', () => {
     expect(d.notes.join(' ')).toContain('XYZ');
   });
 
-  it('nêu rõ tài sản vừa thêm / sửa hôm nay', () => {
-    const v = valuation([holding('1', 'stock', 'FPT', 100, 100_000)], { FPT: 110_000 }, { FPT: 10 });
-    const d = dayChange(v, new Set(['1']));
-    expect(d.changedToday).toEqual(['FPT']);
-    expect(d.notes.join(' ')).toContain('giả định');
+  describe('theo sổ giao dịch', () => {
+    const day = (p: Partial<DayLedger>): DayLedger => ({
+      startQty: new Map(),
+      trades: [],
+      openedToday: new Set(),
+      closed: [],
+      ...p,
+    });
+    // FPT: tham chiếu 10.000, hiện tại 11.000 (+10%)
+    const fpt = (qty: number) => valuation([holding('1', 'stock', 'FPT', qty, 10_000)], { FPT: 11_000 }, { FPT: 10 });
+    const trade = (side: 'buy' | 'sell', quantity: number, price: number, costsVnd = 0): DayTrade => ({
+      assetType: 'stock',
+      symbol: 'FPT',
+      side,
+      quantity,
+      valueVnd: quantity * price,
+      costsVnd,
+    });
+
+    it('mua mới hôm nay ở giá hiện tại: chưa lãi gì, không tính phần tăng trước lúc mua', () => {
+      const d = dayChange(fpt(100), day({ trades: [trade('buy', 100, 11_000)] }));
+      expect(d.changeVnd).toBeCloseTo(0);
+      expect(d.gainers).toEqual([]);
+      expect(d.notes.join(' ')).toContain('có mua/bán hôm nay');
+    });
+
+    it('mua mới có phí: lỗ đúng bằng phí', () => {
+      const d = dayChange(fpt(100), day({ trades: [trade('buy', 100, 11_000, 16_500)] }));
+      expect(d.changeVnd).toBeCloseTo(-16_500);
+    });
+
+    it('mua thêm: phần đã giữ tính từ giá tham chiếu, phần mua tính từ giá mua', () => {
+      // Giữ 100 từ đầu ngày (+100k), mua thêm 50 giá 10.500 (+25k)
+      const d = dayChange(
+        fpt(150),
+        day({ startQty: new Map([['stock:FPT', 100]]), trades: [trade('buy', 50, 10_500)] }),
+      );
+      expect(d.changeVnd).toBeCloseTo(125_000);
+    });
+
+    it('bán một phần: phần bán tính theo giá bán thực tế, sau phí và thuế', () => {
+      // 100 cp đầu ngày; bán 40 giá 10.500 (phí + thuế 1.000) → +20k − 1k; còn 60 cp +60k
+      const d = dayChange(
+        fpt(60),
+        day({ startQty: new Map([['stock:FPT', 100]]), trades: [trade('sell', 40, 10_500, 1_000)] }),
+      );
+      expect(d.changeVnd).toBeCloseTo(79_000);
+    });
+
+    it('bán hết hôm nay: vẫn tính lãi/lỗ của tài sản đã bán', () => {
+      const v = valuation([holding('2', 'cash', 'VND', 1_200_000, 1)], {});
+      const d = dayChange(
+        v,
+        day({
+          startQty: new Map([['stock:FPT', 100]]),
+          trades: [trade('sell', 100, 12_000)],
+          closed: [{ assetType: 'stock', symbol: 'FPT', displayName: 'FPT', priceVnd: 11_000, dayChangePct: 10 }],
+        }),
+      );
+      expect(d.changeVnd).toBeCloseTo(200_000);
+      expect(d.gainers.map((g) => g.symbol)).toEqual(['FPT']);
+    });
+
+    it('nạp/rút tiền không phải lãi', () => {
+      // Nạp 5tr hôm nay: tiền mặt tăng nhưng thay đổi trong ngày chỉ do giá
+      const v = valuation(
+        [holding('1', 'stock', 'FPT', 100, 10_000), holding('2', 'cash', 'VND', 5_000_000, 1)],
+        { FPT: 11_000 },
+        { FPT: 10 },
+      );
+      const d = dayChange(v, day({ startQty: new Map([['stock:FPT', 100]]) }));
+      expect(d.changeVnd).toBeCloseTo(100_000);
+    });
+
+    it('khai báo số dư hôm nay: giả định đã giữ từ đầu ngày và nói rõ', () => {
+      const d = dayChange(
+        fpt(100),
+        day({ startQty: new Map([['stock:FPT', 100]]), openedToday: new Set(['stock:FPT']) }),
+      );
+      expect(d.changeVnd).toBeCloseTo(100_000);
+      expect(d.changedToday).toEqual(['FPT']);
+      expect(d.notes.join(' ')).toContain('giả định');
+    });
   });
 
   it('danh mục rỗng hoặc không có dữ liệu trong ngày thì không đưa ra con số', () => {

@@ -4,13 +4,17 @@ import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
 import { MarketService } from '../market/market.service';
+import type { AssetType } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { NewsModule, NewsService } from '../news/news.module';
 import type { NewsItem } from '../news/news.module';
+import { ledgerOfAll } from '../portfolio/ledger';
+import type { LedgerTx } from '../portfolio/ledger';
 import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
+import { toLedgerTx, TransactionsService } from '../portfolio/transactions';
 import { PrismaService } from '../prisma/prisma.module';
 import { planSignals } from '../plans/plan-rules';
-import { dayChange, ReviewPoint, reviewPoints } from './today';
+import { dayChange, DayLedger, DayTrade, ReviewPoint, reviewPoints } from './today';
 
 const NEWS_HOURS = 48;
 const MAX_NEWS = 8;
@@ -25,18 +29,15 @@ export class HomeService {
     private prisma: PrismaService,
     private market: MarketService,
     private portfolio: PortfolioService,
+    private transactions: TransactionsService,
     private news: NewsService,
   ) {}
 
   async today(userId: string) {
-    const [v, holdings] = await Promise.all([
+    const [v, txs] = await Promise.all([
       this.portfolio.valuation(userId),
-      this.prisma.holding.findMany({ where: { userId }, select: { id: true, createdAt: true, updatedAt: true } }),
+      this.transactions.activeTransactions(userId).then((list) => list.map(toLedgerTx)),
     ]);
-    const today = vnDateKey();
-    const changedToday = new Set(
-      holdings.filter((h) => vnDateKey(h.updatedAt) === today || vnDateKey(h.createdAt) === today).map((h) => h.id),
-    );
     return {
       hasHoldings: v.holdings.length > 0,
       totalValue: v.totalValue,
@@ -44,11 +45,56 @@ export class HomeService {
       totalPnl: v.totalPnl,
       totalPnlPct: v.totalPnlPct,
       allocationPct: v.allocationPct,
-      day: dayChange(v, changedToday),
+      day: dayChange(v, this.dayLedger(txs, v)),
       stockSessionOpen: this.market.stockSessionOpen,
       dataQuality: v.dataQuality,
       generatedAt: v.generatedAt,
     };
+  }
+
+  /** Vị thế đầu ngày (sổ trước hôm nay) và các giao dịch hôm nay, quy VND theo tỷ giá hiện tại */
+  private dayLedger(txs: LedgerTx[], v: { holdings: { assetType: string; symbol: string }[] }): DayLedger {
+    const today = vnDateKey();
+    const rate = this.market.usdtVnd.rate;
+    const start = ledgerOfAll(txs.filter((t) => t.date < today));
+    const startQty = new Map(start.positions.map((p) => [`${p.assetType}:${p.symbol}`, p.quantity.toNumber()]));
+    const trades: DayTrade[] = [];
+    const openedToday = new Set<string>();
+    for (const t of txs.filter((x) => x.date === today)) {
+      if (!t.assetType || t.assetType === 'cash' || !t.symbol || !t.quantity) continue;
+      const key = `${t.assetType}:${t.symbol}`;
+      const toVnd = t.currency === 'USDT' ? rate : 1;
+      if (t.type === 'opening') {
+        startQty.set(key, (startQty.get(key) ?? 0) + t.quantity.toNumber());
+        openedToday.add(key);
+      } else if (t.type === 'buy' || t.type === 'sell') {
+        trades.push({
+          assetType: t.assetType,
+          symbol: t.symbol,
+          side: t.type,
+          quantity: t.quantity.toNumber(),
+          valueVnd: t.quantity.mul(t.price ?? 0).toNumber() * toVnd,
+          costsVnd: t.fee.add(t.tax).toNumber() * toVnd,
+        });
+      }
+    }
+    const held = new Set(v.holdings.map((h) => `${h.assetType}:${h.symbol}`));
+    const closed = [...new Set([...startQty.keys(), ...trades.map((t) => `${t.assetType}:${t.symbol}`)])]
+      .filter((k) => !held.has(k))
+      .map((k) => {
+        const [assetType, symbol] = k.split(':') as [AssetType, string];
+        return {
+          assetType,
+          symbol,
+          displayName:
+            assetType === 'gold'
+              ? (this.market.goldQuotes().find((g) => g.code === symbol)?.name ?? symbol)
+              : symbol.replace(/USDT$/, ''),
+          priceVnd: this.market.priceInfo(assetType, symbol).value,
+          dayChangePct: this.market.dayChangePct(assetType, symbol),
+        };
+      });
+    return { startQty, trades, openedToday, closed };
   }
 
   async review(userId: string) {
