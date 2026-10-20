@@ -106,7 +106,7 @@ export default function TelegramPanel() {
         </Stack>
       ) : (
         <Stack spacing={1}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+          <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
             <Chip size="small" color="success" label={`Đã kết nối${link.username ? ` · @${link.username}` : ''}`} />
             <Box sx={{ flex: 1 }} />
             <Button size="small" onClick={() => void run(() => post('/telegram/test'), 'Đã gửi tin thử, hãy kiểm tra Telegram.')}>

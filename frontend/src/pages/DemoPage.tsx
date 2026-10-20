@@ -172,7 +172,7 @@ export default function DemoPage() {
                   Nhập tài sản đang có hoặc ghi từng giao dịch; app tính lãi/lỗ đúng sau khi tách tiền nạp, nhắc khi cần xem lại,
                   và cố vấn AI trả lời có dẫn nguồn.
                 </Typography>
-                <Stack direction="row" spacing={1} sx={{ justifyContent: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+                <Stack useFlexGap direction="row" spacing={1} sx={{ justifyContent: 'center', flexWrap: 'wrap', rowGap: 1 }}>
                   <Button component={RouterLink} to="/register" variant="contained">
                     Tạo tài khoản miễn phí
                   </Button>

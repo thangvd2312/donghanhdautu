@@ -135,7 +135,7 @@ export default function LedgerPanel({
                     {t.fee + t.tax ? money(t.fee + t.tax, t.currency) : '—'}
                   </TableCell>
                   <TableCell sx={{ maxWidth: 220 }}>
-                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+                    <Stack useFlexGap direction="row" spacing={0.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
                       {t.source === 'migration' && (
                         <Tooltip title="Chuyển từ tài sản bạn đã khai báo trước khi có sổ giao dịch">
                           <Chip size="small" label="Khai báo cũ" sx={{ height: 20, fontSize: 11 }} />

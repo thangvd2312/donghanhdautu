@@ -53,7 +53,7 @@ export function TodayBlock({ d, demo }: { d: HomeToday; demo?: boolean }) {
         </Grid>
       </Grid>
 
-      <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 1, alignItems: 'center' }}>
+      <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 1, alignItems: 'center' }}>
         <Chip
           size="small"
           variant="outlined"
@@ -92,7 +92,7 @@ export function TodayBlock({ d, demo }: { d: HomeToday; demo?: boolean }) {
 
       <Divider sx={{ my: 2 }} />
       <AllocationBar allocation={d.allocationPct} />
-      <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
+      <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
         <Button
           variant="contained"
           size="small"
@@ -198,7 +198,7 @@ export function NewsRow({ news, tags }: { news: HomeFeed['macro'][number]; tags?
   return (
     <Box>
       {tags && (
-        <Stack direction="row" spacing={0.5} sx={{ mb: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
+        <Stack useFlexGap direction="row" spacing={0.5} sx={{ mb: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
           {tags}
         </Stack>
       )}

@@ -96,7 +96,7 @@ export default function StockPage() {
             <Typography color="text.secondary" sx={{ mt: 0.5 }}>
               {c?.name ?? q.name}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
+            <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
               <Button
                 variant="contained"
                 component={RouterLink}

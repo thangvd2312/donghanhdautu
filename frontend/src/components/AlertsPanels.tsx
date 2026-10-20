@@ -174,7 +174,7 @@ export function NotificationSettingsPanel() {
         />
       </Stack>
       <Divider sx={{ my: 1.5 }} />
-      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+      <Stack useFlexGap direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
         <Button size="small" variant="outlined" disabled={!!sending} onClick={() => void sendNow('morning')}>
           {sending === 'morning' ? 'Đang viết bản tin…' : 'Gửi thử bản tin sáng'}
         </Button>

@@ -63,7 +63,7 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
           <Link component={RouterLink} to="/plans" variant="body2">
             ← Kế hoạch đầu tư
           </Link>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
+          <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               {p.link ? (
                 <Link component={RouterLink} to={p.link} underline="hover" color="inherit">

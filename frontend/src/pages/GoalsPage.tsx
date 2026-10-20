@@ -133,7 +133,7 @@ function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: () => void; onCha
 
   return (
     <Paper sx={{ p: 2.5, opacity: g.status === 'active' ? 1 : 0.8 }}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+      <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           {g.name}
         </Typography>
@@ -169,7 +169,7 @@ function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: () => void; onCha
         </Button>
       </Stack>
 
-      <Stack direction="row" spacing={2} sx={{ mt: 1.5, alignItems: 'baseline', flexWrap: 'wrap' }}>
+      <Stack useFlexGap direction="row" spacing={2} sx={{ mt: 1.5, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <Typography className="num" sx={{ fontSize: 24, fontWeight: 700 }}>
           {p.isEstimate ? '≈ ' : ''}
           {fmtVndShort(p.current)}

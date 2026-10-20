@@ -317,7 +317,7 @@ export default function ImportDialog({
               {preview.mappingErrors.length > 0 && <Alert severity="warning">{preview.mappingErrors.join(' ')}</Alert>}
 
               {c && (
-                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+                <Stack useFlexGap direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
                   <Chip label={`${c.total} dòng`} size="small" />
                   <Chip label={`${c.toImport} sẽ nhập`} size="small" color="success" />
                   {c.errors > 0 && <Chip label={`${c.errors} dòng lỗi`} size="small" color="error" />}

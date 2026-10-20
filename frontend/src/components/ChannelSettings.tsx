@@ -37,7 +37,7 @@ export default function ChannelSettings({
           label={<Typography variant="body2">{label}</Typography>}
         />
       ))}
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+      <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
         <Typography variant="body2">Giờ yên lặng</Typography>
         <TextField
           select

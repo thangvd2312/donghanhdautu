@@ -143,7 +143,7 @@ function GettingStarted() {
         Nhập tài sản đang nắm giữ để mỗi ngày biết danh mục tăng giảm bao nhiêu, vì sao, và điều gì cần xem lại. Chưa muốn
         nhập? Thêm vài mã vào danh sách theo dõi bên dưới, hoặc hỏi cố vấn trước.
       </Typography>
-      <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
+      <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
         <Button variant="contained" component={RouterLink} to="/portfolio">
           Nhập danh mục
         </Button>

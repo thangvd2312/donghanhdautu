@@ -259,7 +259,7 @@ function NotificationItem({ n, onNavigate }: { n: Notification; onNavigate: () =
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {n.body}
           </Typography>
-          <Stack direction="row" spacing={2} sx={{ mt: 0.75, flexWrap: 'wrap' }}>
+          <Stack useFlexGap direction="row" spacing={2} sx={{ mt: 0.75, flexWrap: 'wrap' }}>
             <Typography variant="caption" color="text.secondary">
               {timeAgo(n.createdAt)}
             </Typography>

@@ -57,7 +57,7 @@ export default function CryptoPage() {
               <Typography variant="h4">{base}</Typography>
               <Chip size="small" label={`${base}/USDT · Binance`} />
             </Stack>
-            <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
+            <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
             <Button
               variant="contained"
               component={RouterLink}

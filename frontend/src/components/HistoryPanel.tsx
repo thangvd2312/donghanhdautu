@@ -160,7 +160,7 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
             </Grid>
           )}
           {shown && (
-            <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5, mb: 0.5 }}>
+            <Stack useFlexGap direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5, mb: 0.5 }}>
               <Typography variant="caption" sx={{ fontWeight: 600 }}>
                 {fmtDate(shown.date)}
               </Typography>

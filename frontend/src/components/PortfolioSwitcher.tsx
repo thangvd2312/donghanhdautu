@@ -71,7 +71,7 @@ export default function PortfolioSwitcher({
   }
 
   return (
-    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+    <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
       {accounts.length > 1 && (
         <Chip label="Tất cả" color={value === '' ? 'primary' : 'default'} onClick={() => onChange('')} />
       )}

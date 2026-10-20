@@ -160,7 +160,7 @@ export default function OnboardingPage() {
             <Typography variant="overline" color="text.secondary">
               Kiểu nhà đầu tư của bạn
             </Typography>
-            <Stack direction="row" spacing={2} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+            <Stack useFlexGap direction="row" spacing={2} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
               <Typography variant="h4" color="primary">
                 {RISK_LABEL[profile.riskType]}
               </Typography>

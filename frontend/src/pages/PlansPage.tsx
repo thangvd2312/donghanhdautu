@@ -107,7 +107,7 @@ function PlanCard({ p }: { p: PlanListItem }) {
       to={`/plans/${p.id}`}
       sx={{ p: 2, display: 'block', textDecoration: 'none', color: 'inherit', height: '100%', '&:hover': { borderColor: 'primary.main' } }}
     >
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+      <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
         <Typography sx={{ fontWeight: 700 }}>{p.displayName}</Typography>
         {p.held && <Chip size="small" label="Đang nắm giữ" sx={{ height: 20, fontSize: 11 }} />}
         {p.status === 'closed' && <Chip size="small" label="Đã kết thúc" sx={{ height: 20, fontSize: 11 }} />}

@@ -141,7 +141,7 @@ export default function PushPanel() {
             Trình duyệt này không hỗ trợ thông báo đẩy. Hãy dùng Chrome, Edge, Firefox hoặc Safari bản mới.
           </Typography>
         ) : (
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+          <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
             {thisDeviceOn ? (
               <>
                 <Chip size="small" color="success" label="Đã bật trên thiết bị này" />
