@@ -1,18 +1,11 @@
 import AddIcon from '@mui/icons-material/Add'
-import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
-import EditOutlined from '@mui/icons-material/EditOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
-import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
@@ -31,11 +24,15 @@ import { NotificationSettingsPanel, PriceAlertsPanel } from '../components/Alert
 import AllocationBar from '../components/AllocationBar'
 import { DataQualityAlert, PriceStatusChip } from '../components/DataStatus'
 import HoldingForm from '../components/HoldingForm'
+import LedgerPanel from '../components/LedgerPanel'
+import TransactionDialog, { type TxPreset } from '../components/TransactionDialog'
 import { KV, Panel, Stat } from '../components/ui'
-import { api, del, patch } from '../lib/api'
+import { api, patch } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../lib/format'
-import { RISK_LABEL, type HoldingRow, type Portfolio } from '../lib/types'
+import { RISK_LABEL, type Performance, type Portfolio, type Transaction } from '../lib/types'
+
+type TxAsset = NonNullable<TxPreset['assetType']>
 
 const HORIZON: Record<string, string> = { short: 'Dưới 1 năm', medium: '1–3 năm', long: 'Trên 3 năm' }
 const GOAL: Record<string, string> = { preserve: 'Giữ giá trị', accumulate: 'Tích luỹ dài hạn', trade: 'Lướt sóng' }
@@ -43,25 +40,34 @@ const GOAL: Record<string, string> = { preserve: 'Giữ giá trị', accumulate:
 export default function PortfolioPage() {
   const { me, refresh } = useAuth()
   const [p, setP] = useState<Portfolio | null>(null)
-  const [adding, setAdding] = useState(false)
-  const [editing, setEditing] = useState<HoldingRow | null>(null)
-  const [removing, setRemoving] = useState<HoldingRow | null>(null)
+  const [perf, setPerf] = useState<Performance | null>(null)
+  const [txs, setTxs] = useState<Transaction[] | null>(null)
+  const [declaring, setDeclaring] = useState(false)
+  const [preset, setPreset] = useState<TxPreset | null>(null)
   const [threshold, setThreshold] = useState(String(me?.profile?.alertThresholdPct ?? 3))
   const [saved, setSaved] = useState(false)
 
-  const load = useCallback(() => api<Portfolio>('/portfolio').then(setP), [])
+  const load = useCallback(
+    () =>
+      Promise.all([
+        api<Portfolio>('/portfolio').then(setP),
+        api<Performance>('/portfolio/performance')
+          .then(setPerf)
+          .catch(() => setPerf(null)),
+      ]),
+    [],
+  )
+  const loadTxs = useCallback(() => api<Transaction[]>('/portfolio/transactions').then(setTxs).catch(() => setTxs([])), [])
+  const changed = () => {
+    void load()
+    void loadTxs()
+  }
   useEffect(() => {
     void load()
+    void loadTxs()
     const t = setInterval(() => void load(), 15000)
     return () => clearInterval(t)
-  }, [load])
-
-  const confirmRemove = async () => {
-    if (!removing) return
-    await del(`/portfolio/holdings/${removing.id}`)
-    setRemoving(null)
-    void load()
-  }
+  }, [load, loadTxs])
 
   const saveThreshold = async () => {
     await patch('/profile/settings', { alertThresholdPct: Number(threshold) })
@@ -99,20 +105,51 @@ export default function PortfolioPage() {
                 />
               </Grid>
               <Grid size={{ xs: 6, sm: 4 }}>
-                <Stat
-                  label={
-                    p && p.pnlCoverage.priced < p.pnlCoverage.total
-                      ? `Lãi / lỗ (${p.pnlCoverage.priced}/${p.pnlCoverage.total} tài sản có giá)`
-                      : 'Lãi / lỗ'
-                  }
-                  value={p && p.totalPnl !== null ? `${fmtVndShort(p.totalPnl)} (${fmtPct(p.totalPnlPct)})` : '—'}
-                  color={changeColor(p?.totalPnl)}
-                />
+                <Tooltip title="Giá trị hiện tại trừ số vốn bạn đã đưa vào (nạp − rút + tài sản khai báo đầu kỳ theo giá vốn). Tiền nạp thêm không được tính là lãi.">
+                  <span>
+                    <Stat
+                      label={perf?.isEstimate ? 'Tổng lãi / lỗ (ước tính)' : 'Tổng lãi / lỗ'}
+                      value={perf ? `${fmtVndShort(perf.totalProfit)} (${fmtPct(perf.totalProfitPct)})` : '—'}
+                      color={changeColor(perf?.totalProfit)}
+                      size="lg"
+                    />
+                  </span>
+                </Tooltip>
               </Grid>
               <Grid size={{ xs: 6, sm: 4 }}>
-                <Stat label="Tổng vốn" value={fmtVndShort(p?.totalCost)} />
+                <Stat label="Vốn đã đưa vào (ròng)" value={fmtVndShort(perf?.netContributions)} />
               </Grid>
             </Grid>
+            {perf && (
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <Stat label="Lãi đã chốt" value={fmtVndShort(perf.realized)} color={changeColor(perf.realized)} size="sm" />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <Stat
+                    label={
+                      p && p.pnlCoverage.priced < p.pnlCoverage.total
+                        ? `Lãi chưa chốt (${p.pnlCoverage.priced}/${p.pnlCoverage.total} có giá)`
+                        : 'Lãi chưa chốt'
+                    }
+                    value={fmtVndShort(perf.unrealized)}
+                    color={changeColor(perf.unrealized)}
+                    size="sm"
+                  />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <Stat label="Cổ tức đã nhận" value={fmtVndShort(perf.dividends)} size="sm" />
+                </Grid>
+                <Grid size={{ xs: 6, sm: 3 }}>
+                  <Stat label="Phí + thuế đã trả" value={fmtVndShort(perf.feesAndTaxes)} size="sm" />
+                </Grid>
+              </Grid>
+            )}
+            {perf && perf.notes.length > 0 && (
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
+                {perf.notes.join(' ')}
+              </Typography>
+            )}
             {p && (
               <Box sx={{ mt: 2, '&:empty': { display: 'none' } }}>
                 <DataQualityAlert quality={p.dataQuality} />
@@ -184,21 +221,30 @@ export default function PortfolioPage() {
         title="Tài sản đang nắm giữ"
         noPadding
         action={
-          !adding && (
-            <Button startIcon={<AddIcon />} variant="contained" size="small" onClick={() => setAdding(true)}>
-              Thêm tài sản
-            </Button>
+          !declaring && (
+            <Stack direction="row" spacing={1}>
+              <Button size="small" onClick={() => setDeclaring(true)}>
+                Khai báo tài sản đang có
+              </Button>
+              <Button startIcon={<AddIcon />} variant="contained" size="small" onClick={() => setPreset({ type: 'buy' })}>
+                Ghi giao dịch
+              </Button>
+            </Stack>
           )
         }
       >
-        <Collapse in={adding} unmountOnExit>
-          <Stack sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+        <Collapse in={declaring} unmountOnExit>
+          <Stack spacing={1} sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+            <Typography variant="caption" color="text.secondary">
+              Tài sản bạn đã có từ trước: ghi vào sổ thành số dư đầu kỳ theo giá vốn bình quân, không tính là lãi. Lần mua
+              / bán sau đó hãy dùng "Ghi giao dịch".
+            </Typography>
             <HoldingForm
               onDone={() => {
-                setAdding(false)
-                void load()
+                setDeclaring(false)
+                changed()
               }}
-              onCancel={() => setAdding(false)}
+              onCancel={() => setDeclaring(false)}
             />
           </Stack>
         </Collapse>
@@ -288,16 +334,36 @@ export default function PortfolioPage() {
                     </TableCell>
                     <TableCell align="right">{fmtNum(h.weightPct, 1)}%</TableCell>
                     <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                      <Tooltip title="Sửa">
-                        <IconButton size="small" onClick={() => setEditing(h)}>
-                          <EditOutlined fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Xoá">
-                        <IconButton size="small" onClick={() => setRemoving(h)}>
-                          <DeleteOutlined fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {h.assetType === 'cash' ? (
+                        <>
+                          <Button size="small" onClick={() => setPreset({ type: 'deposit' })}>
+                            Nạp
+                          </Button>
+                          <Button size="small" color="inherit" onClick={() => setPreset({ type: 'withdraw' })}>
+                            Rút
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            size="small"
+                            onClick={() =>
+                              setPreset({ type: 'buy', assetType: h.assetType as TxAsset, symbol: h.symbol, label: h.displayName })
+                            }
+                          >
+                            Mua thêm
+                          </Button>
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() =>
+                              setPreset({ type: 'sell', assetType: h.assetType as TxAsset, symbol: h.symbol, label: h.displayName })
+                            }
+                          >
+                            Bán
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 )
@@ -320,6 +386,8 @@ export default function PortfolioPage() {
         </Alert>
       </Panel>
 
+      <LedgerPanel txs={txs} onChanged={changed} />
+
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, lg: 7 }}>
           <PriceAlertsPanel />
@@ -329,39 +397,7 @@ export default function PortfolioPage() {
         </Grid>
       </Grid>
 
-      <Dialog open={!!editing} onClose={() => setEditing(null)} fullWidth maxWidth="md">
-        <DialogTitle>Sửa {editing?.displayName}</DialogTitle>
-        <DialogContent>
-          {editing && (
-            <Stack sx={{ pt: 1 }}>
-              <HoldingForm
-                key={editing.id}
-                initial={editing}
-                onDone={() => {
-                  setEditing(null)
-                  void load()
-                }}
-                onCancel={() => setEditing(null)}
-              />
-            </Stack>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!removing} onClose={() => setRemoving(null)}>
-        <DialogTitle>Xoá {removing?.displayName} khỏi danh mục?</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            Cố vấn sẽ không còn theo dõi và cảnh báo về tài sản này.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRemoving(null)}>Huỷ</Button>
-          <Button color="error" variant="contained" onClick={() => void confirmRemove()}>
-            Xoá
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <TransactionDialog open={!!preset} preset={preset} onClose={() => setPreset(null)} onSaved={changed} />
     </Stack>
   )
 }

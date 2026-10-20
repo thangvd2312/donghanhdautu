@@ -412,3 +412,49 @@ export interface HomeFeed {
   macro: HomeNews[]
   trackedTickers: string[]
 }
+
+export type TxType = 'opening' | 'buy' | 'sell' | 'deposit' | 'withdraw' | 'dividend' | 'fee'
+
+export interface Transaction {
+  id: string
+  type: TxType
+  /** YYYY-MM-DD */
+  date: string
+  assetType: AssetType | null
+  symbol: string | null
+  displayName: string | null
+  quantity: number | null
+  price: number | null
+  amount: number | null
+  fee: number
+  tax: number
+  currency: 'VND' | 'USDT'
+  fxRate: number | null
+  grossValue: number | null
+  note: string | null
+  source: 'manual' | 'migration'
+  edited: boolean
+  createdAt: string
+}
+
+export interface TransactionRevision {
+  id: string
+  action: 'update' | 'delete'
+  before: Record<string, unknown>
+  createdAt: string
+}
+
+export interface Performance {
+  netContributions: number
+  totalValue: number
+  totalProfit: number
+  totalProfitPct: number | null
+  realized: number
+  unrealized: number | null
+  dividends: number
+  feesAndTaxes: number
+  cash: { VND: number; USDT: number }
+  implicitDeposits: number
+  isEstimate: boolean
+  notes: string[]
+}

@@ -24,6 +24,7 @@ model User {
   notifications Notification[]
   priceAlerts   PriceAlert[]
   feedback      AnswerFeedback[]
+  transactions  Transaction[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -231,4 +232,53 @@ model AnswerFeedback {
 
   @@unique([userId, answerId])
   @@index([status, createdAt])
+}
+
+/// Sổ giao dịch: nguồn gốc của số dư tài sản và tiền mặt. Bảng Holding được tính lại từ sổ này.
+/// Không xoá cứng: huỷ = đặt deletedAt; mọi lần sửa/huỷ lưu bản trước vào TransactionRevision.
+model Transaction {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// opening (số dư đầu kỳ) | buy | sell | deposit | withdraw | dividend | fee
+  type      String
+  /// Ngày giao dịch theo lịch VN
+  date      DateTime  @db.Date
+  /// stock | crypto | gold | cash; null với nạp / rút / phí
+  assetType String?
+  /// FPT, BTCUSDT, SJL1L10, VND/USDT (tiền mặt đầu kỳ)
+  symbol    String?
+  quantity  Decimal?  @db.Decimal(30, 10)
+  /// Giá mỗi đơn vị theo đồng tiền của giao dịch
+  price     Decimal?  @db.Decimal(30, 10)
+  /// Số tiền với nạp / rút / cổ tức / phí
+  amount    Decimal?  @db.Decimal(30, 10)
+  fee       Decimal   @default(0) @db.Decimal(30, 10)
+  tax       Decimal   @default(0) @db.Decimal(30, 10)
+  /// VND | USDT
+  currency  String
+  /// Số VND cho 1 USDT lúc giao dịch, nếu người dùng nhập
+  fxRate    Decimal?  @db.Decimal(30, 10)
+  note      String?
+  /// manual | migration
+  source    String    @default("manual")
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  revisions TransactionRevision[]
+
+  @@index([userId, date])
+}
+
+model TransactionRevision {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  /// update | delete
+  action        String
+  /// Bản ghi trước khi thay đổi
+  before        Json
+  createdAt     DateTime    @default(now())
+
+  @@index([transactionId])
 }

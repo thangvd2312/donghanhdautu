@@ -251,10 +251,11 @@ export class AdvisorTools {
   }
 
   private async myPortfolio(userId: string) {
-    const [profile, valuation, user] = await Promise.all([
+    const [profile, valuation, user, performance] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
       this.portfolio.valuation(userId),
       this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
+      this.portfolio.performance(userId).catch(() => null),
     ]);
     return {
       name: user.name,
@@ -280,6 +281,9 @@ export class AdvisorTools {
             })),
           }
         : 'Người dùng chưa khai báo tài sản nắm giữ',
+      // Từ sổ giao dịch: totalProfit = giá trị hiện tại − vốn đưa vào ròng (tiền nạp không phải lãi);
+      // realized = lãi đã chốt khi bán, unrealized = lãi/lỗ chưa chốt của tài sản đang giữ
+      performance: performance ?? 'Chưa tính được hiệu quả từ sổ giao dịch',
     };
   }
 

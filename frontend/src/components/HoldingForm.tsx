@@ -8,9 +8,10 @@ import TextField from '@mui/material/TextField'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, post, put } from '../lib/api'
+import { api, post } from '../lib/api'
 import { fmtVnd } from '../lib/format'
-import type { AssetType, HoldingRow } from '../lib/types'
+import { parseNum } from '../lib/num'
+import type { AssetType } from '../lib/types'
 import StockSearch from './StockSearch'
 
 interface GoldOption {
@@ -41,19 +42,12 @@ const COST_LABEL: Record<AssetType, string> = {
   cash: '',
 }
 
-export default function HoldingForm({
-  initial,
-  onDone,
-  onCancel,
-}: {
-  initial?: HoldingRow
-  onDone: () => void
-  onCancel?: () => void
-}) {
-  const [assetType, setAssetType] = useState<AssetType>(initial?.assetType ?? 'stock')
-  const [symbol, setSymbol] = useState(initial?.symbol ?? '')
-  const [quantity, setQuantity] = useState(initial ? String(initial.quantity) : '')
-  const [avgCost, setAvgCost] = useState(initial ? String(initial.avgCost) : '')
+/** Khai báo nhanh một tài sản đang có (ghi thành giao dịch số dư đầu kỳ trong sổ) */
+export default function HoldingForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => void }) {
+  const [assetType, setAssetType] = useState<AssetType>('stock')
+  const [symbol, setSymbol] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [avgCost, setAvgCost] = useState('')
   const [gold, setGold] = useState<GoldOption[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -63,8 +57,8 @@ export default function HoldingForm({
   }, [])
 
   useEffect(() => {
-    if (!initial && assetType === 'gold' && !symbol && gold[0]) setSymbol(gold[0].code)
-  }, [assetType, gold, symbol, initial])
+    if (assetType === 'gold' && !symbol && gold[0]) setSymbol(gold[0].code)
+  }, [assetType, gold, symbol])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -79,14 +73,11 @@ export default function HoldingForm({
     if (!(body.quantity > 0)) return setError('Số lượng phải lớn hơn 0')
     setBusy(true)
     try {
-      if (initial) await put(`/portfolio/holdings/${initial.id}`, body)
-      else await post('/portfolio/holdings', body)
+      await post('/portfolio/holdings', body)
       onDone()
-      if (!initial) {
-        setSymbol('')
-        setQuantity('')
-        setAvgCost('')
-      }
+      setSymbol('')
+      setQuantity('')
+      setAvgCost('')
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -104,7 +95,6 @@ export default function HoldingForm({
           size="small"
           color="primary"
           value={assetType}
-          disabled={!!initial}
           onChange={(_, v: AssetType | null) => {
             if (!v) return
             setAssetType(v)
@@ -131,7 +121,7 @@ export default function HoldingForm({
                   slotProps={{
                     input: {
                       readOnly: true,
-                      endAdornment: !initial && (
+                      endAdornment: (
                         <Chip size="small" label="Đổi" onClick={() => setSymbol('')} sx={{ cursor: 'pointer' }} />
                       ),
                     },
@@ -150,8 +140,7 @@ export default function HoldingForm({
                 size="small"
                 fullWidth
                 value={symbol}
-                disabled={!!initial}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                      onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               />
             </Grid>
           )}
@@ -163,8 +152,7 @@ export default function HoldingForm({
                 size="small"
                 fullWidth
                 value={gold.some((g) => g.code === symbol) ? symbol : ''}
-                disabled={!!initial}
-                onChange={(e) => setSymbol(e.target.value)}
+                      onChange={(e) => setSymbol(e.target.value)}
               >
                 {gold.map((g) => (
                   <MenuItem key={g.code} value={g.code}>
@@ -203,18 +191,11 @@ export default function HoldingForm({
         {error && <Alert severity="error">{error}</Alert>}
         <Stack direction="row" spacing={1}>
           <Button type="submit" variant="contained" disabled={busy}>
-            {busy ? 'Đang lưu…' : initial ? 'Lưu thay đổi' : 'Thêm tài sản'}
+            {busy ? 'Đang lưu…' : 'Thêm tài sản'}
           </Button>
           {onCancel && <Button onClick={onCancel}>Huỷ</Button>}
         </Stack>
       </Stack>
     </form>
   )
-}
-
-/** Chấp nhận cả "1.000.000", "1,000,000", "0.05", "0,05" */
-function parseNum(s: string) {
-  const t = s.trim().replace(/\s/g, '')
-  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g, ''))
-  return Number(t.replace(',', '.'))
 }

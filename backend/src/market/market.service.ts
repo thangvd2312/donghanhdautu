@@ -420,8 +420,18 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
           reason: status === 'stale' ? 'Giá vàng của nguồn đã lâu chưa cập nhật' : undefined,
         };
       }
-      case 'cash':
-        return { value: 1, status: 'fresh', source: 'Người dùng khai báo', asOf: null };
+      case 'cash': {
+        if (symbol !== 'USDT') return { value: 1, status: 'fresh', source: 'Sổ giao dịch', asOf: null };
+        // Tiền mặt USDT (trên sàn): quy VND theo tỷ giá USDT/VND hiện tại
+        const fx = this.usdtVnd;
+        return {
+          value: fx.rate,
+          status: fx.status,
+          source: fx.source,
+          asOf: fx.asOf,
+          reason: fx.status === 'fallback' ? 'Quy ra VND bằng tỷ giá dự phòng' : undefined,
+        };
+      }
     }
   }
 

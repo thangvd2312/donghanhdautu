@@ -1,25 +1,17 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Injectable,
-  Module,
-  NotFoundException,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Injectable, Module, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
-import { MarketService, normalizeCrypto } from '../market/market.service';
+import { MarketService } from '../market/market.service';
 import type { AssetType } from '../market/market.service';
+import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
+import { performance } from './ledger';
+import { TransactionDto, TransactionsService } from './transactions';
 import { valuePortfolio } from './valuation';
 
+/** Khai báo nhanh một tài sản đang có (onboarding / "khai báo tài sản đang có") = giao dịch số dư đầu kỳ */
 class HoldingDto {
   @IsIn(['stock', 'crypto', 'gold', 'cash']) assetType!: AssetType;
   @IsString() symbol!: string;
@@ -33,42 +25,8 @@ export class PortfolioService {
   constructor(
     private prisma: PrismaService,
     private market: MarketService,
+    private transactions: TransactionsService,
   ) {}
-
-  async normalize(dto: HoldingDto) {
-    let symbol = dto.symbol.trim().toUpperCase();
-    if (dto.assetType === 'stock') symbol = (await this.market.assertStock(symbol)).symbol;
-    if (dto.assetType === 'crypto') symbol = normalizeCrypto(symbol);
-    if (dto.assetType === 'gold' && !this.market.goldQuotes().some((g) => g.code === symbol)) {
-      throw new NotFoundException(`Không có loại vàng ${symbol}`);
-    }
-    if (dto.assetType === 'cash') symbol = 'VND';
-    return { ...dto, symbol };
-  }
-
-  async create(userId: string, dto: HoldingDto) {
-    const data = await this.normalize(dto);
-    const h = await this.prisma.holding.create({ data: { ...data, userId } });
-    if (data.assetType === 'stock') await this.market.stockQuote(data.symbol);
-    return h;
-  }
-
-  async update(userId: string, id: string, dto: HoldingDto) {
-    await this.own(userId, id);
-    return this.prisma.holding.update({ where: { id }, data: await this.normalize(dto) });
-  }
-
-  async remove(userId: string, id: string) {
-    await this.own(userId, id);
-    await this.prisma.holding.delete({ where: { id } });
-    return { ok: true };
-  }
-
-  private async own(userId: string, id: string) {
-    const h = await this.prisma.holding.findFirst({ where: { id, userId } });
-    if (!h) throw new NotFoundException('Không tìm thấy tài sản');
-    return h;
-  }
 
   /** Định giá danh mục theo giá thị trường hiện tại, tất cả quy ra VND, kèm trạng thái dữ liệu */
   async valuation(userId: string) {
@@ -88,8 +46,40 @@ export class PortfolioService {
       displayName: (type, symbol) =>
         type === 'gold'
           ? (this.market.goldQuotes().find((g) => g.code === symbol)?.name ?? symbol)
-          : symbol.replace(/USDT$/, ''),
+          : type === 'cash'
+            ? symbol
+            : symbol.replace(/USDT$/, ''),
       usdt: this.market.usdtVnd,
+    });
+  }
+
+  /** Hiệu quả đầu tư từ sổ giao dịch: vốn đưa vào, lãi đã / chưa chốt, cổ tức, phí, tổng lãi */
+  async performance(userId: string) {
+    const ledger = await this.transactions.ledger(userId);
+    const v = await this.valuation(userId);
+    // Lãi chưa chốt chỉ tính trên tài sản đầu tư (tiền mặt USDT đổi giá theo tỷ giá không phải lãi đầu tư)
+    const invested = v.holdings.filter((h) => h.assetType !== 'cash');
+    const unrealized = invested.some((h) => h.pnl !== null)
+      ? invested.reduce((s, h) => s + (h.pnl ?? 0), 0)
+      : null;
+    return performance({
+      ledger,
+      totalValueVnd: v.totalValue,
+      unrealizedVnd: unrealized,
+      totalIsEstimate: v.totalIsEstimate,
+      usdtVnd: v.usdtVnd,
+    });
+  }
+
+  addHolding(userId: string, dto: HoldingDto) {
+    return this.transactions.create(userId, {
+      type: 'opening',
+      date: vnDateKey(),
+      assetType: dto.assetType,
+      symbol: dto.assetType === 'cash' ? 'VND' : dto.symbol,
+      quantity: dto.quantity,
+      price: dto.assetType === 'cash' ? 1 : dto.avgCost,
+      note: dto.note,
     });
   }
 }
@@ -99,12 +89,18 @@ export class PortfolioService {
 class PortfolioController {
   constructor(
     private portfolio: PortfolioService,
+    private transactions: TransactionsService,
     private market: MarketService,
   ) {}
 
   @Get()
   get(@CurrentUser() user: AuthUser) {
     return this.portfolio.valuation(user.id);
+  }
+
+  @Get('performance')
+  performance(@CurrentUser() user: AuthUser) {
+    return this.portfolio.performance(user.id);
   }
 
   /** Danh sách loại vàng hợp lệ để chọn khi nhập tài sản */
@@ -117,25 +113,40 @@ class PortfolioController {
   }
 
   @Post('holdings')
-  create(@CurrentUser() user: AuthUser, @Body() dto: HoldingDto) {
-    return this.portfolio.create(user.id, dto);
+  addHolding(@CurrentUser() user: AuthUser, @Body() dto: HoldingDto) {
+    return this.portfolio.addHolding(user.id, dto);
   }
 
-  @Put('holdings/:id')
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: HoldingDto) {
-    return this.portfolio.update(user.id, id, dto);
+  @Get('transactions')
+  listTransactions(@CurrentUser() user: AuthUser) {
+    return this.transactions.list(user.id);
   }
 
-  @Delete('holdings/:id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.portfolio.remove(user.id, id);
+  @Post('transactions')
+  createTransaction(@CurrentUser() user: AuthUser, @Body() dto: TransactionDto) {
+    return this.transactions.create(user.id, dto);
+  }
+
+  @Put('transactions/:id')
+  updateTransaction(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: TransactionDto) {
+    return this.transactions.update(user.id, id, dto);
+  }
+
+  @Delete('transactions/:id')
+  removeTransaction(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.transactions.remove(user.id, id);
+  }
+
+  @Get('transactions/:id/revisions')
+  revisions(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.transactions.revisions(user.id, id);
   }
 }
 
 @Module({
   imports: [MarketModule],
   controllers: [PortfolioController],
-  providers: [PortfolioService],
-  exports: [PortfolioService],
+  providers: [PortfolioService, TransactionsService],
+  exports: [PortfolioService, TransactionsService],
 })
 export class PortfolioModule {}
