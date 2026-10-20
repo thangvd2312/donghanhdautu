@@ -19,6 +19,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import PriceAlertDialog from '../components/PriceAlertDialog'
+import PlanButton from '../components/PlanButton'
 import WatchButton from '../components/WatchButton'
 import PriceChart from '../components/PriceChart'
 import StockFundamentals, { StatementTable } from '../components/StockFundamentals'
@@ -123,6 +124,7 @@ export default function StockPage() {
                 Đặt cảnh báo giá
               </Button>
               <WatchButton assetType="stock" symbol={q.symbol} />
+              <PlanButton assetType="stock" symbol={q.symbol} label={q.symbol} />
             </Stack>
           </Box>
           <Box sx={{ textAlign: { md: 'right' } }}>

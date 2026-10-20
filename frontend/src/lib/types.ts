@@ -458,3 +458,90 @@ export interface Performance {
   isEstimate: boolean
   notes: string[]
 }
+
+export interface PlanPrice {
+  value: number | null
+  status: PriceStatus
+  source: string
+  asOf: string | null
+}
+
+export interface PlanSignal {
+  kind: 'due' | 'target' | 'stop'
+  message: string
+}
+
+export interface Plan {
+  id: string
+  assetType: 'stock' | 'crypto' | 'gold'
+  symbol: string
+  displayName: string
+  link: string | null
+  currency: 'VND' | 'USDT'
+  thesis: string
+  horizon: string | null
+  exitConditions: string
+  targetPrice: number | null
+  stopPrice: number | null
+  reviewEveryDays: number | null
+  nextReviewAt: string
+  status: 'active' | 'closed'
+  closedReason: string | null
+  closedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PlanReview {
+  id: string
+  decision: 'keep' | 'adjust' | 'close'
+  note: string | null
+  priceAtReview: number | null
+  pnlPctAtReview: number | null
+  createdAt: string
+}
+
+export interface PlanListItem extends Plan {
+  price: PlanPrice
+  held: { quantity: number; pnlPct: number | null } | null
+  signals: PlanSignal[]
+  lastReview: PlanReview | null
+}
+
+export interface PlanDetail extends Plan {
+  price: PlanPrice
+  dayChangePct: number | null
+  held: {
+    quantity: number
+    avgCost: number
+    pnlPct: number | null
+    pnl: number | null
+    weightPct: number
+    exceedsMaxLoss: boolean | null
+  } | null
+  maxDrawdownPct: number | null
+  toTargetPct: number | null
+  toStopPct: number | null
+  signals: PlanSignal[]
+  versions: { id: string; snapshot: Record<string, unknown>; createdAt: string }[]
+  reviews: PlanReview[]
+  transactions: {
+    id: string
+    type: TxType
+    date: string
+    quantity: number | null
+    price: number | null
+    amount: number | null
+    currency: 'VND' | 'USDT'
+  }[]
+}
+
+export interface PlanDraft {
+  thesis: string
+  horizon: string
+  exitConditions: string
+  reviewEveryDays: number
+  targetPrice: number | null
+  stopPrice: number | null
+  caveat: string
+}

@@ -10,8 +10,6 @@ export const DAY_BASIS: Record<AssetType, string> = {
   cash: 'không đổi',
 };
 
-type Holding = Valuation['holdings'][number];
-
 export function holdingLink(h: { assetType: AssetType; symbol: string }) {
   if (h.assetType === 'stock') return `/stock/${h.symbol}`;
   if (h.assetType === 'crypto') return `/crypto/${h.symbol.replace(/USDT$/, '')}`;

@@ -6,9 +6,11 @@ import { MarketModule } from '../market/market.module';
 import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { NewsModule, NewsService } from '../news/news.module';
+import type { NewsItem } from '../news/news.module';
 import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
 import { PrismaService } from '../prisma/prisma.module';
-import { dayChange, reviewPoints } from './today';
+import { planSignals } from '../plans/plan-rules';
+import { dayChange, ReviewPoint, reviewPoints } from './today';
 
 const NEWS_HOURS = 48;
 const MAX_NEWS = 8;
@@ -50,16 +52,49 @@ export class HomeService {
   }
 
   async review(userId: string) {
-    const [v, profile, alerts] = await Promise.all([
+    const [v, profile, alerts, plans] = await Promise.all([
       this.portfolio.valuation(userId),
       this.prisma.investorProfile.findUnique({ where: { userId }, select: { riskType: true, maxDrawdownPct: true } }),
       this.prisma.priceAlert.findMany({ where: { userId, active: true } }),
+      this.prisma.investmentPlan.findMany({ where: { userId, status: 'active' } }),
     ]);
-    return reviewPoints(
+    const points = reviewPoints(
       v,
       profile,
       alerts.map((a) => ({ ...a, currentPrice: this.alertPrice(a.assetType, a.symbol) })),
     );
+    // Kế hoạch: chạm mốc cắt lỗ / chốt lời tự đặt, đến hạn xem lại
+    const today = vnDateKey();
+    const planPoints: ReviewPoint[] = plans.flatMap((p) =>
+      planSignals(
+        { ...p, nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10) },
+        today,
+        this.planPrice(p.assetType, p.symbol),
+      ).map((s) => ({
+        id: `plan-${s.kind}:${p.id}`,
+        severity: s.kind === 'stop' ? ('high' as const) : ('medium' as const),
+        title: s.message,
+        reason:
+          s.kind === 'due'
+            ? 'Đối chiếu luận điểm và điều kiện bạn đã đặt với dữ liệu hiện tại, rồi ghi quyết định giữ, điều chỉnh hay kết thúc.'
+            : 'Đây là mốc bạn tự đặt khi lập kế hoạch. Xem lại điều kiện đã viết trước khi hành động.',
+        link: `/plans/${p.id}`,
+        ask:
+          s.kind === 'due'
+            ? null
+            : `${s.message}. Luận điểm của tôi: "${p.thesis}". Tôi nên làm gì theo đúng kế hoạch?`,
+      })),
+    );
+    const order = { high: 0, medium: 1, info: 2 };
+    return [...points, ...planPoints].sort((a, b) => order[a.severity] - order[b.severity]);
+  }
+
+  /** Giá theo đơn vị của kế hoạch: VND/cp, USDT/coin, VND/lượng (giá mua vào) */
+  private planPrice(type: string, symbol: string) {
+    if (type === 'stock') return this.market.stocksFor([symbol])[0]?.price ?? null;
+    if (type === 'crypto') return this.market.binance.quotes.get(symbol)?.price ?? null;
+    if (type === 'gold') return this.market.goldQuotes().find((g) => g.code === symbol)?.buy ?? null;
+    return null;
   }
 
   /** Giá theo đơn vị của mốc cảnh báo: VND/cp, USDT/coin, VND/lượng (giá bán ra) */
@@ -80,7 +115,7 @@ export class HomeService {
       }),
       this.prisma.holding.findMany({ where: { userId, assetType: 'stock' }, select: { symbol: true } }),
       this.prisma.watchItem.findMany({ where: { userId, assetType: 'stock' }, select: { symbol: true } }),
-      this.news.all().catch(() => []),
+      this.news.all().catch((): NewsItem[] => []),
     ]);
     const held = new Set(holdings.map((h) => h.symbol));
     const tickers = [...new Set([...held, ...watch.map((w) => w.symbol)])];

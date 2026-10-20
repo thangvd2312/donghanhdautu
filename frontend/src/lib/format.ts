@@ -59,3 +59,14 @@ export function timeAgo(iso: string) {
   if (s < 86400) return `${Math.floor(s / 3600)} giờ trước`
   return new Date(iso).toLocaleDateString('vi-VN')
 }
+
+/** Giá theo đơn vị gốc: USDT (coin) hoặc VND */
+export function fmtPrice(v: number | null | undefined, currency: 'VND' | 'USDT') {
+  if (v === null || v === undefined || !Number.isFinite(v)) return '—'
+  return currency === 'USDT' ? `${fmtNum(v, 2)} USDT` : `${fmtNum(v)} ₫`
+}
+
+/** "2026-10-20" hoặc ISO → "20/10/2026" */
+export function fmtDate(d: string) {
+  return d.slice(0, 10).split('-').reverse().join('/')
+}

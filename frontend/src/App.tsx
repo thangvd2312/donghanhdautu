@@ -10,6 +10,8 @@ import HomePage from './pages/HomePage'
 import MarketPage from './pages/MarketPage'
 import NewsPage from './pages/NewsPage'
 import OnboardingPage from './pages/OnboardingPage'
+import PlanDetailPage from './pages/PlanDetailPage'
+import PlansPage from './pages/PlansPage'
 import PortfolioPage from './pages/PortfolioPage'
 import StockPage from './pages/StockPage'
 
@@ -45,6 +47,8 @@ export default function App() {
             <Route path="/stock/:symbol" element={<StockPage />} />
             <Route path="/crypto/:symbol" element={<CryptoPage />} />
             <Route path="/news" element={<NewsPage />} />
+            <Route path="/plans" element={<PlansPage />} />
+            <Route path="/plans/:id" element={<PlanDetailPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

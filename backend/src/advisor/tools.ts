@@ -251,11 +251,12 @@ export class AdvisorTools {
   }
 
   private async myPortfolio(userId: string) {
-    const [profile, valuation, user, performance] = await Promise.all([
+    const [profile, valuation, user, performance, plans] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
       this.portfolio.valuation(userId),
       this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
       this.portfolio.performance(userId).catch(() => null),
+      this.prisma.investmentPlan.findMany({ where: { userId, status: 'active' } }),
     ]);
     return {
       name: user.name,
@@ -284,6 +285,19 @@ export class AdvisorTools {
       // Từ sổ giao dịch: totalProfit = giá trị hiện tại − vốn đưa vào ròng (tiền nạp không phải lãi);
       // realized = lãi đã chốt khi bán, unrealized = lãi/lỗ chưa chốt của tài sản đang giữ
       performance: performance ?? 'Chưa tính được hiệu quả từ sổ giao dịch',
+      // Kế hoạch người dùng TỰ ĐẶT: đối chiếu lời khuyên với luận điểm và điều kiện của họ
+      investmentPlans: plans.length
+        ? plans.map((p) => ({
+            asset: p.assetType === 'crypto' ? p.symbol.replace(/USDT$/, '') : p.symbol,
+            assetType: p.assetType,
+            thesis: p.thesis,
+            horizon: p.horizon,
+            exitConditions: p.exitConditions,
+            targetPrice: p.targetPrice,
+            stopPrice: p.stopPrice,
+            nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10),
+          }))
+        : 'Chưa có kế hoạch nào',
     };
   }
 

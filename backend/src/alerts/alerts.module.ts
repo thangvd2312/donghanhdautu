@@ -470,5 +470,6 @@ class NotificationsController {
   imports: [MarketModule, NewsModule, PortfolioModule, MacroModule],
   controllers: [NotificationsController, AlertsController],
   providers: [AlertsService, BriefsService, LlmService, NewsTaggerService, NotifierService],
+  exports: [LlmService, NotifierService],
 })
 export class AlertsModule {}

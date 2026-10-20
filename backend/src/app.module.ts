@@ -5,6 +5,7 @@ import { AdvisorModule } from './advisor/advisor.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { AuthModule } from './auth/auth.module';
 import { HomeModule } from './home/home.module';
+import { PlansModule } from './plans/plans.module';
 import { MacroModule } from './macro/macro.module';
 import { MarketModule } from './market/market.module';
 import { NewsModule } from './news/news.module';
@@ -34,6 +35,7 @@ class HealthController {
     PortfolioModule,
     WatchlistModule,
     HomeModule,
+    PlansModule,
     AdvisorModule,
     AlertsModule,
   ],

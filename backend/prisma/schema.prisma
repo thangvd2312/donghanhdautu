@@ -25,6 +25,7 @@ model User {
   priceAlerts   PriceAlert[]
   feedback      AnswerFeedback[]
   transactions  Transaction[]
+  plans         InvestmentPlan[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -281,4 +282,66 @@ model TransactionRevision {
   createdAt     DateTime    @default(now())
 
   @@index([transactionId])
+}
+
+/// Kế hoạch đầu tư cho một tài sản (đang giữ hoặc đang theo dõi): người dùng tự đặt, AI chỉ hỗ trợ viết nháp
+model InvestmentPlan {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// stock | crypto | gold
+  assetType      String
+  symbol         String
+  /// Luận điểm: vì sao mua / nắm giữ
+  thesis         String
+  /// Dự định nắm giữ bao lâu, vd "1–3 năm"
+  horizon        String?
+  /// Điều kiện cho thấy luận điểm sai / cần xem lại hoặc bán
+  exitConditions String
+  /// Mốc chốt lời / cắt lỗ theo đơn vị giá gốc (VND/cp, USDT/coin, VND/lượng giá mua vào)
+  targetPrice    Float?
+  stopPrice      Float?
+  /// Chu kỳ xem lại (ngày) để tự đặt ngày xem lại tiếp theo
+  reviewEveryDays Int?
+  nextReviewAt   DateTime       @db.Date
+  /// active | closed
+  status         String         @default("active")
+  closedReason   String?
+  closedAt       DateTime?
+  /// Ngày xem lại đã nhắc gần nhất, để không nhắc trùng
+  remindedFor    DateTime?      @db.Date
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  versions       PlanVersion[]
+  reviews        PlanReview[]
+
+  @@index([userId, status])
+  @@index([status, nextReviewAt])
+}
+
+/// Bản trước của kế hoạch, lưu mỗi lần sửa
+model PlanVersion {
+  id        String         @id @default(cuid())
+  planId    String
+  plan      InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  snapshot  Json
+  createdAt DateTime       @default(now())
+
+  @@index([planId])
+}
+
+/// Một lần xem lại kế hoạch: quyết định giữ / điều chỉnh / kết thúc và lý do
+model PlanReview {
+  id             String         @id @default(cuid())
+  planId         String
+  plan           InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// keep | adjust | close
+  decision       String
+  note           String?
+  /// Dữ kiện lúc xem lại (để đối chiếu sau này)
+  priceAtReview  Float?
+  pnlPctAtReview Float?
+  createdAt      DateTime       @default(now())
+
+  @@index([planId])
 }
