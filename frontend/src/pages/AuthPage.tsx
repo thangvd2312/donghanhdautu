@@ -13,14 +13,15 @@ import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-d
 import { Logo } from '../components/ui'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
+import { safeNext } from '../lib/nav'
 
 export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { login, register, loginWithGoogle } = useAuth()
   const nav = useNavigate()
   const [params] = useSearchParams()
-  // Chỉ nhận đường dẫn nội bộ (chặn chuyển hướng ra trang ngoài kiểu //evil.com)
-  const nextRaw = params.get('next') ?? '/'
-  const next = nextRaw.startsWith('/') && !nextRaw.startsWith('//') && !nextRaw.startsWith('/login') ? nextRaw : '/'
+  const next = safeNext(params.get('next'))
+  // Chuyển qua lại đăng nhập / đăng ký vẫn giữ đích cần quay lại
+  const keepNext = next === '/' ? '' : `?next=${encodeURIComponent(next)}`
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -151,7 +152,11 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 3, textAlign: 'center' }}>
             {mode === 'login' ? 'Chưa có tài khoản? ' : 'Đã có tài khoản? '}
-            <Link component={RouterLink} to={mode === 'login' ? '/register' : '/login'}>
+            <Link
+              component={RouterLink}
+              to={`${mode === 'login' ? '/register' : '/login'}${keepNext}`}
+              sx={{ display: 'inline-block', py: 1 }}
+            >
               {mode === 'login' ? 'Đăng ký' : 'Đăng nhập'}
             </Link>
           </Typography>

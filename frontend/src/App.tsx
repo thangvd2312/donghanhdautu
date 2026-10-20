@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import { useAuth } from './lib/auth-context'
 import { ChatProvider } from './lib/chat'
 import { MarketProvider } from './lib/market'
+import { onboardingSkipped } from './lib/nav'
 import AdvisorPage from './pages/AdvisorPage'
 import AuthPage from './pages/AuthPage'
 import CryptoPage from './pages/CryptoPage'
@@ -38,7 +39,11 @@ export default function App() {
     )
   }
 
-  if (!me.onboarded && loc.pathname !== '/onboarding') return <Navigate to="/onboarding" replace />
+  // Khảo sát mời làm ngay sau đăng ký nhưng không bắt buộc: "Để sau" thì dùng app bình thường, phần tư vấn cá nhân
+  // nói rõ là chưa có hồ sơ. Đích ban đầu (vd link trong thông báo) được giữ qua khảo sát.
+  if (!me.onboarded && !onboardingSkipped() && loc.pathname !== '/onboarding') {
+    return <Navigate to={`/onboarding?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />
+  }
 
   return (
     <MarketProvider>

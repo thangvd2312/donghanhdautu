@@ -12,11 +12,12 @@ import StepLabel from '@mui/material/StepLabel'
 import Stepper from '@mui/material/Stepper'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import HoldingForm from '../components/HoldingForm'
 import { Logo } from '../components/ui'
 import { api, put } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
+import { safeNext, skipOnboarding } from '../lib/nav'
 import { fmtVndShort } from '../lib/format'
 import { RISK_LABEL, type InvestorProfile, type Portfolio, type QuizQuestion } from '../lib/types'
 
@@ -36,6 +37,8 @@ const STEPS = ['Khảo sát khẩu vị', 'Kết quả', 'Tài sản đang có']
 export default function OnboardingPage() {
   const { me, refresh } = useAuth()
   const nav = useNavigate()
+  const [params] = useSearchParams()
+  const next = safeNext(params.get('next'))
   const [quiz, setQuiz] = useState<QuizQuestion[]>([])
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -51,14 +54,14 @@ export default function OnboardingPage() {
   const loadPortfolio = () => api<Portfolio>('/portfolio').then(setPortfolio)
 
   const choose = async (qid: string, value: string) => {
-    const next = { ...answers, [qid]: value }
-    setAnswers(next)
+    const nextAnswers = { ...answers, [qid]: value }
+    setAnswers(nextAnswers)
     if (step < quiz.length - 1) {
       setStep(step + 1)
       return
     }
     try {
-      setProfile(await put<InvestorProfile>('/profile', { answers: next }))
+      setProfile(await put<InvestorProfile>('/profile', { answers: nextAnswers }))
       await loadPortfolio()
       setStage(1)
     } catch (e) {
@@ -68,7 +71,13 @@ export default function OnboardingPage() {
 
   const finish = async () => {
     await refresh()
-    nav('/')
+    nav(next, { replace: true })
+  }
+
+  /** Chưa muốn làm khảo sát: vào app luôn; cố vấn sẽ nói rõ là chưa biết khẩu vị rủi ro của bạn */
+  const later = () => {
+    skipOnboarding()
+    nav(next, { replace: true })
   }
 
   const q = quiz[step]
@@ -140,11 +149,14 @@ export default function OnboardingPage() {
                     )
                   })}
                 </Stack>
-                {step > 0 && (
-                  <Button sx={{ mt: 2 }} onClick={() => setStep(step - 1)}>
-                    Câu trước
-                  </Button>
-                )}
+                <Stack direction="row" sx={{ mt: 2, justifyContent: 'space-between' }}>
+                  {step > 0 ? <Button onClick={() => setStep(step - 1)}>Câu trước</Button> : <span />}
+                  {!me?.onboarded && (
+                    <Button color="inherit" onClick={later}>
+                      Để sau
+                    </Button>
+                  )}
+                </Stack>
                 {error && (
                   <Alert severity="error" sx={{ mt: 2 }}>
                     {error}

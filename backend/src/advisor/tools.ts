@@ -284,7 +284,7 @@ export class AdvisorTools {
             answers: profile.answers,
             referenceAllocationPct: REFERENCE_ALLOCATION[profile.riskType],
           }
-        : 'Người dùng chưa làm khảo sát khẩu vị rủi ro',
+        : 'Người dùng chưa làm khảo sát khẩu vị rủi ro: KHÔNG tự giả định mức chịu rủi ro, mục tiêu hay khung thời gian. Câu hỏi cần cá nhân hoá thì trả lời ở mức nguyên tắc chung, nói rõ là chưa biết khẩu vị của họ và mời làm khảo sát ngắn ở /onboarding.',
       portfolio: valuation.holdings.length
         ? {
             ...valuation,
