@@ -5,6 +5,8 @@
   "scripts": {
     "install:all": "npm ci --prefix backend --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund",
     "build": "npm run build --prefix frontend && cd backend && npx prisma generate && npm run build",
+    "test": "npm test --prefix backend -- --ci",
+    "lint": "npm run lint --prefix frontend",
     "check": "npm run build"
   },
   "engines": {

@@ -3,7 +3,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { fmtNum } from '../lib/format'
 
-export const ALLOC_COLORS: Record<string, string> = {
+const ALLOC_COLORS: Record<string, string> = {
   'Cổ phiếu': '#2563eb',
   Vàng: '#d4a017',
   Crypto: '#8b5cf6',

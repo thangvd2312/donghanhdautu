@@ -2,6 +2,11 @@
 
 Web xem giá realtime (cổ phiếu VN, vàng, crypto, tỷ giá) cho nhà đầu tư cá nhân người Việt, kèm một **cố vấn AI** biết hồ sơ rủi ro và danh mục của từng người, phân tích có dẫn nguồn và chủ động cảnh báo khi tài sản biến động.
 
+## Tài liệu phát triển sản phẩm
+
+- [Đánh giá hiện trạng, định hướng và roadmap](docs/PRODUCT_ROADMAP.md).
+- [Backlog cho dev: phạm vi, phụ thuộc và tiêu chí nghiệm thu](docs/DEV_BACKLOG.md).
+
 ## Chạy thử
 
 Yêu cầu: Node 22+, Docker.
