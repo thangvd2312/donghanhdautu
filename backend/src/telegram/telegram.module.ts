@@ -170,10 +170,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
       await this.reply(chatId, 'Đã ngừng gửi thông báo. Bật lại trong ứng dụng khi cần.');
       return;
     }
-    await this.reply(
-      chatId,
-      'Bot này chỉ gửi thông báo của Đồng Hành Đầu Tư. Kết nối trong mục Cài đặt của ứng dụng.',
-    );
+    await this.reply(chatId, 'Bot này chỉ gửi thông báo của Đồng Hành Đầu Tư. Kết nối trong mục Cài đặt của ứng dụng.');
   }
 
   private reply(chatId: string, text: string) {
