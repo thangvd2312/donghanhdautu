@@ -20,7 +20,7 @@ import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
-import Dialog from '@mui/material/Dialog'
+import ButtonBase from '@mui/material/ButtonBase'
 import Divider from '@mui/material/Divider'
 import Drawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
@@ -50,7 +50,7 @@ import { timeAgo } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import { useIsMobile } from '../lib/useIsMobile'
 import type { Notification } from '../lib/types'
-import StockSearch from './StockSearch'
+import SearchDialog from './SearchDialog'
 import { Logo } from './ui'
 
 const NAV = [
@@ -126,6 +126,16 @@ export default function Layout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const typing = useTyping()
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const bottomValue =
     BOTTOM.find((n) => matches(loc.pathname, n.to))?.to ??
     (MORE.some((n) => matches(loc.pathname, n.to)) || loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto')
@@ -174,11 +184,32 @@ export default function Layout() {
               </Tabs>
             )}
             <Box sx={{ flex: 1 }} />
-            <Box sx={{ width: 240, display: { xs: 'none', lg: 'block' } }}>
-              <StockSearch onPick={(s) => nav(`/stock/${s}`)} />
-            </Box>
-            <Tooltip title="Tìm mã cổ phiếu">
-              <IconButton onClick={() => setSearchOpen(true)} sx={{ display: { lg: 'none' } }}>
+            {/* Desktop: nút dạng thanh tìm kiếm mở hộp tìm (⌘K / Ctrl+K) */}
+            <ButtonBase
+              onClick={() => setSearchOpen(true)}
+              sx={{
+                display: { xs: 'none', lg: 'flex' },
+                width: 260,
+                height: 38,
+                px: 1.5,
+                gap: 1,
+                borderRadius: 99,
+                bgcolor: 'action.hover',
+                color: 'text.secondary',
+                justifyContent: 'flex-start',
+                '&:hover': { bgcolor: 'action.selected' },
+              }}
+            >
+              <SearchOutlined fontSize="small" />
+              <Typography variant="body2" sx={{ flex: 1, textAlign: 'left' }}>
+                Tìm mã…
+              </Typography>
+              <Box component="kbd" sx={{ fontSize: 11, fontFamily: 'inherit', border: 1, borderColor: 'divider', borderRadius: 1, px: 0.75 }}>
+                {navigator.platform.toLowerCase().includes('mac') ? '⌘K' : 'Ctrl K'}
+              </Box>
+            </ButtonBase>
+            <Tooltip title="Tìm mã">
+              <IconButton aria-label="Tìm mã" onClick={() => setSearchOpen(true)} sx={{ display: { lg: 'none' } }}>
                 <SearchOutlined />
               </IconButton>
             </Tooltip>
@@ -257,26 +288,7 @@ export default function Layout() {
         <MoreSheet onClose={() => setMoreOpen(false)} />
       </Drawer>
 
-      <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} fullScreen={mobile} fullWidth maxWidth="sm">
-        <Box sx={{ p: 2, pt: mobile ? 'calc(16px + env(safe-area-inset-top))' : 2 }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Box sx={{ flex: 1 }}>
-              <StockSearch
-                autoFocus
-                size="medium"
-                onPick={(s) => {
-                  setSearchOpen(false)
-                  nav(`/stock/${s}`)
-                }}
-              />
-            </Box>
-            <Button aria-label="Đóng" onClick={() => setSearchOpen(false)}>Đóng</Button>
-          </Stack>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
-            Gõ mã hoặc tên công ty, ví dụ FPT, Hòa Phát, ngân hàng…
-          </Typography>
-        </Box>
-      </Dialog>
+      <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} fullScreen={mobile} />
       <Toast />
     </Box>
   )
