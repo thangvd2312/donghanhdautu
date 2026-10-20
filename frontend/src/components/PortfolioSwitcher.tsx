@@ -18,6 +18,7 @@ import { useState } from 'react'
 import { api, del, post } from '../lib/api'
 import { fmtVndShort } from '../lib/format'
 import { useIsMobile } from '../lib/useIsMobile'
+import { InfoTip } from './ui'
 import type { PortfolioAccount } from '../lib/types'
 
 /** Chọn xem gộp hoặc từng danh mục; thêm / đổi tên / xoá danh mục */
@@ -139,11 +140,17 @@ export default function PortfolioSwitcher({
       <Dialog open={adding} onClose={() => setAdding(false)} fullWidth maxWidth="xs">
         <DialogTitle>Thêm danh mục</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Tách theo tài khoản / nơi giữ tài sản, vd "TK SSI", "Ví Binance", "Vàng cất nhà". Mỗi danh mục có sổ giao dịch
-            và tiền mặt riêng.
-          </Typography>
-          <TextField autoFocus fullWidth size="small" label="Tên danh mục" value={name} onChange={(e) => setName(e.target.value)} />
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            label="Tên danh mục"
+            placeholder="VD: TK SSI, Ví Binance, Vàng cất nhà"
+            helperText="Mỗi danh mục có sổ giao dịch và tiền mặt riêng"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            sx={{ mt: 1 }}
+          />
           {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         </DialogContent>
         <DialogActions>
@@ -189,8 +196,11 @@ export default function PortfolioSwitcher({
               </Stack>
             ))}
             <Typography variant="caption" color="text.secondary">
-              Chỉ xoá được danh mục không còn giao dịch. Chuyển tiền giữa hai danh mục: ghi "Rút tiền" ở danh mục này và
-              "Nạp tiền" ở danh mục kia — khi xem gộp, hai giao dịch triệt tiêu nên không bị tính thành vốn mới.
+              Chỉ xoá được danh mục trống.{' '}
+              <InfoTip label="Chuyển tiền giữa hai danh mục">
+                Chuyển tiền giữa hai danh mục: ghi "Rút tiền" ở bên chuyển và "Nạp tiền" ở bên nhận. Khi xem gộp, hai giao dịch
+                triệt tiêu nên không bị tính là vốn mới.
+              </InfoTip>
             </Typography>
             {error && <Alert severity="error">{error}</Alert>}
           </Stack>
