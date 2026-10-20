@@ -1,13 +1,4 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  Module,
-  Patch,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Module, Patch, Put, UseGuards } from '@nestjs/common';
 import { IsBoolean, IsNumber, IsObject, IsOptional, Max, Min } from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';

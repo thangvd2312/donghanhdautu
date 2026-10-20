@@ -13,10 +13,12 @@ function fakePrisma(items: Item[] = [], holdings: { userId: string; assetType: s
   return {
     items,
     watchItem: {
-      findMany: ({ where }: { where: { userId: string } }) => Promise.resolve(items.filter((w) => w.userId === where.userId)),
+      findMany: ({ where }: { where: { userId: string } }) =>
+        Promise.resolve(items.filter((w) => w.userId === where.userId)),
       findUnique: ({ where }: { where: { userId_assetType_symbol: Item } }) =>
         Promise.resolve(items.find((w) => match(w, where.userId_assetType_symbol)) ?? null),
-      count: ({ where }: { where: { userId: string } }) => Promise.resolve(items.filter((w) => w.userId === where.userId).length),
+      count: ({ where }: { where: { userId: string } }) =>
+        Promise.resolve(items.filter((w) => w.userId === where.userId).length),
       upsert: ({ create }: { create: Omit<Item, 'id' | 'createdAt'> }) => {
         const found = items.find((w) => match(w, create as Item));
         if (found) return Promise.resolve(found);
@@ -41,7 +43,9 @@ function fakePrisma(items: Item[] = [], holdings: { userId: string; assetType: s
 function fakeMarket() {
   return {
     assertStock: (s: string) =>
-      s === 'FPT' || s === 'HPG' ? Promise.resolve({ symbol: s }) : Promise.reject(new NotFoundException(`Không tìm thấy mã chứng khoán ${s}`)),
+      s === 'FPT' || s === 'HPG'
+        ? Promise.resolve({ symbol: s })
+        : Promise.reject(new NotFoundException(`Không tìm thấy mã chứng khoán ${s}`)),
     stockQuote: () => Promise.resolve({}),
     binance: { quotes: new Map([['BTCUSDT', {}]]) },
     goldQuotes: () => [{ code: 'SJL1L10', name: 'SJC miếng (SJC)' }],

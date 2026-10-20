@@ -101,7 +101,9 @@ export function validateAllocations(next: Allocation[], others: Allocation[], na
       errors.push(`Phần trăm của ${nameOf(a)} phải trong khoảng 0–100`);
       continue;
     }
-    const used = others.filter((o) => o.assetType === a.assetType && o.symbol === a.symbol).reduce((s, o) => s + o.pct, 0);
+    const used = others
+      .filter((o) => o.assetType === a.assetType && o.symbol === a.symbol)
+      .reduce((s, o) => s + o.pct, 0);
     if (used + a.pct > 100 + 1e-9) {
       errors.push(`${nameOf(a)} đã gán ${round(used)}% cho mục tiêu khác, chỉ còn ${round(100 - used)}%`);
     }
@@ -112,7 +114,8 @@ export function validateAllocations(next: Allocation[], others: Allocation[], na
 export function validateTargetAllocation(t: Partial<Record<string, number>> | null | undefined) {
   if (!t) return null;
   const entries = Object.entries(t).filter(([, v]) => v !== undefined && v !== null);
-  if (entries.some(([k]) => !(ASSET_TYPES as readonly string[]).includes(k))) return 'Loại tài sản trong tỷ trọng không hợp lệ';
+  if (entries.some(([k]) => !(ASSET_TYPES as readonly string[]).includes(k)))
+    return 'Loại tài sản trong tỷ trọng không hợp lệ';
   if (entries.some(([, v]) => !(Number(v) >= 0 && Number(v) <= 100))) return 'Mỗi tỷ trọng phải trong khoảng 0–100%';
   const sum = entries.reduce((s, [, v]) => s + Number(v), 0);
   if (Math.abs(sum - 100) > 0.5) return `Tổng tỷ trọng mong muốn phải là 100% (hiện ${round(sum)}%)`;

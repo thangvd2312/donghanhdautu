@@ -36,9 +36,15 @@ type PlanAsset = (typeof PLAN_ASSETS)[number];
 class PlanDto {
   @IsIn(PLAN_ASSETS) assetType!: PlanAsset;
   @IsString() @MaxLength(20) symbol!: string;
-  @IsString() @MinLength(5, { message: 'Hãy viết lý do mua / nắm giữ (ít nhất vài chữ)' }) @MaxLength(3000) thesis!: string;
+  @IsString()
+  @MinLength(5, { message: 'Hãy viết lý do mua / nắm giữ (ít nhất vài chữ)' })
+  @MaxLength(3000)
+  thesis!: string;
   @IsOptional() @IsString() @MaxLength(100) horizon?: string;
-  @IsString() @MinLength(5, { message: 'Hãy viết điều kiện để xem lại hoặc bán' }) @MaxLength(3000) exitConditions!: string;
+  @IsString()
+  @MinLength(5, { message: 'Hãy viết điều kiện để xem lại hoặc bán' })
+  @MaxLength(3000)
+  exitConditions!: string;
   @IsOptional() @IsNumber() @Min(0) targetPrice?: number | null;
   @IsOptional() @IsNumber() @Min(0) stopPrice?: number | null;
   @IsOptional() @IsInt() @Min(1) @Max(730) reviewEveryDays?: number | null;
@@ -108,7 +114,8 @@ export class PlansService {
   /** Giá hiện tại theo đơn vị của kế hoạch: VND/cp, USDT/coin, VND/lượng (giá mua vào) */
   priceNative(assetType: string, symbol: string) {
     const info = this.market.priceInfo(assetType as PlanAsset, symbol);
-    const value = info.value === null ? null : assetType === 'crypto' ? info.value / this.market.usdtVnd.rate : info.value;
+    const value =
+      info.value === null ? null : assetType === 'crypto' ? info.value / this.market.usdtVnd.rate : info.value;
     return { value, status: info.status, source: info.source, asOf: info.asOf };
   }
 
@@ -253,7 +260,8 @@ export class PlansService {
     const v = await this.portfolio.valuation(userId);
     const held = v.holdings.find((h) => h.assetType === plan.assetType && h.symbol === plan.symbol);
     const next = dto.nextReviewAt ?? addDays(today, plan.reviewEveryDays ?? DEFAULT_REVIEW_DAYS);
-    if (dto.decision !== 'close' && next <= today) throw new BadRequestException('Ngày xem lại tiếp theo phải sau hôm nay');
+    if (dto.decision !== 'close' && next <= today)
+      throw new BadRequestException('Ngày xem lại tiếp theo phải sau hôm nay');
     return this.prisma.$transaction(async (db) => {
       const review = await db.planReview.create({
         data: {
@@ -322,7 +330,10 @@ export class PlansService {
       maxTokens: 2000,
     });
     if (!draft) throw new ServiceUnavailableException('AI chưa viết được bản nháp, bạn thử lại hoặc tự viết nhé');
-    return { ...draft, reviewEveryDays: Math.min(365, Math.max(7, Math.round(draft.reviewEveryDays || DEFAULT_REVIEW_DAYS))) };
+    return {
+      ...draft,
+      reviewEveryDays: Math.min(365, Math.max(7, Math.round(draft.reviewEveryDays || DEFAULT_REVIEW_DAYS))),
+    };
   }
 
   /** 8:00 mỗi ngày: nhắc các kế hoạch đến hạn xem lại (mỗi ngày xem lại chỉ nhắc một lần) */
@@ -365,7 +376,12 @@ export class PlansService {
       assetType: p.assetType as PlanAsset,
       symbol: p.symbol,
       displayName: this.displayName(p.assetType, p.symbol),
-      link: p.assetType === 'stock' ? `/stock/${p.symbol}` : p.assetType === 'crypto' ? `/crypto/${displaySymbol('crypto', p.symbol)}` : null,
+      link:
+        p.assetType === 'stock'
+          ? `/stock/${p.symbol}`
+          : p.assetType === 'crypto'
+            ? `/crypto/${displaySymbol('crypto', p.symbol)}`
+            : null,
       currency: p.assetType === 'crypto' ? 'USDT' : 'VND',
       thesis: p.thesis,
       horizon: p.horizon,

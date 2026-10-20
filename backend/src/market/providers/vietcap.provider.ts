@@ -79,9 +79,9 @@ export class VietcapProvider {
   async allSymbols(): Promise<Map<string, SymbolInfo>> {
     if (this.symbols) return this.symbols;
     try {
-      const rows = await this.get<
-        { symbol: string; organName: string; board: string; type: string }[]
-      >(`${TRADING}/price/symbols/getAll`);
+      const rows = await this.get<{ symbol: string; organName: string; board: string; type: string }[]>(
+        `${TRADING}/price/symbols/getAll`,
+      );
       const list = rows
         .filter((r) => ['HSX', 'HNX', 'UPCOM'].includes(r.board))
         .map((r) => ({ symbol: r.symbol, name: r.organName, board: r.board, type: r.type }));
@@ -109,9 +109,7 @@ export class VietcapProvider {
 
   async group(group: string): Promise<string[]> {
     return this.cached(`group:${group}`, 6 * 3600_000, async () => {
-      const rows = await this.get<{ symbol: string }[]>(
-        `${TRADING}/price/symbols/getByGroup?group=${group}`,
-      );
+      const rows = await this.get<{ symbol: string }[]>(`${TRADING}/price/symbols/getByGroup?group=${group}`);
       return rows.map((r) => r.symbol);
     });
   }
@@ -210,14 +208,15 @@ export class VietcapProvider {
 
   private async historyVietcap(symbol: string, days: number): Promise<Candle[]> {
     {
-      const rows = await this.post<
-        { o: number[]; h: number[]; l: number[]; c: number[]; v: number[]; t: string[] }[]
-      >(`${TRADING}/chart/OHLCChart/gap-chart`, {
-        timeFrame: 'ONE_DAY',
-        symbols: [symbol],
-        to: Math.floor(Date.now() / 1000) + 86400,
-        countBack: days,
-      });
+      const rows = await this.post<{ o: number[]; h: number[]; l: number[]; c: number[]; v: number[]; t: string[] }[]>(
+        `${TRADING}/chart/OHLCChart/gap-chart`,
+        {
+          timeFrame: 'ONE_DAY',
+          symbols: [symbol],
+          to: Math.floor(Date.now() / 1000) + 86400,
+          countBack: days,
+        },
+      );
       const r = rows[0];
       if (!r?.t?.length) throw new Error(`không có dữ liệu ${symbol}`);
       return r.t.map((t, i) => ({
@@ -233,9 +232,7 @@ export class VietcapProvider {
 
   async company(symbol: string) {
     return this.cached(`company:${symbol}`, 6 * 3600_000, async () => {
-      const res = await this.get<{ data: Record<string, unknown> | null }>(
-        `${IQ}/company/${symbol}`,
-      );
+      const res = await this.get<{ data: Record<string, unknown> | null }>(`${IQ}/company/${symbol}`);
       const d = res.data;
       if (!d) return null;
       return {
@@ -265,7 +262,7 @@ export class VietcapProvider {
               previous: d.prevInsight,
             }
           : null,
-        profile: stripHtml(String(d.profile ?? '')).slice(0, 1500),
+        profile: stripHtml(typeof d.profile === 'string' ? d.profile : '').slice(0, 1500),
       };
     });
   }
@@ -276,17 +273,31 @@ export class VietcapProvider {
       // quarter = 5 là số liệu cả năm, trùng với quý 4 — bỏ đi
       const rows = (await this.statsRaw(symbol))
         .filter((r) => Number(r.quarter) >= 1 && Number(r.quarter) <= 4)
-        .sort(
-          (a, b) =>
-            Number(a.yearReport) - Number(b.yearReport) ||
-            Number(a.quarter) - Number(b.quarter),
-        )
+        .sort((a, b) => Number(a.yearReport) - Number(b.yearReport) || Number(a.quarter) - Number(b.quarter))
         .slice(-8);
       const keep = [
-        'pe', 'pb', 'ps', 'evToEbitda', 'roe', 'roa', 'roic', 'grossMargin',
-        'afterTaxProfitMargin', 'debtToEquity', 'currentRatio', 'quickRatio',
-        'dividendYield', 'marketCap', 'netInterestMargin', 'npl', 'casaRatio',
-        'ldrLoanDepositRatio', 'costToIncome', 'car', 'loansGrowth', 'depositGrowth',
+        'pe',
+        'pb',
+        'ps',
+        'evToEbitda',
+        'roe',
+        'roa',
+        'roic',
+        'grossMargin',
+        'afterTaxProfitMargin',
+        'debtToEquity',
+        'currentRatio',
+        'quickRatio',
+        'dividendYield',
+        'marketCap',
+        'netInterestMargin',
+        'npl',
+        'casaRatio',
+        'ldrLoanDepositRatio',
+        'costToIncome',
+        'car',
+        'loansGrowth',
+        'depositGrowth',
       ];
       return rows.map((r) => {
         const o: Record<string, number | string> = { period: `Q${r.quarter}/${r.yearReport}` };
@@ -321,13 +332,9 @@ export class VietcapProvider {
         return o;
       };
       const years = data.years.slice(-5).map((r) => pick(r, `${r.yearReport}`));
-      const quarters = data.quarters
-        .slice(-6)
-        .map((r) => pick(r, `Q${r.lengthReport}/${r.yearReport}`));
+      const quarters = data.quarters.slice(-6).map((r) => pick(r, `Q${r.lengthReport}/${r.yearReport}`));
       // Bỏ các dòng toàn 0 (vd. EPS pha loãng không được công bố)
-      const empty = lines
-        .map((m) => m.titleVi)
-        .filter((k) => [...years, ...quarters].every((r) => !r[k]));
+      const empty = lines.map((m) => m.titleVi).filter((k) => [...years, ...quarters].every((r) => !r[k]));
       for (const r of [...years, ...quarters]) for (const k of empty) delete r[k];
       return { unit: 'tỷ VND (EPS: VND)', years, quarters };
     });
@@ -378,7 +385,8 @@ export class VietcapProvider {
       .filter(([f]) => byField.has(f))
       .map(([f, label]) => ({ field: f, label: label ?? byField.get(f)!.titleVi }));
     const standard = lines.length >= 5;
-    if (!standard) lines = all.filter((m) => m.level === 1 && m.field).map((m) => ({ field: m.field as string, label: m.titleVi }));
+    if (!standard)
+      lines = all.filter((m) => m.level === 1 && m.field).map((m) => ({ field: m.field as string, label: m.titleVi }));
     const pick = (row: Record<string, number>, period: string) => {
       const o: StatementRow = { period };
       for (const l of lines) {
@@ -407,7 +415,10 @@ export class VietcapProvider {
 
   /** Loại doanh nghiệp quyết định cách đọc báo cáo tài chính */
   private async kind(symbol: string): Promise<'bank' | 'securities' | 'insurance' | 'corporate'> {
-    const [meta, company] = await Promise.all([this.metrics(symbol), this.safe('company', () => this.company(symbol), null)]);
+    const [meta, company] = await Promise.all([
+      this.metrics(symbol),
+      this.safe('company', () => this.company(symbol), null),
+    ]);
     if (company?.isBank || (meta.BALANCE_SHEET ?? []).some((m) => m.field === 'bsb103')) return 'bank';
     if (company?.companyType === 'CK') return 'securities';
     if (company?.companyType === 'BH') return 'insurance';
@@ -419,7 +430,11 @@ export class VietcapProvider {
     return this.cached(`bs:${symbol}`, 6 * 3600_000, async () => {
       const kind = await this.kind(symbol);
       // Chứng khoán / bảo hiểm có mẫu báo cáo riêng: lấy các dòng cấp 1, không tính chỉ tiêu nợ vay ròng
-      const k = await this.keyLines(symbol, 'BALANCE_SHEET', kind === 'bank' ? BANK_BS : kind === 'corporate' ? CORP_BS : []);
+      const k = await this.keyLines(
+        symbol,
+        'BALANCE_SHEET',
+        kind === 'bank' ? BANK_BS : kind === 'corporate' ? CORP_BS : [],
+      );
       const derive = (r: StatementRow): StatementRow => {
         if (kind !== 'corporate' || !k.standard) return r;
         const d = netDebt(r, { stDebt: 'bsa56', ltDebt: 'bsa71', cash: 'bsa2', stInv: 'bsa5' });
@@ -459,13 +474,18 @@ export class VietcapProvider {
       const last4 = k.quarters.slice(-4);
       const consecutive =
         last4.length === 4 &&
-        last4.every((r, i) => i === 0 || quarterIndex(String(r.period)) - quarterIndex(String(last4[i - 1].period)) === 1);
+        last4.every(
+          (r, i) => i === 0 || quarterIndex(String(r.period)) - quarterIndex(String(last4[i - 1].period)) === 1,
+        );
       let ttm: StatementRow | null = null;
       if (consecutive) {
         ttm = { period: `TTM (${last4[0].period} – ${last4[3].period})` };
         for (const l of k.lines) {
           if (last4.every((r) => typeof r[l.field] === 'number')) {
-            ttm[l.field] = round(last4.reduce((s, r) => s + Number(r[l.field]), 0), 1);
+            ttm[l.field] = round(
+              last4.reduce((s, r) => s + Number(r[l.field]), 0),
+              1,
+            );
           }
         }
       }
@@ -485,7 +505,8 @@ export class VietcapProvider {
                 'Tổng lợi nhuận trước thuế': round(sum('cfa1'), 1),
                 'Tổng chi mua sắm TSCĐ': round(sum('cfa19'), 1),
                 'Tổng cổ tức đã trả': round(sum('cfa32'), 1),
-                'Dòng tiền kinh doanh / Lợi nhuận trước thuế (lần)': sum('cfa1') > 0 ? round(sum('cfa18') / sum('cfa1'), 2) : '',
+                'Dòng tiền kinh doanh / Lợi nhuận trước thuế (lần)':
+                  sum('cfa1') > 0 ? round(sum('cfa18') / sum('cfa1'), 2) : '',
               }
             : null,
       };
@@ -498,7 +519,10 @@ export class VietcapProvider {
       const res = await this.get<{ data: VcShareholder[] | null }>(`${IQ}/company/${symbol}/shareholder`);
       const rows = (res.data ?? []).filter((r) => r.publicDate && r.percentage);
       if (!rows.length) return null;
-      const latest = rows.map((r) => r.publicDate).sort().at(-1)!;
+      const latest = rows
+        .map((r) => r.publicDate)
+        .sort()
+        .at(-1)!;
       const cutoff = new Date(latest);
       cutoff.setMonth(cutoff.getMonth() - 18);
       // Bỏ người nắm dưới 0,1% — không phải cổ đông lớn theo nghĩa thông thường
@@ -597,19 +621,41 @@ const KIND_NOTE = {
 
 /** Mã trường các dòng chính — doanh nghiệp thường. Nhãn bỏ trống thì dùng tên dòng của Vietcap */
 const CORP_BS: [string, string?][] = [
-  ['bsa2'], ['bsa5'], ['bsa8'], ['bsa15'], ['bsa1', 'Tài sản ngắn hạn'], ['bsa53', 'Tổng tài sản'],
-  ['bsa55', 'Nợ ngắn hạn'], ['bsa56', 'Vay ngắn hạn'], ['bsa71', 'Vay dài hạn'], ['bsa54', 'Nợ phải trả'],
-  ['bsa78'], ['bsa90', 'Lợi nhuận chưa phân phối'],
+  ['bsa2'],
+  ['bsa5'],
+  ['bsa8'],
+  ['bsa15'],
+  ['bsa1', 'Tài sản ngắn hạn'],
+  ['bsa53', 'Tổng tài sản'],
+  ['bsa55', 'Nợ ngắn hạn'],
+  ['bsa56', 'Vay ngắn hạn'],
+  ['bsa71', 'Vay dài hạn'],
+  ['bsa54', 'Nợ phải trả'],
+  ['bsa78'],
+  ['bsa90', 'Lợi nhuận chưa phân phối'],
 ];
 const BANK_BS: [string, string?][] = [
-  ['bsa53', 'Tổng tài sản'], ['bsb104', 'Cho vay khách hàng (gộp)'], ['bsb105', 'Dự phòng rủi ro cho vay khách hàng'],
-  ['bsb106'], ['bsb113'], ['bsb116'], ['bsb112'], ['bsa54', 'Tổng nợ phải trả'], ['bsa78', 'Vốn chủ sở hữu'],
+  ['bsa53', 'Tổng tài sản'],
+  ['bsb104', 'Cho vay khách hàng (gộp)'],
+  ['bsb105', 'Dự phòng rủi ro cho vay khách hàng'],
+  ['bsb106'],
+  ['bsb113'],
+  ['bsb116'],
+  ['bsb112'],
+  ['bsa54', 'Tổng nợ phải trả'],
+  ['bsa78', 'Vốn chủ sở hữu'],
   ['bsa90', 'Lợi nhuận chưa phân phối'],
 ];
 const CORP_CF: [string, string?][] = [
-  ['cfa1', 'Lợi nhuận trước thuế'], ['cfa2', 'Khấu hao'], ['cfa18', 'Dòng tiền từ hoạt động kinh doanh'],
-  ['cfa19', 'Chi mua sắm, xây dựng TSCĐ'], ['cfa26', 'Dòng tiền từ hoạt động đầu tư'], ['cfa29', 'Tiền vay nhận được'],
-  ['cfa30', 'Tiền trả nợ gốc vay'], ['cfa32', 'Cổ tức đã trả'], ['cfa34', 'Dòng tiền từ hoạt động tài chính'],
+  ['cfa1', 'Lợi nhuận trước thuế'],
+  ['cfa2', 'Khấu hao'],
+  ['cfa18', 'Dòng tiền từ hoạt động kinh doanh'],
+  ['cfa19', 'Chi mua sắm, xây dựng TSCĐ'],
+  ['cfa26', 'Dòng tiền từ hoạt động đầu tư'],
+  ['cfa29', 'Tiền vay nhận được'],
+  ['cfa30', 'Tiền trả nợ gốc vay'],
+  ['cfa32', 'Cổ tức đã trả'],
+  ['cfa34', 'Dòng tiền từ hoạt động tài chính'],
   ['cfa35', 'Lưu chuyển tiền thuần trong kỳ'],
 ];
 
@@ -662,11 +708,31 @@ function stripHtml(s: string) {
 }
 
 const HTML_ENTITIES: Record<string, string> = {
-  '&ocirc;': 'ô', '&oacute;': 'ó', '&ograve;': 'ò', '&otilde;': 'õ', '&aacute;': 'á',
-  '&agrave;': 'à', '&atilde;': 'ã', '&acirc;': 'â', '&eacute;': 'é', '&egrave;': 'è',
-  '&ecirc;': 'ê', '&iacute;': 'í', '&igrave;': 'ì', '&uacute;': 'ú', '&ugrave;': 'ù',
-  '&yacute;': 'ý', '&amp;': '&', '&quot;': '"', '&lt;': '<', '&gt;': '>',
-  '&Ocirc;': 'Ô', '&Aacute;': 'Á', '&Eacute;': 'É', '&Uacute;': 'Ú', '&Ecirc;': 'Ê',
+  '&ocirc;': 'ô',
+  '&oacute;': 'ó',
+  '&ograve;': 'ò',
+  '&otilde;': 'õ',
+  '&aacute;': 'á',
+  '&agrave;': 'à',
+  '&atilde;': 'ã',
+  '&acirc;': 'â',
+  '&eacute;': 'é',
+  '&egrave;': 'è',
+  '&ecirc;': 'ê',
+  '&iacute;': 'í',
+  '&igrave;': 'ì',
+  '&uacute;': 'ú',
+  '&ugrave;': 'ù',
+  '&yacute;': 'ý',
+  '&amp;': '&',
+  '&quot;': '"',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&Ocirc;': 'Ô',
+  '&Aacute;': 'Á',
+  '&Eacute;': 'É',
+  '&Uacute;': 'Ú',
+  '&Ecirc;': 'Ê',
 };
 
 interface VcBoardRow {

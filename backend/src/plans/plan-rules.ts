@@ -36,7 +36,10 @@ export function planSignals(plan: PlanLite, today: string, priceNative: number |
     out.push({ kind: 'stop', message: `${name} đã về mốc cắt lỗ ${fmt(plan.stopPrice)} bạn đặt trong kế hoạch` });
   }
   if (priceNative !== null && plan.targetPrice !== null && priceNative >= plan.targetPrice) {
-    out.push({ kind: 'target', message: `${name} đã chạm mốc chốt lời ${fmt(plan.targetPrice)} bạn đặt trong kế hoạch` });
+    out.push({
+      kind: 'target',
+      message: `${name} đã chạm mốc chốt lời ${fmt(plan.targetPrice)} bạn đặt trong kế hoạch`,
+    });
   }
   if (plan.nextReviewAt <= today) {
     const overdue = daysBetween(plan.nextReviewAt, today);

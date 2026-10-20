@@ -90,10 +90,9 @@ describe('reviewPoints', () => {
   const balanced = { riskType: 'balanced', maxDrawdownPct: 15 };
 
   it('lỗ vượt mức chịu được là điểm quan trọng nhất, kèm câu hỏi cho cố vấn', () => {
-    const v = valuation(
-      [holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'cash', 'VND', 100_000_000, 1)],
-      { FPT: 80_000 },
-    );
+    const v = valuation([holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'cash', 'VND', 100_000_000, 1)], {
+      FPT: 80_000,
+    });
     const points = reviewPoints(v, balanced, []);
     expect(points[0]).toMatchObject({ id: 'maxloss:1', severity: 'high', link: '/stock/FPT' });
     expect(points[0].title).toContain('20%');
@@ -117,10 +116,9 @@ describe('reviewPoints', () => {
 
   it('nhắc rủi ro tập trung và lệch phân bổ tham khảo', () => {
     // FPT chiếm ~91%, cổ phiếu cao hơn nhiều mức tham khảo 55% của kiểu cân bằng
-    const v = valuation(
-      [holding('1', 'stock', 'FPT', 1000, 100_000), holding('2', 'cash', 'VND', 10_000_000, 1)],
-      { FPT: 100_000 },
-    );
+    const v = valuation([holding('1', 'stock', 'FPT', 1000, 100_000), holding('2', 'cash', 'VND', 10_000_000, 1)], {
+      FPT: 100_000,
+    });
     const points = reviewPoints(v, balanced, []);
     expect(points.find((p) => p.id === 'concentration:1')?.title).toContain('FPT');
     // Cổ phiếu chỉ có FPT nên mức tham khảo được gộp vào điểm tập trung
@@ -143,10 +141,9 @@ describe('reviewPoints', () => {
   });
 
   it('nhóm tài sản chỉ gồm một mã đã bị nhắc tập trung thì gộp mức tham khảo vào, không nhắc hai lần', () => {
-    const v = valuation(
-      [holding('1', 'gold', 'SJL1L10', 1, 100_000_000), holding('2', 'cash', 'VND', 50_000_000, 1)],
-      { SJL1L10: 100_000_000 },
-    );
+    const v = valuation([holding('1', 'gold', 'SJL1L10', 1, 100_000_000), holding('2', 'cash', 'VND', 50_000_000, 1)], {
+      SJL1L10: 100_000_000,
+    });
     const points = reviewPoints(v, balanced, []);
     expect(points.some((p) => p.id === 'allocation:gold')).toBe(false);
     expect(points.find((p) => p.id === 'concentration:1')?.reason).toContain('mức tham khảo');
@@ -162,7 +159,14 @@ describe('reviewPoints', () => {
     const points = reviewPoints(v, balanced, [
       { id: 'a', assetType: 'stock', symbol: 'HPG', direction: 'below', targetPrice: 24_700, currentPrice: 25_000 },
       { id: 'b', assetType: 'stock', symbol: 'FPT', direction: 'above', targetPrice: 110_000, currentPrice: 100_000 },
-      { id: 'c', assetType: 'crypto', symbol: 'BTCUSDT', direction: 'above', targetPrice: 70_500, currentPrice: 70_000 },
+      {
+        id: 'c',
+        assetType: 'crypto',
+        symbol: 'BTCUSDT',
+        direction: 'above',
+        targetPrice: 70_500,
+        currentPrice: 70_000,
+      },
       // Giá đã vượt mốc "≥" (cảnh báo sẽ tự bắn), không phải "sắp chạm"
       { id: 'd', assetType: 'stock', symbol: 'VNM', direction: 'above', targetPrice: 59_000, currentPrice: 60_000 },
     ]);

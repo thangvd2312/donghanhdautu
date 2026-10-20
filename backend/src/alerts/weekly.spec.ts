@@ -25,9 +25,36 @@ const base: WeekSummary = {
     missing: [],
   },
   assets: [
-    { name: 'FPT', assetType: 'stock', valueStart: 50e6, valueEnd: 53e6, priceChangePct: 6, priceEffect: 3_000_000, tradedThisWeek: false, priced: true },
-    { name: 'HPG', assetType: 'stock', valueStart: 20e6, valueEnd: 19e6, priceChangePct: -5, priceEffect: -1_000_000, tradedThisWeek: true, priced: true },
-    { name: 'Tiền mặt', assetType: 'cash', valueStart: 30e6, valueEnd: 40e6, priceChangePct: null, priceEffect: null, tradedThisWeek: false, priced: true },
+    {
+      name: 'FPT',
+      assetType: 'stock',
+      valueStart: 50e6,
+      valueEnd: 53e6,
+      priceChangePct: 6,
+      priceEffect: 3_000_000,
+      tradedThisWeek: false,
+      priced: true,
+    },
+    {
+      name: 'HPG',
+      assetType: 'stock',
+      valueStart: 20e6,
+      valueEnd: 19e6,
+      priceChangePct: -5,
+      priceEffect: -1_000_000,
+      tradedThisWeek: true,
+      priced: true,
+    },
+    {
+      name: 'Tiền mặt',
+      assetType: 'cash',
+      valueStart: 30e6,
+      valueEnd: 40e6,
+      priceChangePct: null,
+      priceEffect: null,
+      tradedThisWeek: false,
+      priced: true,
+    },
   ],
   allocationStart: { stock: 70, cash: 30 },
   allocationEnd: { stock: 64.3, cash: 35.7 },
@@ -55,7 +82,19 @@ describe('weeklyTable', () => {
     const md = weeklyTable({
       ...base,
       period: { ...base.period!, isEstimate: true, notes: ['Giá đầu kỳ có phần ước tính.'] },
-      assets: [...base.assets, { name: 'SJC', assetType: 'gold', valueStart: 0, valueEnd: 1, priceChangePct: null, priceEffect: null, tradedThisWeek: false, priced: false }],
+      assets: [
+        ...base.assets,
+        {
+          name: 'SJC',
+          assetType: 'gold',
+          valueStart: 0,
+          valueEnd: 1,
+          priceChangePct: null,
+          priceEffect: null,
+          tradedThisWeek: false,
+          priced: false,
+        },
+      ],
     });
     expect(md).toContain('Cổ phiếu 70% → 64%');
     expect(md).toContain('— ước tính');
@@ -63,6 +102,8 @@ describe('weeklyTable', () => {
   });
 
   it('không có tiền nạp/rút thì ghi rõ', () => {
-    expect(weeklyTable({ ...base, period: { ...base.period!, netFlows: 0 } })).toContain('| Tiền nạp / rút trong tuần | không có |');
+    expect(weeklyTable({ ...base, period: { ...base.period!, netFlows: 0 } })).toContain(
+      '| Tiền nạp / rút trong tuần | không có |',
+    );
   });
 });

@@ -70,10 +70,9 @@ export class GoldFxProvider {
   }
 
   private async fromBtmc(): Promise<GoldQuote[]> {
-    const r = await fetch(
-      'http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v',
-      { signal: AbortSignal.timeout(15000) },
-    );
+    const r = await fetch('http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v', {
+      signal: AbortSignal.timeout(15000),
+    });
     const d = (await r.json()) as { DataList: { Data: Record<string, string>[] } };
     const seen = new Set<string>();
     const out: GoldQuote[] = [];
@@ -103,24 +102,24 @@ export class GoldFxProvider {
   }
 
   async fx(): Promise<FxRate[]> {
-    const r = await fetch(
-      'https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx',
-      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) },
-    );
+    const r = await fetch('https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx', {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(15000),
+    });
     const xml = await r.text();
     const parsed = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' }).parse(xml) as {
       ExrateList: { DateTime: string; Exrate: Record<string, string>[] };
     };
     const num = (s: string) => Number(String(s).replace(/,/g, '')) || 0;
-    return parsed.ExrateList.Exrate.filter((e) =>
-      ['USD', 'EUR', 'JPY', 'CNY', 'SGD'].includes(e.CurrencyCode),
-    ).map((e) => ({
-      code: e.CurrencyCode,
-      buy: num(e.Buy),
-      transfer: num(e.Transfer),
-      sell: num(e.Sell),
-      updatedAt: parsed.ExrateList.DateTime,
-    }));
+    return parsed.ExrateList.Exrate.filter((e) => ['USD', 'EUR', 'JPY', 'CNY', 'SGD'].includes(e.CurrencyCode)).map(
+      (e) => ({
+        code: e.CurrencyCode,
+        buy: num(e.Buy),
+        transfer: num(e.Transfer),
+        sell: num(e.Sell),
+        updatedAt: parsed.ExrateList.DateTime,
+      }),
+    );
   }
 
   /**
@@ -147,7 +146,10 @@ export class GoldFxProvider {
         signal: AbortSignal.timeout(15000),
       });
       const d = (await r.json()) as { data?: { adv: { price: string } }[] };
-      const prices = (d.data ?? []).map((a) => Number(a.adv.price)).filter((x) => x > 0).slice(0, 5);
+      const prices = (d.data ?? [])
+        .map((a) => Number(a.adv.price))
+        .filter((x) => x > 0)
+        .slice(0, 5);
       if (!prices.length) throw new Error(`Binance P2P không có quảng cáo ${tradeType}`);
       return median(prices);
     };

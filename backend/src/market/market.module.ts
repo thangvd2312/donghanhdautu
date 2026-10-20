@@ -32,10 +32,7 @@ class MarketController {
   }
 
   @Get('stocks/:symbol/history')
-  stockHistory(
-    @Param('symbol') symbol: string,
-    @Query('days', new DefaultValuePipe(365), ParseIntPipe) days: number,
-  ) {
+  stockHistory(@Param('symbol') symbol: string, @Query('days', new DefaultValuePipe(365), ParseIntPipe) days: number) {
     return this.market.stockHistory(symbol, days);
   }
 
@@ -45,10 +42,7 @@ class MarketController {
   }
 
   @Get('crypto/:symbol/history')
-  cryptoHistory(
-    @Param('symbol') symbol: string,
-    @Query('days', new DefaultValuePipe(365), ParseIntPipe) days: number,
-  ) {
+  cryptoHistory(@Param('symbol') symbol: string, @Query('days', new DefaultValuePipe(365), ParseIntPipe) days: number) {
     return this.market.cryptoHistory(symbol, days);
   }
 }

@@ -12,7 +12,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import { Logo } from '../components/ui'
 import { api } from '../lib/api'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth-context'
 
 export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { login, register, loginWithGoogle } = useAuth()

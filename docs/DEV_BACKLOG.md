@@ -2,7 +2,16 @@
 
 - Ngày lập: 20/10/2026.
 - Liên quan: [định hướng sản phẩm và roadmap](PRODUCT_ROADMAP.md).
-- Trạng thái tất cả hạng mục: **chưa triển khai theo tài liệu này**.
+- Trạng thái (cập nhật 20/10/2026):
+
+| Hạng mục | Trạng thái |
+|---|---|
+| QA-01 | Đã làm: CI chạy unit test, lint frontend (0 cảnh báo) và backend. Chưa: đo tải trang / tách bundle |
+| DATA-01, WL-01, HOME-01, ACQ-01 | Đã làm |
+| PF-01, PF-02, PF-03 | Đã làm (TWR/XIRR, benchmark để sau) |
+| PLAN-01, BRIEF-01, GOAL-01 | Đã làm |
+| NT-01 | Đã làm với Telegram (qua Cloudflare Worker vì server bị chặn Telegram) |
+| OBS-01, AI-01, BIZ-01 | Chưa làm — ưu tiên tính năng sản phẩm trước |
 - Các lựa chọn dưới đây là phạm vi đề xuất. Khi chia ticket, dev ghi rõ quyết định kỹ thuật, phụ thuộc và phần được hoãn.
 
 ## Quy ước triển khai

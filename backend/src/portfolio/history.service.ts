@@ -40,7 +40,9 @@ export class HistoryService implements OnApplicationBootstrap {
 
   async history(userId: string, range: string) {
     if (!(range in RANGES)) throw new BadRequestException('Khoảng thời gian không hợp lệ');
-    const r = await this.compute(userId, (firstTx, today) => (range === 'all' ? firstTx : addDays(today, -RANGES[range as Range])));
+    const r = await this.compute(userId, (firstTx, today) =>
+      range === 'all' ? firstTx : addDays(today, -RANGES[range as Range]),
+    );
     if (!r) return { range, points: [], period: null, notes: [] };
     return { range, points: r.points, period: r.period, notes: r.notes };
   }
@@ -58,7 +60,9 @@ export class HistoryService implements OnApplicationBootstrap {
     const name = (t: string, sym: string) => this.displayName(t, sym);
     const after = assetBreakdown(ledgerAt(end), end, r.price, r.usdt, name);
     const before = start ? assetBreakdown(ledgerAt(start), start, r.price, r.usdt, name) : [];
-    const traded = new Set(r.txs.filter((t) => t.date > (start ?? '') && t.symbol).map((t) => `${t.assetType}:${t.symbol}`));
+    const traded = new Set(
+      r.txs.filter((t) => t.date > (start ?? '') && t.symbol).map((t) => `${t.assetType}:${t.symbol}`),
+    );
     const keys = [...new Set([...before, ...after].map((a) => a.key))];
     const assets = keys.map((k) => {
       const b = before.find((a) => a.key === k);
@@ -74,7 +78,8 @@ export class HistoryService implements OnApplicationBootstrap {
         /** % đổi giá trong tuần (theo giá, không tính mua/bán) */
         priceChangePct: pStart && pEnd ? ((pEnd - pStart) / pStart) * 100 : null,
         /** Ảnh hưởng của biến động giá lên số đang giữ đầu tuần (VND) */
-        priceEffect: b && pStart && pEnd ? b.quantity * (pEnd - pStart) * (ref.currency === 'USDT' ? r.usdt(end).rate : 1) : null,
+        priceEffect:
+          b && pStart && pEnd ? b.quantity * (pEnd - pStart) * (ref.currency === 'USDT' ? r.usdt(end).rate : 1) : null,
         tradedThisWeek: traded.has(k),
         priced: (a?.priced ?? true) && (b?.priced ?? true),
       };
@@ -111,7 +116,9 @@ export class HistoryService implements OnApplicationBootstrap {
     // Tài sản từng có trong sổ (kể cả đã bán hết) cần giá trong khoảng
     const assets = [
       ...new Map(
-        txs.filter((t) => t.assetType && t.assetType !== 'cash' && t.symbol).map((t) => [`${t.assetType}:${t.symbol}`, t]),
+        txs
+          .filter((t) => t.assetType && t.assetType !== 'cash' && t.symbol)
+          .map((t) => [`${t.assetType}:${t.symbol}`, t]),
       ).values(),
     ].map((t) => ({ assetType: t.assetType as string, symbol: t.symbol as string }));
 
@@ -161,7 +168,9 @@ export class HistoryService implements OnApplicationBootstrap {
     const notes: string[] = [];
     if (failed.length) notes.push(`Chưa lấy được lịch sử giá của ${failed.join(', ')}.`);
     if (assets.some((a) => a.assetType === 'gold') && points.some((p) => p.status === 'partial')) {
-      notes.push('Giá vàng lịch sử chỉ có từ ngày app bắt đầu lưu; những ngày trước đó vàng được tạm tính theo giá vốn.');
+      notes.push(
+        'Giá vàng lịch sử chỉ có từ ngày app bắt đầu lưu; những ngày trước đó vàng được tạm tính theo giá vốn.',
+      );
     }
     if (points.some((p) => p.status === 'estimated')) {
       notes.push('Một số ngày dùng giá hoặc tỷ giá gần nhất trước đó (đánh dấu ước tính).');
@@ -218,7 +227,8 @@ export class HistoryService implements OnApplicationBootstrap {
         .map((g) => ({ assetType: 'gold', symbol: g.code, close: g.buy, source: g.source })),
     ];
     const usdt = this.market.usdtVnd;
-    if (usdt.status !== 'fallback') rows.push({ assetType: 'fx', symbol: 'USDTVND', close: usdt.rate, source: usdt.source });
+    if (usdt.status !== 'fallback')
+      rows.push({ assetType: 'fx', symbol: 'USDTVND', close: usdt.rate, source: usdt.source });
     for (const r of rows) {
       await this.prisma.priceDaily.upsert({
         where: { assetType_symbol_date: { assetType: r.assetType, symbol: r.symbol, date } },

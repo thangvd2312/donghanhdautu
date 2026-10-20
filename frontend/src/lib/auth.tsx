@@ -1,18 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { Ctx } from './auth-context'
 import { api, getToken, post, setToken } from './api'
 import type { Me } from './types'
-
-interface AuthState {
-  me: Me | null
-  loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
-  loginWithGoogle: (credential: string) => Promise<void>
-  logout: () => void
-  refresh: () => Promise<void>
-}
-
-const Ctx = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null)
@@ -63,8 +52,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={{ me, loading, login, register, loginWithGoogle, logout, refresh }}>{children}</Ctx.Provider>
 }
 
-export function useAuth() {
-  const v = useContext(Ctx)
-  if (!v) throw new Error('useAuth phải nằm trong AuthProvider')
-  return v
-}

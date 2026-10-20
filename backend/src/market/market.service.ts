@@ -55,8 +55,36 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   };
   /** Danh sách dự phòng khi API nhóm VN30 lỗi; được cập nhật lại từ Vietcap mỗi 5 phút */
   private vn30: string[] = [
-    'ACB', 'BID', 'BSR', 'CTG', 'FPT', 'GAS', 'GVR', 'HDB', 'HPG', 'LPB', 'MBB', 'MCH', 'MSN', 'MWG', 'SAB',
-    'SHB', 'SSB', 'SSI', 'STB', 'TCB', 'TCX', 'VCB', 'VHM', 'VIB', 'VIC', 'VJC', 'VNM', 'VPB', 'VPL', 'VRE',
+    'ACB',
+    'BID',
+    'BSR',
+    'CTG',
+    'FPT',
+    'GAS',
+    'GVR',
+    'HDB',
+    'HPG',
+    'LPB',
+    'MBB',
+    'MCH',
+    'MSN',
+    'MWG',
+    'SAB',
+    'SHB',
+    'SSB',
+    'SSI',
+    'STB',
+    'TCB',
+    'TCX',
+    'VCB',
+    'VHM',
+    'VIB',
+    'VIC',
+    'VJC',
+    'VNM',
+    'VPB',
+    'VPL',
+    'VRE',
   ];
   private timers: NodeJS.Timeout[] = [];
   private pendingCrypto = new Map<string, CryptoQuote>();
@@ -81,13 +109,7 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       }, 2000),
     );
 
-    await Promise.all([
-      this.binance.start(),
-      this.refreshTracked(),
-      this.pollGold(),
-      this.pollFx(),
-      this.pollUsdt(),
-    ]);
+    await Promise.all([this.binance.start(), this.refreshTracked(), this.pollGold(), this.pollFx(), this.pollUsdt()]);
     // Lấy giá một lần lúc khởi động (để ngoài giờ vẫn có giá đóng cửa gần nhất),
     // sau đó chỉ poll mỗi 3 giây trong giờ giao dịch; ngoài giờ giá không đổi nên bỏ qua
     await this.pollStocks();
@@ -96,10 +118,22 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       () => (isStockSessionOpen() ? this.pollStocks() : Promise.resolve()),
       () => 3000,
     );
-    this.loop(() => this.pollGold(), () => 5 * 60_000);
-    this.loop(() => this.pollFx(), () => 30 * 60_000);
-    this.loop(() => this.pollUsdt(), () => 5 * 60_000);
-    this.loop(() => this.refreshTracked(), () => 5 * 60_000);
+    this.loop(
+      () => this.pollGold(),
+      () => 5 * 60_000,
+    );
+    this.loop(
+      () => this.pollFx(),
+      () => 30 * 60_000,
+    );
+    this.loop(
+      () => this.pollUsdt(),
+      () => 5 * 60_000,
+    );
+    this.loop(
+      () => this.refreshTracked(),
+      () => 5 * 60_000,
+    );
   }
 
   onModuleDestroy() {
@@ -109,9 +143,9 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   private loop(fn: () => Promise<void>, delay: () => number) {
     const tick = async () => {
       await fn().catch((e: Error) => this.log.warn(e.message));
-      this.timers.push(setTimeout(tick, delay()));
+      this.timers.push(setTimeout(() => void tick(), delay()));
     };
-    this.timers.push(setTimeout(tick, delay()));
+    this.timers.push(setTimeout(() => void tick(), delay()));
   }
 
   /** Theo dõi VN30 + mọi mã cổ phiếu người dùng đang nắm giữ, quan tâm hoặc đặt cảnh báo giá */
@@ -345,7 +379,13 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     const candles = await this.binance.history(symbol, 400);
     const quote = this.binance.quotes.get(symbol) ?? null;
     const usdt = this.usdtVnd;
-    return { quote, usdtVnd: usdt.rate, usdtSource: usdt.source, usdtStatus: usdt.status, technicals: technicals(candles) };
+    return {
+      quote,
+      usdtVnd: usdt.rate,
+      usdtSource: usdt.source,
+      usdtStatus: usdt.status,
+      technicals: technicals(candles),
+    };
   }
 
   cryptoHistory(symbol: string, days: number) {
@@ -376,7 +416,8 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       case 'stock': {
         const q = this.stocks.get(symbol);
         const fetchedAt = this.stockFetchedAt.get(symbol) ?? null;
-        if (!q) return { value: null, status: 'missing', source: 'Vietcap', asOf: null, reason: 'Chưa lấy được giá mã này' };
+        if (!q)
+          return { value: null, status: 'missing', source: 'Vietcap', asOf: null, reason: 'Chưa lấy được giá mã này' };
         const status = stockStatus(fetchedAt, now);
         return {
           value: q.price,
@@ -388,7 +429,14 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       }
       case 'crypto': {
         const q = this.binance.quotes.get(normalizeCrypto(symbol));
-        if (!q) return { value: null, status: 'missing', source: 'Binance', asOf: null, reason: 'Chưa lấy được giá coin này' };
+        if (!q)
+          return {
+            value: null,
+            status: 'missing',
+            source: 'Binance',
+            asOf: null,
+            reason: 'Chưa lấy được giá coin này',
+          };
         const fx = this.usdtVnd;
         // Coin ít giao dịch có thể lâu không đổi giá: chỉ coi là cũ khi cả luồng giá Binance ngừng cập nhật
         const priceStatus = ageStatus(this.binance.lastMessageAt ?? new Date(q.time), STALE_AFTER_MS.crypto, now);
@@ -410,7 +458,14 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       }
       case 'gold': {
         const g = this.gold.find((x) => x.code === symbol);
-        if (!g) return { value: null, status: 'missing', source: 'vang.today', asOf: null, reason: 'Nguồn không còn loại vàng này' };
+        if (!g)
+          return {
+            value: null,
+            status: 'missing',
+            source: 'vang.today',
+            asOf: null,
+            reason: 'Nguồn không còn loại vàng này',
+          };
         const status = ageStatus(new Date(g.updatedAt), STALE_AFTER_MS.gold, now);
         return {
           value: g.buy,

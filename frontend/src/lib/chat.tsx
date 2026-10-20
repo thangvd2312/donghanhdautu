@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { Ctx } from './chat-context'
 import { streamPost } from './api'
 
 export interface VerificationIssue {
@@ -44,25 +45,13 @@ type ChatEvent =
   | { type: 'done'; answerId: string | null }
   | { type: 'error'; message: string }
 
-interface ActiveChat {
+export interface ActiveChat {
   /** undefined cho tới khi server tạo xong cuộc trò chuyện mới */
   conversationId?: string
   /** Lịch sử đã có trước lượt hỏi này + lượt đang stream */
   messages: ChatMsg[]
   busy: boolean
 }
-
-interface ChatState {
-  active: ActiveChat | null
-  send: (text: string, conversationId: string | undefined, history: ChatMsg[]) => Promise<void>
-  stop: () => void
-  patchMessage: (answerId: string, f: (m: ChatMsg) => ChatMsg) => void
-  /** Gọi khi server báo id cuộc trò chuyện mới, để trang cố vấn chuyển URL */
-  onConversation: React.MutableRefObject<((id: string) => void) | null>
-  onFinished: React.MutableRefObject<(() => void) | null>
-}
-
-const Ctx = createContext<ChatState | null>(null)
 
 /**
  * Luồng chat sống ở cấp app chứ không gắn với trang cố vấn: rời trang trong lúc đang trả lời
@@ -160,8 +149,3 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={{ active, send, stop, patchMessage, onConversation, onFinished }}>{children}</Ctx.Provider>
 }
 
-export function useChat() {
-  const v = useContext(Ctx)
-  if (!v) throw new Error('useChat phải nằm trong ChatProvider')
-  return v
-}

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { Prisma } from '@prisma/client';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { NewsService } from '../news/news.module';
 import type { NewsItem } from '../news/news.module';
@@ -141,8 +140,8 @@ export class WeeklyBriefService {
         title,
         messages: {
           create: [
-            { role: 'user', content: [{ type: 'text', text: title }] as unknown as Prisma.InputJsonValue },
-            { role: 'assistant', content: [{ type: 'text', text: body }] as unknown as Prisma.InputJsonValue },
+            { role: 'user', content: [{ type: 'text', text: title }] },
+            { role: 'assistant', content: [{ type: 'text', text: body }] },
           ],
         },
       },
@@ -159,7 +158,10 @@ export class WeeklyBriefService {
 
   /** Tin 7 ngày qua về cổ phiếu đang giữ (dùng nhãn AI đã lưu) */
   private async relatedNews(userId: string) {
-    const holdings = await this.prisma.holding.findMany({ where: { userId, assetType: 'stock' }, select: { symbol: true } });
+    const holdings = await this.prisma.holding.findMany({
+      where: { userId, assetType: 'stock' },
+      select: { symbol: true },
+    });
     const tickers = [...new Set(holdings.map((h) => h.symbol))];
     if (!tickers.length) return [];
     const since = Date.now() - 7 * 86_400_000;
@@ -168,7 +170,9 @@ export class WeeklyBriefService {
       (await this.prisma.newsTag.findMany({ where: { url: { in: items.map((n) => n.url) } } })).map((t) => [t.url, t]),
     );
     return items
-      .filter((n) => tickers.some((t) => tags.get(n.url)?.tickers.includes(t) || mentionsCompany(`${n.title} ${n.summary}`, t)))
+      .filter((n) =>
+        tickers.some((t) => tags.get(n.url)?.tickers.includes(t) || mentionsCompany(`${n.title} ${n.summary}`, t)),
+      )
       .slice(0, 5)
       .map((n) => ({ title: n.title, url: n.url, source: n.source, impact: tags.get(n.url)?.impact ?? null }));
   }

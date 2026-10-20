@@ -66,8 +66,14 @@ export function dayChange(v: Valuation, changedTodayIds: Set<string> = new Set()
   return {
     changeVnd: known.length ? changeVnd : null,
     changePct: known.length && base > 0 ? (changeVnd / base) * 100 : null,
-    gainers: contributors.filter((c) => c.changeVnd > 0).sort((a, b) => b.changeVnd - a.changeVnd).slice(0, 3),
-    losers: contributors.filter((c) => c.changeVnd < 0).sort((a, b) => a.changeVnd - b.changeVnd).slice(0, 3),
+    gainers: contributors
+      .filter((c) => c.changeVnd > 0)
+      .sort((a, b) => b.changeVnd - a.changeVnd)
+      .slice(0, 3),
+    losers: contributors
+      .filter((c) => c.changeVnd < 0)
+      .sort((a, b) => a.changeVnd - b.changeVnd)
+      .slice(0, 3),
     missing,
     changedToday,
     notes,
@@ -125,7 +131,8 @@ export function reviewPoints(v: Valuation, profile: ProfileLite | null, alerts: 
       id: 'profile',
       severity: 'medium',
       title: 'Chưa có hồ sơ khẩu vị rủi ro',
-      reason: 'Cố vấn chưa biết mức lỗ bạn chịu được và mục tiêu đầu tư, nên chưa đánh giá được danh mục có hợp với bạn không.',
+      reason:
+        'Cố vấn chưa biết mức lỗ bạn chịu được và mục tiêu đầu tư, nên chưa đánh giá được danh mục có hợp với bạn không.',
       link: '/onboarding',
       ask: null,
     });
@@ -184,7 +191,9 @@ export function reviewPoints(v: Valuation, profile: ProfileLite | null, alerts: 
         const refText = `${label} chiếm ${fmtPct(actual[type])}, mức tham khảo cho kiểu nhà đầu tư ${RISK_TYPE_LABEL[profile.riskType] ?? profile.riskType} là ${reference[refKey]}%.`;
         // Một tài sản đã bị nhắc tập trung gần như là cả nhóm này: gộp vào điểm đó thay vì nhắc hai lần
         const concentrated = points.filter(
-          (p) => p.id.startsWith('concentration:') && v.holdings.find((h) => `concentration:${h.id}` === p.id)?.assetType === type,
+          (p) =>
+            p.id.startsWith('concentration:') &&
+            v.holdings.find((h) => `concentration:${h.id}` === p.id)?.assetType === type,
         );
         const concentratedWeight = sum(
           concentrated.map((p) => v.holdings.find((h) => `concentration:${h.id}` === p.id)!.weightPct),
@@ -225,7 +234,10 @@ export function reviewPoints(v: Valuation, profile: ProfileLite | null, alerts: 
     points.push({
       id: 'data',
       severity: 'info',
-      title: v.dataQuality.status === 'partial' ? 'Có tài sản chưa có giá thị trường' : 'Có giá cũ hoặc dùng tỷ giá dự phòng',
+      title:
+        v.dataQuality.status === 'partial'
+          ? 'Có tài sản chưa có giá thị trường'
+          : 'Có giá cũ hoặc dùng tỷ giá dự phòng',
       reason: v.dataQuality.messages.join(' '),
       link: '/portfolio',
       ask: null,

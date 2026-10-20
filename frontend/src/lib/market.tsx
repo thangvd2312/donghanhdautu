@@ -1,20 +1,8 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Ctx } from './market-context'
 import { io, type Socket } from 'socket.io-client'
 import { api, getToken } from './api'
 import type { CryptoQuote, FxRate, GoldQuote, IndexQuote, MarketSnapshot, Notification, StockQuote, UsdtRate } from './types'
-
-interface MarketState {
-  snapshot: MarketSnapshot | null
-  connected: boolean
-  notifications: Notification[]
-  unread: number
-  /** Thông báo mới nhất vừa đến qua socket, để hiện toast */
-  latest: Notification | null
-  markAllRead: () => Promise<void>
-  dismissLatest: () => void
-}
-
-const Ctx = createContext<MarketState | null>(null)
 
 function mergeBy<T>(list: T[], updates: T[], key: (t: T) => string) {
   const map = new Map(updates.map((u) => [key(u), u]))
@@ -87,8 +75,3 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useMarket() {
-  const v = useContext(Ctx)
-  if (!v) throw new Error('useMarket phải nằm trong MarketProvider')
-  return v
-}

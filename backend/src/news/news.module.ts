@@ -87,7 +87,6 @@ export class NewsService {
       .slice(0, limit)
       .map((x) => x.i);
   }
-
 }
 
 interface RssItem {

@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Header, Injectable, Module, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  Injectable,
+  Module,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
@@ -39,9 +52,7 @@ export class PortfolioService {
     });
     // Mã cổ phiếu mới thêm có thể chưa có trong bộ nhớ đệm
     await Promise.all(
-      holdings
-        .filter((h) => h.assetType === 'stock')
-        .map((h) => this.market.stockQuote(h.symbol).catch(() => null)),
+      holdings.filter((h) => h.assetType === 'stock').map((h) => this.market.stockQuote(h.symbol).catch(() => null)),
     );
     return valuePortfolio(holdings, {
       priceInfo: (type, symbol) => this.market.priceInfo(type, symbol),
@@ -62,9 +73,7 @@ export class PortfolioService {
     const v = await this.valuation(userId);
     // Lãi chưa chốt chỉ tính trên tài sản đầu tư (tiền mặt USDT đổi giá theo tỷ giá không phải lãi đầu tư)
     const invested = v.holdings.filter((h) => h.assetType !== 'cash');
-    const unrealized = invested.some((h) => h.pnl !== null)
-      ? invested.reduce((s, h) => s + (h.pnl ?? 0), 0)
-      : null;
+    const unrealized = invested.some((h) => h.pnl !== null) ? invested.reduce((s, h) => s + (h.pnl ?? 0), 0) : null;
     return performance({
       ledger,
       totalValueVnd: v.totalValue,

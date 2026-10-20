@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import HoldingForm from '../components/HoldingForm'
 import { Logo } from '../components/ui'
 import { api, put } from '../lib/api'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth-context'
 import { fmtVndShort } from '../lib/format'
 import { RISK_LABEL, type InvestorProfile, type Portfolio, type QuizQuestion } from '../lib/types'
 

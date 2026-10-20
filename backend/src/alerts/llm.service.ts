@@ -50,7 +50,12 @@ export class LlmService {
           max_tokens: opts.maxTokens ?? 4000,
           ...(compat
             ? {}
-            : { output_config: { effort: opts.effort ?? 'low', format: { type: 'json_schema' as const, schema: opts.schema } } }),
+            : {
+                output_config: {
+                  effort: opts.effort ?? 'low',
+                  format: { type: 'json_schema' as const, schema: opts.schema },
+                },
+              }),
           system: compat
             ? `${opts.system}\n\nChỉ trả về đúng một object JSON theo schema sau, không kèm chữ nào khác:\n${JSON.stringify(opts.schema)}`
             : opts.system,

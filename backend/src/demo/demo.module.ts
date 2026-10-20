@@ -74,7 +74,12 @@ export class DemoService {
     const tickers = ['FPT', 'VCB', 'HPG'];
     return {
       sample: true,
-      profile: { label: 'Cân bằng', goal: 'Tích luỹ dài hạn', horizon: 'Trên 3 năm', maxDrawdownPct: SAMPLE_PROFILE.maxDrawdownPct },
+      profile: {
+        label: 'Cân bằng',
+        goal: 'Tích luỹ dài hạn',
+        horizon: 'Trên 3 năm',
+        maxDrawdownPct: SAMPLE_PROFILE.maxDrawdownPct,
+      },
       today: {
         hasHoldings: v.holdings.length > 0,
         totalValue: v.totalValue,
@@ -103,7 +108,8 @@ export class DemoService {
             displayName: 'HPG',
             thesis:
               'Mua vì kỳ vọng giá thép phục hồi và nhu cầu xây dựng trong nước tăng trở lại. Dự định giữ 1–3 năm.',
-            exitConditions: '- Lợi nhuận giảm 2 quý liên tiếp\n- Lỗ quá 15% so với giá vốn\n- Giá thép thế giới giảm tiếp 3 tháng',
+            exitConditions:
+              '- Lợi nhuận giảm 2 quý liên tiếp\n- Lỗ quá 15% so với giá vốn\n- Giá thép thế giới giảm tiếp 3 tháng',
             stopPrice: Math.round((hpg.avgCost * (1 - SAMPLE_PROFILE.maxDrawdownPct / 100)) / 50) * 50,
             nextReviewInDays: 14,
           }
@@ -123,7 +129,14 @@ export class DemoService {
       .map((n) => {
         const tag = tags.get(n.url);
         const hit = tickers.filter((t) => tag?.tickers.includes(t) || mentionsCompany(`${n.title} ${n.summary}`, t));
-        return { title: n.title, url: n.url, source: n.source, publishedAt: n.publishedAt, impact: tag?.impact ?? null, tickers: hit };
+        return {
+          title: n.title,
+          url: n.url,
+          source: n.source,
+          publishedAt: n.publishedAt,
+          impact: tag?.impact ?? null,
+          tickers: hit,
+        };
       })
       .filter((n) => n.tickers.length)
       .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))

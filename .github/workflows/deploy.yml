@@ -32,7 +32,7 @@ jobs:
         run: npm run check
       - name: Backend unit tests
         run: npm test
-      - name: Frontend lint
+      - name: Lint (frontend + backend)
         run: npm run lint
 
   deploy:

@@ -23,7 +23,8 @@ export interface PageContent {
 
 const MAX_CHARS = 8000;
 const MAX_HTML_BYTES = 3 * 1024 * 1024;
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
+const UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
 
 /**
  * Tìm kiếm web và đọc bài cho cố vấn:
@@ -119,8 +120,7 @@ export class WebService {
     if (!['http:', 'https:'].includes(u.protocol)) throw new Error('Chỉ hỗ trợ http/https');
     const host = u.hostname.toLowerCase();
     const privateIp =
-      isIP(host) &&
-      /^(127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|fc|fd|fe80)/.test(host);
+      isIP(host) && /^(127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|fc|fd|fe80)/.test(host);
     if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal') || privateIp) {
       throw new Error('Không được truy cập địa chỉ nội bộ');
     }

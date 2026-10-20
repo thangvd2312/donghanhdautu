@@ -8,8 +8,22 @@ const REST = 'https://api.binance.com/api/v3';
 
 /** Các coin hiển thị trên bảng giá mặc định */
 export const FEATURED_COINS = [
-  'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'DOGE', 'ADA', 'TRX',
-  'TON', 'AVAX', 'LINK', 'SUI', 'DOT', 'LTC', 'NEAR', 'SHIB',
+  'BTC',
+  'ETH',
+  'BNB',
+  'SOL',
+  'XRP',
+  'DOGE',
+  'ADA',
+  'TRX',
+  'TON',
+  'AVAX',
+  'LINK',
+  'SUI',
+  'DOT',
+  'LTC',
+  'NEAR',
+  'SHIB',
 ].map((c) => `${c}USDT`);
 
 /**
@@ -42,7 +56,8 @@ export class BinanceProvider implements OnModuleDestroy {
     ws.on('open', () => this.log.log('Đã kết nối Binance websocket'));
     ws.on('message', (raw) => {
       try {
-        const arr = JSON.parse(raw.toString()) as BinanceMini[];
+        // binaryType mặc định của ws là nodebuffer
+        const arr = JSON.parse((raw as Buffer).toString()) as BinanceMini[];
         const changed: CryptoQuote[] = [];
         for (const m of arr) {
           if (!m.s.endsWith('USDT')) continue;
@@ -68,10 +83,9 @@ export class BinanceProvider implements OnModuleDestroy {
 
   async refreshRest() {
     try {
-      const r = await fetch(
-        `${REST}/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(FEATURED_COINS))}`,
-        { signal: AbortSignal.timeout(15000) },
-      );
+      const r = await fetch(`${REST}/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(FEATURED_COINS))}`, {
+        signal: AbortSignal.timeout(15000),
+      });
       const rows = (await r.json()) as {
         symbol: string;
         lastPrice: string;
@@ -94,10 +108,9 @@ export class BinanceProvider implements OnModuleDestroy {
   }
 
   async history(symbol: string, days: number): Promise<Candle[]> {
-    const r = await fetch(
-      `${REST}/klines?symbol=${symbol}&interval=1d&limit=${Math.min(days, 1000)}`,
-      { signal: AbortSignal.timeout(15000) },
-    );
+    const r = await fetch(`${REST}/klines?symbol=${symbol}&interval=1d&limit=${Math.min(days, 1000)}`, {
+      signal: AbortSignal.timeout(15000),
+    });
     if (!r.ok) throw new Error(`Binance ${r.status}: không có cặp ${symbol}`);
     const rows = (await r.json()) as (string | number)[][];
     return rows.map((k) => ({
@@ -112,7 +125,13 @@ export class BinanceProvider implements OnModuleDestroy {
 }
 
 function toQuote(
-  symbol: string, price: number, open: number, high: number, low: number, quoteVolume: number, time: number,
+  symbol: string,
+  price: number,
+  open: number,
+  high: number,
+  low: number,
+  quoteVolume: number,
+  time: number,
 ): CryptoQuote {
   return {
     symbol,

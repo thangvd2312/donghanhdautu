@@ -28,7 +28,6 @@ import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { BriefsService } from './briefs.service';
-import type { BriefKind } from './briefs.service';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
 import { NotifierService } from './notifier.service';
@@ -90,7 +89,18 @@ export class AlertsService {
     });
   }
 
-  private async policyChange(c: { fact: { key: string; label: string; value: string; asOf: string; document: string | null; sourceName: string; sourceUrl: string }; previousValue: string }) {
+  private async policyChange(c: {
+    fact: {
+      key: string;
+      label: string;
+      value: string;
+      asOf: string;
+      document: string | null;
+      sourceName: string;
+      sourceUrl: string;
+    };
+    previousValue: string;
+  }) {
     const f = c.fact;
     for (const user of await this.macroUsers()) {
       await this.firePersonal(user, {
@@ -185,8 +195,7 @@ export class AlertsService {
         title: `${name} đã ${a.direction === 'above' ? 'lên tới' : 'về'} ${fmt(price)} — chạm mốc bạn đặt`,
         body: `Mốc của bạn: ${a.direction === 'above' ? '≥' : '≤'} ${fmt(a.targetPrice)}.${a.note ? ` Ghi chú: ${a.note}.` : ''} Trước khi hành động, hãy xem lại lý do bạn đặt mốc này hoặc hỏi cố vấn.`,
         dedupeKey: `target:${a.id}`,
-        link:
-          a.assetType === 'stock' ? `/stock/${a.symbol}` : a.assetType === 'crypto' ? `/crypto/${name}` : '/',
+        link: a.assetType === 'stock' ? `/stock/${a.symbol}` : a.assetType === 'crypto' ? `/crypto/${name}` : '/',
       });
     }
   }
@@ -200,8 +209,10 @@ export class AlertsService {
       return;
     }
     const moves: { code: 'USD' | 'USDT'; from: number; to: number; source: string }[] = [];
-    if (this.fxBaseline.usd && usd) moves.push({ code: 'USD', from: this.fxBaseline.usd, to: usd, source: 'Vietcombank' });
-    if (this.fxBaseline.usdt && usdt) moves.push({ code: 'USDT', from: this.fxBaseline.usdt, to: usdt, source: 'Binance P2P' });
+    if (this.fxBaseline.usd && usd)
+      moves.push({ code: 'USD', from: this.fxBaseline.usd, to: usd, source: 'Vietcombank' });
+    if (this.fxBaseline.usdt && usdt)
+      moves.push({ code: 'USDT', from: this.fxBaseline.usdt, to: usdt, source: 'Binance P2P' });
     for (const m of moves) {
       const pct = ((m.to - m.from) / m.from) * 100;
       const thr = FX_THRESHOLD[m.code];
@@ -435,8 +446,9 @@ class AlertsController {
       if (!w) throw new BadRequestException('Chưa có giao dịch nào trong sổ để tổng kết tuần');
       return w;
     }
-    if (kind !== 'morning' && kind !== 'closing') throw new BadRequestException('kind phải là morning, closing hoặc weekly');
-    const n = await this.briefs.generate(user.id, kind as BriefKind, true);
+    if (kind !== 'morning' && kind !== 'closing')
+      throw new BadRequestException('kind phải là morning, closing hoặc weekly');
+    const n = await this.briefs.generate(user.id, kind, true);
     if (!n) throw new BadRequestException('Không tạo được bản tin');
     return n;
   }

@@ -36,7 +36,8 @@ import ReactMarkdown from 'react-markdown'
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import remarkGfm from 'remark-gfm'
 import { api, del, post } from '../lib/api'
-import { useChat, type ChatMsg as Msg, type Verification } from '../lib/chat'
+import { type ChatMsg as Msg, type Verification } from '../lib/chat'
+import { useChat } from '../lib/chat-context'
 import { timeAgo } from '../lib/format'
 
 const SUGGESTIONS = [

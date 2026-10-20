@@ -34,9 +34,7 @@ export interface LinkPrefs {
 }
 
 export type Decision =
-  | { action: 'send' }
-  | { action: 'skip'; reason: string }
-  | { action: 'later'; until: Date; reason: string };
+  { action: 'send' } | { action: 'skip'; reason: string } | { action: 'later'; until: Date; reason: string };
 
 /** Phút trong ngày theo giờ VN (UTC+7, không có giờ mùa hè) */
 export function vnMinutes(d: Date) {

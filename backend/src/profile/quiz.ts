@@ -130,8 +130,7 @@ export function scoreQuiz(answers: QuizAnswers) {
   if (answers.horizon === 'short' || answers.emergency === 'no') capped = Math.min(capped, 45);
   if (answers.income_share === 'most') capped = Math.min(capped, 55);
 
-  const riskType =
-    capped < 30 ? 'conservative' : capped < 55 ? 'balanced' : capped < 75 ? 'growth' : 'aggressive';
+  const riskType = capped < 30 ? 'conservative' : capped < 55 ? 'balanced' : capped < 75 ? 'growth' : 'aggressive';
 
   return {
     riskScore: capped,
@@ -139,8 +138,7 @@ export function scoreQuiz(answers: QuizAnswers) {
     goal: answers.goal,
     horizon: answers.horizon,
     maxDrawdownPct: Number(answers.drawdown),
-    fomoProne:
-      ['groups', 'news'].includes(answers.decision) || ['often', 'once'].includes(answers.fomo_history),
+    fomoProne: ['groups', 'news'].includes(answers.decision) || ['often', 'once'].includes(answers.fomo_history),
   };
 }
 

@@ -26,7 +26,8 @@ async function main() {
     }
     const fromLedger = new Map<string, { q: number; c: number }>();
     for (const p of ledger.positions) {
-      if (p.quantity.gt(0)) fromLedger.set(`${p.assetType}:${p.symbol}`, { q: p.quantity.toNumber(), c: p.costBasis.toNumber() });
+      if (p.quantity.gt(0))
+        fromLedger.set(`${p.assetType}:${p.symbol}`, { q: p.quantity.toNumber(), c: p.costBasis.toNumber() });
     }
     for (const cur of ['VND', 'USDT'] as const) {
       const q = ledger.cash[cur].toNumber();

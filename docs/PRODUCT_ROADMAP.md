@@ -2,7 +2,7 @@
 
 - Ngày lập: 20/10/2026.
 - Mục đích: tài liệu bàn giao cho product và dev để lập kế hoạch cải thiện sản phẩm.
-- Trạng thái: đề xuất để triển khai; các tính năng trong roadmap chưa được xây dựng.
+- Trạng thái: phần lớn tính năng đợt A–D đã triển khai (20/10/2026); chi tiết trong bảng trạng thái của [DEV_BACKLOG.md](DEV_BACKLOG.md). Phần "Hiện trạng đã kiểm tra" bên dưới mô tả thời điểm trước khi triển khai.
 - Backlog và tiêu chí nghiệm thu: [DEV_BACKLOG.md](DEV_BACKLOG.md).
 
 ## 1. Định hướng sản phẩm

@@ -18,7 +18,9 @@ export function money(v: number) {
 
 const signed = (v: number) => (v > 0 ? `+${money(v)}` : money(v));
 const pct = (v: number | null) =>
-  v === null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`;
+  v === null
+    ? '—'
+    : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`;
 const day = (d: string) => d.split('-').reverse().slice(0, 2).join('/');
 
 /** Bảng markdown các con số chính của tuần */
@@ -41,11 +43,18 @@ export function weeklyTable(s: WeekSummary) {
     .sort((a, b) => Math.abs(b.priceEffect!) - Math.abs(a.priceEffect!))
     .slice(0, 5);
   if (movers.length) {
-    lines.push('', '**Tác động của biến động giá lên tài sản đang giữ**', '', '| Tài sản | Giá trong tuần | Ảnh hưởng |', '|---|---|---|');
+    lines.push(
+      '',
+      '**Tác động của biến động giá lên tài sản đang giữ**',
+      '',
+      '| Tài sản | Giá trong tuần | Ảnh hưởng |',
+      '|---|---|---|',
+    );
     for (const a of movers) {
       lines.push(`| ${a.name}${a.tradedThisWeek ? ' *' : ''} | ${pct(a.priceChangePct)} | ${signed(a.priceEffect!)} |`);
     }
-    if (movers.some((a) => a.tradedThisWeek)) lines.push('', '\\* có mua/bán trong tuần; ảnh hưởng tính trên số đang giữ đầu tuần.');
+    if (movers.some((a) => a.tradedThisWeek))
+      lines.push('', '\\* có mua/bán trong tuần; ảnh hưởng tính trên số đang giữ đầu tuần.');
   }
 
   if (s.allocationStart) {

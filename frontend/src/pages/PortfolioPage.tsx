@@ -30,7 +30,7 @@ import TelegramPanel from '../components/TelegramPanel'
 import TransactionDialog, { type TxPreset } from '../components/TransactionDialog'
 import { KV, Panel, Stat } from '../components/ui'
 import { api, patch } from '../lib/api'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth-context'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../lib/format'
 import { RISK_LABEL, type Performance, type Portfolio, type Transaction } from '../lib/types'
 

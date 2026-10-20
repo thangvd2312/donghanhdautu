@@ -27,7 +27,9 @@ function tx(p: Partial<LedgerTx> & { q?: number; px?: number; amt?: number }): L
 /** Giá FPT theo ngày; ngày không có thì lấy ngày gần nhất trước đó */
 function prices(table: Record<string, number>) {
   return (_t: string, _s: string, date: string): DayPrice => {
-    const days = Object.keys(table).filter((d) => d <= date).sort();
+    const days = Object.keys(table)
+      .filter((d) => d <= date)
+      .sort();
     return days.length ? { value: table[days[days.length - 1]], estimated: false } : { value: null, estimated: false };
   };
 }
@@ -78,7 +80,12 @@ describe('buildHistory', () => {
 
   it('giao dịch nhập lùi ngày làm thay đổi các ngày sau đó', () => {
     const before = run(txs, '2026-10-01', '2026-10-05', table);
-    const after = run([...txs, tx({ type: 'sell', assetType: 'stock', symbol: 'FPT', q: 50, px: 22_000, date: '2026-10-03' })], '2026-10-01', '2026-10-05', table);
+    const after = run(
+      [...txs, tx({ type: 'sell', assetType: 'stock', symbol: 'FPT', q: 50, px: 22_000, date: '2026-10-03' })],
+      '2026-10-01',
+      '2026-10-05',
+      table,
+    );
     expect(before.at(-1)!.value).toBe(15_500_000);
     // Bán 50 cp giá 22k ngày 3: cuối kỳ còn 50 × 25k + tiền 8tr + 1,1tr + 5tr
     expect(after.at(-1)!.value).toBe(15_350_000);
@@ -96,7 +103,11 @@ describe('periodPerformance', () => {
 
   it('danh mục có từ trước kỳ: lãi trong kỳ không tính tiền nạp; tỷ suất Modified Dietz', () => {
     const pts = run(txs, '2026-10-01', '2026-10-11', table);
-    const p = periodPerformance(pts.filter((x) => x.date >= '2026-10-01'), '2026-10-01', '2026-09-01')!;
+    const p = periodPerformance(
+      pts.filter((x) => x.date >= '2026-10-01'),
+      '2026-10-01',
+      '2026-09-01',
+    )!;
     // Đầu kỳ (cuối ngày 1): 10tr. Cuối kỳ: 3tr cổ phiếu + 8tr + 10tr = 21tr. Dòng tiền 10tr đầu ngày 6 (có mặt 6/10 ngày)
     expect(p.startValue).toBe(10_000_000);
     expect(p.endValue).toBe(21_000_000);
@@ -116,13 +127,29 @@ describe('periodPerformance', () => {
   });
 
   it('không có vốn thì không tính %', () => {
-    const p = periodPerformance([{ date: '2026-10-01', value: 0, netContributions: 0, profit: 0, preTrackingGain: 0, status: 'complete', missing: [] }], '2026-09-01', '2026-10-01')!;
+    const p = periodPerformance(
+      [
+        {
+          date: '2026-10-01',
+          value: 0,
+          netContributions: 0,
+          profit: 0,
+          preTrackingGain: 0,
+          status: 'complete',
+          missing: [],
+        },
+      ],
+      '2026-09-01',
+      '2026-10-01',
+    )!;
     expect(p.returnPct).toBeNull();
   });
 
   it('tài sản khai báo đầu kỳ: lỗ có sẵn lúc khai báo không tính vào hiệu quả của kỳ', () => {
     // Khai báo 100 FPT giá vốn 30k vào ngày giá thị trường 20k; sau đó giá lên 22k
-    const opening = [tx({ type: 'opening', assetType: 'stock', symbol: 'FPT', q: 100, px: 30_000, date: '2026-10-01' })];
+    const opening = [
+      tx({ type: 'opening', assetType: 'stock', symbol: 'FPT', q: 100, px: 30_000, date: '2026-10-01' }),
+    ];
     const pts = run(opening, '2026-10-01', '2026-10-05', { '2026-10-01': 20_000, '2026-10-05': 22_000 });
     // So với giá vốn: vẫn lỗ 800k (đúng với "Tổng lãi/lỗ" của danh mục)
     expect(pts.at(-1)!.profit).toBe(-800_000);

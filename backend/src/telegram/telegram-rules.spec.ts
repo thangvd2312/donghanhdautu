@@ -24,7 +24,10 @@ describe('decide', () => {
   it('kiểm tra cài đặt lúc gửi: chưa kết nối / đã tắt / loại tin bị tắt thì bỏ', () => {
     expect(decide(vn('10:00'), 'price_target', null, 0).action).toBe('skip');
     expect(decide(vn('10:00'), 'price_target', { ...link, active: false }, 0).action).toBe('skip');
-    expect(decide(vn('10:00'), 'brief', link, 0)).toMatchObject({ action: 'skip', reason: 'Đã tắt loại thông báo này' });
+    expect(decide(vn('10:00'), 'brief', link, 0)).toMatchObject({
+      action: 'skip',
+      reason: 'Đã tắt loại thông báo này',
+    });
     expect(decide(vn('10:00'), 'price_target', link, 0).action).toBe('send');
   });
 

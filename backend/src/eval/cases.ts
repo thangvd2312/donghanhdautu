@@ -67,7 +67,8 @@ export const EVAL_CASES: EvalCase[] = [
       { re: '19/03/2023', why: 'không lặp lại ngày áp dụng ghi nhầm trên trang NHNN' },
       { re: 'luatquanghuy', why: 'không dùng blog làm nguồn cho số liệu chính sách' },
     ],
-    rubric: 'Đạt khi: nêu đúng các mức lãi suất điều hành từ nguồn chính thức kèm số văn bản; nói đúng thời điểm điều chỉnh gần nhất theo văn bản (2023); có bối cảnh lãi suất thị trường hiện tại nếu có dữ liệu; không gán phát ngôn sai nguồn.',
+    rubric:
+      'Đạt khi: nêu đúng các mức lãi suất điều hành từ nguồn chính thức kèm số văn bản; nói đúng thời điểm điều chỉnh gần nhất theo văn bản (2023); có bối cảnh lãi suất thị trường hiện tại nếu có dữ liệu; không gán phát ngôn sai nguồn.',
   },
   {
     id: 'macro-fx-central',
@@ -78,7 +79,8 @@ export const EVAL_CASES: EvalCase[] = [
       { re: '\\d{2}\\.\\d{3}', why: 'phải có con số tỷ giá' },
       { re: 'TB-NHNN', why: 'phải nêu số thông báo của NHNN' },
     ],
-    rubric: 'Đạt khi: nêu đúng tỷ giá trung tâm, ngày áp dụng và số thông báo từ NHNN; câu trả lời ngắn gọn đúng trọng tâm (câu hỏi đơn giản thì trả lời ngắn).',
+    rubric:
+      'Đạt khi: nêu đúng tỷ giá trung tâm, ngày áp dụng và số thông báo từ NHNN; câu trả lời ngắn gọn đúng trọng tâm (câu hỏi đơn giản thì trả lời ngắn).',
   },
   {
     id: 'macro-fed',
@@ -86,7 +88,8 @@ export const EVAL_CASES: EvalCase[] = [
     question: 'Fed gần đây làm gì với lãi suất, điều đó ảnh hưởng gì tới thị trường Việt Nam và danh mục của tôi?',
     mustUseTools: [['get_macro_data']],
     mustMatch: [{ re: '3,75|3\\.75', why: 'mức lãi suất Fed hiện hành' }],
-    rubric: 'Đạt khi: nêu đúng quyết định gần nhất của Fed từ nguồn chính thức; giải thích kênh tác động tới Việt Nam (tỷ giá, dòng vốn ngoại, lãi suất trong nước) và liên hệ cụ thể với danh mục người dùng; phần suy luận ghi rõ là nhận định.',
+    rubric:
+      'Đạt khi: nêu đúng quyết định gần nhất của Fed từ nguồn chính thức; giải thích kênh tác động tới Việt Nam (tỷ giá, dòng vốn ngoại, lãi suất trong nước) và liên hệ cụ thể với danh mục người dùng; phần suy luận ghi rõ là nhận định.',
   },
   {
     id: 'gold-sjc',
@@ -94,33 +97,38 @@ export const EVAL_CASES: EvalCase[] = [
     question: 'Có nên mua thêm vàng SJC lúc này không?',
     mustUseTools: [['get_gold_prices', 'get_market_overview'], ['get_my_portfolio']],
     mustMatch: [{ re: 'thế giới', why: 'phải so với giá vàng thế giới' }],
-    rubric: 'Đạt khi: nêu chênh lệch SJC so với vàng thế giới và chênh lệch mua–bán bằng số liệu; xét tỷ trọng vàng hiện tại của người dùng (đang rất cao, gần 48%) so với tham chiếu; kết luận rõ ràng phù hợp hồ sơ.',
+    rubric:
+      'Đạt khi: nêu chênh lệch SJC so với vàng thế giới và chênh lệch mua–bán bằng số liệu; xét tỷ trọng vàng hiện tại của người dùng (đang rất cao, gần 48%) so với tham chiếu; kết luận rõ ràng phù hợp hồ sơ.',
   },
   {
     id: 'crypto-btc',
     category: 'Crypto',
     question: 'BTC đang giảm, tôi có nên mua thêm để bình quân giá không?',
     mustUseTools: [['get_crypto_analysis'], ['get_my_portfolio']],
-    rubric: 'Đạt khi: xét tỷ trọng crypto hiện tại (khoảng 18%) so với tham chiếu của hồ sơ (5%); dùng chỉ báo kỹ thuật và giá thật; không khuyến khích bình quân giá khi tỷ trọng đã vượt xa tham chiếu; nhắc rủi ro pháp lý và biến động.',
+    rubric:
+      'Đạt khi: xét tỷ trọng crypto hiện tại (khoảng 18%) so với tham chiếu của hồ sơ (5%); dùng chỉ báo kỹ thuật và giá thật; không khuyến khích bình quân giá khi tỷ trọng đã vượt xa tham chiếu; nhắc rủi ro pháp lý và biến động.',
   },
   {
     id: 'allocation-100m',
     category: 'Phân bổ tài sản',
     question: 'Tôi có thêm 100 triệu nhàn rỗi, nên phân bổ thế nào cho hợp với tôi?',
     mustUseTools: [['get_my_portfolio']],
-    rubric: 'Đạt khi: dựa trên danh mục hiện có (đang lệch: vàng và crypto quá cao, cổ phiếu thấp) và tỷ trọng tham chiếu của hồ sơ; đưa phương án cụ thể bằng con số, mua chia nhiều lần; nhắc quỹ dự phòng nếu phù hợp; nếu thiếu thông tin quan trọng (thời gian dùng tiền) có thể hỏi lại hoặc nêu giả định.',
+    rubric:
+      'Đạt khi: dựa trên danh mục hiện có (đang lệch: vàng và crypto quá cao, cổ phiếu thấp) và tỷ trọng tham chiếu của hồ sơ; đưa phương án cụ thể bằng con số, mua chia nhiều lần; nhắc quỹ dự phòng nếu phù hợp; nếu thiếu thông tin quan trọng (thời gian dùng tiền) có thể hỏi lại hoặc nêu giả định.',
   },
   {
     id: 'ambiguous-sell',
     category: 'Hỏi lại khi thiếu thông tin',
     question: 'Có nên bán không?',
-    rubric: 'Câu hỏi không nói bán tài sản nào. Đạt khi: cố vấn hỏi lại người dùng muốn nói tới tài sản nào (có thể gợi ý dựa trên danh mục, ví dụ các khoản đang lỗ vượt ngưỡng) thay vì tự đoán rồi khuyên bán một mã cụ thể.',
+    rubric:
+      'Câu hỏi không nói bán tài sản nào. Đạt khi: cố vấn hỏi lại người dùng muốn nói tới tài sản nào (có thể gợi ý dựa trên danh mục, ví dụ các khoản đang lỗ vượt ngưỡng) thay vì tự đoán rồi khuyên bán một mã cụ thể.',
   },
   {
     id: 'no-data-margin',
     category: 'Trung thực khi thiếu dữ liệu',
     question: 'Dư nợ margin toàn thị trường chứng khoán Việt Nam hiện là bao nhiêu?',
-    rubric: 'Đạt khi: hoặc tìm được con số từ nguồn uy tín và trích dẫn kèm thời điểm, hoặc nói rõ không có dữ liệu đáng tin cậy. Không đạt nếu đưa ra con số cụ thể mà không có nguồn hoặc nguồn là mạng xã hội/blog.',
+    rubric:
+      'Đạt khi: hoặc tìm được con số từ nguồn uy tín và trích dẫn kèm thời điểm, hoặc nói rõ không có dữ liệu đáng tin cậy. Không đạt nếu đưa ra con số cụ thể mà không có nguồn hoặc nguồn là mạng xã hội/blog.',
   },
   {
     id: 'valuation-history-fpt',
@@ -155,7 +163,8 @@ export const EVAL_CASES: EvalCase[] = [
     category: 'Tin đồn',
     question: 'Nghe nói Vingroup sắp phá sản, có đúng không? Tôi có nên tránh cổ phiếu nhóm Vin?',
     mustUseTools: [['search_web', 'get_news', 'web_search']],
-    rubric: 'Đạt khi: kiểm chứng bằng nguồn tin (tìm web/tin tức) và dữ liệu tài chính; không xác nhận tin đồn nếu không có nguồn chính thức/uy tín; phân biệt rõ dữ kiện có nguồn và tin đồn; không dùng mạng xã hội làm căn cứ.',
+    rubric:
+      'Đạt khi: kiểm chứng bằng nguồn tin (tìm web/tin tức) và dữ liệu tài chính; không xác nhận tin đồn nếu không có nguồn chính thức/uy tín; phân biệt rõ dữ kiện có nguồn và tin đồn; không dùng mạng xã hội làm căn cứ.',
   },
   {
     id: 'read-link',
@@ -163,7 +172,8 @@ export const EVAL_CASES: EvalCase[] = [
     question:
       'Tin này ảnh hưởng gì tới danh mục của tôi? https://cafef.vn/ngan-hang-nha-nuoc-giam-lai-suat-tien-gui-niem-yet-toi-thieu-05-nam-voi-ky-han-tu-6-thang-cac-ngan-hang-tuyet-doi-khong-dua-tang-lai-suat-huy-dong-188261018150957005.chn',
     mustUseTools: [['read_webpage'], ['get_my_portfolio']],
-    rubric: 'Đạt khi: tóm tắt đúng nội dung bài (NHNN yêu cầu giảm lãi suất tiền gửi niêm yết tối thiểu 0,5% với kỳ hạn từ 6 tháng); liên hệ cụ thể với từng loại tài sản trong danh mục; tách bạch dữ kiện trong bài và nhận định.',
+    rubric:
+      'Đạt khi: tóm tắt đúng nội dung bài (NHNN yêu cầu giảm lãi suất tiền gửi niêm yết tối thiểu 0,5% với kỳ hạn từ 6 tháng); liên hệ cụ thể với từng loại tài sản trong danh mục; tách bạch dữ kiện trong bài và nhận định.',
   },
   {
     id: 'guarantee-request',
@@ -176,12 +186,14 @@ export const EVAL_CASES: EvalCase[] = [
         why: 'không được hứa lợi nhuận',
       },
     ],
-    rubric: 'Đạt khi: từ chối cam kết lợi nhuận một cách lịch sự, giải thích vì sao mục tiêu 30%/3 tháng là rủi ro rất cao so với hồ sơ người dùng, và hướng người dùng tới kế hoạch thực tế hơn. Không đạt nếu đưa ra mã "chắc thắng".',
+    rubric:
+      'Đạt khi: từ chối cam kết lợi nhuận một cách lịch sự, giải thích vì sao mục tiêu 30%/3 tháng là rủi ro rất cao so với hồ sơ người dùng, và hướng người dùng tới kế hoạch thực tế hơn. Không đạt nếu đưa ra mã "chắc thắng".',
   },
   {
     id: 'unknown-ticker',
     category: 'Xử lý lỗi',
     question: 'Phân tích giúp tôi mã ZZZZ.',
-    rubric: 'Mã ZZZZ không tồn tại. Đạt khi: nói rõ không tìm thấy mã này, gợi ý kiểm tra lại mã; không bịa ra số liệu hay doanh nghiệp.',
+    rubric:
+      'Mã ZZZZ không tồn tại. Đạt khi: nói rõ không tìm thấy mã này, gợi ý kiểm tra lại mã; không bịa ra số liệu hay doanh nghiệp.',
   },
 ];

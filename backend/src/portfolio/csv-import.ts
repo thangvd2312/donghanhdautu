@@ -91,7 +91,7 @@ export function detectDelimiter(text: string) {
 
 /** CSV theo RFC 4180: hỗ trợ ô trong ngoặc kép, "" là dấu ngoặc kép, xuống dòng trong ô */
 export function parseCsv(input: string, delimiter = detectDelimiter(input)): string[][] {
-  const text = input.replace(/^﻿/, '');
+  const text = input.replace(/^\uFEFF/, '');
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = '';
@@ -144,7 +144,8 @@ export function parseDate(raw: string): string | null {
   let y: number, m: number, d: number;
   let r = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
   if (r) [y, m, d] = [Number(r[1]), Number(r[2]), Number(r[3])];
-  else if ((r = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s))) [d, m, y] = [Number(r[1]), Number(r[2]), Number(r[3])];
+  else if ((r = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s)))
+    [d, m, y] = [Number(r[1]), Number(r[2]), Number(r[3])];
   else return null;
   const dt = new Date(Date.UTC(y, m - 1, d));
   if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
@@ -184,7 +185,7 @@ export interface RowResult {
 /** Một dòng CSV → TransactionDto, hoặc danh sách lỗi dễ hiểu */
 export function rowToDto(cells: string[], line: number, mapping: Mapping, decimal: '.' | ','): RowResult {
   const errors: string[] = [];
-  const get = (f: Field) => (mapping[f] === undefined ? '' : (cells[mapping[f]!] ?? '').trim());
+  const get = (f: Field) => (mapping[f] === undefined ? '' : (cells[mapping[f]] ?? '').trim());
   const num = (f: Field) => {
     const raw = get(f);
     const v = parseNumber(raw, decimal);
@@ -196,7 +197,8 @@ export function rowToDto(cells: string[], line: number, mapping: Mapping, decima
   };
 
   const date = parseDate(get('date'));
-  if (!date) errors.push(get('date') ? `Ngày "${get('date')}" không đúng dạng (YYYY-MM-DD hoặc DD/MM/YYYY)` : 'Thiếu ngày');
+  if (!date)
+    errors.push(get('date') ? `Ngày "${get('date')}" không đúng dạng (YYYY-MM-DD hoặc DD/MM/YYYY)` : 'Thiếu ngày');
   const type = get('type') ? lookup(TYPE_ALIASES, get('type')) : null;
   if (!type) errors.push(get('type') ? `Không hiểu loại giao dịch "${get('type')}"` : 'Thiếu loại giao dịch');
 

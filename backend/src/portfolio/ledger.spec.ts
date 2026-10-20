@@ -4,14 +4,16 @@ import { computeLedger, LedgerError, LedgerTx, performance } from './ledger';
 const D = (v: number | string) => new Prisma.Decimal(v);
 let seq = 0;
 
-function tx(p: Partial<Omit<LedgerTx, 'quantity' | 'price' | 'amount' | 'fee' | 'tax' | 'fxRate'>> & {
-  quantity?: number;
-  price?: number;
-  amount?: number;
-  fee?: number;
-  tax?: number;
-  fxRate?: number;
-}): LedgerTx {
+function tx(
+  p: Partial<Omit<LedgerTx, 'quantity' | 'price' | 'amount' | 'fee' | 'tax' | 'fxRate'>> & {
+    quantity?: number;
+    price?: number;
+    amount?: number;
+    fee?: number;
+    tax?: number;
+    fxRate?: number;
+  },
+): LedgerTx {
   seq++;
   return {
     id: p.id ?? `t${seq}`,
@@ -180,9 +182,9 @@ describe('computeLedger — chặn dữ liệu sai', () => {
   });
 
   it('chặn rút quá tiền mặt', () => {
-    expect(() => computeLedger([tx({ type: 'deposit', amount: 1_000 }), tx({ type: 'withdraw', amount: 2_000 })])).toThrow(
-      LedgerError,
-    );
+    expect(() =>
+      computeLedger([tx({ type: 'deposit', amount: 1_000 }), tx({ type: 'withdraw', amount: 2_000 })]),
+    ).toThrow(LedgerError);
   });
 
   it('chặn số lượng / giá không hợp lệ', () => {
@@ -209,7 +211,13 @@ describe('computeLedger — coin và tỷ giá', () => {
     const txs = [tx({ type: 'deposit', currency: 'USDT', amount: 1_000, fxRate: 25_000 }), coin('buy', 0.01, 60_000)];
     const l = computeLedger(txs);
     expect(l.cash.USDT.toNumber()).toBe(400);
-    const p = performance({ ledger: l, totalValueVnd: 0, unrealizedVnd: null, totalIsEstimate: false, usdtVnd: 26_000 });
+    const p = performance({
+      ledger: l,
+      totalValueVnd: 0,
+      unrealizedVnd: null,
+      totalIsEstimate: false,
+      usdtVnd: 26_000,
+    });
     expect(p.netContributions).toBe(25_000_000);
     expect(p.isEstimate).toBe(false);
   });
@@ -218,7 +226,13 @@ describe('computeLedger — coin và tỷ giá', () => {
     const l = computeLedger([coin('buy', 0.01, 60_000), coin('sell', 0.01, 70_000)]);
     expect(l.positions[0].realized.toNumber()).toBe(100);
     expect(l.positions[0].realizedVnd).toBeNull();
-    const p = performance({ ledger: l, totalValueVnd: 0, unrealizedVnd: null, totalIsEstimate: false, usdtVnd: 26_000 });
+    const p = performance({
+      ledger: l,
+      totalValueVnd: 0,
+      unrealizedVnd: null,
+      totalIsEstimate: false,
+      usdtVnd: 26_000,
+    });
     expect(p.realized).toBe(100 * 26_000);
     expect(p.isEstimate).toBe(true);
     expect(p.notes.join(' ')).toContain('tỷ giá hiện tại');

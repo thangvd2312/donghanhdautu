@@ -80,7 +80,12 @@ export class WatchlistService {
         dayChangePct: this.market.dayChangePct(type, w.symbol),
         price: { status: price.status, source: price.source, asOf: price.asOf, reason: price.reason ?? null },
         /** Trang chi tiết trong app; vàng chưa có trang riêng */
-        link: type === 'stock' ? `/stock/${w.symbol}` : type === 'crypto' ? `/crypto/${w.symbol.replace(/USDT$/, '')}` : null,
+        link:
+          type === 'stock'
+            ? `/stock/${w.symbol}`
+            : type === 'crypto'
+              ? `/crypto/${w.symbol.replace(/USDT$/, '')}`
+              : null,
         held: heldKeys.has(`${type}:${w.symbol}`),
         createdAt: w.createdAt,
       };
@@ -95,7 +100,9 @@ export class WatchlistService {
     if (existing) return existing;
     const count = await this.prisma.watchItem.count({ where: { userId } });
     if (count >= MAX_WATCH_ITEMS) {
-      throw new BadRequestException(`Danh sách theo dõi tối đa ${MAX_WATCH_ITEMS} mã — hãy bỏ bớt mã không còn quan tâm`);
+      throw new BadRequestException(
+        `Danh sách theo dõi tối đa ${MAX_WATCH_ITEMS} mã — hãy bỏ bớt mã không còn quan tâm`,
+      );
     }
     // upsert để hai yêu cầu thêm cùng lúc không lỗi trùng khoá
     return this.prisma.watchItem.upsert({ where: { userId_assetType_symbol: key }, create: key, update: {} });

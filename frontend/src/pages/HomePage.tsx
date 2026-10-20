@@ -16,7 +16,7 @@ import { NewsRow, ReviewList, TodayBlock } from '../components/HomeBlocks'
 import { Panel } from '../components/ui'
 import WatchlistPanel from '../components/WatchlistPanel'
 import { api } from '../lib/api'
-import { useAuth } from '../lib/auth'
+import { useAuth } from '../lib/auth-context'
 import { timeAgo } from '../lib/format'
 import type { HomeFeed, HomeToday, ReviewPoint } from '../lib/types'
 

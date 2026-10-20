@@ -29,7 +29,7 @@ import {
   stockPriceColor,
   timeAgo,
 } from '../lib/format'
-import { useMarket } from '../lib/market'
+import { useMarket } from '../lib/market-context'
 import type { MarketSnapshot, SourceStatus } from '../lib/types'
 
 const INDEX_NAME: Record<string, string> = {

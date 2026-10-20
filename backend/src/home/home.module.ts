@@ -148,7 +148,10 @@ export class HomeService {
     const relatedUrls = new Set(related.map((n) => n.url));
     const macro = recent
       .filter((n) => (tags.get(n.url)?.macroScore ?? 0) >= 4 && !relatedUrls.has(n.url))
-      .sort((a, b) => tags.get(b.url)!.macroScore - tags.get(a.url)!.macroScore || b.publishedAt.localeCompare(a.publishedAt))
+      .sort(
+        (a, b) =>
+          tags.get(b.url)!.macroScore - tags.get(a.url)!.macroScore || b.publishedAt.localeCompare(a.publishedAt),
+      )
       .slice(0, 3)
       .map((n) => ({
         title: n.title,

@@ -178,7 +178,8 @@ export class AdvisorService {
     if (!this.client) {
       emit({
         type: 'error',
-        message: 'Máy chủ chưa cấu hình LLM_API_KEY nên cố vấn AI chưa hoạt động. Thêm key vào backend/.env rồi khởi động lại.',
+        message:
+          'Máy chủ chưa cấu hình LLM_API_KEY nên cố vấn AI chưa hoạt động. Thêm key vào backend/.env rồi khởi động lại.',
       });
       return;
     }
@@ -206,7 +207,17 @@ export class AdvisorService {
     await this.save(conv.id, 'user', userContent, true);
     messages.push({ role: 'user', content: userContent });
 
-    const ctx: TurnContext = { convId: conv.id, userId, messages, emit, signal, evidence: [], answer: [], lastAssistantId: null, firstAssistantId: null };
+    const ctx: TurnContext = {
+      convId: conv.id,
+      userId,
+      messages,
+      emit,
+      signal,
+      evidence: [],
+      answer: [],
+      lastAssistantId: null,
+      firstAssistantId: null,
+    };
     if (!(await this.runTurns(ctx, MAX_TURNS))) return;
 
     // Lớp kiểm tra: đối chiếu câu trả lời với chính dữ liệu cố vấn đã dùng
@@ -238,7 +249,10 @@ export class AdvisorService {
     const fixable = v.issues.filter((i) => i.type !== 'unsupported');
     if (!fixable.length || ctx.signal.aborted) return;
     const list = fixable
-      .map((i, n) => `${n + 1}. Câu trong trả lời: "${i.quote}" — ${i.explanation} Dữ liệu nguồn ghi: "${i.evidenceQuote}". Thông tin đúng: ${i.correction}`)
+      .map(
+        (i, n) =>
+          `${n + 1}. Câu trong trả lời: "${i.quote}" — ${i.explanation} Dữ liệu nguồn ghi: "${i.evidenceQuote}". Thông tin đúng: ${i.correction}`,
+      )
       .join('\n');
     const note: Anthropic.Beta.BetaContentBlockParam[] = [
       {
@@ -254,7 +268,7 @@ export class AdvisorService {
       if (ctx.lastAssistantId) {
         await this.prisma.chatMessage.update({
           where: { id: ctx.lastAssistantId },
-          data: { meta: { correction: true } as unknown as Prisma.InputJsonValue },
+          data: { meta: { correction: true } },
         });
       }
     }
@@ -326,9 +340,7 @@ export class AdvisorService {
         return false;
       }
 
-      const toolUses = response.content.filter(
-        (b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use',
-      );
+      const toolUses = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use');
       for (const t of toolUses) emit({ type: 'tool', label: this.tools.label(t.name, t.input) });
       if (response.stop_reason === 'max_tokens' && toolUses.length) {
         emit({ type: 'error', message: 'Câu trả lời quá dài, bị cắt giữa chừng. Hãy hỏi cụ thể hơn.' });
@@ -339,7 +351,7 @@ export class AdvisorService {
       ctx.lastAssistantId = savedAssistant.id;
       ctx.firstAssistantId ??= savedAssistant.id;
       for (const b of response.content) if (b.type === 'text') ctx.answer.push(b.text);
-      messages.push({ role: 'assistant', content: response.content as Anthropic.Beta.BetaContentBlockParam[] });
+      messages.push({ role: 'assistant', content: response.content });
 
       if (response.stop_reason === 'pause_turn') continue;
       if (!toolUses.length) break;
@@ -347,7 +359,13 @@ export class AdvisorService {
       const results = await Promise.all(
         toolUses.map(async (t): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
           const r = await this.tools.run(t.name, t.input, userId);
-          if (r.ok) ctx.evidence.push({ id: `${t.name}#${ctx.evidence.length + 1}`, tool: t.name, input: t.input, content: r.content });
+          if (r.ok)
+            ctx.evidence.push({
+              id: `${t.name}#${ctx.evidence.length + 1}`,
+              tool: t.name,
+              input: t.input,
+              content: r.content,
+            });
           if (r.ok) {
             const src = sourcesOfToolResult(t.name, r.content);
             if (src.length) emit({ type: 'sources', items: src });
@@ -360,7 +378,6 @@ export class AdvisorService {
     }
     return true;
   }
-
 
   private save(conversationId: string, role: 'user' | 'assistant', content: unknown, visible: boolean) {
     return this.prisma.chatMessage.create({

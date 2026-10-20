@@ -14,7 +14,6 @@ import {
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { IsBoolean, IsInt, IsObject, IsOptional, Max, Min } from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
@@ -90,7 +89,9 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
       this.botUsername = me.username;
       this.log.log(`Telegram bot @${me.username} sẵn sàng`);
     } catch (e) {
-      this.log.warn(`Telegram getMe lỗi: ${(e as Error).message} — kiểm tra máy chủ có kết nối được ${process.env.TELEGRAM_API_BASE || 'api.telegram.org'}`);
+      this.log.warn(
+        `Telegram getMe lỗi: ${(e as Error).message} — kiểm tra máy chủ có kết nối được ${process.env.TELEGRAM_API_BASE || 'api.telegram.org'}`,
+      );
     }
     return this.botUsername;
   }
@@ -103,7 +104,12 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(timeoutMs),
     });
-    const d = (await r.json().catch(() => ({}))) as { ok?: boolean; result?: T; description?: string; error_code?: number };
+    const d = (await r.json().catch(() => ({}))) as {
+      ok?: boolean;
+      result?: T;
+      description?: string;
+      error_code?: number;
+    };
     if (!d.ok) throw new TelegramError(d.description ?? `HTTP ${r.status}`, d.error_code ?? r.status);
     return d.result as T;
   }
@@ -112,7 +118,11 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
   private async poll() {
     while (!this.stopped) {
       try {
-        const updates = await this.call<TgUpdate[]>('getUpdates', { offset: this.offset, timeout: 25, allowed_updates: ['message'] }, 35_000);
+        const updates = await this.call<TgUpdate[]>(
+          'getUpdates',
+          { offset: this.offset, timeout: 25, allowed_updates: ['message'] },
+          35_000,
+        );
         for (const u of updates) {
           this.offset = u.update_id + 1;
           await this.handle(u).catch((e: Error) => this.log.warn(`Xử lý tin Telegram lỗi: ${e.message}`));
@@ -133,7 +143,10 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
     if (cmd === '/start' && arg) {
       const code = await this.prisma.telegramLinkCode.findUnique({ where: { code: arg } });
       if (!code || code.usedAt || code.expiresAt < new Date()) {
-        await this.reply(chatId, 'Mã kết nối không hợp lệ hoặc đã hết hạn. Hãy bấm lại "Kết nối Telegram" trong ứng dụng.');
+        await this.reply(
+          chatId,
+          'Mã kết nối không hợp lệ hoặc đã hết hạn. Hãy bấm lại "Kết nối Telegram" trong ứng dụng.',
+        );
         return;
       }
       await this.prisma.$transaction([
@@ -157,7 +170,10 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
       await this.reply(chatId, 'Đã ngừng gửi thông báo. Bật lại trong ứng dụng khi cần.');
       return;
     }
-    await this.reply(chatId, 'Bot này chỉ gửi thông báo của Đồng Hành Đầu Tư. Kết nối từ trang Danh mục trong ứng dụng.');
+    await this.reply(
+      chatId,
+      'Bot này chỉ gửi thông báo của Đồng Hành Đầu Tư. Kết nối từ trang Danh mục trong ứng dụng.',
+    );
   }
 
   private reply(chatId: string, text: string) {
@@ -196,12 +212,26 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
     const [link, n, sentLastHour] = await Promise.all([
       this.prisma.telegramLink.findUnique({ where: { userId } }),
       this.prisma.notification.findUnique({ where: { id: notificationId } }),
-      this.prisma.telegramDelivery.count({ where: { userId, status: 'sent', sentAt: { gt: new Date(now.getTime() - 3600_000) } } }),
+      this.prisma.telegramDelivery.count({
+        where: { userId, status: 'sent', sentAt: { gt: new Date(now.getTime() - 3600_000) } },
+      }),
     ]);
-    if (!n) return this.prisma.telegramDelivery.update({ where: { id }, data: { status: 'skipped', lastError: 'Thông báo đã bị xoá' } });
-    const decision = decide(now, n.kind, link ? { ...link, kinds: link.kinds as Record<string, boolean> } : null, sentLastHour);
+    if (!n)
+      return this.prisma.telegramDelivery.update({
+        where: { id },
+        data: { status: 'skipped', lastError: 'Thông báo đã bị xoá' },
+      });
+    const decision = decide(
+      now,
+      n.kind,
+      link ? { ...link, kinds: link.kinds as Record<string, boolean> } : null,
+      sentLastHour,
+    );
     if (decision.action === 'skip') {
-      return this.prisma.telegramDelivery.update({ where: { id }, data: { status: 'skipped', lastError: decision.reason } });
+      return this.prisma.telegramDelivery.update({
+        where: { id },
+        data: { status: 'skipped', lastError: decision.reason },
+      });
     }
     if (decision.action === 'later') {
       return this.prisma.telegramDelivery.update({
@@ -216,13 +246,19 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
         parse_mode: 'HTML',
         disable_web_page_preview: true,
       });
-      await this.prisma.telegramDelivery.update({ where: { id }, data: { status: 'sent', sentAt: new Date(), attempts: attempts + 1, lastError: null } });
+      await this.prisma.telegramDelivery.update({
+        where: { id },
+        data: { status: 'sent', sentAt: new Date(), attempts: attempts + 1, lastError: null },
+      });
     } catch (e) {
       const err = e as TelegramError;
       // 403: người dùng đã chặn bot → tắt liên kết, không thử lại
       if (err.status === 403) {
         await this.prisma.telegramLink.update({ where: { userId }, data: { active: false } });
-        return this.prisma.telegramDelivery.update({ where: { id }, data: { status: 'failed', attempts: attempts + 1, lastError: err.message } });
+        return this.prisma.telegramDelivery.update({
+          where: { id },
+          data: { status: 'failed', attempts: attempts + 1, lastError: err.message },
+        });
       }
       const next = retryAt(now, attempts + 1);
       await this.prisma.telegramDelivery.update({
@@ -278,7 +314,9 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
       throw new ServiceUnavailableException('Máy chủ chưa kết nối được tới Telegram, vui lòng thử lại sau');
     }
     const code = randomBytes(18).toString('base64url');
-    await this.prisma.telegramLinkCode.create({ data: { code, userId, expiresAt: new Date(Date.now() + 15 * 60_000) } });
+    await this.prisma.telegramLinkCode.create({
+      data: { code, userId, expiresAt: new Date(Date.now() + 15 * 60_000) },
+    });
     return { url: `https://t.me/${this.botUsername}?start=${code}` };
   }
 
@@ -291,11 +329,12 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
     }
     const quietStart = dto.quietStart === undefined ? link.quietStart : dto.quietStart;
     const quietEnd = dto.quietEnd === undefined ? link.quietEnd : dto.quietEnd;
-    if ((quietStart === null) !== (quietEnd === null)) throw new BadRequestException('Giờ yên lặng cần cả giờ bắt đầu và kết thúc');
+    if ((quietStart === null) !== (quietEnd === null))
+      throw new BadRequestException('Giờ yên lặng cần cả giờ bắt đầu và kết thúc');
     await this.prisma.telegramLink.update({
       where: { userId },
       data: {
-        kinds: kinds as Prisma.InputJsonValue,
+        kinds: kinds,
         quietStart,
         quietEnd,
         showDetails: dto.showDetails ?? link.showDetails,

@@ -187,7 +187,11 @@ export class TransactionsService {
    * Ghi một đợt nhập CSV. Cùng nội dung (hash) đã nhập và chưa hoàn tác thì trả lại đợt cũ,
    * không tạo thêm giao dịch — bấm lại / gửi lại an toàn.
    */
-  commitImport(userId: string, rows: NormalizedTx[], meta: { hash: string; fileName: string | null; rowCount: number }) {
+  commitImport(
+    userId: string,
+    rows: NormalizedTx[],
+    meta: { hash: string; fileName: string | null; rowCount: number },
+  ) {
     return this.write(userId, async (db, txs) => {
       const existing = await db.importBatch.findFirst({ where: { userId, hash: meta.hash, undoneAt: null } });
       if (existing) return { result: { batch: existing, alreadyImported: true }, txs };
@@ -197,7 +201,13 @@ export class TransactionsService {
       const base = Date.now();
       // createdAt tăng dần theo thứ tự dòng để giao dịch cùng ngày giữ đúng thứ tự trong file
       await db.transaction.createMany({
-        data: rows.map((r, i) => ({ ...r, userId, source: 'csv', importBatchId: batch.id, createdAt: new Date(base + i) })),
+        data: rows.map((r, i) => ({
+          ...r,
+          userId,
+          source: 'csv',
+          importBatchId: batch.id,
+          createdAt: new Date(base + i),
+        })),
       });
       const created = await db.transaction.findMany({ where: { importBatchId: batch.id } });
       return { result: { batch, alreadyImported: false }, txs: [...txs, ...created] };
@@ -217,7 +227,10 @@ export class TransactionsService {
       }
       await db.transaction.updateMany({ where: { id: { in: inBatch.map((t) => t.id) } }, data: { deletedAt: now } });
       const undone = await db.importBatch.update({ where: { id: batchId }, data: { undoneAt: now } });
-      return { result: { batch: undone, removed: inBatch.length }, txs: txs.filter((t) => t.importBatchId !== batchId) };
+      return {
+        result: { batch: undone, removed: inBatch.length },
+        txs: txs.filter((t) => t.importBatchId !== batchId),
+      };
     });
   }
 
@@ -296,7 +309,10 @@ export class TransactionsService {
 
   /** Ghi lại bảng Holding từ sổ: chỉ cập nhật dòng thay đổi để giữ id và mốc updatedAt có ý nghĩa */
   private async syncHoldings(db: Prisma.TransactionClient, userId: string, ledger: LedgerResult) {
-    const desired = new Map<string, { assetType: string; symbol: string; quantity: number; avgCost: number; note: string | null }>();
+    const desired = new Map<
+      string,
+      { assetType: string; symbol: string; quantity: number; avgCost: number; note: string | null }
+    >();
     for (const p of ledger.positions) {
       if (!p.quantity.gt(0)) continue;
       desired.set(`${p.assetType}:${p.symbol}`, {

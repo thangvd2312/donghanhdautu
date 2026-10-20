@@ -115,9 +115,11 @@ export class ImportService {
       throw new BadRequestException('File có ký tự lỗi font. Hãy lưu lại dạng "CSV UTF-8" rồi tải lên lại.');
     }
     const all = parseCsv(dto.csv);
-    if (all.length < 2) throw new BadRequestException('File không có dòng dữ liệu nào (cần dòng tiêu đề và ít nhất 1 dòng)');
+    if (all.length < 2)
+      throw new BadRequestException('File không có dòng dữ liệu nào (cần dòng tiêu đề và ít nhất 1 dòng)');
     const [headers, ...data] = all;
-    if (data.length > MAX_ROWS) throw new BadRequestException(`File có ${data.length} dòng, tối đa ${MAX_ROWS} dòng mỗi lần`);
+    if (data.length > MAX_ROWS)
+      throw new BadRequestException(`File có ${data.length} dòng, tối đa ${MAX_ROWS} dòng mỗi lần`);
     const decimal = dto.decimal ?? '.';
     // Ánh xạ do người dùng chọn: chỉ giữ chỉ số cột hợp lệ
     const mapping: Mapping = {};
@@ -137,7 +139,14 @@ export class ImportService {
     if (!mappingErrors.length) {
       for (const [i, cells] of data.entries()) {
         const parsed = rowToDto(cells, i + 2, mapping, decimal);
-        const row: PreviewRow = { line: parsed.line, status: 'ok', errors: parsed.errors, duplicateReason: null, included: false, tx: null };
+        const row: PreviewRow = {
+          line: parsed.line,
+          status: 'ok',
+          errors: parsed.errors,
+          duplicateReason: null,
+          included: false,
+          tx: null,
+        };
         if (parsed.dto) {
           try {
             const n = await this.transactions.normalize(parsed.dto);
@@ -184,7 +193,8 @@ export class ImportService {
     for (const row of rows) {
       if (row.status !== 'ok' || !row.tx) continue;
       const key = dupKey(row.tx);
-      if (existingKeys.has(key)) row.duplicateReason = 'Giống một giao dịch đã có trong sổ (cùng ngày, loại, mã, số lượng, giá)';
+      if (existingKeys.has(key))
+        row.duplicateReason = 'Giống một giao dịch đã có trong sổ (cùng ngày, loại, mã, số lượng, giá)';
       else if (seenInFile.has(key)) row.duplicateReason = `Giống dòng ${seenInFile.get(key)} trong file`;
       if (!seenInFile.has(key)) seenInFile.set(key, row.line);
       if (row.duplicateReason) {
@@ -258,7 +268,10 @@ export class ImportService {
       .filter((p) => p.before !== p.after);
     const rate = this.market.usdtVnd.rate;
     const contrib = (l: LedgerResult) =>
-      l.contributions.VND.vndKnown.add(l.contributions.USDT.vndKnown).add(l.contributions.USDT.unknownFx.mul(rate)).toNumber();
+      l.contributions.VND.vndKnown
+        .add(l.contributions.USDT.vndKnown)
+        .add(l.contributions.USDT.unknownFx.mul(rate))
+        .toNumber();
     return {
       positions,
       cash: {

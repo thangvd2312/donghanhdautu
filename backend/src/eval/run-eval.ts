@@ -27,8 +27,16 @@ class EvalAppModule {}
 const EVAL_EMAIL = 'eval@local';
 
 const ANSWERS = {
-  goal: 'accumulate', horizon: 'long', drawdown: '20', reaction: 'sell_some', experience: 'some',
-  income_share: 'half', emergency: 'yes', margin: 'never', decision: 'groups', fomo_history: 'often',
+  goal: 'accumulate',
+  horizon: 'long',
+  drawdown: '20',
+  reaction: 'sell_some',
+  experience: 'some',
+  income_share: 'half',
+  emergency: 'yes',
+  margin: 'never',
+  decision: 'groups',
+  fomo_history: 'often',
 };
 
 const HOLDINGS = [
@@ -114,7 +122,14 @@ async function prepareUser(prisma: PrismaService) {
   const scored = scoreQuiz(ANSWERS);
   await prisma.investorProfile.upsert({
     where: { userId: user.id },
-    create: { userId: user.id, ...scored, answers: ANSWERS, macroAlerts: false, morningBrief: false, closingBrief: false },
+    create: {
+      userId: user.id,
+      ...scored,
+      answers: ANSWERS,
+      macroAlerts: false,
+      morningBrief: false,
+      closingBrief: false,
+    },
     update: { ...scored, answers: ANSWERS },
   });
   await prisma.holding.deleteMany({ where: { userId: user.id } });
@@ -168,7 +183,11 @@ async function runCase(
   const checks: CaseResult['checks'] = [];
   for (const group of c.mustUseTools ?? []) {
     const ok = group.some((g) => tools.includes(g));
-    checks.push({ name: `gọi công cụ ${group.join(' / ')}`, ok, detail: ok ? '' : `đã gọi: ${tools.join(', ') || 'không có'}` });
+    checks.push({
+      name: `gọi công cụ ${group.join(' / ')}`,
+      ok,
+      detail: ok ? '' : `đã gọi: ${tools.join(', ') || 'không có'}`,
+    });
   }
   for (const m of c.mustMatch ?? []) {
     const ok = new RegExp(m.re, 'i').test(answer);
@@ -238,15 +257,28 @@ function report(results: CaseResult[]) {
     '|---|---|---|---|---|---|',
     ...results.map(
       (r) =>
-        `| ${r.id} | ${r.category} | ${r.pass ? 'Đạt' : '**Không đạt**'} | ${r.judge?.score ?? '–'} | ${r.checks.filter((c) => !c.ok).map((c) => c.name).join('; ') || '—'} | ${r.seconds}s |`,
+        `| ${r.id} | ${r.category} | ${r.pass ? 'Đạt' : '**Không đạt**'} | ${r.judge?.score ?? '–'} | ${
+          r.checks
+            .filter((c) => !c.ok)
+            .map((c) => c.name)
+            .join('; ') || '—'
+        } | ${r.seconds}s |`,
     ),
     '',
   ];
   for (const r of results) {
     lines.push(`## ${r.id} — ${r.pass ? 'Đạt' : 'Không đạt'}`, '', `**Câu hỏi:** ${r.question}`, '');
     lines.push(`**Công cụ:** ${r.tools.join(', ') || '—'}`, '');
-    lines.push('**Kiểm tra:**', ...r.checks.map((c) => `- ${c.ok ? '✓' : '✗'} ${c.name}${c.detail ? ` — ${c.detail}` : ''}`), '');
-    if (r.verification) lines.push(`**Đối chiếu nguồn:** ${r.verification.status}${r.verification.issues.length ? ` (${r.verification.issues.length} điểm)` : ''}`, '');
+    lines.push(
+      '**Kiểm tra:**',
+      ...r.checks.map((c) => `- ${c.ok ? '✓' : '✗'} ${c.name}${c.detail ? ` — ${c.detail}` : ''}`),
+      '',
+    );
+    if (r.verification)
+      lines.push(
+        `**Đối chiếu nguồn:** ${r.verification.status}${r.verification.issues.length ? ` (${r.verification.issues.length} điểm)` : ''}`,
+        '',
+      );
     if (r.judge) lines.push(`**Chấm điểm (${r.judge.score}/5):**`, ...r.judge.reasons.map((x) => `- ${x}`), '');
     lines.push('<details><summary>Câu trả lời</summary>', '', r.answer, '', '</details>', '');
   }

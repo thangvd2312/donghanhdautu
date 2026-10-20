@@ -15,7 +15,10 @@ export function technicals(candles: Candle[]) {
   const hi = Math.max(...year.map((c) => c.high));
   const lo = Math.min(...year.map((c) => c.low));
   const vol20 = avg(candles.slice(-20).map((c) => c.volume));
-  const daily = closes.slice(-250).map((c, i, a) => (i ? Math.log(c / a[i - 1]) : 0)).slice(1);
+  const daily = closes
+    .slice(-250)
+    .map((c, i, a) => (i ? Math.log(c / a[i - 1]) : 0))
+    .slice(1);
   const ma20 = sma(20);
   const ma50 = sma(50);
   const ma200 = sma(200);

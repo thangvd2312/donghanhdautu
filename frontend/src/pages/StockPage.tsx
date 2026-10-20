@@ -27,7 +27,7 @@ import TechnicalsPanel from '../components/TechnicalsPanel'
 import { KV, Panel } from '../components/ui'
 import { api } from '../lib/api'
 import { changeColor, fmtNum, fmtPct, fmtStockPrice, fmtVnd, stockPriceColor } from '../lib/format'
-import { useMarket } from '../lib/market'
+import { useMarket } from '../lib/market-context'
 import type { Candle, StockDetail } from '../lib/types'
 
 const RATIO_ROWS: [string, string, 'x' | '%'][] = [

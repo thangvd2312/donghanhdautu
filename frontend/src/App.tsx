@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
-import { useAuth } from './lib/auth'
+import { useAuth } from './lib/auth-context'
 import { ChatProvider } from './lib/chat'
 import { MarketProvider } from './lib/market'
 import AdvisorPage from './pages/AdvisorPage'

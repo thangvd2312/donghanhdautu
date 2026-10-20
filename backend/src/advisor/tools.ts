@@ -83,7 +83,11 @@ export class AdvisorTools {
           input_schema: {
             type: 'object',
             properties: {
-              symbols: { type: 'array', items: { type: 'string' }, description: 'Danh sách mã, ví dụ ["VCB","TCB","MBB"]' },
+              symbols: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Danh sách mã, ví dụ ["VCB","TCB","MBB"]',
+              },
             },
             required: ['symbols'],
           },
@@ -129,7 +133,7 @@ export class AdvisorTools {
           },
         },
         schema: NewsInput,
-        label: (i) => (i.query ? `Đọc tin về "${String(i.query)}"` : 'Đọc tin mới nhất'),
+        label: (i) => (typeof i.query === 'string' && i.query ? `Đọc tin về "${i.query}"` : 'Đọc tin mới nhất'),
         run: async (i: z.infer<typeof NewsInput>) =>
           (await this.news.search(i.query, 12)).map((n) => ({ ...n, sourceTier: classifySource(n.url).tier })),
       },
@@ -166,7 +170,13 @@ export class AdvisorTools {
             'Tìm kiếm trên Internet (như Google) khi cần thông tin không có trong các công cụ khác hoặc mới hơn tin RSS: lãi suất điều hành, chính sách, số liệu vĩ mô, sự kiện doanh nghiệp (cổ tức, phát hành, M&A, kiện tụng), tin thế giới, kiểm chứng tin đồn. Trả về tối đa 10 kết quả thô: tiêu đề, link, đoạn trích, ngày đăng. Hãy tự đánh giá độ tin cậy của từng nguồn (ưu tiên cơ quan nhà nước, báo lớn, công ty chứng khoán) và để ý ngày đăng — kết quả có thể cũ. Dùng tiếng Việt cho chủ đề trong nước, tiếng Anh cho chủ đề quốc tế. Cần chi tiết hơn đoạn trích thì gọi tiếp read_webpage với link đó.',
           input_schema: {
             type: 'object',
-            properties: { query: { type: 'string', description: 'Từ khoá tìm kiếm, cụ thể và có mốc thời gian nếu cần, ví dụ "lãi suất điều hành NHNN tháng 10/2026"' } },
+            properties: {
+              query: {
+                type: 'string',
+                description:
+                  'Từ khoá tìm kiếm, cụ thể và có mốc thời gian nếu cần, ví dụ "lãi suất điều hành NHNN tháng 10/2026"',
+              },
+            },
             required: ['query'],
           },
         },
@@ -174,7 +184,8 @@ export class AdvisorTools {
         label: (i) => `Tìm trên web: "${String(i.query)}"`,
         run: async (i: z.infer<typeof SearchInput>) => ({
           source: 'Kết quả tìm kiếm web (MiniMax Search). Trích dẫn bằng link gốc của từng kết quả, kèm ngày đăng.',
-          tierNote: 'sourceTier: 1 = chính thức, 2 = báo chí/tổ chức uy tín, 3 = thứ cấp (không dùng làm nguồn cho số liệu, chính sách)',
+          tierNote:
+            'sourceTier: 1 = chính thức, 2 = báo chí/tổ chức uy tín, 3 = thứ cấp (không dùng làm nguồn cho số liệu, chính sách)',
           searchedAt: new Date().toISOString(),
           results: (await this.web.search(i.query)).map((r) => {
             const c = classifySource(r.url);
@@ -325,7 +336,8 @@ export class AdvisorTools {
       foreignNetVol: q.foreignBuyVol - q.foreignSellVol,
     });
     return {
-      source: 'Vietcap (cổ phiếu), Binance (crypto), vang.today (vàng), Vietcombank (tỷ giá USD), Binance P2P (USDT/VND)',
+      source:
+        'Vietcap (cổ phiếu), Binance (crypto), vang.today (vàng), Vietcombank (tỷ giá USD), Binance P2P (USDT/VND)',
       // Độ mới thật của dữ liệu theo từng nguồn (lần lấy thành công/lỗi gần nhất), không phải giờ tạo phản hồi
       dataSources: s.sources,
       stockSessionOpen: s.stockSessionOpen,
@@ -334,10 +346,15 @@ export class AdvisorTools {
         symbols: s.stocks.map((q) => q.symbol),
         topGainers: sorted.slice(0, 5).map(slim),
         topLosers: sorted.slice(-5).reverse().map(slim),
-        mostTraded: [...s.stocks].sort((a, b) => b.valueBn - a.valueBn).slice(0, 5).map(slim),
+        mostTraded: [...s.stocks]
+          .sort((a, b) => b.valueBn - a.valueBn)
+          .slice(0, 5)
+          .map(slim),
       },
       gold: this.gold(),
-      crypto: s.crypto.slice(0, 8).map((c) => ({ symbol: c.base, priceUsd: c.price, change24hPct: round(c.changePct) })),
+      crypto: s.crypto
+        .slice(0, 8)
+        .map((c) => ({ symbol: c.base, priceUsd: c.price, change24hPct: round(c.changePct) })),
       fx: s.fx,
       usdtVnd: s.usdt ?? 'không lấy được tỷ giá P2P',
     };
@@ -352,7 +369,8 @@ export class AdvisorTools {
       unit: 'VND/lượng (XAUUSD: USD/oz)',
       quotes: quotes.map((g) => ({ ...g, spread: g.sell && g.buy ? g.sell - g.buy : null })),
       worldGoldVndPerLuong: world,
-      sjcPremiumVsWorld: sjc && world ? { vnd: sjc.sell - world, pct: round(((sjc.sell - world) / world) * 100) } : null,
+      sjcPremiumVsWorld:
+        sjc && world ? { vnd: sjc.sell - world, pct: round(((sjc.sell - world) / world) * 100) } : null,
       usdVnd: this.market.usdVndInfo,
     };
   }
@@ -415,7 +433,7 @@ export class AdvisorTools {
             return1yPct: (t.returnPct as Record<string, number> | undefined)?.['1y'],
             fromHigh52wPct: t.fromHigh52wPct,
             vietcapRating: d.company?.analystView
-              ? `${String(d.company.analystView.rating)} @ ${String(d.company.analystView.targetPrice)} (${String(d.company.analystView.ratingAsOf)})`
+              ? `${text(d.company.analystView.rating)} @ ${text(d.company.analystView.targetPrice)} (${text(d.company.analystView.ratingAsOf)})`
               : null,
           };
         } catch (e) {
@@ -441,4 +459,9 @@ function hostOf(url: string) {
   } catch {
     return url.slice(0, 40);
   }
+}
+
+/** Giá trị nguồn không rõ kiểu → chuỗi (bỏ qua object) */
+function text(v: unknown) {
+  return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
 }

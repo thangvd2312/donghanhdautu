@@ -69,7 +69,11 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
         const px = input.price(t.assetType, t.symbol, t.date);
         if (px.value !== null) {
           const toVnd = t.currency === 'USDT' ? input.usdt(t.date).rate : 1;
-          const cost = t.quantity.mul(t.price ?? 0).add(t.fee).add(t.tax).toNumber();
+          const cost = t.quantity
+            .mul(t.price ?? 0)
+            .add(t.fee)
+            .add(t.tax)
+            .toNumber();
           preTrackingGain += (t.quantity.toNumber() * px.value - cost) * toVnd;
         }
       }
@@ -80,7 +84,9 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
 
     const fx = input.usdt(d);
     let value = ledger.cash.VND.toNumber() + ledger.cash.USDT.toNumber() * fx.rate;
-    let estimated = fx.estimated && (ledger.cash.USDT.gt(0) || ledger.positions.some((p) => p.currency === 'USDT' && p.quantity.gt(0)));
+    let estimated =
+      fx.estimated &&
+      (ledger.cash.USDT.gt(0) || ledger.positions.some((p) => p.currency === 'USDT' && p.quantity.gt(0)));
     const missing: string[] = [];
     for (const p of ledger.positions) {
       if (!p.quantity.gt(0)) continue;
@@ -135,7 +141,13 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
   const startedInPeriod = firstTxDate >= from;
   // Mốc đầu kỳ: cuối ngày trước điểm đầu tiên. Nếu danh mục bắt đầu trong kỳ thì mốc đó bằng 0.
   const base = startedInPeriod
-    ? { date: addDays(points[0].date, -1), value: 0, netContributions: 0, preTrackingGain: 0, status: 'complete' as DayStatus }
+    ? {
+        date: addDays(points[0].date, -1),
+        value: 0,
+        netContributions: 0,
+        preTrackingGain: 0,
+        status: 'complete' as DayStatus,
+      }
     : points[0];
   const body = startedInPeriod ? points : points.slice(1);
   const end = points[points.length - 1];
@@ -162,7 +174,9 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
   else returnPct = (profit / denominator) * 100;
 
   if (end.preTrackingGain !== base.preTrackingGain) {
-    notes.push('Tài sản khai báo đầu kỳ được tính theo giá thị trường ngày khai báo; lãi/lỗ có từ trước đó không tính vào kỳ.');
+    notes.push(
+      'Tài sản khai báo đầu kỳ được tính theo giá thị trường ngày khai báo; lãi/lỗ có từ trước đó không tính vào kỳ.',
+    );
   }
   if (startedInPeriod && firstTxDate > from) {
     notes.push(`Danh mục có dữ liệu từ ${points[0].date.split('-').reverse().join('/')}; kỳ được tính từ ngày đó.`);

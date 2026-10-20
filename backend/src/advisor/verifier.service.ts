@@ -60,9 +60,10 @@ const MAX_TOTAL_EVIDENCE_CHARS = 300_000;
 /** Cắt bằng chứng theo giới hạn; mục nào bị cắt được đánh dấu để bộ kiểm tra không kết luận "không có nguồn" */
 export function fitEvidence(evidence: Evidence[]) {
   const total = evidence.reduce((s, e) => s + Math.min(e.content.length, MAX_EVIDENCE_CHARS), 0);
-  const cap = total > MAX_TOTAL_EVIDENCE_CHARS
-    ? Math.floor(MAX_EVIDENCE_CHARS * (MAX_TOTAL_EVIDENCE_CHARS / total))
-    : MAX_EVIDENCE_CHARS;
+  const cap =
+    total > MAX_TOTAL_EVIDENCE_CHARS
+      ? Math.floor(MAX_EVIDENCE_CHARS * (MAX_TOTAL_EVIDENCE_CHARS / total))
+      : MAX_EVIDENCE_CHARS;
   return evidence.map((e) =>
     e.content.length > cap ? { ...e, content: e.content.slice(0, cap), truncated: true } : e,
   );
@@ -81,9 +82,16 @@ export class VerifierService {
 
   async verify(answer: string, evidence: Evidence[]): Promise<Verification> {
     const checkedAt = new Date().toISOString();
-    if (!this.llm.enabled) return { status: 'skipped', issues: [], discarded: 0, checkedAt, reason: 'Chưa cấu hình AI' };
+    if (!this.llm.enabled)
+      return { status: 'skipped', issues: [], discarded: 0, checkedAt, reason: 'Chưa cấu hình AI' };
     if (answer.trim().length < 150 || !evidence.length) {
-      return { status: 'skipped', issues: [], discarded: 0, checkedAt, reason: 'Câu trả lời ngắn hoặc không dùng dữ liệu' };
+      return {
+        status: 'skipped',
+        issues: [],
+        discarded: 0,
+        checkedAt,
+        reason: 'Câu trả lời ngắn hoặc không dùng dữ liệu',
+      };
     }
     const ev = fitEvidence(evidence);
     const result = await this.llm.json<{ issues: VerificationIssue[] }>({
@@ -93,7 +101,8 @@ export class VerifierService {
       schema: SCHEMA,
       maxTokens: 6000,
     });
-    if (!result) return { status: 'skipped', issues: [], discarded: 0, checkedAt, reason: 'Bộ kiểm tra không phản hồi' };
+    if (!result)
+      return { status: 'skipped', issues: [], discarded: 0, checkedAt, reason: 'Bộ kiểm tra không phản hồi' };
 
     const answerNorm = norm(answer);
     const evidenceNorm = norm(ev.map((e) => e.content).join('\n'));
@@ -102,7 +111,8 @@ export class VerifierService {
     for (const i of result.issues ?? []) {
       const quoteOk = i.quote?.trim().length >= 6 && answerNorm.includes(norm(i.quote));
       const needsEvidence = i.type !== 'unsupported';
-      const evidenceOk = !needsEvidence || (i.evidenceQuote?.trim().length >= 4 && evidenceNorm.includes(norm(i.evidenceQuote)));
+      const evidenceOk =
+        !needsEvidence || (i.evidenceQuote?.trim().length >= 4 && evidenceNorm.includes(norm(i.evidenceQuote)));
       if (quoteOk && evidenceOk) kept.push(i);
       else discarded++;
     }

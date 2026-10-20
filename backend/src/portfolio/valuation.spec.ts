@@ -41,10 +41,9 @@ const fresh = (value: number, asOf = '2026-10-20T03:00:00.000Z'): PriceInfo => (
 
 describe('valuePortfolio', () => {
   it('đủ giá: tổng tài sản và lãi/lỗ như trước', () => {
-    const v = run(
-      [holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'cash', 'VND', 5_000_000, 1)],
-      { FPT: fresh(120_000) },
-    );
+    const v = run([holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'cash', 'VND', 5_000_000, 1)], {
+      FPT: fresh(120_000),
+    });
     expect(v.totalValue).toBe(17_000_000);
     expect(v.totalIsEstimate).toBe(false);
     expect(v.totalPnl).toBe(2_000_000);
@@ -54,10 +53,9 @@ describe('valuePortfolio', () => {
   });
 
   it('thiếu giá một phần: không coi tài sản thiếu giá là hoà vốn', () => {
-    const v = run(
-      [holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'stock', 'XYZ', 100, 50_000)],
-      { FPT: fresh(120_000) },
-    );
+    const v = run([holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'stock', 'XYZ', 100, 50_000)], {
+      FPT: fresh(120_000),
+    });
     const xyz = v.holdings.find((h) => h.symbol === 'XYZ')!;
     expect(xyz.marketValue).toBeNull();
     expect(xyz.pnl).toBeNull();
@@ -114,13 +112,10 @@ describe('valuePortfolio', () => {
   });
 
   it('dữ liệu cũ: vẫn định giá, báo mốc giá cũ nhất', () => {
-    const v = run(
-      [holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'gold', 'SJL1L10', 1, 80_000_000)],
-      {
-        FPT: { ...fresh(120_000, '2026-10-17T08:05:00.000Z'), status: 'stale' },
-        SJL1L10: fresh(85_000_000, '2026-10-20T02:00:00.000Z'),
-      },
-    );
+    const v = run([holding('1', 'stock', 'FPT', 100, 100_000), holding('2', 'gold', 'SJL1L10', 1, 80_000_000)], {
+      FPT: { ...fresh(120_000, '2026-10-17T08:05:00.000Z'), status: 'stale' },
+      SJL1L10: fresh(85_000_000, '2026-10-20T02:00:00.000Z'),
+    });
     expect(v.totalIsEstimate).toBe(false);
     expect(v.totalPnl).toBe(2_000_000 + 5_000_000);
     expect(v.dataQuality.status).toBe('degraded');

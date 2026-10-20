@@ -58,7 +58,7 @@ const ALIASES: Record<string, string[]> = {
   VNM: ['Vinamilk'],
   VPB: ['VPBank'],
   VRE: ['Vincom Retail'],
-}
+};
 
 /** Tin có nhắc tới mã (chữ in hoa đứng riêng) hoặc tên thường gọi của doanh nghiệp không */
 export function mentionsCompany(text: string, ticker: string): boolean {

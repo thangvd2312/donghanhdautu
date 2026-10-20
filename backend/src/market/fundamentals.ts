@@ -74,8 +74,7 @@ export function valuationBand(rows: StatRow[], currentPrice: number | null, maxQ
   if (!peBand && !pbBand) return null;
 
   // Giá ngầm định trong số liệu quý gần nhất = vốn hoá / số cổ phiếu
-  const impliedPrice =
-    last.marketCap && last.numberOfSharesMktCap ? last.marketCap / last.numberOfSharesMktCap : null;
+  const impliedPrice = last.marketCap && last.numberOfSharesMktCap ? last.marketCap / last.numberOfSharesMktCap : null;
   const scale = currentPrice && impliedPrice ? currentPrice / impliedPrice : 1;
   const curPe = last.pe && PE_VALID(last.pe) ? r2(last.pe * scale) : null;
   const curPb = last.pb && PB_VALID(last.pb) ? r2(last.pb * scale) : null;
@@ -86,8 +85,14 @@ export function valuationBand(rows: StatRow[], currentPrice: number | null, maxQ
       'Mỗi điểm là P/E, P/B theo lợi nhuận 4 quý gần nhất (TTM) tại từng quý. Quý thua lỗ hoặc lợi nhuận gần 0 (P/E ≤ 0 hoặc ≥ 100) bị loại. ' +
       'Định giá hiện tại (current) tính theo giá thị trường hiện tại và lợi nhuận TTM / giá trị sổ sách mới nhất mà nguồn dữ liệu có.',
     current: { pe: curPe, pb: curPb, basedOnQuarter: `Q${last.quarter}/${last.yearReport}` },
-    pe: peBand && curPe != null ? { ...peBand, currentPercentile: percentile(pes, curPe), position: position(peBand, curPe) } : peBand,
-    pb: pbBand && curPb != null ? { ...pbBand, currentPercentile: percentile(pbs, curPb), position: position(pbBand, curPb) } : pbBand,
+    pe:
+      peBand && curPe != null
+        ? { ...peBand, currentPercentile: percentile(pes, curPe), position: position(peBand, curPe) }
+        : peBand,
+    pb:
+      pbBand && curPb != null
+        ? { ...pbBand, currentPercentile: percentile(pbs, curPb), position: position(pbBand, curPb) }
+        : pbBand,
     excludedQuarters: { pe: q.length - pes.length, pb: q.length - pbs.length },
     /** Chuỗi theo quý để vẽ biểu đồ (thời điểm = ngày cuối quý, giây UTC); quý bị loại để null */
     // Điểm cuối dùng định giá theo giá hiện tại để khớp với số "hiện tại" hiển thị cạnh biểu đồ
@@ -104,7 +109,7 @@ export type StatementRow = Record<string, number | string>;
 
 /** Nợ ròng = vay ngắn hạn + vay dài hạn − tiền − đầu tư ngắn hạn (doanh nghiệp thường, tỷ VND) */
 export function netDebt(row: StatementRow, f: { stDebt: string; ltDebt: string; cash: string; stInv: string }) {
-  const n = (k: string) => (typeof row[k] === 'number' ? (row[k] as number) : 0);
+  const n = (k: string) => (typeof row[k] === 'number' ? row[k] : 0);
   const debt = n(f.stDebt) + n(f.ltDebt);
   return { totalDebt: r1(debt), netDebt: r1(debt - n(f.cash) - n(f.stInv)) };
 }

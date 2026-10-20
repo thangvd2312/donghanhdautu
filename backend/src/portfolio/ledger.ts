@@ -313,13 +313,13 @@ export function performance({ ledger, totalValueVnd, unrealizedVnd, totalIsEstim
     totalValue: totalValueVnd,
     /** Tổng lãi/lỗ = giá trị hiện tại − vốn đưa vào ròng; đã gồm lãi đã chốt, chưa chốt, cổ tức, phí */
     totalProfit: totalValueVnd - num(netContributions),
-    totalProfitPct: netContributions.gt(0) ? ((totalValueVnd - num(netContributions)) / num(netContributions)) * 100 : null,
+    totalProfitPct: netContributions.gt(0)
+      ? ((totalValueVnd - num(netContributions)) / num(netContributions)) * 100
+      : null,
     realized: num(realizedVnd),
     unrealized: unrealizedVnd,
     dividends: num(ledger.dividends),
-    feesAndTaxes: num(
-      ledger.fees.VND.add(ledger.taxes.VND).add(ledger.fees.USDT.add(ledger.taxes.USDT).mul(usdtVnd)),
-    ),
+    feesAndTaxes: num(ledger.fees.VND.add(ledger.taxes.VND).add(ledger.fees.USDT.add(ledger.taxes.USDT).mul(usdtVnd))),
     cash: { VND: num(ledger.cash.VND), USDT: num(ledger.cash.USDT) },
     implicitDeposits: num(implicitVnd),
     isEstimate: totalIsEstimate || fxEstimated,

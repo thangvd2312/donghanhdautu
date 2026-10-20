@@ -54,9 +54,9 @@ export class NewsTaggerService {
     const since = new Date(Date.now() - hours * 3600_000);
     const items = (await this.news.all()).filter((n) => new Date(n.publishedAt) > since);
     const known = new Set(
-      (await this.prisma.newsTag.findMany({ where: { url: { in: items.map((i) => i.url) } }, select: { url: true } })).map(
-        (t) => t.url,
-      ),
+      (
+        await this.prisma.newsTag.findMany({ where: { url: { in: items.map((i) => i.url) } }, select: { url: true } })
+      ).map((t) => t.url),
     );
     const fresh = items.filter((i) => !known.has(i.url));
     for (let k = 0; k < fresh.length; k += BATCH) {

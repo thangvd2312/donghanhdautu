@@ -18,7 +18,7 @@ import TechnicalsPanel from '../components/TechnicalsPanel'
 import { Panel } from '../components/ui'
 import { api } from '../lib/api'
 import { changeColor, fmtNum, fmtPct, fmtUsd, fmtVnd } from '../lib/format'
-import { useMarket } from '../lib/market'
+import { useMarket } from '../lib/market-context'
 import type { Candle, CryptoQuote, Technicals } from '../lib/types'
 
 interface CryptoDetail {

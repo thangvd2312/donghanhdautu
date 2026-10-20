@@ -75,17 +75,27 @@ export class GoalsService {
 
   async list(userId: string) {
     const [goals, v] = await Promise.all([
-      this.prisma.goal.findMany({ where: { userId }, include: { allocations: true }, orderBy: [{ status: 'asc' }, { targetDate: 'asc' }] }),
+      this.prisma.goal.findMany({
+        where: { userId },
+        include: { allocations: true },
+        orderBy: [{ status: 'asc' }, { targetDate: 'asc' }],
+      }),
       this.portfolio.valuation(userId),
     ]);
     const today = vnDateKey();
     // Phần trăm còn trống của từng tài sản (để form gán tài sản hiển thị)
     const used = new Map<string, number>();
-    for (const g of goals) for (const a of g.allocations) used.set(`${a.assetType}:${a.symbol}`, (used.get(`${a.assetType}:${a.symbol}`) ?? 0) + a.pct);
+    for (const g of goals)
+      for (const a of g.allocations)
+        used.set(`${a.assetType}:${a.symbol}`, (used.get(`${a.assetType}:${a.symbol}`) ?? 0) + a.pct);
     return {
       goals: goals.map((g) => {
         const target = (g.targetAllocation as Partial<Record<GoalAssetType, number>> | null) ?? null;
-        const progress = goalProgress({ targetAmount: g.targetAmount, targetAllocation: target }, g.allocations, v.holdings);
+        const progress = goalProgress(
+          { targetAmount: g.targetAmount, targetAllocation: target },
+          g.allocations,
+          v.holdings,
+        );
         const date = g.targetDate.toISOString().slice(0, 10);
         const months = monthsUntil(today, date);
         const projected = project(progress.current, g.monthlyContribution, g.expectedReturnPct, months);
@@ -177,7 +187,10 @@ export class GoalsService {
     const others = await this.prisma.goalAllocation.findMany({
       where: { goal: { userId }, ...(goalId ? { goalId: { not: goalId } } : {}) },
     });
-    const holdings = await this.prisma.holding.findMany({ where: { userId }, select: { assetType: true, symbol: true } });
+    const holdings = await this.prisma.holding.findMany({
+      where: { userId },
+      select: { assetType: true, symbol: true },
+    });
     const next = dto.allocations.filter((a) => a.pct > 0).map((a) => ({ ...a, symbol: a.symbol.toUpperCase() }));
     for (const a of next) {
       if (!holdings.some((h) => h.assetType === a.assetType && h.symbol === a.symbol)) {

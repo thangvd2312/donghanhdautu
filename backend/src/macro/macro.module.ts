@@ -49,8 +49,18 @@ const FED = 'https://www.federalreserve.gov/monetarypolicy/openmarket.htm';
 const POLICY_KEYS = new Set(['vn.policy.refinancing', 'vn.policy.rediscount', 'us.fed.target']);
 
 const MONTHS: Record<string, string> = {
-  January: '01', February: '02', March: '03', April: '04', May: '05', June: '06',
-  July: '07', August: '08', September: '09', October: '10', November: '11', December: '12',
+  January: '01',
+  February: '02',
+  March: '03',
+  April: '04',
+  May: '05',
+  June: '06',
+  July: '07',
+  August: '08',
+  September: '09',
+  October: '10',
+  November: '11',
+  December: '12',
 };
 
 /**
@@ -153,7 +163,8 @@ export class MacroService implements OnApplicationBootstrap {
         const r = await fetch(url, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(30000) });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const html = await r.text();
-        if (/Request Rejected|The requested URL was rejected/i.test(html)) throw new Error('bị tường lửa của trang chặn');
+        if (/Request Rejected|The requested URL was rejected/i.test(html))
+          throw new Error('bị tường lửa của trang chặn');
         return html;
       } catch (e) {
         lastErr = e as Error;
@@ -170,7 +181,9 @@ export class MacroService implements OnApplicationBootstrap {
       ['vn.policy.rediscount', 'tái chiết khấu'],
       ['vn.policy.refinancing', 'tái cấp vốn'],
     ] as const) {
-      const m = t.match(new RegExp(`Lãi suất ${name} ([\\d,]+)% (\\S+) ngày (\\d{2}/\\d{2}/\\d{4}) (\\d{2}/\\d{2}/\\d{4})`));
+      const m = t.match(
+        new RegExp(`Lãi suất ${name} ([\\d,]+)% (\\S+) ngày (\\d{2}/\\d{2}/\\d{4}) (\\d{2}/\\d{2}/\\d{4})`),
+      );
       if (!m) throw new Error(`không thấy dòng lãi suất ${name}`);
       // Kiểm tra logic ngày: ngày áp dụng không thể sớm hơn ngày ban hành văn bản
       const issued = toDate(m[3]);
@@ -306,7 +319,8 @@ export class MacroService implements OnApplicationBootstrap {
     const [mon, day] = date.split(' ');
     const [lo, hi] = level.split('-').map(Number);
     if (!Number.isFinite(lo) || !Number.isFinite(hi)) throw new Error(`mức lãi suất lạ: ${level}`);
-    const move = Number(inc) > 0 ? `tăng ${inc} điểm cơ bản` : Number(dec) > 0 ? `giảm ${dec} điểm cơ bản` : 'giữ nguyên';
+    const move =
+      Number(inc) > 0 ? `tăng ${inc} điểm cơ bản` : Number(dec) > 0 ? `giảm ${dec} điểm cơ bản` : 'giữ nguyên';
     return [
       {
         key: 'us.fed.target',

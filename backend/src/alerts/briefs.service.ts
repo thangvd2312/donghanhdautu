@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { Prisma } from '@prisma/client';
 import { BRIEF_PROMPT } from '../advisor/prompt';
 import { MacroService } from '../macro/macro.module';
 import { MarketService } from '../market/market.service';
@@ -93,13 +92,11 @@ export class BriefsService {
           create: [
             {
               role: 'user',
-              content: [
-                { type: 'text', text: `[Thời điểm hiện tại: ${nowVn()}]\n${title}` },
-              ] as unknown as Prisma.InputJsonValue,
+              content: [{ type: 'text', text: `[Thời điểm hiện tại: ${nowVn()}]\n${title}` }],
             },
             {
               role: 'assistant',
-              content: [{ type: 'text', text: result.markdown }] as unknown as Prisma.InputJsonValue,
+              content: [{ type: 'text', text: result.markdown }],
             },
           ],
         },
@@ -141,7 +138,11 @@ export class BriefsService {
         .map((t) => ({ ticker, title: t.title, url: t.url, impact: t.impact })),
     );
     const sorted = [...snap.stocks].sort((a, b) => b.changePct - a.changePct);
-    const slim = (q: (typeof snap.stocks)[number]) => ({ symbol: q.symbol, price: q.price, changePct: round(q.changePct) });
+    const slim = (q: (typeof snap.stocks)[number]) => ({
+      symbol: q.symbol,
+      price: q.price,
+      changePct: round(q.changePct),
+    });
     const sjc = snap.gold.find((g) => g.code === 'SJL1L10');
 
     return {
@@ -170,8 +171,7 @@ export class BriefsService {
           dayChangePct: h.dayChangePct === null ? null : round(h.dayChangePct),
           priceStatus: h.price.status,
           // Tính sẵn để AI không tự so sánh số (dễ sai)
-          exceedsYourMaxLoss:
-            profile && h.pnlPct !== null ? h.pnlPct <= -profile.maxDrawdownPct : null,
+          exceedsYourMaxLoss: profile && h.pnlPct !== null ? h.pnlPct <= -profile.maxDrawdownPct : null,
         })),
         note: 'totalIsEstimate = true nghĩa là có tài sản chưa có giá, tổng tài sản đang tạm tính phần đó theo giá vốn và totalPnlPct chỉ tính trên phần đã có giá. priceStatus: fresh = mới, stale = cũ, fallback = quy đổi bằng tỷ giá dự phòng, missing = chưa có giá (pnlPct null, KHÔNG phải hoà vốn). pnlPct = lãi/lỗ so với giá vốn. dayChangePct = thay đổi trong phiên gần nhất (coin: 24 giờ). exceedsYourMaxLoss = true nghĩa là khoản này đã lỗ vượt mức lỗ tối đa người dùng chấp nhận (maxDrawdownPct).',
       },
@@ -181,14 +181,21 @@ export class BriefsService {
           ? 'đang trong phiên'
           : `ngoài giờ giao dịch — số liệu cổ phiếu/chỉ số là của phiên gần nhất (${lastSession(snap.indices[0]?.time)})`,
         changePctMeaning: 'changePct của chỉ số và cổ phiếu là thay đổi trong MỘT phiên gần nhất, không phải cả tuần',
-        indices: snap.indices.map((i) => ({ symbol: i.symbol, price: i.price, changePct: round(i.changePct), valueBn: Math.round(i.valueBn) })),
+        indices: snap.indices.map((i) => ({
+          symbol: i.symbol,
+          price: i.price,
+          changePct: round(i.changePct),
+          valueBn: Math.round(i.valueBn),
+        })),
         vn30TopGainers: sorted.slice(0, 3).map(slim),
         vn30TopLosers: sorted.slice(-3).reverse().map(slim),
         goldSjc: sjc ? { buy: sjc.buy, sell: sjc.sell } : null,
         worldGoldVndPerLuong: snap.worldGoldVndPerLuong,
         usdtVnd: snap.usdt?.mid ?? null,
         usdVnd: snap.fx.find((f) => f.code === 'USD')?.transfer ?? null,
-        crypto: snap.crypto.slice(0, 4).map((c) => ({ symbol: c.base, priceUsd: c.price, change24hPct: round(c.changePct) })),
+        crypto: snap.crypto
+          .slice(0, 4)
+          .map((c) => ({ symbol: c.base, priceUsd: c.price, change24hPct: round(c.changePct) })),
       },
       officialMacroData: (await this.macro.all()).map((f) => ({
         label: f.label,
@@ -207,9 +214,12 @@ export class BriefsService {
 
 function lastSession(iso?: string) {
   if (!iso) return 'không rõ ngày';
-  return new Intl.DateTimeFormat('vi-VN', { timeZone: VN_TZ, weekday: 'long', day: 'numeric', month: 'numeric' }).format(
-    new Date(iso),
-  );
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: VN_TZ,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'numeric',
+  }).format(new Date(iso));
 }
 
 function round(v: number) {

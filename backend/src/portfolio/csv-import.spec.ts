@@ -1,4 +1,13 @@
-import { autoMapping, detectDelimiter, dupKey, parseCsv, parseDate, parseNumber, rowToDto, TEMPLATE_CSV } from './csv-import';
+import {
+  autoMapping,
+  detectDelimiter,
+  dupKey,
+  parseCsv,
+  parseDate,
+  parseNumber,
+  rowToDto,
+  TEMPLATE_CSV,
+} from './csv-import';
 
 describe('parseCsv', () => {
   it('tách cột, ô có ngoặc kép, dấu phẩy và xuống dòng trong ô, BOM, CRLF', () => {
@@ -43,12 +52,31 @@ describe('autoMapping + rowToDto', () => {
 
   it('file mẫu: nhận đủ cột và mọi dòng hợp lệ', () => {
     expect(Object.keys(mapping).sort()).toEqual(
-      ['amount', 'assetType', 'currency', 'date', 'fee', 'fxRate', 'note', 'price', 'quantity', 'symbol', 'tax', 'type'].sort(),
+      [
+        'amount',
+        'assetType',
+        'currency',
+        'date',
+        'fee',
+        'fxRate',
+        'note',
+        'price',
+        'quantity',
+        'symbol',
+        'tax',
+        'type',
+      ].sort(),
     );
     const parsed = rows.map((r, i) => rowToDto(r, i + 2, mapping, '.'));
     expect(parsed.flatMap((p) => p.errors)).toEqual([]);
     expect(parsed.map((p) => p.dto!.type)).toEqual(['deposit', 'buy', 'sell', 'dividend', 'buy', 'buy']);
-    expect(parsed[5].dto).toMatchObject({ assetType: 'crypto', symbol: 'BTC', quantity: 0.01, currency: 'USDT', fxRate: 25500 });
+    expect(parsed[5].dto).toMatchObject({
+      assetType: 'crypto',
+      symbol: 'BTC',
+      quantity: 0.01,
+      currency: 'USDT',
+      fxRate: 25500,
+    });
   });
 
   it('tiêu đề tiếng Việt có dấu / tiếng Anh', () => {
@@ -59,7 +87,12 @@ describe('autoMapping + rowToDto', () => {
       quantity: 3,
       price: 4,
     });
-    expect(autoMapping(['Date', 'Side', 'Ticker', 'Qty', 'Price', 'Fee'])).toMatchObject({ date: 0, type: 1, symbol: 2, fee: 5 });
+    expect(autoMapping(['Date', 'Side', 'Ticker', 'Qty', 'Price', 'Fee'])).toMatchObject({
+      date: 0,
+      type: 1,
+      symbol: 2,
+      fee: 5,
+    });
   });
 
   it('báo lỗi rõ ràng theo từng dòng', () => {
@@ -80,8 +113,23 @@ describe('autoMapping + rowToDto', () => {
   });
 
   it('khoá so trùng không phụ thuộc cách viết số', () => {
-    const a = dupKey({ date: '2026-01-05', type: 'buy', assetType: 'stock', symbol: 'FPT', quantity: 100, price: 95000, amount: null });
-    const b = dupKey({ date: '2026-01-05', type: 'buy', assetType: 'stock', symbol: 'FPT', quantity: 100.0, price: 95000.0 });
+    const a = dupKey({
+      date: '2026-01-05',
+      type: 'buy',
+      assetType: 'stock',
+      symbol: 'FPT',
+      quantity: 100,
+      price: 95000,
+      amount: null,
+    });
+    const b = dupKey({
+      date: '2026-01-05',
+      type: 'buy',
+      assetType: 'stock',
+      symbol: 'FPT',
+      quantity: 100.0,
+      price: 95000.0,
+    });
     expect(a).toBe(b);
   });
 });
