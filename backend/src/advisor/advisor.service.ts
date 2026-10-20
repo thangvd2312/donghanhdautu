@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { compatMode, createAnthropicClient } from '../common/anthropic';
 import { Prisma } from '@prisma/client';
 import { VN_TZ } from '../market/types';
+import { AiQuotaError, AiUsageService } from '../ai/ai-usage.service';
+import { historyChars, MAX_HISTORY_CHARS, missingToolResults } from '../ai/history';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { stripEmoji } from '../common/text';
@@ -39,6 +41,7 @@ export class AdvisorService {
     private tools: AdvisorTools,
     private verifier: VerifierService,
     private analytics: AnalyticsService,
+    private aiUsage: AiUsageService,
   ) {
     this.client = createAnthropicClient();
     this.model = config.get<string>('LLM_MODEL_ADVISOR') || config.get<string>('LLM_MODEL') || 'claude-opus-5-5';
@@ -195,6 +198,31 @@ export class AdvisorService {
       return;
     }
 
+    // Quota phía server: lượt hỏi mỗi ngày, một câu mỗi lúc, ngân sách chung. Hết thì báo dễ hiểu và dừng.
+    let requestId: string;
+    try {
+      requestId = await this.aiUsage.reserve(userId, 'chat');
+    } catch (e) {
+      if (e instanceof AiQuotaError) {
+        emit({ type: 'error', message: e.message });
+        return;
+      }
+      throw e;
+    }
+    try {
+      await this.answer(userId, conversationId, message, emit, signal);
+    } finally {
+      await this.aiUsage.finish(requestId);
+    }
+  }
+
+  private async answer(
+    userId: string,
+    conversationId: string | undefined,
+    message: string,
+    emit: (e: AdvisorEvent) => void,
+    signal: AbortSignal,
+  ) {
     const conv = conversationId
       ? await this.prisma.conversation.findFirst({ where: { id: conversationId, userId } })
       : await this.prisma.conversation.create({
@@ -212,6 +240,19 @@ export class AdvisorService {
       role: m.role as 'user' | 'assistant',
       content: m.content as unknown as Anthropic.Beta.BetaContentBlockParam[],
     }));
+    if (historyChars(messages) > MAX_HISTORY_CHARS) {
+      emit({
+        type: 'error',
+        message: 'Cuộc trò chuyện này đã quá dài để cố vấn đọc lại đầy đủ. Hãy mở cuộc trò chuyện mới để hỏi tiếp.',
+      });
+      return;
+    }
+    // Lượt trước dừng giữa lúc chạy công cụ: nối kết quả "bị dừng" để lịch sử hợp lệ (chỉ nối thêm, không sửa)
+    const missing = missingToolResults(messages);
+    if (missing) {
+      await this.save(conv.id, 'user', missing, false);
+      messages.push({ role: 'user', content: missing });
+    }
 
     const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
       { type: 'text', text: `[Thời điểm hiện tại: ${nowVn()}]\n${message}` },
@@ -258,7 +299,7 @@ export class AdvisorService {
     ctx.emit({ type: 'verifying' });
     let v: Verification;
     try {
-      v = await this.verifier.verify(answer, ctx.evidence);
+      v = await this.verifier.verify(answer, ctx.evidence, ctx.userId);
     } catch (e) {
       this.log.warn(`Đối chiếu nguồn lỗi: ${(e as Error).message}`);
       return;
@@ -346,10 +387,27 @@ export class AdvisorService {
       });
 
       let response: Anthropic.Beta.BetaMessage;
+      const started = Date.now();
       try {
         response = await stream.finalMessage();
         jsonRetries = 0;
+        void this.aiUsage.record({
+          feature: 'chat',
+          userId,
+          model: response.model || this.model,
+          usage: response.usage,
+          durationMs: Date.now() - started,
+          outcome: response.stop_reason === 'refusal' ? 'refused' : 'ok',
+        });
       } catch (err) {
+        // Huỷ / lỗi: không có usage cuối cùng → chi phí "không rõ"
+        void this.aiUsage.record({
+          feature: 'chat',
+          userId,
+          model: this.model,
+          durationMs: Date.now() - started,
+          outcome: signal.aborted ? 'aborted' : 'error',
+        });
         if (signal.aborted) return false;
         // Chỉ thử lại khi input của tool không parse được JSON; lỗi API thì báo luôn
         if (err instanceof Anthropic.APIError || jsonRetries++ >= 2) {

@@ -9,6 +9,8 @@ import { NestFactory } from '@nestjs/core';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { AdvisorModule } from '../advisor/advisor.module';
+import { AiModule } from '../ai/ai-usage.service';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { AdvisorEvent, AdvisorService } from '../advisor/advisor.service';
 import { classifySource } from '../advisor/source-tiers';
 import type { Verification } from '../advisor/verifier.service';
@@ -19,10 +21,13 @@ import { EVAL_CASES, EvalCase } from './cases';
 
 /** App gọn cho chấm điểm: không có ScheduleModule nên không chạy quét cảnh báo / gửi thông báo */
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AdvisorModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AnalyticsModule, AiModule, AdvisorModule],
   providers: [LlmService],
 })
 class EvalAppModule {}
+
+// Bộ chấm điểm hỏi liên tục nhiều câu: không áp quota hỏi mỗi ngày của người dùng thường
+process.env.AI_CHAT_DAILY_LIMIT ??= '100000';
 
 const EVAL_EMAIL = 'eval@local';
 
@@ -213,6 +218,7 @@ async function runCase(
   const judge = answer.trim()
     ? await llm.json<{ score: number; pass: boolean; reasons: string[] }>({
         tier: 'brief',
+        feature: 'eval',
         system: JUDGE_PROMPT,
         user: JSON.stringify({
           today: new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),

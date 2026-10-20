@@ -26,6 +26,7 @@ import { MarketModule } from '../market/market.module';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
+import { AiUsageService } from '../ai/ai-usage.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
@@ -111,6 +112,7 @@ export class PlansService {
     private llm: LlmService,
     private notifier: NotifierService,
     private analytics: AnalyticsService,
+    private aiUsage: AiUsageService,
   ) {}
 
   /** Giá hiện tại theo đơn vị của kế hoạch: VND/cp, USDT/coin, VND/lượng (giá mua vào) */
@@ -291,6 +293,10 @@ export class PlansService {
   /** AI viết nháp kế hoạch từ hồ sơ, vị thế đang có và dữ liệu thị trường; không lưu gì */
   async draft(userId: string, dto: DraftDto) {
     if (!this.llm.enabled) throw new ServiceUnavailableException('Trợ lý AI đang tắt, bạn có thể tự viết kế hoạch');
+    return this.aiUsage.run(userId, 'plan_draft', () => this.writeDraft(userId, dto));
+  }
+
+  private async writeDraft(userId: string, dto: DraftDto) {
     const symbol = await this.normalizeAsset(dto.assetType, dto.symbol);
     const [profile, v] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
@@ -313,6 +319,8 @@ export class PlansService {
     }
     const draft = await this.llm.json<PlanDraft>({
       tier: 'fast',
+      feature: 'plan_draft',
+      userId,
       system: DRAFT_PROMPT,
       user: JSON.stringify({
         asset: { type: dto.assetType, symbol: this.displayName(dto.assetType, symbol) },

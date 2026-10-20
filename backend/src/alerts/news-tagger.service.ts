@@ -68,6 +68,7 @@ export class NewsTaggerService {
   private async tagBatch(batch: NewsItem[]) {
     const result = await this.llm.json<TagResult>({
       tier: 'fast',
+      feature: 'news_tag',
       system: NEWS_TAG_PROMPT,
       user: JSON.stringify(
         batch.map((n, i) => ({ i, title: n.title, summary: n.summary, source: n.source, category: n.category })),

@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { AiFeature } from '../ai/ai-usage.service';
+import { AiUsageService } from '../ai/ai-usage.service';
 import { compatMode, createAnthropicClient } from '../common/anthropic';
 
 /**
@@ -20,7 +22,10 @@ export class LlmService {
   private client: Anthropic | null;
   private models: Record<LlmTier, string>;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    @Optional() private usage?: AiUsageService,
+  ) {
     this.client = createAnthropicClient();
     const base = config.get<string>('LLM_MODEL') || 'claude-opus-5-5';
     this.models = {
@@ -35,6 +40,9 @@ export class LlmService {
 
   async json<T>(opts: {
     tier: LlmTier;
+    /** Chức năng gọi AI, để ghi usage và chi phí */
+    feature: AiFeature;
+    userId?: string | null;
     system: string;
     user: string;
     schema: Record<string, unknown>;
@@ -43,10 +51,12 @@ export class LlmService {
   }): Promise<T | null> {
     if (!this.client) return null;
     const compat = compatMode();
+    const model = this.models[opts.tier];
+    const started = Date.now();
     try {
       const res = await this.client.messages
         .stream({
-          model: this.models[opts.tier],
+          model,
           max_tokens: opts.maxTokens ?? 4000,
           ...(compat
             ? {}
@@ -62,11 +72,26 @@ export class LlmService {
           messages: [{ role: 'user', content: opts.user }],
         })
         .finalMessage();
+      void this.usage?.record({
+        feature: opts.feature,
+        userId: opts.userId,
+        model: res.model || model,
+        usage: res.usage,
+        durationMs: Date.now() - started,
+        outcome: res.stop_reason === 'refusal' ? 'refused' : 'ok',
+      });
       if (res.stop_reason === 'refusal') return null;
       const text = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text')?.text;
       const json = text?.match(/\{[\s\S]*\}/)?.[0];
       return json ? (JSON.parse(json) as T) : null;
     } catch (e) {
+      void this.usage?.record({
+        feature: opts.feature,
+        userId: opts.userId,
+        model,
+        durationMs: Date.now() - started,
+        outcome: 'error',
+      });
       this.log.warn(`LLM lỗi: ${(e as Error).message}`);
       return null;
     }

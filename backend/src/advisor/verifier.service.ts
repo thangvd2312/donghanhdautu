@@ -80,7 +80,7 @@ export class VerifierService {
 
   constructor(private llm: LlmService) {}
 
-  async verify(answer: string, evidence: Evidence[]): Promise<Verification> {
+  async verify(answer: string, evidence: Evidence[], userId?: string): Promise<Verification> {
     const checkedAt = new Date().toISOString();
     if (!this.llm.enabled)
       return { status: 'skipped', issues: [], discarded: 0, checkedAt, reason: 'Chưa cấu hình AI' };
@@ -96,6 +96,8 @@ export class VerifierService {
     const ev = fitEvidence(evidence);
     const result = await this.llm.json<{ issues: VerificationIssue[] }>({
       tier: 'fast',
+      feature: 'verifier',
+      userId,
       system: VERIFY_PROMPT,
       user: JSON.stringify({ answer, evidence: ev }),
       schema: SCHEMA,

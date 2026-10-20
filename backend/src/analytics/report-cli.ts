@@ -24,6 +24,8 @@ async function main() {
     console.table(r.briefs);
     console.log('Sự kiện 30 ngày qua');
     console.table(r.last30Days);
+    console.log('Chi phí AI 30 ngày qua (USD ước tính; unknown_cost_calls = lượt không tính được chi phí)');
+    console.table(r.aiCost30Days);
   } finally {
     await prisma.$disconnect();
   }

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { AiUsageService } from '../ai/ai-usage.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { NewsService } from '../news/news.module';
 import type { NewsItem } from '../news/news.module';
@@ -47,6 +48,7 @@ export class WeeklyBriefService {
     private news: NewsService,
     private llm: LlmService,
     private runs: BriefRunService,
+    private aiUsage: AiUsageService,
   ) {}
 
   @Cron('0 9 * * 6', { timeZone: VN_TZ })
@@ -60,6 +62,10 @@ export class WeeklyBriefService {
       });
       this.log.log(`Tổng kết tuần: ${users.length} người dùng`);
       for (const u of users) {
+        if (await this.aiUsage.overBudget()) {
+          this.log.warn('Tổng kết tuần: dừng vì đã chạm ngân sách AI hôm nay');
+          break;
+        }
         await this.generate(u.id).catch((e: Error) => this.log.warn(`Tổng kết tuần lỗi (${u.id}): ${e.message}`));
       }
     } finally {
@@ -96,6 +102,8 @@ export class WeeklyBriefService {
     if (this.llm.enabled) {
       const ai = await this.llm.json<{ headline: string; markdown: string }>({
         tier: 'brief',
+        feature: 'brief_weekly',
+        userId,
         system: WEEKLY_PROMPT,
         user: JSON.stringify({
           numbersTable: table,

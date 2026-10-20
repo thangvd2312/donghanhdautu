@@ -2,6 +2,7 @@ import { Controller, Get, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdvisorModule } from './advisor/advisor.module';
+import { AiModule } from './ai/ai-usage.service';
 import { AlertsModule } from './alerts/alerts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
@@ -34,6 +35,7 @@ class HealthController {
     ScheduleModule.forRoot(),
     PrismaModule,
     AnalyticsModule,
+    AiModule,
     AuthModule,
     MarketModule,
     MacroModule,

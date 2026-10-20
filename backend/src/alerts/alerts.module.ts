@@ -16,6 +16,7 @@ import { Interval } from '@nestjs/schedule';
 import { Holding, InvestorProfile } from '@prisma/client';
 import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { ALERT_SYSTEM_PROMPT } from '../advisor/prompt';
+import { AiUsageService } from '../ai/ai-usage.service';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MacroModule, MacroService } from '../macro/macro.module';
@@ -347,6 +348,8 @@ export class AlertsService {
     const p = user.profile;
     const draft = await this.llm.json<AlertDraft>({
       tier: 'fast',
+      feature: 'alert',
+      userId: user.id,
       system: ALERT_SYSTEM_PROMPT,
       user: JSON.stringify({
         event: e.event,
@@ -401,6 +404,7 @@ class AlertsController {
     private alerts: AlertsService,
     private briefs: BriefsService,
     private weekly: WeeklyBriefService,
+    private aiUsage: AiUsageService,
   ) {}
 
   @Get('price')
@@ -442,14 +446,19 @@ class AlertsController {
   /** Gửi thử bản tin ngay cho chính mình */
   @Post('brief/:kind')
   async briefNow(@CurrentUser() user: AuthUser, @Param('kind') kind: string) {
+    if (kind !== 'weekly' && kind !== 'morning' && kind !== 'closing')
+      throw new BadRequestException('kind phải là morning, closing hoặc weekly');
+    // Gửi thử cũng gọi AI: giới hạn lượt mỗi ngày, một lượt mỗi lúc
+    return this.aiUsage.run(user.id, 'brief_test', () => this.sendBrief(user.id, kind));
+  }
+
+  private async sendBrief(userId: string, kind: 'weekly' | 'morning' | 'closing') {
     if (kind === 'weekly') {
-      const w = await this.weekly.generate(user.id, true);
+      const w = await this.weekly.generate(userId, true);
       if (!w) throw new BadRequestException('Chưa có giao dịch nào trong sổ để tổng kết tuần');
       return w;
     }
-    if (kind !== 'morning' && kind !== 'closing')
-      throw new BadRequestException('kind phải là morning, closing hoặc weekly');
-    const n = await this.briefs.generate(user.id, kind, true);
+    const n = await this.briefs.generate(userId, kind, true);
     if (!n) throw new BadRequestException('Không tạo được bản tin');
     return n;
   }

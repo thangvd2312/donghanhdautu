@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
+import { AiUsageService } from '../ai/ai-usage.service';
 import { BriefContent, BriefRunService } from './brief-run.service';
 
 export type BriefKind = 'morning' | 'closing';
@@ -39,6 +40,7 @@ export class BriefsService {
     private tagger: NewsTaggerService,
     private llm: LlmService,
     private runs: BriefRunService,
+    private aiUsage: AiUsageService,
     private macro: MacroService,
   ) {}
 
@@ -60,6 +62,10 @@ export class BriefsService {
     });
     this.log.log(`${LABEL[kind]}: gửi cho ${users.length} người dùng`);
     for (const u of users) {
+      if (await this.aiUsage.overBudget()) {
+        this.log.warn(`${LABEL[kind]}: dừng vì đã chạm ngân sách AI hôm nay`);
+        break;
+      }
       await this.generate(u.id, kind).catch((e: Error) => this.log.warn(`${LABEL[kind]} lỗi (${u.id}): ${e.message}`));
     }
   }
@@ -75,6 +81,8 @@ export class BriefsService {
     const context = await this.context(userId, kind);
     const result = await this.llm.json<{ headline: string; markdown: string }>({
       tier: 'brief',
+      feature: kind === 'morning' ? 'brief_morning' : 'brief_closing',
+      userId,
       system: BRIEF_PROMPT,
       user: JSON.stringify(context),
       schema: BRIEF_SCHEMA,

@@ -98,6 +98,26 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
     GROUP BY name, sample ORDER BY name, sample
   `);
 
+  // Chi phí AI theo chức năng: phần không rõ chi phí (thiếu usage / model chưa có giá) đếm riêng, không coi là 0
+  const ai = await prisma.$queryRaw<
+    {
+      feature: string;
+      calls: number;
+      errors: number;
+      cost_usd: number | null;
+      unknown_cost_calls: number;
+      users: number;
+    }[]
+  >(Prisma.sql`
+    SELECT feature, count(*)::int AS calls,
+      count(*) FILTER (WHERE outcome <> 'ok')::int AS errors,
+      sum("costUsd")::float AS cost_usd,
+      count(*) FILTER (WHERE "costUsd" IS NULL)::int AS unknown_cost_calls,
+      count(DISTINCT "userId")::int AS users
+    FROM "AiUsage" WHERE "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+    GROUP BY feature ORDER BY cost_usd DESC NULLS LAST
+  `);
+
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : null);
   return {
     generatedAt: now.toISOString(),
@@ -114,5 +134,6 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
       followupPct: pct(b.followed_up, b.generated),
     })),
     last30Days: counts,
+    aiCost30Days: ai,
   };
 }

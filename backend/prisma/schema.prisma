@@ -589,3 +589,43 @@ model AnalyticsEvent {
   @@index([name, createdAt])
   @@index([userId, createdAt])
 }
+
+/// Một lần gọi model AI: token, chi phí ước tính và kết quả (AI-01). costUsd null = không rõ (thiếu usage hoặc
+/// model chưa có trong bảng giá), không phải 0.
+model AiUsage {
+  id               String   @id @default(cuid())
+  userId           String?
+  /// chat | verifier | brief_morning | brief_closing | brief_weekly | alert | news_tag | plan_draft | eval
+  feature          String
+  model            String
+  inputTokens      Int?
+  outputTokens     Int?
+  cacheReadTokens  Int?
+  cacheWriteTokens Int?
+  costUsd          Decimal? @db.Decimal(14, 6)
+  /// Phiên bản bảng giá dùng để tính costUsd
+  priceVersion     String?
+  durationMs       Int
+  /// ok | error | aborted | refused
+  outcome          String
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([feature, createdAt])
+}
+
+/// Lượt dùng AI do người dùng bấm (một câu hỏi chat, một lần gửi thử bản tin, một bản nháp kế hoạch): giữ chỗ
+/// trước khi gọi model để kiểm tra quota và số lượt chạy đồng thời một cách nguyên tử.
+model AiRequest {
+  id         String    @id @default(cuid())
+  userId     String
+  /// chat | brief_test | plan_draft
+  kind       String
+  /// running | done
+  status     String    @default("running")
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([userId, kind, createdAt])
+}
