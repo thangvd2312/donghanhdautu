@@ -8,4 +8,5 @@ export const TX_LABEL: Record<TxType, string> = {
   dividend: 'Cổ tức',
   fee: 'Phí',
   opening: 'Số dư đầu kỳ',
+  bonus: 'Nhận cổ phiếu',
 }

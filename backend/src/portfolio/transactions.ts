@@ -98,6 +98,23 @@ export class TransactionsService {
       };
     }
 
+    if (dto.type === 'bonus') {
+      if (dto.assetType && dto.assetType !== 'stock')
+        throw new BadRequestException('Chỉ cổ phiếu mới nhận thêm cổ phiếu');
+      if (!dto.symbol) throw new BadRequestException('Chọn mã cổ phiếu');
+      if (!dto.quantity) throw new BadRequestException('Nhập số cổ phiếu nhận thêm');
+      const symbol = (await this.market.assertStock(dto.symbol.trim().toUpperCase())).symbol;
+      return {
+        ...base,
+        assetType: 'stock',
+        symbol,
+        quantity: dec(dto.quantity),
+        price: null,
+        amount: null,
+        currency: 'VND',
+      };
+    }
+
     if (dto.type === 'dividend') {
       if (!dto.amount) throw new BadRequestException('Nhập số tiền cổ tức');
       const symbol = dto.symbol ? (await this.market.assertStock(dto.symbol.trim().toUpperCase())).symbol : null;

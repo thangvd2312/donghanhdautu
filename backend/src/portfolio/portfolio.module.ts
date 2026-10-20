@@ -24,6 +24,7 @@ import type { AssetType } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
 import { TEMPLATE_CSV } from './csv-import';
+import { CorporateActionsService } from './corporate-actions.service';
 import { HistoryService } from './history.service';
 import { ImportDto, ImportService } from './import.service';
 import { computeLedger, performance } from './ledger';
@@ -39,6 +40,10 @@ class HoldingDto {
   @IsNumber() @Min(0) avgCost!: number;
   @IsOptional() @IsString() note?: string;
   @IsOptional() @IsString() @MaxLength(40) portfolioId?: string;
+}
+
+class DismissDto {
+  @IsString() @MaxLength(120) key!: string;
 }
 
 class PortfolioNameDto {
@@ -250,7 +255,19 @@ class PortfolioController {
     private historyService: HistoryService,
     private market: MarketService,
     private prisma: PrismaService,
+    private corporateActions: CorporateActionsService,
   ) {}
+
+  /** Sự kiện quyền (cổ phiếu thưởng, chia tách, cổ tức) được hưởng nhưng chưa ghi vào sổ */
+  @Get('corporate-actions')
+  missingActions(@CurrentUser() user: AuthUser) {
+    return this.corporateActions.missing(user.id);
+  }
+
+  @Post('corporate-actions/dismiss')
+  dismissAction(@CurrentUser() user: AuthUser, @Body() dto: DismissDto) {
+    return this.corporateActions.dismiss(user.id, dto.key);
+  }
 
   /** ?portfolioId=… để xem riêng một danh mục; bỏ trống = gộp, kèm tài sản nằm ở danh mục nào */
   @Get()
@@ -378,7 +395,7 @@ class PortfolioController {
 @Module({
   imports: [MarketModule],
   controllers: [PortfolioController],
-  providers: [PortfolioService, TransactionsService, ImportService, HistoryService],
-  exports: [PortfolioService, TransactionsService, HistoryService],
+  providers: [PortfolioService, TransactionsService, ImportService, HistoryService, CorporateActionsService],
+  exports: [PortfolioService, TransactionsService, HistoryService, CorporateActionsService],
 })
 export class PortfolioModule {}

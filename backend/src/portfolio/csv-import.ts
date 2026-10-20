@@ -160,6 +160,7 @@ const TYPE_ALIASES: Record<TxType, string[]> = {
   dividend: ['cotuc', 'cotuctienmat', 'dividend', 'div'],
   fee: ['phi', 'fee', 'phiquanly', 'philuuky'],
   opening: ['sodudauky', 'dauky', 'opening', 'sodu'],
+  bonus: ['cophieuthuong', 'thuong', 'cotuccophieu', 'cotucbangcophieu', 'chiatach', 'bonus', 'split'],
 };
 const ASSET_ALIASES: Record<'stock' | 'crypto' | 'gold' | 'cash', string[]> = {
   stock: ['cophieu', 'stock', 'ck', 'chungkhoan', 'cp'],
@@ -206,7 +207,7 @@ export function rowToDto(cells: string[], line: number, mapping: Mapping, decima
   let assetType = get('assetType') ? lookup(ASSET_ALIASES, get('assetType')) : null;
   if (get('assetType') && !assetType) errors.push(`Không hiểu loại tài sản "${get('assetType')}"`);
   // Mua/bán/đầu kỳ không ghi loại tài sản: mặc định là cổ phiếu
-  if (!assetType && type && ['buy', 'sell', 'opening'].includes(type) && symbol) assetType = 'stock';
+  if (!assetType && type && ['buy', 'sell', 'opening', 'bonus'].includes(type) && symbol) assetType = 'stock';
 
   const currencyRaw = get('currency').toUpperCase();
   const currency = currencyRaw === 'USDT' ? 'USDT' : currencyRaw === '' || currencyRaw === 'VND' ? 'VND' : null;
@@ -230,6 +231,10 @@ export function rowToDto(cells: string[], line: number, mapping: Mapping, decima
     if (!symbol) errors.push('Thiếu mã tài sản');
     if (!dto.quantity) errors.push('Thiếu số lượng');
     if (dto.price === undefined || (type !== 'opening' && !dto.price)) errors.push('Thiếu giá');
+  }
+  if (type === 'bonus') {
+    if (!symbol) errors.push('Thiếu mã cổ phiếu');
+    if (!dto.quantity) errors.push('Thiếu số cổ phiếu nhận thêm');
   }
   if (type && ['deposit', 'withdraw', 'dividend', 'fee'].includes(type) && !dto.amount) errors.push('Thiếu số tiền');
   return { line, cells, dto: errors.length ? null : dto, errors };
@@ -255,6 +260,7 @@ export const TEMPLATE_CSV = `ngay,loai,loai_tai_san,ma,so_luong,gia,so_tien,phi,
 2026-01-06,mua,co_phieu,FPT,100,95000,,14250,,VND,,
 2026-03-10,ban,co_phieu,FPT,50,110000,,8250,5500,VND,,
 2026-04-20,co_tuc,co_phieu,FPT,,,100000,,5000,VND,,Cổ tức tiền mặt
+2026-04-21,co_phieu_thuong,co_phieu,FPT,10,,,,,VND,,Cổ phiếu thưởng 20%
 2026-05-02,mua,vang,SJL1L10,1,120000000,,,,VND,,
 2026-06-01,mua,crypto,BTC,0.01,65000,,0.5,,USDT,25500,
 `;

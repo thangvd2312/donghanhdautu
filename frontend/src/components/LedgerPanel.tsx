@@ -43,6 +43,7 @@ const TYPE_COLOR: Record<Transaction['type'], 'success' | 'error' | 'info' | 'wa
   dividend: 'success',
   fee: 'warning',
   opening: 'default',
+  bonus: 'success',
 }
 
 function money(v: number | null, currency: 'VND' | 'USDT') {

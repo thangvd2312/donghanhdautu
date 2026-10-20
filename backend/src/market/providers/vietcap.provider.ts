@@ -22,6 +22,32 @@ export interface SymbolInfo {
   type: string;
 }
 
+export interface CorporateEvent {
+  symbol: string;
+  kind: 'stock' | 'cash';
+  title: string;
+  /** Ngày giao dịch không hưởng quyền (YYYY-MM-DD) */
+  exDate: string;
+  recordDate: string | null;
+  payoutDate: string | null;
+  /** stock: số cổ phiếu nhận thêm cho mỗi cổ phiếu đang giữ (0.1 = 10%) */
+  ratio: number | null;
+  /** cash: VND / cổ phiếu, trước thuế */
+  valuePerShare: number | null;
+}
+
+interface VcEvent {
+  eventCode?: string;
+  eventNameVi?: string;
+  eventTitleVi?: string;
+  eventTitleEn?: string;
+  exrightDate?: string;
+  recordDate?: string;
+  payoutDate?: string;
+  exerciseRatio?: number;
+  valuePerShare?: number;
+}
+
 export interface Candle {
   time: number;
   open: number;
@@ -585,6 +611,44 @@ export class VietcapProvider {
           ownershipAfterPct: r.ownershipAfterTrade ? round(r.ownershipAfterTrade * 100, 3) : undefined,
         })),
       };
+    });
+  }
+
+  /**
+   * Sự kiện quyền làm thay đổi số cổ phiếu / tiền của cổ đông hiện hữu: cổ phiếu thưởng, cổ tức bằng cổ phiếu,
+   * chia tách (kind = stock, ratio = số cổ phiếu nhận thêm cho mỗi cổ phiếu đang giữ) và cổ tức tiền mặt
+   * (kind = cash, VND / cổ phiếu). Bỏ ESOP, phát hành riêng lẻ, chuyển đổi trái phiếu, quyền mua (phải tự mua).
+   */
+  async corporateEvents(symbol: string): Promise<CorporateEvent[]> {
+    return this.cached(`events:${symbol}`, 6 * 3600_000, async () => {
+      const ymd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
+      const res = await this.get<{ data: { content?: VcEvent[] } | VcEvent[] | null }>(
+        `${IQ}/events?ticker=${symbol}&fromDate=20180101&toDate=${ymd(new Date(Date.now() + 180 * 86_400_000))}&eventCode=DIV,ISS&page=0&size=200`,
+      );
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
+      const out: CorporateEvent[] = [];
+      for (const e of items) {
+        const exDate = e.exrightDate?.slice(0, 10);
+        if (!exDate) continue;
+        const base = {
+          symbol,
+          title: e.eventTitleVi ?? e.eventNameVi ?? '',
+          exDate,
+          recordDate: e.recordDate?.slice(0, 10) ?? null,
+          payoutDate: e.payoutDate?.slice(0, 10) ?? null,
+        };
+        if (e.eventCode === 'DIV' && e.valuePerShare && e.valuePerShare > 0) {
+          out.push({ ...base, kind: 'cash', valuePerShare: e.valuePerShare, ratio: null });
+        } else if (
+          e.eventCode === 'ISS' &&
+          /bonus issue|stock dividend|split/i.test(e.eventTitleEn ?? '') &&
+          e.exerciseRatio &&
+          e.exerciseRatio > 0
+        ) {
+          out.push({ ...base, kind: 'stock', ratio: e.exerciseRatio, valuePerShare: null });
+        }
+      }
+      return out.sort((a, b) => a.exDate.localeCompare(b.exDate));
     });
   }
 

@@ -5,6 +5,7 @@ import { MarketService } from './market.service';
 import { BinanceProvider } from './providers/binance.provider';
 import { GoldFxProvider } from './providers/gold-fx.provider';
 import { VietcapProvider } from './providers/vietcap.provider';
+import { VndirectProvider } from './providers/vndirect.provider';
 
 @UseGuards(JwtAuthGuard)
 @Controller('market')
@@ -50,7 +51,7 @@ class MarketController {
 @Module({
   imports: [AuthModule],
   controllers: [MarketController],
-  providers: [MarketService, MarketGateway, VietcapProvider, BinanceProvider, GoldFxProvider],
-  exports: [MarketService, MarketGateway, VietcapProvider],
+  providers: [MarketService, MarketGateway, VietcapProvider, VndirectProvider, BinanceProvider, GoldFxProvider],
+  exports: [MarketService, MarketGateway, VietcapProvider, VndirectProvider],
 })
 export class MarketModule {}

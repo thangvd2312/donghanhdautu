@@ -35,6 +35,12 @@ export interface TxPreset {
   label?: string
   /** Danh mục ghi giao dịch (vd bán từ đúng tài khoản đang giữ) */
   portfolioId?: string
+  /** Điền sẵn (vd từ gợi ý sự kiện quyền): ngày, số lượng, số tiền, thuế, ghi chú */
+  date?: string
+  quantity?: number
+  amount?: number
+  tax?: number
+  note?: string
 }
 
 /**
@@ -84,17 +90,17 @@ export default function TransactionDialog({
     setError('')
     const t = editing
     setType(t?.type ?? preset?.type ?? 'buy')
-    setDate(t?.date ?? todayVn())
+    setDate(t?.date ?? preset?.date ?? todayVn())
     setAssetType((t?.assetType && t.assetType !== 'cash' ? t.assetType : preset?.assetType) ?? 'stock')
     setSymbol(t?.symbol && t.assetType !== 'cash' ? t.symbol.replace(/USDT$/, '') : (preset?.symbol?.replace(/USDT$/, '') ?? ''))
-    setQuantity(t?.quantity != null ? String(t.quantity) : '')
+    setQuantity(t?.quantity != null ? String(t.quantity) : preset?.quantity != null ? String(preset.quantity) : '')
     setPrice(t?.price != null ? String(t.price) : '')
-    setAmount(t?.amount != null ? String(t.amount) : '')
+    setAmount(t?.amount != null ? String(t.amount) : preset?.amount != null ? String(preset.amount) : '')
     setFee(t?.fee ? String(t.fee) : '')
-    setTax(t?.tax ? String(t.tax) : '')
+    setTax(t?.tax ? String(t.tax) : preset?.tax ? String(preset.tax) : '')
     setCurrency(t?.currency ?? 'VND')
     setFxRate(t?.fxRate != null ? String(t.fxRate) : '')
-    setNote(t?.note ?? '')
+    setNote(t?.note ?? preset?.note ?? '')
     setPortfolioId(
       t?.portfolioId ?? preset?.portfolioId ?? defaultPortfolioId ?? accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? '',
     )
@@ -106,6 +112,8 @@ export default function TransactionDialog({
   const cashOpening = type === 'opening' && editing?.assetType === 'cash'
   const trade = (type === 'buy' || type === 'sell' || type === 'opening') && !cashOpening
   const cashOnly = type === 'deposit' || type === 'withdraw' || type === 'fee'
+  /** Cổ phiếu thưởng / cổ tức bằng cổ phiếu / chia tách: chỉ có mã và số cổ phiếu nhận thêm */
+  const isBonus = type === 'bonus'
   const usdt = (trade && assetType === 'crypto') || (cashOnly && currency === 'USDT')
   const unit = trade ? PRICE_UNIT[assetType] : currency === 'USDT' ? 'USDT' : '₫'
   const lockedAsset = !!editing || !!preset?.symbol
@@ -145,6 +153,10 @@ export default function TransactionDialog({
     if (cashOpening) {
       if (!(qtyN > 0)) return setError('Số tiền phải lớn hơn 0')
       Object.assign(body, { assetType: 'cash', symbol: editing!.symbol, quantity: qtyN, price: 1 })
+    } else if (isBonus) {
+      if (!symbol.trim()) return setError('Chọn mã cổ phiếu')
+      if (!(qtyN > 0)) return setError('Số cổ phiếu nhận thêm phải lớn hơn 0')
+      Object.assign(body, { assetType: 'stock', symbol: symbol.trim(), quantity: qtyN })
     } else if (trade) {
       if (!symbol.trim()) return setError('Chọn tài sản')
       if (!(qtyN > 0)) return setError('Số lượng phải lớn hơn 0')
@@ -178,7 +190,7 @@ export default function TransactionDialog({
     }
   }
 
-  const types: TxType[] = ['buy', 'sell', 'deposit', 'withdraw', 'dividend', 'fee', 'opening']
+  const types: TxType[] = ['buy', 'sell', 'deposit', 'withdraw', 'dividend', 'bonus', 'fee', 'opening']
   const title = editing
     ? `Sửa giao dịch ${TX_LABEL[editing.type].toLowerCase()}`
     : preset?.label
@@ -202,6 +214,12 @@ export default function TransactionDialog({
           {type === 'opening' && (
             <Typography variant="caption" color="text.secondary">
               Tài sản bạn đã có từ trước, khai báo theo giá vốn bình quân. Không trừ tiền mặt và không tính là lãi.
+            </Typography>
+          )}
+          {isBonus && (
+            <Typography variant="caption" color="text.secondary">
+              Cổ phiếu thưởng, cổ tức bằng cổ phiếu hoặc chia tách: số cổ phiếu tăng, tổng giá vốn giữ nguyên (giá vốn bình quân
+              giảm). Ghi theo ngày giao dịch không hưởng quyền.
             </Typography>
           )}
 
@@ -244,7 +262,7 @@ export default function TransactionDialog({
             </ToggleButtonGroup>
           )}
 
-          {(trade || type === 'dividend') &&
+          {(trade || type === 'dividend' || isBonus) &&
             (lockedAsset && symbol ? (
               <TextField
                 size="small"
@@ -252,7 +270,7 @@ export default function TransactionDialog({
                 value={assetType === 'gold' ? (gold.find((g) => g.code === symbol)?.name ?? symbol) : symbol}
                 slotProps={{ input: { readOnly: true } }}
               />
-            ) : (trade && assetType === 'stock') || type === 'dividend' ? (
+            ) : (trade && assetType === 'stock') || type === 'dividend' || isBonus ? (
               symbol ? (
                 <TextField
                   size="small"
@@ -292,6 +310,8 @@ export default function TransactionDialog({
 
           {cashOpening ? (
             <NumField label={`Tiền mặt ${editing?.symbol} đầu kỳ`} value={quantity} onChange={setQuantity} unit={editing?.symbol ?? ''} />
+          ) : isBonus ? (
+            <NumField label="Số cổ phiếu nhận thêm" value={quantity} onChange={setQuantity} />
           ) : trade ? (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -334,7 +354,7 @@ export default function TransactionDialog({
             </Grid>
           )}
 
-          {type !== 'fee' && !cashOpening && (
+          {type !== 'fee' && !cashOpening && !isBonus && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 6 }}>
                 <NumField label="Phí" value={fee} onChange={setFee} unit={usdt ? 'USDT' : '₫'} />

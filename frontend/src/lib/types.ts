@@ -423,7 +423,7 @@ export interface HomeFeed {
   trackedTickers: string[]
 }
 
-export type TxType = 'opening' | 'buy' | 'sell' | 'deposit' | 'withdraw' | 'dividend' | 'fee'
+export type TxType = 'opening' | 'buy' | 'sell' | 'deposit' | 'withdraw' | 'dividend' | 'fee' | 'bonus'
 
 export interface Transaction {
   id: string

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { MarketService, normalizeCrypto } from '../market/market.service';
+import { VndirectProvider } from '../market/providers/vndirect.provider';
 import type { AssetType } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { addDays, daysBetween } from '../plans/plan-rules';
@@ -31,6 +32,7 @@ export class HistoryService implements OnApplicationBootstrap {
     private prisma: PrismaService,
     private market: MarketService,
     private transactions: TransactionsService,
+    private vndirect: VndirectProvider,
   ) {}
 
   /** Lưu giá ngay sau khi khởi động (chờ dữ liệu thị trường tải xong) để có mốc của hôm nay */
@@ -70,18 +72,19 @@ export class HistoryService implements OnApplicationBootstrap {
       const b = before.find((a) => a.key === k);
       const a = after.find((x) => x.key === k);
       const ref = (a ?? b)!;
-      const pStart = start && ref.assetType !== 'cash' ? r.price(ref.assetType, ref.symbol, start).value : null;
-      const pEnd = ref.assetType !== 'cash' ? r.price(ref.assetType, ref.symbol, end).value : null;
+      // % đổi giá theo giá điều chỉnh: tuần có cổ phiếu thưởng không bị tính là "giảm giá"
+      const cStart = start && ref.assetType !== 'cash' ? r.changePrice(ref.assetType, ref.symbol, start) : null;
+      const cEnd = ref.assetType !== 'cash' ? r.changePrice(ref.assetType, ref.symbol, end) : null;
       return {
         name: ref.name,
         assetType: ref.assetType,
         valueStart: b?.value ?? 0,
         valueEnd: a?.value ?? 0,
         /** % đổi giá trong tuần (theo giá, không tính mua/bán) */
-        priceChangePct: pStart && pEnd ? ((pEnd - pStart) / pStart) * 100 : null,
+        priceChangePct: cStart && cEnd ? ((cEnd - cStart) / cStart) * 100 : null,
         /** Ảnh hưởng của biến động giá lên số đang giữ đầu tuần (VND) */
-        priceEffect:
-          b && pStart && pEnd ? b.quantity * (pEnd - pStart) * (ref.currency === 'USDT' ? r.usdt(end).rate : 1) : null,
+        // Giá trị đầu tuần × % đổi giá (giá điều chỉnh): cổ phiếu thưởng trong tuần không bị tính là lỗ do giá
+        priceEffect: b && b.priced && cStart && cEnd ? b.value * (cEnd / cStart - 1) : null,
         tradedThisWeek: traded.has(k),
         priced: (a?.priced ?? true) && (b?.priced ?? true),
       };
@@ -125,11 +128,22 @@ export class HistoryService implements OnApplicationBootstrap {
     ].map((t) => ({ assetType: t.assetType as string, symbol: t.symbol as string }));
 
     const series = new Map<string, Series>();
+    // Cổ phiếu: giá điều chỉnh (để tính % đổi giá) và mã đang phải dùng giá điều chỉnh vì nguồn giá gốc lỗi
+    const adjusted = new Map<string, Series>();
+    const adjustedOnly = new Set<string>();
     const failed: string[] = [];
     await Promise.all(
       assets.map(async (a) => {
+        const key = `${a.assetType}:${a.symbol}`;
         try {
-          series.set(`${a.assetType}:${a.symbol}`, await this.loadSeries(a.assetType, a.symbol, loadFrom, days));
+          if (a.assetType === 'stock') {
+            const s = await this.loadStock(a.symbol, loadFrom, today, days);
+            series.set(key, s.raw);
+            adjusted.set(key, s.adjusted);
+            if (s.adjustedOnly) adjustedOnly.add(key);
+            return;
+          }
+          series.set(key, await this.loadSeries(a.assetType, a.symbol, loadFrom, days));
         } catch (e) {
           this.log.warn(`Lịch sử giá ${a.symbol}: ${(e as Error).message}`);
           failed.push(this.displayName(a.assetType, a.symbol));
@@ -155,7 +169,12 @@ export class HistoryService implements OnApplicationBootstrap {
       const s = series.get(`${assetType}:${symbol}`);
       const hit = s ? lastOnOrBefore(s, date) : null;
       if (!hit) return { value: null, estimated: false };
-      return { value: hit.value, estimated: daysBetween(hit.date, date) > (MAX_GAP[assetType] ?? 3) };
+      return {
+        value: hit.value,
+        // Giá đã điều chỉnh theo sự kiện quyền không khớp số cổ phiếu thật trước ngày sự kiện: chỉ là ước tính
+        estimated:
+          daysBetween(hit.date, date) > (MAX_GAP[assetType] ?? 3) || adjustedOnly.has(`${assetType}:${symbol}`),
+      };
     };
     const usdtToday = this.market.usdtVnd;
     const usdt = (date: string) => {
@@ -186,10 +205,42 @@ export class HistoryService implements OnApplicationBootstrap {
     if (points.some((p) => p.status === 'estimated')) {
       notes.push('Một số ngày dùng giá hoặc tỷ giá gần nhất trước đó (đánh dấu ước tính).');
     }
+    if (adjustedOnly.size) {
+      notes.push(
+        `Chưa lấy được giá gốc của ${[...adjustedOnly].map((k) => k.split(':')[1]).join(', ')}; đang dùng giá đã điều chỉnh theo sự kiện quyền nên các ngày trước cổ phiếu thưởng / cổ tức chỉ là ước tính.`,
+      );
+    }
     if (assets.some((a) => a.assetType === 'crypto')) {
       notes.push('Coin: giá đóng cửa ngày theo giờ UTC của Binance.');
     }
-    return { txs, from, today, points, period, notes, price, usdt };
+    /** Giá để tính % đổi giá giữa hai ngày: cổ phiếu dùng giá điều chỉnh (không bị sự kiện quyền làm "rơi giá") */
+    const changePrice = (assetType: string, symbol: string, date: string) => {
+      const adj = adjusted.get(`${assetType}:${symbol}`);
+      if (adj && date !== today) return lastOnOrBefore(adj, date)?.value ?? null;
+      return price(assetType, symbol, date).value;
+    };
+    return { txs, from, today, points, period, notes, price, usdt, changePrice };
+  }
+
+  /**
+   * Cổ phiếu: giá đóng cửa GỐC (VNDirect) để nhân với số cổ phiếu thật trong sổ, kèm giá điều chỉnh để tính % đổi giá.
+   * Nguồn giá gốc lỗi thì dùng giá điều chỉnh (Vietcap) và đánh dấu ước tính.
+   */
+  private async loadStock(symbol: string, from: string, today: string, days: number) {
+    try {
+      const rows = await this.vndirect.rawCloses(symbol, addDays(from, -10), today);
+      if (rows.length) {
+        return {
+          raw: new Map(rows.map((r) => [r.date, r.close])),
+          adjusted: new Map(rows.map((r) => [r.date, r.adjClose])),
+          adjustedOnly: false,
+        };
+      }
+    } catch (e) {
+      this.log.warn(`Giá gốc ${symbol} (VNDirect): ${(e as Error).message}`);
+    }
+    const s = await this.loadSeries('stock', symbol, from, days);
+    return { raw: s, adjusted: s, adjustedOnly: true };
   }
 
   private async loadSeries(assetType: string, symbol: string, from: string, days: number): Promise<Series> {

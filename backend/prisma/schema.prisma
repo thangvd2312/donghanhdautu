@@ -33,6 +33,7 @@ model User {
   pushSubscriptions PushSubscription[]
   portfolios    Portfolio[]
   briefRuns     BriefRun[]
+  dismissedActions DismissedAction[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -654,4 +655,15 @@ model BriefJob {
 
   @@unique([userId, kind, day])
   @@index([status, runAfter])
+}
+
+/// Gợi ý sự kiện quyền người dùng đã chọn bỏ qua (vd đã tính vào số dư khai báo, hoặc nhận ở tài khoản khác)
+model DismissedAction {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// danh mục:mã:loại:ngày GDKHQ (actionKey)
+  key       String
+  createdAt DateTime @default(now())
+
+  @@id([userId, key])
 }

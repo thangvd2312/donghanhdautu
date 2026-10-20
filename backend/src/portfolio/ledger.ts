@@ -4,7 +4,8 @@ const D = Prisma.Decimal;
 type Dec = Prisma.Decimal;
 const ZERO = new D(0);
 
-export const TX_TYPES = ['opening', 'buy', 'sell', 'deposit', 'withdraw', 'dividend', 'fee'] as const;
+/** bonus: nhận thêm cổ phiếu không mất tiền (cổ phiếu thưởng, cổ tức bằng cổ phiếu, chia tách) */
+export const TX_TYPES = ['opening', 'buy', 'sell', 'deposit', 'withdraw', 'dividend', 'fee', 'bonus'] as const;
 export type TxType = (typeof TX_TYPES)[number];
 export type Currency = 'VND' | 'USDT';
 export type LedgerAsset = 'stock' | 'crypto' | 'gold' | 'cash';
@@ -261,6 +262,21 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
         }
         cash[tx.currency] = cash[tx.currency].sub(out);
         addFlow(contributions[tx.currency], amount, tx.currency, tx.fxRate, -1);
+        break;
+      }
+      case 'bonus': {
+        // Cổ phiếu thưởng / cổ tức bằng cổ phiếu / chia tách: thêm số lượng, tổng giá vốn giữ nguyên (giá vốn
+        // bình quân giảm), không phát sinh tiền. Phải đang nắm giữ mã đó tại ngày nhận.
+        const qty = positive(tx.quantity, 'Số cổ phiếu nhận thêm', tx);
+        const p = positions.get(`${tx.assetType}:${tx.symbol}`);
+        if (!p || !p.quantity.gt(0)) {
+          throw new LedgerError(`Nhận cổ phiếu ${tx.symbol} ngày ${tx.date} nhưng lúc đó chưa nắm giữ mã này`, tx.id);
+        }
+        p.quantity = p.quantity.add(qty);
+        if (charges.gt(0)) {
+          // Phí lưu ký / thuế khi nhận cổ phiếu thưởng (nếu có) trả bằng tiền mặt
+          spend(tx.currency, charges, tx.fxRate);
+        }
         break;
       }
       case 'dividend': {

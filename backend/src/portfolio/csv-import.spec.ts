@@ -69,8 +69,9 @@ describe('autoMapping + rowToDto', () => {
     );
     const parsed = rows.map((r, i) => rowToDto(r, i + 2, mapping, '.'));
     expect(parsed.flatMap((p) => p.errors)).toEqual([]);
-    expect(parsed.map((p) => p.dto!.type)).toEqual(['deposit', 'buy', 'sell', 'dividend', 'buy', 'buy']);
-    expect(parsed[5].dto).toMatchObject({
+    expect(parsed.map((p) => p.dto!.type)).toEqual(['deposit', 'buy', 'sell', 'dividend', 'bonus', 'buy', 'buy']);
+    expect(parsed[4].dto).toMatchObject({ type: 'bonus', assetType: 'stock', symbol: 'FPT', quantity: 10 });
+    expect(parsed[6].dto).toMatchObject({
       assetType: 'crypto',
       symbol: 'BTC',
       quantity: 0.01,

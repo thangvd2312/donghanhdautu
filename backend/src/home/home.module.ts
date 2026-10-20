@@ -11,6 +11,7 @@ import type { NewsItem } from '../news/news.module';
 import { ledgerOfAll } from '../portfolio/ledger';
 import type { LedgerTx } from '../portfolio/ledger';
 import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
+import { CorporateActionsService } from '../portfolio/corporate-actions.service';
 import { toLedgerTx, TransactionsService } from '../portfolio/transactions';
 import { PrismaService } from '../prisma/prisma.module';
 import { planSignals } from '../plans/plan-rules';
@@ -30,6 +31,7 @@ export class HomeService {
     private market: MarketService,
     private portfolio: PortfolioService,
     private transactions: TransactionsService,
+    private corporateActions: CorporateActionsService,
     private news: NewsService,
   ) {}
 
@@ -64,9 +66,11 @@ export class HomeService {
       if (!t.assetType || t.assetType === 'cash' || !t.symbol || !t.quantity) continue;
       const key = `${t.assetType}:${t.symbol}`;
       const toVnd = t.currency === 'USDT' ? rate : 1;
-      if (t.type === 'opening') {
+      if (t.type === 'opening' || t.type === 'bonus') {
+        // Cổ phiếu thưởng ngày GDKHQ: giá tham chiếu đã được sàn điều chỉnh giảm tương ứng, nên coi như đã giữ
+        // từ đầu ngày (không tính phần cổ phiếu nhận thêm là lãi)
         startQty.set(key, (startQty.get(key) ?? 0) + t.quantity.toNumber());
-        openedToday.add(key);
+        if (t.type === 'opening') openedToday.add(key);
       } else if (t.type === 'buy' || t.type === 'sell') {
         trades.push({
           assetType: t.assetType,
@@ -98,11 +102,13 @@ export class HomeService {
   }
 
   async review(userId: string) {
-    const [v, profile, alerts, plans] = await Promise.all([
+    const [v, profile, alerts, plans, actions] = await Promise.all([
       this.portfolio.valuation(userId),
       this.prisma.investorProfile.findUnique({ where: { userId }, select: { riskType: true, maxDrawdownPct: true } }),
       this.prisma.priceAlert.findMany({ where: { userId, active: true } }),
       this.prisma.investmentPlan.findMany({ where: { userId, status: 'active' } }),
+      // Nguồn sự kiện lỗi thì bỏ qua điểm này, không làm hỏng cả khối
+      this.corporateActions.missing(userId).catch(() => null),
     ]);
     const points = reviewPoints(
       v,
@@ -131,8 +137,26 @@ export class HomeService {
             : `${s.message}. Luận điểm của tôi: "${p.thesis}". Tôi nên làm gì theo đúng kế hoạch?`,
       })),
     );
+    // Sự kiện quyền chưa ghi: số lượng / giá vốn / lãi lỗ đang lệch so với tài khoản thật
+    const actionPoints: ReviewPoint[] = actions?.items.length
+      ? [
+          {
+            id: 'corporate-actions',
+            severity: 'medium',
+            title: `${actions.items.length} sự kiện quyền chưa ghi vào sổ`,
+            reason: `${actions.items
+              .slice(0, 3)
+              .map((a) => `${a.symbol}: ${a.title} (GDKHQ ${a.exDate.split('-').reverse().join('/')})`)
+              .join(
+                '; ',
+              )}${actions.items.length > 3 ? '…' : ''}. Chưa ghi thì số cổ phiếu, giá vốn và lãi/lỗ sẽ lệch với tài khoản thật.`,
+            link: '/portfolio',
+            ask: null,
+          },
+        ]
+      : [];
     const order = { high: 0, medium: 1, info: 2 };
-    return [...points, ...planPoints].sort((a, b) => order[a.severity] - order[b.severity]);
+    return [...points, ...planPoints, ...actionPoints].sort((a, b) => order[a.severity] - order[b.severity]);
   }
 
   /** Giá theo đơn vị của kế hoạch: VND/cp, USDT/coin, VND/lượng (giá mua vào) */
