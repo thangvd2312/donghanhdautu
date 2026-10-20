@@ -94,6 +94,7 @@ export class DemoService {
       },
       holdings: v.holdings.map((h) => ({
         displayName: h.displayName,
+        symbol: h.symbol,
         typeLabel: h.typeLabel,
         assetType: h.assetType,
         marketValue: h.marketValue,

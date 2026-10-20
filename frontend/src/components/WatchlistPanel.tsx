@@ -2,6 +2,7 @@ import AddIcon from '@mui/icons-material/Add'
 import Close from '@mui/icons-material/Close'
 import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
@@ -29,6 +30,7 @@ import { PriceStatusChip } from './DataStatus'
 import PriceAlertDialog from './PriceAlertDialog'
 import StockSearch from './StockSearch'
 import { Panel } from './ui'
+import AssetAvatar from './AssetAvatar'
 
 type WatchType = WatchItem['assetType']
 
@@ -96,16 +98,21 @@ export default function WatchlistPanel() {
               {items.map((w) => (
                 <TableRow key={w.id} hover>
                   <TableCell>
-                    {w.link ? (
-                      <Link component={RouterLink} to={w.link} underline="hover" sx={{ fontWeight: 700 }}>
-                        {w.displayName}
-                      </Link>
-                    ) : (
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                        {w.displayName}
-                      </Typography>
-                    )}
-                    {w.held && <Chip label="Đang nắm giữ" size="small" sx={{ ml: 0.75, height: 20, fontSize: 11 }} />}
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                      <AssetAvatar assetType={w.assetType} symbol={w.symbol} size={26} />
+                      <Box sx={{ minWidth: 0 }}>
+                        {w.link ? (
+                          <Link component={RouterLink} to={w.link} underline="hover" sx={{ fontWeight: 700 }}>
+                            {w.displayName}
+                          </Link>
+                        ) : (
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                            {w.displayName}
+                          </Typography>
+                        )}
+                        {w.held && <Chip label="Đang nắm giữ" size="small" sx={{ ml: 0.75, height: 20, fontSize: 11 }} />}
+                      </Box>
+                    </Stack>
                   </TableCell>
                   <TableCell align="right" className="num" sx={{ whiteSpace: 'nowrap' }}>
                     {w.currency === 'USDT' ? `${fmtNum(w.priceNative, 2)} USDT` : fmtVnd(w.priceNative)}

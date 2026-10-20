@@ -37,6 +37,7 @@
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cryptocurrency-icons": "^0.18.1",
     "fast-xml-parser": "^5.11.2",
     "google-auth-library": "^11.3.1",
     "jsdom": "^24.1.3",

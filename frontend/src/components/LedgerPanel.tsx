@@ -29,6 +29,7 @@ import type { PortfolioAccount, Transaction, TransactionRevision } from '../lib/
 import ImportDialog from './ImportDialog'
 import TransactionDialog from './TransactionDialog'
 import { Panel } from './ui'
+import AssetAvatar from './AssetAvatar'
 
 const TYPE_COLOR: Record<Transaction['type'], 'success' | 'error' | 'info' | 'warning' | 'default'> = {
   buy: 'success',
@@ -111,7 +112,8 @@ export default function LedgerPanel({
       {txs && txs.length > 0 && mobile ? (
         <Stack divider={<Divider flexItem />}>
           {txs.map((t) => (
-            <Stack key={t.id} direction="row" spacing={1} sx={{ px: 2, py: 1.25, alignItems: 'center' }}>
+            <Stack key={t.id} direction="row" spacing={1.25} sx={{ px: 2, py: 1.25, alignItems: 'center' }}>
+              <AssetAvatar assetType={t.assetType ?? 'cash'} symbol={t.symbol ?? t.currency} size={32} />
               <Box sx={{ minWidth: 0, flex: 1 }}>
                 <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
                   <Chip size="small" variant="outlined" color={TYPE_COLOR[t.type]} label={TX_LABEL[t.type]} sx={{ height: 22 }} />
@@ -164,7 +166,12 @@ export default function LedgerPanel({
                   <TableCell>
                     <Chip size="small" variant="outlined" color={TYPE_COLOR[t.type]} label={TX_LABEL[t.type]} />
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{t.displayName ?? (t.currency === 'USDT' ? 'Tiền USDT' : 'Tiền mặt')}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                      <AssetAvatar assetType={t.assetType ?? 'cash'} symbol={t.symbol ?? t.currency} size={24} />
+                      <span>{t.displayName ?? (t.currency === 'USDT' ? 'Tiền USDT' : 'Tiền mặt')}</span>
+                    </Stack>
+                  </TableCell>
                   {showPortfolio && <TableCell sx={{ whiteSpace: 'nowrap' }}>{t.portfolioName ?? '—'}</TableCell>}
                   <TableCell align="right" className="num" sx={{ whiteSpace: 'nowrap' }}>
                     {describe(t)}

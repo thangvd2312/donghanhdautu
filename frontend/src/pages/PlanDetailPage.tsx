@@ -23,6 +23,7 @@ import { changeColor, fmtDate, fmtNum, fmtPct, fmtPrice, fmtVndShort, timeAgo } 
 import { todayVn } from '../lib/num'
 import { TX_LABEL } from '../lib/tx'
 import type { PlanDetail, PlanReview } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 const DECISION: Record<PlanReview['decision'], string> = {
   keep: 'Giữ nguyên kế hoạch',
@@ -64,6 +65,7 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
             ← Kế hoạch đầu tư
           </Link>
           <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
+            <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={36} />
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               {p.link ? (
                 <Link component={RouterLink} to={p.link} underline="hover" color="inherit">

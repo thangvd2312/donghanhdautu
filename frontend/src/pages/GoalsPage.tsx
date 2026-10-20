@@ -28,6 +28,7 @@ import { project, requiredMonthly } from '../lib/goalMath'
 import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum, todayVn } from '../lib/num'
 import type { Goal, GoalAsset, GoalAssetType } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 const TYPE_LABEL: Record<GoalAssetType, string> = { stock: 'Cổ phiếu', crypto: 'Crypto', gold: 'Vàng', cash: 'Tiền mặt' }
 const STATUS_LABEL: Record<Goal['status'], string> = { active: 'Đang theo đuổi', paused: 'Tạm dừng', achieved: 'Đã đạt' }
@@ -414,6 +415,7 @@ function GoalEditor({
                   const free = Math.max(0, 100 - a.usedPct + ownPct(a))
                   return (
                     <Stack key={key} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                      <AssetAvatar assetType={a.assetType} symbol={a.symbol} size={30} />
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
                           {a.displayName}

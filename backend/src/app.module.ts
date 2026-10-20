@@ -10,6 +10,7 @@ import { DemoModule } from './demo/demo.module';
 import { GoalsModule } from './goals/goals.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { PushModule } from './push/push.module';
+import { LogosModule } from './logos/logos.module';
 import { MacroModule } from './macro/macro.module';
 import { MarketModule } from './market/market.module';
 import { NewsModule } from './news/news.module';
@@ -44,6 +45,7 @@ class HealthController {
     GoalsModule,
     TelegramModule,
     PushModule,
+    LogosModule,
     AdvisorModule,
     AlertsModule,
   ],

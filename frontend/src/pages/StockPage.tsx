@@ -29,6 +29,7 @@ import { api } from '../lib/api'
 import { changeColor, fmtNum, fmtPct, fmtStockPrice, fmtVnd, stockPriceColor } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import type { Candle, StockDetail } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 const RATIO_ROWS: [string, string, 'x' | '%'][] = [
   ['pe', 'P/E', 'x'],
@@ -89,6 +90,7 @@ export default function StockPage() {
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>
           <Box>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+              <AssetAvatar assetType="stock" symbol={q.symbol} size={44} />
               <Typography variant="h4">{q.symbol}</Typography>
               <Chip size="small" label={q.board} />
               {c?.sector && <Chip size="small" variant="outlined" label={c.sector} />}

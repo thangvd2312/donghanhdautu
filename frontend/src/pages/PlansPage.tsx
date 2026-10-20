@@ -14,6 +14,7 @@ import PlanEditor from '../components/PlanEditor'
 import { api } from '../lib/api'
 import { changeColor, fmtDate, fmtPct, fmtPrice } from '../lib/format'
 import type { PlanListItem } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 
 /** Danh sách kế hoạch: đang theo dõi (ưu tiên cái đến hạn / chạm mốc) và đã kết thúc */
@@ -108,6 +109,7 @@ function PlanCard({ p }: { p: PlanListItem }) {
       sx={{ p: 2, display: 'block', textDecoration: 'none', color: 'inherit', height: '100%', '&:hover': { borderColor: 'primary.main' } }}
     >
       <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+        <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={30} />
         <Typography sx={{ fontWeight: 700 }}>{p.displayName}</Typography>
         {p.held && <Chip size="small" label="Đang nắm giữ" sx={{ height: 20, fontSize: 11 }} />}
         {p.status === 'closed' && <Chip size="small" label="Đã kết thúc" sx={{ height: 20, fontSize: 11 }} />}

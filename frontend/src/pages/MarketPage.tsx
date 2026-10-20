@@ -31,6 +31,7 @@ import {
 } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import type { MarketSnapshot, SourceStatus } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 const INDEX_NAME: Record<string, string> = {
   VNINDEX: 'VN-Index',
@@ -190,7 +191,12 @@ function StockBoard({ snapshot }: { snapshot: MarketSnapshot }) {
             const net = q.foreignBuyVol - q.foreignSellVol
             return (
               <TableRow key={q.symbol} hover onClick={() => nav(`/stock/${q.symbol}`)} sx={{ cursor: 'pointer' }}>
-                <TableCell sx={{ color, fontWeight: 700 }}>{q.symbol}</TableCell>
+                <TableCell sx={{ color, fontWeight: 700 }}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <AssetAvatar assetType="stock" symbol={q.symbol} size={24} />
+                    <span>{q.symbol}</span>
+                  </Stack>
+                </TableCell>
                 <TableCell align="right" sx={{ color: 'price.ceil', ...HIDE_XS }}>
                   {fmtStockPrice(q.ceiling)}
                 </TableCell>
@@ -261,7 +267,12 @@ function GoldBoard({ snapshot }: { snapshot: MarketSnapshot }) {
           <TableBody>
             {vnd.map((g) => (
               <TableRow key={g.code} hover>
-                <TableCell>{g.name}</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <AssetAvatar assetType="gold" symbol={g.code} size={24} />
+                    <span>{g.name}</span>
+                  </Stack>
+                </TableCell>
                 <TableCell align="right">
                   <Flash value={g.buy}>{fmtVnd(g.buy)}</Flash>
                 </TableCell>
@@ -309,7 +320,12 @@ function CryptoBoard({ snapshot }: { snapshot: MarketSnapshot }) {
         <TableBody>
           {snapshot.crypto.map((c) => (
             <TableRow key={c.symbol} hover onClick={() => nav(`/crypto/${c.base}`)} sx={{ cursor: 'pointer' }}>
-              <TableCell sx={{ fontWeight: 700 }}>{c.base}</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <AssetAvatar assetType="crypto" symbol={c.base} size={24} />
+                  <span>{c.base}</span>
+                </Stack>
+              </TableCell>
               <TableCell align="right" sx={{ color: changeColor(c.changePct), fontWeight: 600 }}>
                 <Flash value={c.price}>{fmtUsd(c.price)}</Flash>
               </TableCell>

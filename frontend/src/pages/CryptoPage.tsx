@@ -20,6 +20,7 @@ import { api } from '../lib/api'
 import { changeColor, fmtNum, fmtPct, fmtUsd, fmtVnd } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import type { Candle, CryptoQuote, Technicals } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 interface CryptoDetail {
   quote: CryptoQuote | null
@@ -54,6 +55,7 @@ export default function CryptoPage() {
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>
           <Box>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+              <AssetAvatar assetType="crypto" symbol={base} size={44} />
               <Typography variant="h4">{base}</Typography>
               <Chip size="small" label={`${base}/USDT · Binance`} />
             </Stack>

@@ -6,6 +6,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import AssetAvatar from './AssetAvatar'
 
 export interface StockHit {
   symbol: string
@@ -65,16 +66,19 @@ export default function StockSearch({
       noOptionsText={input ? 'Không tìm thấy mã' : 'Gõ mã hoặc tên công ty'}
       loadingText="Đang tìm…"
       renderOption={({ key, ...props }, o) => (
-        <Box component="li" key={key} {...props} sx={{ display: 'block !important' }}>
-          <Typography component="span" sx={{ fontWeight: 700 }}>
-            {o.symbol}
-          </Typography>
-          <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-            {o.board}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap component="div">
-            {o.name}
-          </Typography>
+        <Box component="li" key={key} {...props} sx={{ display: 'flex !important', gap: 1.25, alignItems: 'center' }}>
+          <AssetAvatar assetType="stock" symbol={o.symbol} size={30} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="span" sx={{ fontWeight: 700 }}>
+              {o.symbol}
+            </Typography>
+            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              {o.board}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap component="div">
+              {o.name}
+            </Typography>
+          </Box>
         </Box>
       )}
       renderInput={(params) => (

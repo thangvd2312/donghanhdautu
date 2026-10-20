@@ -16,6 +16,7 @@ import { KV, Logo, Panel } from '../components/ui'
 import { api } from '../lib/api'
 import { changeColor, fmtPct, fmtPrice, fmtVndShort } from '../lib/format'
 import type { HomeFeed, HomeToday, ReviewPoint } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 interface Demo {
   sample: true
@@ -23,6 +24,7 @@ interface Demo {
   today: HomeToday
   holdings: {
     displayName: string
+    symbol: string
     typeLabel: string
     assetType: string
     marketValue: number | null
@@ -106,7 +108,12 @@ export default function DemoPage() {
                     {d.holdings.map((h) => (
                       <KV
                         key={h.displayName}
-                        k={`${h.displayName} · ${fmtPct(h.weightPct, 1, false)}`}
+                        k={
+                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }} component="span">
+                            <AssetAvatar assetType={h.assetType} symbol={h.symbol} size={22} />
+                            <span>{`${h.displayName} · ${fmtPct(h.weightPct, 1, false)}`}</span>
+                          </Stack>
+                        }
                         v={
                           <>
                             {fmtVndShort(h.marketValue)}

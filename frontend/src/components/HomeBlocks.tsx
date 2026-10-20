@@ -20,6 +20,7 @@ import type { DayContributor, HomeFeed, HomeToday, ReviewPoint } from '../lib/ty
 import AllocationBar from './AllocationBar'
 import { DataQualityAlert } from './DataStatus'
 import { Stat } from './ui'
+import AssetAvatar from './AssetAvatar'
 
 const ask = (text: string) => `/advisor?q=${encodeURIComponent(text)}`
 
@@ -120,7 +121,9 @@ function Contributors({ title, items, empty }: { title: string; items: DayContri
       {items.length ? (
         items.map((c) => (
           <Stack key={c.id} direction="row" sx={{ justifyContent: 'space-between', py: 0.5, gap: 2 }}>
-            <Tooltip title={`Thay đổi ${c.basis} · chiếm ${fmtPct(c.weightPct, 1, false)} danh mục`}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <AssetAvatar assetType={c.assetType} symbol={c.symbol} size={24} />
+              <Tooltip title={`Thay đổi ${c.basis} · chiếm ${fmtPct(c.weightPct, 1, false)} danh mục`}>
               {c.link ? (
                 <Link component={RouterLink} to={c.link} underline="hover" variant="body2" sx={{ fontWeight: 600 }}>
                   {c.displayName}
@@ -130,7 +133,8 @@ function Contributors({ title, items, empty }: { title: string; items: DayContri
                   {c.displayName}
                 </Typography>
               )}
-            </Tooltip>
+              </Tooltip>
+            </Stack>
             <Typography variant="body2" className="num" sx={{ color: changeColor(c.changeVnd), fontWeight: 500 }}>
               {fmtVndShort(c.changeVnd)} ({fmtPct(c.dayChangePct, 1)})
             </Typography>

@@ -29,6 +29,7 @@ import { api } from '../lib/api'
 import { useIsMobile } from '../lib/useIsMobile'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../lib/format'
 import { type HoldingRow, type Performance, type Portfolio, type PortfolioAccount, type Transaction } from '../lib/types'
+import AssetAvatar from '../components/AssetAvatar'
 
 type TxAsset = NonNullable<TxPreset['assetType']>
 
@@ -256,15 +257,18 @@ export default function PortfolioPage() {
                   return (
                     <TableRow key={h.id} hover>
                       <TableCell>
-                        {to ? (
-                          <Link component={RouterLink} to={to} underline="hover" sx={{ fontWeight: 700 }}>
-                            {h.displayName}
-                          </Link>
-                        ) : (
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                            {h.displayName}
-                          </Typography>
-                        )}
+                        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                          <AssetAvatar assetType={h.assetType} symbol={h.symbol} size={30} />
+                          <Box sx={{ minWidth: 0 }}>
+                            {to ? (
+                              <Link component={RouterLink} to={to} underline="hover" sx={{ fontWeight: 700 }}>
+                                {h.displayName}
+                              </Link>
+                            ) : (
+                              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                {h.displayName}
+                              </Typography>
+                            )}
                         <Typography variant="caption" color="text.secondary" component="div">
                           {h.typeLabel}
                           {!pf && accounts.length > 1 && h.portfolios && h.portfolios.length > 0 && (
@@ -280,6 +284,8 @@ export default function PortfolioPage() {
                             </>
                           )}
                         </Typography>
+                          </Box>
+                        </Stack>
                       </TableCell>
                       <TableCell align="right">
                         {fmtNum(h.quantity, h.assetType === 'crypto' || h.assetType === 'gold' ? 4 : 0)}
@@ -429,7 +435,8 @@ function HoldingCards({
         const cash = h.assetType === 'cash'
         return (
           <Box key={h.id} sx={{ px: 2, py: 1.5 }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
+              <AssetAvatar assetType={h.assetType} symbol={h.symbol} size={36} />
               <Box sx={{ minWidth: 0, flex: 1 }}>
                 {to ? (
                   <Link component={RouterLink} to={to} underline="hover" sx={{ fontWeight: 700 }}>
