@@ -32,6 +32,7 @@ model User {
   pushSettings  PushSettings?
   pushSubscriptions PushSubscription[]
   portfolios    Portfolio[]
+  briefRuns     BriefRun[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -541,4 +542,28 @@ model Portfolio {
   transactions Transaction[]
 
   @@index([userId])
+}
+
+/// Một lượt tạo bản tin (sáng / chiều / tuần) cho một người và một kỳ. Khoá duy nhất theo kỳ để hai tiến trình
+/// chạy cùng lúc hoặc chạy lại sau lỗi không tạo hai cuộc trò chuyện / hai thông báo cho cùng kỳ.
+model BriefRun {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Trùng dedupeKey của thông báo, vd brief:weekly:2026-10-24
+  key            String
+  /// running | done
+  status         String   @default("running")
+  /// Lần nhận việc gần nhất; lượt "running" quá lâu coi như tiến trình đã chết và được nhận lại
+  claimedAt      DateTime @default(now())
+  /// Cuộc trò chuyện chứa bản tin, có ngay khi nội dung đã lưu — chạy lại thì dùng lại, không tạo mới
+  conversationId String?
+  /// Nội dung thông báo đã dựng, để chạy lại gửi đúng thông báo đó mà không gọi lại AI
+  notification   Json?
+  notificationId String?
+  attempts       Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, key])
 }

@@ -11,7 +11,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { mentionsCompany } from './aliases';
 import { LlmService } from './llm.service';
-import { NotifierService } from './notifier.service';
+import { BriefContent, BriefRunService } from './brief-run.service';
 import { weeklyTable } from './weekly';
 
 const WEEKLY_PROMPT = `Bạn là cố vấn đầu tư đồng hành, viết phần NHẬN ĐỊNH cho bản tổng kết tuần của một nhà đầu tư cá nhân người Việt.
@@ -46,7 +46,7 @@ export class WeeklyBriefService {
     private portfolio: PortfolioService,
     private news: NewsService,
     private llm: LlmService,
-    private notifier: NotifierService,
+    private runs: BriefRunService,
   ) {}
 
   @Cron('0 9 * * 6', { timeZone: VN_TZ })
@@ -68,11 +68,14 @@ export class WeeklyBriefService {
   }
 
   /** `force` = bỏ qua chống trùng (nút "Gửi thử"); bản chính thức mỗi tuần một lần theo ngày kết thúc kỳ */
-  async generate(userId: string, force = false) {
+  generate(userId: string, force = false) {
     const today = vnDateKey();
-    const dedupeKey = `brief:weekly:${today}${force ? `:${Date.now()}` : ''}`;
-    if (!force && (await this.notifier.exists(userId, dedupeKey))) return null;
+    const key = `brief:weekly:${today}${force ? `:${Date.now()}` : ''}`;
+    return this.runs.run(userId, key, () => this.build(userId, today));
+  }
 
+  /** Bảng số liệu + nhận định AI của một tuần; null khi chưa có gì để tổng kết */
+  private async build(userId: string, today: string): Promise<BriefContent | null> {
     const summary = await this.history.weekSummary(userId);
     if (!summary) return null;
     const table = weeklyTable(summary);
@@ -134,26 +137,17 @@ export class WeeklyBriefService {
     ].join('');
 
     const title = `Tổng kết tuần ${summary.to.split('-').reverse().slice(0, 2).join('/')}`;
-    const conversation = await this.prisma.conversation.create({
-      data: {
-        userId,
-        title,
-        messages: {
-          create: [
-            { role: 'user', content: [{ type: 'text', text: title }] },
-            { role: 'assistant', content: [{ type: 'text', text: body }] },
-          ],
-        },
+    return {
+      title,
+      prompt: title,
+      body,
+      notification: {
+        kind: 'brief',
+        severity: 'info',
+        title: `${title}: ${headline}`.slice(0, 180),
+        body: 'Tổng kết tuần đã sẵn sàng: lãi/lỗ tách riêng tiền nạp, tài sản ảnh hưởng nhiều nhất và việc cần xem lại.',
       },
-    });
-    return this.notifier.send(userId, {
-      kind: 'brief',
-      severity: 'info',
-      title: `${title}: ${headline}`.slice(0, 180),
-      body: 'Tổng kết tuần đã sẵn sàng: lãi/lỗ tách riêng tiền nạp, tài sản ảnh hưởng nhiều nhất và việc cần xem lại.',
-      dedupeKey,
-      link: `/advisor/${conversation.id}`,
-    });
+    };
   }
 
   /** Tin 7 ngày qua về cổ phiếu đang giữ (dùng nhãn AI đã lưu) */

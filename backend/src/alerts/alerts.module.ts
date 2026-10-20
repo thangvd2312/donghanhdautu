@@ -27,6 +27,7 @@ import { NewsModule, NewsService } from '../news/news.module';
 import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
+import { BriefRunService } from './brief-run.service';
 import { BriefsService } from './briefs.service';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
@@ -488,7 +489,15 @@ class NotificationsController {
 @Module({
   imports: [MarketModule, NewsModule, PortfolioModule, MacroModule],
   controllers: [NotificationsController, AlertsController],
-  providers: [AlertsService, BriefsService, WeeklyBriefService, LlmService, NewsTaggerService, NotifierService],
+  providers: [
+    AlertsService,
+    BriefsService,
+    BriefRunService,
+    WeeklyBriefService,
+    LlmService,
+    NewsTaggerService,
+    NotifierService,
+  ],
   exports: [LlmService, NotifierService],
 })
 export class AlertsModule {}

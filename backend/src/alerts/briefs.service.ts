@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
-import { NotifierService } from './notifier.service';
+import { BriefContent, BriefRunService } from './brief-run.service';
 
 export type BriefKind = 'morning' | 'closing';
 
@@ -38,7 +38,7 @@ export class BriefsService {
     private news: NewsService,
     private tagger: NewsTaggerService,
     private llm: LlmService,
-    private notifier: NotifierService,
+    private runs: BriefRunService,
     private macro: MacroService,
   ) {}
 
@@ -65,11 +65,13 @@ export class BriefsService {
   }
 
   /** Tạo bản tin cho một người. `force` = bỏ qua chống trùng trong ngày (dùng cho nút "Gửi thử") */
-  async generate(userId: string, kind: BriefKind, force = false) {
+  generate(userId: string, kind: BriefKind, force = false) {
     const day = vnDateKey();
-    const dedupeKey = `brief:${kind}:${day}${force ? `:${Date.now()}` : ''}`;
-    if (!force && (await this.notifier.exists(userId, dedupeKey))) return null;
+    const key = `brief:${kind}:${day}${force ? `:${Date.now()}` : ''}`;
+    return this.runs.run(userId, key, () => this.build(userId, kind));
+  }
 
+  private async build(userId: string, kind: BriefKind): Promise<BriefContent> {
     const context = await this.context(userId, kind);
     const result = await this.llm.json<{ headline: string; markdown: string }>({
       tier: 'brief',
@@ -84,32 +86,17 @@ export class BriefsService {
     const [, mm, dd] = vnDateKey().split('-');
     const dateLabel = `${dd}/${mm}`;
     const title = `${LABEL[kind]} ${dateLabel}`;
-    const conversation = await this.prisma.conversation.create({
-      data: {
-        userId,
-        title,
-        messages: {
-          create: [
-            {
-              role: 'user',
-              content: [{ type: 'text', text: `[Thời điểm hiện tại: ${nowVn()}]\n${title}` }],
-            },
-            {
-              role: 'assistant',
-              content: [{ type: 'text', text: result.markdown }],
-            },
-          ],
-        },
+    return {
+      title,
+      prompt: `[Thời điểm hiện tại: ${nowVn()}]\n${title}`,
+      body: result.markdown,
+      notification: {
+        kind: 'brief',
+        severity: 'info',
+        title: `${title}: ${result.headline}`.slice(0, 180),
+        body: `${LABEL[kind]} đã sẵn sàng. Bấm "Xem bản tin" để đọc chi tiết và hỏi thêm cố vấn ngay trong đó.`,
       },
-    });
-    return this.notifier.send(userId, {
-      kind: 'brief',
-      severity: 'info',
-      title: `${title}: ${result.headline}`.slice(0, 180),
-      body: `${LABEL[kind]} đã sẵn sàng. Bấm "Xem bản tin" để đọc chi tiết và hỏi thêm cố vấn ngay trong đó.`,
-      dedupeKey,
-      link: `/advisor/${conversation.id}`,
-    });
+    };
   }
 
   private async context(userId: string, kind: BriefKind) {
