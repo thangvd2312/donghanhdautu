@@ -6,6 +6,7 @@ import { MarketProvider } from './lib/market'
 import AdvisorPage from './pages/AdvisorPage'
 import AuthPage from './pages/AuthPage'
 import CryptoPage from './pages/CryptoPage'
+import DemoPage from './pages/DemoPage'
 import HomePage from './pages/HomePage'
 import MarketPage from './pages/MarketPage'
 import NewsPage from './pages/NewsPage'
@@ -26,6 +27,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route path="/demo" element={<DemoPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     )

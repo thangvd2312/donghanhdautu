@@ -150,6 +150,11 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
               {mode === 'login' ? 'Đăng ký' : 'Đăng nhập'}
             </Link>
           </Typography>
+          <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+            <Link component={RouterLink} to="/demo">
+              Xem thử với danh mục mẫu, không cần đăng ký →
+            </Link>
+          </Typography>
         </Paper>
       </Box>
     </Box>
