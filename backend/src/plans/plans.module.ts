@@ -16,7 +16,8 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InvestmentPlan, Prisma } from '@prisma/client';
-import { IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsDateKey } from '../common/dates';
 import { AlertsModule } from '../alerts/alerts.module';
 import { LlmService } from '../alerts/llm.service';
 import { NotifierService } from '../alerts/notifier.service';
@@ -50,13 +51,13 @@ class PlanDto {
   @IsOptional() @IsNumber() @Min(0) targetPrice?: number | null;
   @IsOptional() @IsNumber() @Min(0) stopPrice?: number | null;
   @IsOptional() @IsInt() @Min(1) @Max(730) reviewEveryDays?: number | null;
-  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) nextReviewAt?: string;
+  @IsOptional() @IsDateKey() nextReviewAt?: string;
 }
 
 class ReviewDto {
   @IsIn(['keep', 'adjust', 'close']) decision!: 'keep' | 'adjust' | 'close';
   @IsOptional() @IsString() @MaxLength(2000) note?: string;
-  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) nextReviewAt?: string;
+  @IsOptional() @IsDateKey() nextReviewAt?: string;
 }
 
 class DraftDto {

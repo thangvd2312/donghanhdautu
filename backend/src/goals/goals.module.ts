@@ -22,13 +22,13 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import { IsDateKey } from '../common/dates';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { vnDateKey } from '../market/types';
@@ -54,7 +54,7 @@ class AllocationDto {
 class GoalDto {
   @IsString() @MinLength(1) @MaxLength(100) name!: string;
   @IsNumber() @Min(1) targetAmount!: number;
-  @Matches(/^\d{4}-\d{2}-\d{2}$/) targetDate!: string;
+  @IsDateKey() targetDate!: string;
   @IsOptional() @IsNumber() @Min(0) monthlyContribution?: number;
   @IsOptional() @IsNumber() @Min(-50) @Max(50) expectedReturnPct?: number;
   @IsOptional() @IsObject() targetAllocation?: Partial<Record<GoalAssetType, number>> | null;

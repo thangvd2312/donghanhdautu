@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Holding, Prisma, Transaction } from '@prisma/client';
-import { IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { isDateKey, IsDateKey } from '../common/dates';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { vnDateKey } from '../market/types';
@@ -12,7 +13,7 @@ type Db = Prisma.TransactionClient | PrismaService;
 
 export class TransactionDto {
   @IsIn(TX_TYPES) type!: TxType;
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ngày phải có dạng YYYY-MM-DD' }) date!: string;
+  @IsDateKey() date!: string;
   @IsOptional() @IsIn(['stock', 'crypto', 'gold', 'cash']) assetType?: 'stock' | 'crypto' | 'gold' | 'cash';
   @IsOptional() @IsString() @MaxLength(20) symbol?: string;
   @IsOptional() @IsNumber() @Min(0) quantity?: number;
@@ -28,6 +29,8 @@ export class TransactionDto {
 }
 
 const CASH_ONLY: TxType[] = ['deposit', 'withdraw', 'fee'];
+/** Ngày giao dịch sớm nhất nhận (chặn gõ nhầm năm, vd 0026 hay 1026) */
+const MIN_TX_DATE = '1990-01-01';
 
 const dec = (v: number | undefined | null) => (v === undefined || v === null ? null : new Prisma.Decimal(String(v)));
 const dateKey = (d: Date) => d.toISOString().slice(0, 10);
@@ -70,7 +73,9 @@ export class TransactionsService {
   /** Chuẩn hoá đầu vào theo loại giao dịch; mã tài sản được kiểm tra với nguồn giá */
   async normalize(dto: TransactionDto) {
     const today = vnDateKey();
+    if (!isDateKey(dto.date)) throw new BadRequestException('Ngày giao dịch không hợp lệ');
     if (dto.date > today) throw new BadRequestException('Ngày giao dịch không được ở tương lai');
+    if (dto.date < MIN_TX_DATE) throw new BadRequestException('Ngày giao dịch quá xa trong quá khứ (trước năm 1990)');
     const base = {
       type: dto.type,
       date: new Date(`${dto.date}T00:00:00Z`),
