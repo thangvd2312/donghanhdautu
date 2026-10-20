@@ -1,6 +1,4 @@
-import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
@@ -16,13 +14,10 @@ import TableRow from '@mui/material/TableRow'
 import TableSortLabel from '@mui/material/TableSortLabel'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
-import { useEffect, useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import AllocationBar from '../components/AllocationBar'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Flash from '../components/Flash'
-import WatchlistPanel from '../components/WatchlistPanel'
 import { Stat } from '../components/ui'
-import { api } from '../lib/api'
 import {
   changeColor,
   fmtNum,
@@ -35,7 +30,7 @@ import {
   timeAgo,
 } from '../lib/format'
 import { useMarket } from '../lib/market'
-import type { MarketSnapshot, Portfolio, SourceStatus } from '../lib/types'
+import type { MarketSnapshot, SourceStatus } from '../lib/types'
 
 const INDEX_NAME: Record<string, string> = {
   VNINDEX: 'VN-Index',
@@ -56,7 +51,7 @@ function sourceProblem(s: SourceStatus | undefined) {
   return null
 }
 
-export default function DashboardPage() {
+export default function MarketPage() {
   const { snapshot } = useMarket()
   const [tab, setTab] = useState<Tab>('stocks')
 
@@ -124,10 +119,6 @@ export default function DashboardPage() {
         ))}
       </Grid>
 
-      <PortfolioStrip />
-
-      <WatchlistPanel />
-
       <Paper>
         <Stack
           direction="row"
@@ -152,80 +143,6 @@ export default function DashboardPage() {
         {tab === 'fx' && <FxBoard snapshot={snapshot} />}
       </Paper>
     </Stack>
-  )
-}
-
-function PortfolioStrip() {
-  const [p, setP] = useState<Portfolio | null>(null)
-
-  useEffect(() => {
-    let alive = true
-    const load = () => api<Portfolio>('/portfolio').then((r) => alive && setP(r)).catch(() => {})
-    load()
-    const t = setInterval(load, 10000)
-    return () => {
-      alive = false
-      clearInterval(t)
-    }
-  }, [])
-
-  if (!p) return null
-  if (!p.holdings.length) {
-    return (
-      <Alert
-        severity="info"
-        variant="outlined"
-        action={
-          <Button component={RouterLink} to="/portfolio" size="small">
-            Nhập danh mục
-          </Button>
-        }
-      >
-        Bạn chưa nhập tài sản nắm giữ. Nhập để cố vấn theo dõi và cảnh báo cho bạn.
-      </Alert>
-    )
-  }
-  return (
-    <Paper sx={{ p: 2 }}>
-      <Grid container spacing={3} sx={{ alignItems: 'center' }}>
-        <Grid size={{ xs: 6, md: 'auto' }}>
-          <Stat
-            label={p.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
-            value={`${p.totalIsEstimate ? '≈ ' : ''}${fmtVndShort(p.totalValue)}`}
-            size="lg"
-          />
-        </Grid>
-        <Grid size={{ xs: 6, md: 'auto' }}>
-          <Stat
-            label="Lãi / lỗ"
-            value={p.totalPnl !== null ? `${fmtVndShort(p.totalPnl)} (${fmtPct(p.totalPnlPct)})` : '—'}
-            color={changeColor(p.totalPnl)}
-          />
-          {p.dataQuality.status !== 'ok' && (
-            <Chip
-              size="small"
-              variant="outlined"
-              color={p.dataQuality.status === 'partial' ? 'error' : 'warning'}
-              label={
-                p.dataQuality.status === 'partial'
-                  ? `${p.dataQuality.missing.length} tài sản chưa có giá`
-                  : 'Có giá cũ / tỷ giá dự phòng'
-              }
-              title={p.dataQuality.messages.join(' ')}
-              sx={{ mt: 0.5 }}
-            />
-          )}
-        </Grid>
-        <Grid size={{ xs: 12, md: 'grow' }}>
-          <AllocationBar allocation={p.allocationPct} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 'auto' }}>
-          <Button component={RouterLink} to="/portfolio" variant="outlined" size="small">
-            Xem danh mục
-          </Button>
-        </Grid>
-      </Grid>
-    </Paper>
   )
 }
 

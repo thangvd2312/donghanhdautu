@@ -159,3 +159,5 @@ function describeQuality(rows: Row[], usdt: FxInfo) {
 function sum(xs: number[]) {
   return xs.reduce((s, x) => s + x, 0);
 }
+
+export type Valuation = ReturnType<typeof valuePortfolio>;

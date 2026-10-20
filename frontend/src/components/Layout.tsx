@@ -36,7 +36,8 @@ import StockSearch from './StockSearch'
 import { Logo } from './ui'
 
 const NAV = [
-  { to: '/', label: 'Bảng giá' },
+  { to: '/', label: 'Hôm nay' },
+  { to: '/market', label: 'Bảng giá' },
   { to: '/portfolio', label: 'Danh mục' },
   { to: '/advisor', label: 'Cố vấn' },
   { to: '/news', label: 'Tin tức' },
