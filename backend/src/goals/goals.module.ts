@@ -133,25 +133,38 @@ export class GoalsService {
   }
 
   async create(userId: string, dto: GoalDto) {
-    await this.validate(userId, dto, null);
-    const g = await this.prisma.goal.create({
-      data: { userId, ...this.fields(dto), allocations: { create: dto.allocations.filter((a) => a.pct > 0) } },
+    return this.locked(userId, async (db) => {
+      await this.validate(db, userId, dto, null);
+      const g = await db.goal.create({
+        data: { userId, ...this.fields(dto), allocations: { create: dto.allocations.filter((a) => a.pct > 0) } },
+      });
+      return { id: g.id };
     });
-    return { id: g.id };
   }
 
   /** Sửa mục tiêu: chỉ đổi mục tiêu và phần gán, không đụng tới sổ giao dịch */
   async update(userId: string, id: string, dto: GoalDto) {
-    await this.own(userId, id);
-    await this.validate(userId, dto, id);
-    await this.prisma.$transaction([
-      this.prisma.goalAllocation.deleteMany({ where: { goalId: id } }),
-      this.prisma.goal.update({
+    return this.locked(userId, async (db) => {
+      await this.own(userId, id, db);
+      await this.validate(db, userId, dto, id);
+      await db.goalAllocation.deleteMany({ where: { goalId: id } });
+      await db.goal.update({
         where: { id },
         data: { ...this.fields(dto), allocations: { create: dto.allocations.filter((a) => a.pct > 0) } },
-      }),
-    ]);
-    return { id };
+      });
+      return { id };
+    });
+  }
+
+  /**
+   * Kiểm tra phần trăm còn trống rồi ghi trong cùng transaction có khoá theo người dùng: hai yêu cầu cùng lúc
+   * không thể cùng đọc phần gán cũ rồi cùng ghi vượt 100% một tài sản.
+   */
+  private locked<T>(userId: string, fn: (db: Prisma.TransactionClient) => Promise<T>) {
+    return this.prisma.$transaction(async (db) => {
+      await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`goals:${userId}`}))`;
+      return fn(db);
+    });
   }
 
   async setStatus(userId: string, id: string, dto: StatusDto) {
@@ -179,15 +192,15 @@ export class GoalsService {
     };
   }
 
-  private async validate(userId: string, dto: GoalDto, goalId: string | null) {
+  private async validate(db: Prisma.TransactionClient, userId: string, dto: GoalDto, goalId: string | null) {
     const errors: string[] = [];
     if (dto.targetDate <= vnDateKey()) errors.push('Ngày đích phải ở tương lai');
     const allocErr = validateTargetAllocation(dto.targetAllocation);
     if (allocErr) errors.push(allocErr);
-    const others = await this.prisma.goalAllocation.findMany({
+    const others = await db.goalAllocation.findMany({
       where: { goal: { userId }, ...(goalId ? { goalId: { not: goalId } } : {}) },
     });
-    const holdings = await this.prisma.holding.findMany({
+    const holdings = await db.holding.findMany({
       where: { userId },
       select: { assetType: true, symbol: true },
     });
@@ -201,8 +214,8 @@ export class GoalsService {
     if (errors.length) throw new BadRequestException(errors.join('. '));
   }
 
-  private async own(userId: string, id: string) {
-    const g = await this.prisma.goal.findFirst({ where: { id, userId } });
+  private async own(userId: string, id: string, db: Prisma.TransactionClient = this.prisma) {
+    const g = await db.goal.findFirst({ where: { id, userId } });
     if (!g) throw new NotFoundException('Không tìm thấy mục tiêu');
     return g;
   }
