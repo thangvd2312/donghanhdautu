@@ -50,6 +50,13 @@ export interface Position {
   realized: Dec;
   /** Lãi đã chốt quy VND theo tỷ giá lúc bán; null nếu có lần bán coin không có tỷ giá */
   realizedVnd: Dec | null;
+  /**
+   * Số VND thực đã bỏ ra cho phần đang giữ, theo tỷ giá lúc mua (bình quân gia quyền như giá vốn).
+   * Tài sản VND: bằng costBasis. Coin: null khi có lô mua / khai báo thiếu tỷ giá.
+   */
+  costBasisVnd: Dec | null;
+  /** Lãi đã chốt VND thực tế = tiền bán quy tỷ giá lúc bán − VND đã bỏ ra; null khi thiếu tỷ giá mua hoặc bán */
+  realizedVndActual: Dec | null;
   /** Cổ tức tiền mặt đã nhận (VND, sau thuế) */
   dividends: Dec;
   /** Ghi chú gần nhất của tài sản */
@@ -89,6 +96,13 @@ export interface LedgerResult {
   dividends: Dec;
   /** Ghi chú về phần chưa hỗ trợ hoặc ước tính */
   warnings: string[];
+}
+
+/** Cộng chi phí (theo đồng tiền gốc) vào số VND đã bỏ ra; coin thiếu tỷ giá thì không còn biết được (null) */
+function addVnd(total: Dec | null, cost: Dec, currency: Currency, fxRate: Dec | null) {
+  if (total === null) return null;
+  if (currency === 'VND') return total.add(cost);
+  return fxRate ? total.add(cost.mul(fxRate)) : null;
 }
 
 /** Sắp xếp: theo ngày, cùng ngày theo thời điểm ghi */
@@ -142,6 +156,8 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
         costBasis: ZERO,
         realized: ZERO,
         realizedVnd: ZERO,
+        costBasisVnd: ZERO,
+        realizedVndActual: ZERO,
         dividends: ZERO,
         note: null,
       };
@@ -177,6 +193,7 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
         const cost = qty.mul(price).add(charges);
         p.quantity = p.quantity.add(qty);
         p.costBasis = p.costBasis.add(cost);
+        p.costBasisVnd = addVnd(p.costBasisVnd, cost, tx.currency, tx.fxRate);
         // Tài sản đã có sẵn: tính là vốn đưa vào theo giá vốn, không trừ tiền mặt
         addFlow(contributions[tx.currency], cost, tx.currency, tx.fxRate);
         break;
@@ -188,6 +205,7 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
         const cost = qty.mul(price).add(charges);
         p.quantity = p.quantity.add(qty);
         p.costBasis = p.costBasis.add(cost);
+        p.costBasisVnd = addVnd(p.costBasisVnd, cost, tx.currency, tx.fxRate);
         spend(tx.currency, cost, tx.fxRate);
         break;
       }
@@ -207,8 +225,20 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
         p.realized = p.realized.add(gain);
         if (p.currency === 'VND') p.realizedVnd = p.realizedVnd!.add(gain);
         else p.realizedVnd = p.realizedVnd && tx.fxRate ? p.realizedVnd.add(gain.mul(tx.fxRate)) : null;
+        const costOutVnd = p.costBasisVnd ? p.costBasisVnd.mul(qty).div(p.quantity) : null;
+        const proceedsVnd = p.currency === 'VND' ? proceeds : tx.fxRate ? proceeds.mul(tx.fxRate) : null;
+        p.realizedVndActual =
+          p.realizedVndActual && costOutVnd && proceedsVnd
+            ? p.realizedVndActual.add(proceedsVnd.sub(costOutVnd))
+            : null;
         p.quantity = p.quantity.sub(qty);
         p.costBasis = p.quantity.isZero() ? ZERO : p.costBasis.sub(costOut);
+        // Bán hết thì phần đang giữ không còn lô nào thiếu tỷ giá
+        p.costBasisVnd = p.quantity.isZero()
+          ? ZERO
+          : costOutVnd && p.costBasisVnd
+            ? p.costBasisVnd.sub(costOutVnd)
+            : null;
         cash[tx.currency] = cash[tx.currency].add(proceeds);
         if (cash[tx.currency].lt(0)) spend(tx.currency, ZERO, tx.fxRate);
         break;
@@ -295,6 +325,10 @@ export function performance({ ledger, totalValueVnd, unrealizedVnd, totalIsEstim
     else realizedUnknownUsdt = realizedUnknownUsdt.add(p.realized);
   }
   realizedVnd = realizedVnd.add(realizedUnknownUsdt.mul(usdtVnd));
+  // Lãi đã chốt VND thực tế (gồm chênh lệch tỷ giá với coin); null khi có lần mua / bán coin thiếu tỷ giá
+  const realizedActual = ledger.positions.every((p) => p.realizedVndActual !== null)
+    ? ledger.positions.reduce((s, p) => s.add(p.realizedVndActual!), ZERO)
+    : null;
 
   const notes: string[] = [...ledger.warnings];
   const implicitVnd = ledger.implicitDeposits.VND.add(ledger.implicitDeposits.USDT.mul(usdtVnd));
@@ -319,6 +353,7 @@ export function performance({ ledger, totalValueVnd, unrealizedVnd, totalIsEstim
       ? ((totalValueVnd - num(netContributions)) / num(netContributions)) * 100
       : null,
     realized: num(realizedVnd),
+    realizedVndActual: realizedActual === null ? null : num(realizedActual),
     unrealized: unrealizedVnd,
     dividends: num(ledger.dividends),
     feesAndTaxes: num(ledger.fees.VND.add(ledger.taxes.VND).add(ledger.fees.USDT.add(ledger.taxes.USDT).mul(usdtVnd))),
@@ -378,6 +413,12 @@ export function mergeLedgers(results: LedgerResult[]): LedgerResult {
         costBasis: cur.costBasis.add(p.costBasis),
         realized: cur.realized.add(p.realized),
         realizedVnd: cur.realizedVnd !== null && p.realizedVnd !== null ? cur.realizedVnd.add(p.realizedVnd) : null,
+        costBasisVnd:
+          cur.costBasisVnd !== null && p.costBasisVnd !== null ? cur.costBasisVnd.add(p.costBasisVnd) : null,
+        realizedVndActual:
+          cur.realizedVndActual !== null && p.realizedVndActual !== null
+            ? cur.realizedVndActual.add(p.realizedVndActual)
+            : null,
         dividends: cur.dividends.add(p.dividends),
         note: p.note ?? cur.note,
       });

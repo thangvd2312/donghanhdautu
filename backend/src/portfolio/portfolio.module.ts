@@ -64,6 +64,40 @@ export class PortfolioService {
     return this.value(holdings);
   }
 
+  /**
+   * Coin: thêm lãi/lỗ VND thực tế bên cạnh lãi theo USDT. VND thực tế = giá trị hôm nay − số VND đã bỏ ra theo tỷ giá
+   * lúc mua; phần chênh do tỷ giá = giá vốn USDT quy tỷ giá hôm nay − số VND đã bỏ ra. Lô thiếu tỷ giá → không tính.
+   */
+  async withVndActual<V extends Awaited<ReturnType<PortfolioService['valuation']>>>(
+    userId: string,
+    v: V,
+    portfolioId?: string,
+  ) {
+    if (!v.holdings.some((h) => h.assetType === 'crypto')) return v;
+    const ledger = await this.transactions.ledger(userId, portfolioId);
+    const pos = new Map(ledger.positions.map((p) => [`${p.assetType}:${p.symbol}`, p]));
+    return {
+      ...v,
+      holdings: v.holdings.map((h) => {
+        if (h.assetType !== 'crypto') return h;
+        const costVnd = pos.get(`${h.assetType}:${h.symbol}`)?.costBasisVnd?.toNumber() ?? null;
+        return {
+          ...h,
+          vndActual:
+            costVnd === null
+              ? { known: false as const }
+              : {
+                  known: true as const,
+                  costVnd,
+                  pnlVnd: h.marketValue !== null ? h.marketValue - costVnd : null,
+                  pnlVndPct: h.marketValue !== null && costVnd ? ((h.marketValue - costVnd) / costVnd) * 100 : null,
+                  fxEffectVnd: h.costValue - costVnd,
+                },
+        };
+      }),
+    };
+  }
+
   private async value(holdings: HoldingInput[]) {
     // Mã cổ phiếu mới thêm có thể chưa có trong bộ nhớ đệm
     await Promise.all(
@@ -223,9 +257,12 @@ class PortfolioController {
   async get(@CurrentUser() user: AuthUser, @Query('portfolioId') portfolioId?: string) {
     if (portfolioId) {
       await this.transactions.resolvePortfolio(this.prisma, user.id, portfolioId);
-      return this.portfolio.valuation(user.id, portfolioId);
+      return this.portfolio.withVndActual(user.id, await this.portfolio.valuation(user.id, portfolioId), portfolioId);
     }
-    const [v, breakdown] = await Promise.all([this.portfolio.valuation(user.id), this.portfolio.breakdown(user.id)]);
+    const [v, breakdown] = await Promise.all([
+      this.portfolio.valuation(user.id).then((x) => this.portfolio.withVndActual(user.id, x)),
+      this.portfolio.breakdown(user.id),
+    ]);
     return {
       ...v,
       holdings: v.holdings.map((h) => ({ ...h, portfolios: breakdown[`${h.assetType}:${h.symbol}`] ?? [] })),

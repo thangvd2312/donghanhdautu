@@ -126,6 +126,13 @@ export interface HoldingRow {
   pnlPct: number | null
   /** Lãi/lỗ theo đồng tiền gốc (coin: USDT) */
   pnlNative: number | null
+  /**
+   * Coin: lãi/lỗ VND thực tế = giá trị hôm nay − số VND đã bỏ ra theo tỷ giá lúc mua; fxEffectVnd là phần do tỷ giá.
+   * known = false khi có lô mua thiếu tỷ giá.
+   */
+  vndActual?:
+    | { known: false }
+    | { known: true; costVnd: number; pnlVnd: number | null; pnlVndPct: number | null; fxEffectVnd: number }
   dayChangePct: number | null
   weightPct: number
   /** Khi xem gộp nhiều danh mục: tài sản đang nằm ở danh mục nào, bao nhiêu */

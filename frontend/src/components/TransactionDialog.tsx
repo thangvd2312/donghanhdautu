@@ -113,6 +113,24 @@ export default function TransactionDialog({
   const priceN = parseNum(price)
   const gross = trade && qtyN > 0 && priceN >= 0 ? qtyN * priceN : null
 
+  // Giao dịch coin / USDT hôm nay: điền sẵn tỷ giá hiện tại để tính được lãi VND thực tế. Đổi sang ngày khác thì bỏ
+  // giá trị tự điền (tỷ giá hôm nay không đúng cho ngày cũ), người dùng tự nhập tỷ giá lúc đó.
+  const [autoFx, setAutoFx] = useState('')
+  const liveRate = snapshot?.usdt?.mid ? String(Math.round(snapshot.usdt.mid)) : ''
+  useEffect(() => {
+    if (!open || editing || !usdt) return
+    if (date === todayVn()) {
+      if (!liveRate) return
+      // Ô trống (vừa mở hộp thoại) hoặc đang là giá trị tự điền thì theo tỷ giá mới nhất; người dùng tự nhập thì giữ
+      setFxRate((prev) => (!prev || prev === autoFx ? liveRate : prev))
+      setAutoFx(liveRate)
+    } else {
+      setFxRate((prev) => (prev && prev === autoFx ? '' : prev))
+      setAutoFx('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, usdt, date, liveRate])
+
   const submit = async () => {
     setError('')
     const n = (s: string) => (s.trim() ? parseNum(s) : undefined)
@@ -339,7 +357,11 @@ export default function TransactionDialog({
               value={fxRate}
               onChange={setFxRate}
               unit="₫ / USDT"
-              helper={`Tuỳ chọn — để tính đúng lãi/lỗ theo VND. Bỏ trống thì quy theo tỷ giá hiện tại${snapshot?.usdt ? ` (${fmtNum(snapshot.usdt.mid)} ₫)` : ''}.`}
+              helper={
+                fxRate && fxRate === autoFx
+                  ? 'Đã điền tỷ giá hiện tại. Dùng để tính lãi/lỗ VND thực tế; sửa nếu bạn đổi USDT ở giá khác.'
+                  : `Để tính lãi/lỗ VND thực tế (theo tỷ giá lúc giao dịch). Bỏ trống thì chỉ có lãi theo USDT${snapshot?.usdt ? `, quy theo tỷ giá hiện tại ${fmtNum(snapshot.usdt.mid)} ₫` : ''}.`
+              }
             />
           )}
 

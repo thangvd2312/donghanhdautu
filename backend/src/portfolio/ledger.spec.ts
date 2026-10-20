@@ -242,6 +242,52 @@ describe('computeLedger — coin và tỷ giá', () => {
     const l = computeLedger([coin('buy', 1, 100), coin('sell', 1, 150, { fxRate: 25_500 })]);
     expect(l.positions[0].realizedVnd?.toNumber()).toBe(50 * 25_500);
   });
+
+  it('số VND thực đã bỏ ra theo tỷ giá lúc mua, bình quân qua nhiều lần mua và giảm theo phần bán', () => {
+    const l = computeLedger([
+      coin('buy', 1, 100, { fxRate: 25_000 }),
+      coin('buy', 1, 100, { fxRate: 27_000 }),
+      coin('sell', 1, 120, { fxRate: 26_000 }),
+    ]);
+    const p = l.positions[0];
+    // Đã bỏ ra 2.500.000 + 2.700.000; bán một nửa → còn 2.600.000
+    expect(p.costBasisVnd?.toNumber()).toBe(2_600_000);
+    // Lãi USDT 20 quy tỷ giá lúc bán = 520.000; VND thực tế: thu 3.120.000 − bỏ ra 2.600.000 = 520.000
+    expect(p.realizedVnd?.toNumber()).toBe(520_000);
+    expect(p.realizedVndActual?.toNumber()).toBe(520_000);
+  });
+
+  it('lãi VND thực tế gồm cả chênh lệch tỷ giá', () => {
+    // Mua giá 100 USDT lúc 25.000 ₫, bán đúng giá mua lúc tỷ giá 26.000 ₫: lãi USDT 0, lãi VND thực 100.000
+    const l = computeLedger([coin('buy', 1, 100, { fxRate: 25_000 }), coin('sell', 1, 100, { fxRate: 26_000 })]);
+    expect(l.positions[0].realized.toNumber()).toBe(0);
+    expect(l.positions[0].realizedVndActual?.toNumber()).toBe(100_000);
+    const p = performance({
+      ledger: l,
+      totalValueVnd: 0,
+      unrealizedVnd: null,
+      totalIsEstimate: false,
+      usdtVnd: 26_000,
+    });
+    expect(p.realizedVndActual).toBe(100_000);
+  });
+
+  it('lô mua thiếu tỷ giá: không biết số VND đã bỏ ra; bán hết thì phần còn lại tính lại từ đầu', () => {
+    const l = computeLedger([coin('buy', 1, 100), coin('buy', 1, 100, { fxRate: 25_000 })]);
+    expect(l.positions[0].costBasisVnd).toBeNull();
+    const after = computeLedger([
+      coin('buy', 1, 100),
+      coin('sell', 1, 110, { fxRate: 26_000 }),
+      coin('buy', 1, 100, { fxRate: 25_000 }),
+    ]);
+    expect(after.positions[0].costBasisVnd?.toNumber()).toBe(2_500_000);
+    expect(after.positions[0].realizedVndActual).toBeNull();
+  });
+
+  it('tài sản VND: số VND đã bỏ ra trùng giá vốn', () => {
+    const l = computeLedger([stock('buy', 100, 20_000, { fee: 30_000 })]);
+    expect(l.positions[0].costBasisVnd?.toNumber()).toBe(l.positions[0].costBasis.toNumber());
+  });
 });
 
 describe('nhiều danh mục', () => {

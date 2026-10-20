@@ -30,5 +30,6 @@ export function fakeMarket() {
     usdtVnd: { rate: 26000, source: 'test', status: 'fresh', asOf: null },
     priceInfo: () => ({ value: 100000, status: 'fresh', source: 'test', asOf: null }),
     dayChangePct: () => 0,
+    binance: { quotes: new Map() },
   };
 }

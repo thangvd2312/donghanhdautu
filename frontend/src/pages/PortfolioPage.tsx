@@ -320,7 +320,7 @@ export default function PortfolioPage() {
                         {h.assetType === 'cash' || h.pnl === null ? (
                           '—'
                         ) : h.currency === 'USDT' ? (
-                          <Tooltip title={`Theo USDT: ${fmtNum(h.pnlNative, 2)} USDT. Quy ra VND theo tỷ giá hiện tại.`}>
+                          <Tooltip title={`Theo USDT: ${fmtNum(h.pnlNative, 2)} USDT, quy ra VND theo tỷ giá hôm nay. ${vndActualText(h)}`}>
                             <span>{`${fmtVndShort(h.pnl)} (${fmtPct(h.pnlPct, 1)})`}</span>
                           </Tooltip>
                         ) : (
@@ -517,6 +517,23 @@ function HoldingCards({
                     size="sm"
                   />
                   <Stat label="Hôm nay" value={fmtPct(sheet.dayChangePct)} color={changeColor(sheet.dayChangePct)} size="sm" />
+                  {sheet.vndActual && (
+                    <Box sx={{ gridColumn: '1 / -1' }}>
+                      <Stat
+                        label="Lãi / lỗ VND thực tế (theo tỷ giá lúc mua)"
+                        value={
+                          sheet.vndActual.known && sheet.vndActual.pnlVnd !== null
+                            ? `${fmtVndShort(sheet.vndActual.pnlVnd)} (${fmtPct(sheet.vndActual.pnlVndPct, 1)})`
+                            : 'Chưa đủ tỷ giá lúc mua'
+                        }
+                        color={sheet.vndActual.known ? changeColor(sheet.vndActual.pnlVnd) : undefined}
+                        size="sm"
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        {vndActualText(sheet)}
+                      </Typography>
+                    </Box>
+                  )}
                 </>
               )}
             </Box>
@@ -557,4 +574,13 @@ function HoldingCards({
       </Drawer>
     </>
   )
+}
+
+/** Giải thích lãi VND thực tế của coin: phần do tỷ giá, hoặc cách bổ sung khi thiếu tỷ giá lúc mua */
+function vndActualText(h: HoldingRow) {
+  const a = h.vndActual
+  if (!a) return ''
+  if (!a.known)
+    return 'Có lần mua chưa ghi tỷ giá USDT/VND nên chưa tính được số VND thực đã bỏ ra. Sửa giao dịch mua và điền tỷ giá lúc đó để xem.'
+  return `Đã bỏ ra ${fmtVndShort(a.costVnd)}; trong lãi/lỗ VND có ${fmtVndShort(a.fxEffectVnd)} do tỷ giá USDT/VND thay đổi.`
 }

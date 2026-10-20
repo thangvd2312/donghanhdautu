@@ -110,7 +110,7 @@ export function valuePortfolio(holdings: HoldingInput[], deps: ValuationDeps) {
     notes: [
       'Vàng định giá theo giá MUA VÀO của cửa hàng (số tiền thực nhận nếu bán).',
       hasCrypto
-        ? `Coin: giá vốn và giá hiện tại tính bằng USDT; giá trị và lãi/lỗ quy ra VND theo tỷ giá USDT/VND hiện tại ${usdt.rate} (${usdt.source}${usdt.status === 'fallback' ? ', dự phòng' : ''}). Đây là lãi/lỗ USDT quy đổi theo tỷ giá hôm nay, không phải lãi/lỗ VND thực tế từ ngày mua (chưa có tỷ giá lúc mua).`
+        ? `Coin: giá vốn và giá hiện tại tính bằng USDT; giá trị và lãi/lỗ quy ra VND theo tỷ giá USDT/VND hiện tại ${usdt.rate} (${usdt.source}${usdt.status === 'fallback' ? ', dự phòng' : ''}). Đây là lãi/lỗ USDT quy đổi theo tỷ giá hôm nay, không phải lãi/lỗ VND thực tế từ ngày mua; số VND thực tế (theo tỷ giá lúc mua) có ở từng coin khi các lần mua đều ghi tỷ giá.`
         : null,
       dataQuality.messages.length ? `Chất lượng dữ liệu: ${dataQuality.messages.join(' ')}` : null,
     ]
