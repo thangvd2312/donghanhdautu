@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
-import { AiUsageService } from '../ai/ai-usage.service';
+import { BriefQueueService } from './brief-queue.service';
 import { BriefContent, BriefRunService } from './brief-run.service';
 
 export type BriefKind = 'morning' | 'closing';
@@ -40,9 +40,13 @@ export class BriefsService {
     private tagger: NewsTaggerService,
     private llm: LlmService,
     private runs: BriefRunService,
-    private aiUsage: AiUsageService,
     private macro: MacroService,
-  ) {}
+    private queue: BriefQueueService,
+  ) {
+    for (const kind of ['morning', 'closing'] as const) {
+      queue.register(kind, (userId, day) => this.generate(userId, kind, false, day));
+    }
+  }
 
   @Cron('30 8 * * 1-5', { timeZone: VN_TZ })
   morning() {
@@ -60,19 +64,17 @@ export class BriefsService {
       where: { profile: kind === 'morning' ? { morningBrief: true } : { closingBrief: true } },
       select: { id: true },
     });
-    this.log.log(`${LABEL[kind]}: gửi cho ${users.length} người dùng`);
-    for (const u of users) {
-      if (await this.aiUsage.overBudget()) {
-        this.log.warn(`${LABEL[kind]}: dừng vì đã chạm ngân sách AI hôm nay`);
-        break;
-      }
-      await this.generate(u.id, kind).catch((e: Error) => this.log.warn(`${LABEL[kind]} lỗi (${u.id}): ${e.message}`));
-    }
+    // Chỉ xếp việc; hàng đợi tạo bản tin song song có giới hạn, thử lại khi lỗi, dừng khi chạm ngân sách AI
+    this.log.log(`${LABEL[kind]}: xếp việc cho ${users.length} người dùng`);
+    await this.queue.enqueue(
+      kind,
+      vnDateKey(),
+      users.map((u) => u.id),
+    );
   }
 
   /** Tạo bản tin cho một người. `force` = bỏ qua chống trùng trong ngày (dùng cho nút "Gửi thử") */
-  generate(userId: string, kind: BriefKind, force = false) {
-    const day = vnDateKey();
+  generate(userId: string, kind: BriefKind, force = false, day = vnDateKey()) {
     const key = `brief:${kind}:${day}${force ? `:${Date.now()}` : ''}`;
     return this.runs.run(userId, key, () => this.build(userId, kind));
   }

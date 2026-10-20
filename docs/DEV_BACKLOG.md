@@ -8,7 +8,7 @@
 |---|---|---|
 | DATA-01 | tự động | Giá hôm nay cũ / dự phòng và tỷ giá ước tính được giữ trạng thái tới lịch sử và báo cáo kỳ. Còn cần product chốt cách thể hiện lãi crypto quy VND |
 | OBS-01 | tự động | Bảng `AnalyticsEvent`, từ điển và báo cáo `npm run report:usage` ([ANALYTICS.md](ANALYTICS.md)). D7/D30 chỉ có số từ ngày triển khai |
-| AI-01 | tự động (bản tối thiểu) | Usage và chi phí, quota, ngân sách, trần hội thoại dài ([AI_COSTS.md](AI_COSTS.md)). Chưa có hàng đợi bản tin riêng. Router cần khai `AI_PRICES` để có chi phí |
+| AI-01 | tự động | Usage và chi phí, quota, ngân sách, trần hội thoại dài, hàng đợi bản tin `BriefJob` ([AI_COSTS.md](AI_COSTS.md)). Router cần khai `AI_PRICES` để có chi phí |
 | QA-01 | tự động | CI chạy unit + test tích hợp PostgreSQL. Audit mobile fail khi có lỗi. Đã tách bundle và đo tải trang ([PERFORMANCE.md](PERFORMANCE.md)) |
 | WL-01 | tự động | Giới hạn số mã giữ đúng khi thêm đồng thời |
 | ACQ-01 | tự động | Khảo sát có nút "Để sau"; giữ trang đích qua đăng ký và khảo sát; đo phễu trang mẫu |

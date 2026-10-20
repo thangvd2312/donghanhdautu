@@ -28,6 +28,7 @@ import { NewsModule, NewsService } from '../news/news.module';
 import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
+import { BriefQueueService } from './brief-queue.service';
 import { BriefRunService } from './brief-run.service';
 import { BriefsService } from './briefs.service';
 import { LlmService } from './llm.service';
@@ -502,6 +503,7 @@ class NotificationsController {
     AlertsService,
     BriefsService,
     BriefRunService,
+    BriefQueueService,
     WeeklyBriefService,
     LlmService,
     NewsTaggerService,

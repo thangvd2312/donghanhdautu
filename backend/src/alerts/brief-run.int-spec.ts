@@ -42,23 +42,41 @@ describe('bản tin mỗi kỳ một lần (PostgreSQL)', () => {
     expect(await counts(u.id)).toEqual({ conversations: 1, notifications: 1 });
   });
 
-  it('tiến trình chết sau khi lưu nội dung: lần chạy sau dùng lại cuộc trò chuyện, không gọi lại AI', async () => {
+  it('lỗi sau khi đã lưu nội dung: chạy lại ngay dùng lại cuộc trò chuyện, không gọi lại AI', async () => {
     const u = await testUser(prisma, 'brief-resume');
     const send = jest.spyOn(notifier, 'send').mockRejectedValueOnce(new Error('crash'));
     await expect(runs.run(u.id, KEY, () => Promise.resolve(content()))).rejects.toThrow('crash');
     send.mockRestore();
     expect(await counts(u.id)).toEqual({ conversations: 1, notifications: 0 });
 
-    // Ngay sau đó: lượt cũ có thể vẫn đang chạy nên chưa nhận lại
     const build = jest.fn(() => Promise.resolve(content()));
-    expect(await runs.run(u.id, KEY, build)).toBeNull();
-    // Quá thời gian chờ: nhận lại, gửi thông báo cho đúng cuộc trò chuyện đã có
-    const n = await runs.run(u.id, KEY, build, new Date(Date.now() + STALE_RUN_MS + 1000));
+    const n = await runs.run(u.id, KEY, build);
     expect(build).not.toHaveBeenCalled();
     const conversation = await prisma.conversation.findFirst({ where: { userId: u.id } });
     expect(n).toMatchObject({ title: 'Tổng kết tuần 24/10: ổn', link: `/advisor/${conversation!.id}` });
     expect(await counts(u.id)).toEqual({ conversations: 1, notifications: 1 });
     expect(await prisma.briefRun.findFirst({ where: { userId: u.id } })).toMatchObject({ status: 'done', attempts: 2 });
+  });
+
+  it('tiến trình chết giữa chừng: tiến trình khác chờ hết hạn rồi mới nhận lại', async () => {
+    const u = await testUser(prisma, 'brief-dead');
+    // Lượt đang "running" do một tiến trình đã chết để lại
+    await prisma.briefRun.create({ data: { userId: u.id, key: KEY } });
+    const build = jest.fn(() => Promise.resolve(content()));
+    expect(await runs.run(u.id, KEY, build)).toBeNull();
+    expect(build).not.toHaveBeenCalled();
+    await runs.run(u.id, KEY, build, new Date(Date.now() + STALE_RUN_MS + 1000));
+    expect(build).toHaveBeenCalledTimes(1);
+    expect(await counts(u.id)).toEqual({ conversations: 1, notifications: 1 });
+  });
+
+  it('không lưu được thông báo thì không đánh dấu xong, lần sau gửi lại', async () => {
+    const u = await testUser(prisma, 'brief-notify-fail');
+    const send = jest.spyOn(notifier, 'send').mockResolvedValueOnce(null);
+    await expect(runs.run(u.id, KEY, () => Promise.resolve(content()))).rejects.toThrow('Không lưu được thông báo');
+    send.mockRestore();
+    await runs.run(u.id, KEY, () => Promise.resolve(content()));
+    expect(await counts(u.id)).toEqual({ conversations: 1, notifications: 1 });
   });
 
   it('AI lỗi trước khi có nội dung: không để lại cuộc trò chuyện, lần sau tạo được', async () => {

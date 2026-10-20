@@ -629,3 +629,29 @@ model AiRequest {
 
   @@index([userId, kind, createdAt])
 }
+
+/// Hàng đợi tạo bản tin chạy nền: mỗi người / kỳ một việc; worker lấy việc bằng FOR UPDATE SKIP LOCKED, thử lại có
+/// giãn cách, việc đang chạy dở khi server tắt được nhận lại. Chống trùng nội dung vẫn do BriefRun đảm nhiệm.
+model BriefJob {
+  id          String    @id @default(cuid())
+  userId      String
+  /// morning | closing | weekly
+  kind        String
+  /// Ngày của kỳ (giờ VN) — chạy lại / thử lại vẫn tạo bản tin cho đúng kỳ này
+  day         String
+  /// queued | running | done | failed | skipped
+  status      String    @default("queued")
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(4)
+  runAfter    DateTime  @default(now())
+  lockedAt    DateTime?
+  lastError   String?
+  /// Kết quả: sent | nothing (không có gì để gửi) | duplicate (kỳ này đã có bản tin)
+  result      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  finishedAt  DateTime?
+
+  @@unique([userId, kind, day])
+  @@index([status, runAfter])
+}

@@ -21,6 +21,7 @@
     "test:int": "jest --config ./test/jest-int.json --runInBand",
     "eval": "nest build && node dist/eval/run-eval.js",
     "report:usage": "node --env-file-if-exists=.env dist/analytics/report-cli.js",
+    "briefs:jobs": "node --env-file-if-exists=.env dist/alerts/brief-jobs-cli.js",
     "lint:check": "eslint \"src/**/*.ts\""
   },
   "dependencies": {

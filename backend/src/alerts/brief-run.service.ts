@@ -34,7 +34,24 @@ export class BriefRunService {
   async run(userId: string, key: string, build: () => Promise<BriefContent | null>, now = new Date()) {
     const run = await this.claim(userId, key, now);
     if (!run) return null;
+    try {
+      return await this.execute(userId, key, run, build);
+    } catch (e) {
+      // Lỗi trong tiến trình (AI lỗi, DB lỗi…): nhả việc ngay để lần thử lại nhận được, không phải chờ hết hạn.
+      // Tiến trình chết hẳn thì không chạy tới đây — khi đó lượt "running" hết hạn sau STALE_RUN_MS.
+      await this.prisma.briefRun
+        .updateMany({ where: { id: run.id, status: 'running' }, data: { claimedAt: new Date(0) } })
+        .catch(() => null);
+      throw e;
+    }
+  }
 
+  private async execute(
+    userId: string,
+    key: string,
+    run: { id: string; conversationId: string | null; notification: Prisma.JsonValue },
+    build: () => Promise<BriefContent | null>,
+  ) {
     let conversationId = run.conversationId;
     let notification: BriefContent['notification'] | null = null;
     if (!conversationId) {
@@ -71,6 +88,8 @@ export class BriefRunService {
     const sent =
       (await this.notifier.send(userId, { ...notification, dedupeKey: key, link: `/advisor/${conversationId}` })) ??
       (await this.prisma.notification.findUnique({ where: { userId_dedupeKey: { userId, dedupeKey: key } } }));
+    // Không lưu được thông báo (và cũng chưa có từ trước): báo lỗi để lần thử lại gửi tiếp, không đánh dấu xong
+    if (!sent) throw new Error(`Không lưu được thông báo bản tin ${key}`);
     await this.prisma.briefRun.update({
       where: { id: run.id },
       data: { status: 'done', notificationId: sent?.id ?? null },

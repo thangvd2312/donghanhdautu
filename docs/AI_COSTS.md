@@ -51,6 +51,21 @@ Lịch sử chat không bị cắt bớt lượt cũ. Sửa phần đầu lịch
 
 `npm run report:usage` (trong `backend`) có thêm bảng "Chi phí AI 30 ngày qua" theo chức năng: số lượt, số lỗi, chi phí ước tính, số lượt không rõ chi phí và số người dùng.
 
-## Chưa làm
+## Hàng đợi bản tin
 
-Hàng đợi bản tin bền vững (giới hạn đồng thời, retry, xử lý lại tác vụ lỗi) chưa có. Hiện bản tin đã được chống trùng và tiếp tục được sau lỗi qua `BriefRun`, xem BRIEF-01.
+Cron bản tin sáng, chiều và tuần không tự tạo bản tin. Nó chỉ xếp mỗi người nhận một việc vào bảng `BriefJob`. Khoá duy nhất (người, loại, ngày) nên xếp lại hoặc chạy cron hai lần không tạo trùng.
+
+- **Worker:** mỗi tiến trình chạy tối đa `BRIEF_CONCURRENCY` việc cùng lúc (mặc định 3). Việc được lấy bằng `FOR UPDATE SKIP LOCKED`, nên nhiều tiến trình không lấy trùng việc của nhau. Hàng đợi được quét 15 giây một lần, và chạy ngay khi có việc mới.
+- **Thử lại:** việc lỗi được thử lại sau 2, 4, 8 phút; quá 4 lần thì chuyển sang `failed`, có ghi lỗi.
+- **Server khởi động lại:** việc "running" quá 15 phút được đưa lại vào hàng đợi.
+- **Hết hạn:** bản tin sáng/chiều quá 6 giờ, bản tin tuần quá 2 ngày thì bỏ (`skipped`), không gửi muộn.
+- **Ngân sách AI:** đã chạm ngân sách ngày thì việc được hoãn 30 phút và không tính là một lần thử.
+- **Không trùng nội dung:** việc chống trùng do `BriefRun` đảm nhiệm. Thử lại sau lỗi thì dùng lại cuộc trò chuyện đã lưu, không gọi lại AI.
+
+Xem và chạy lại, trong thư mục `backend` trên server:
+
+```bash
+npm run briefs:jobs                   # thống kê 7 ngày + các việc lỗi
+npm run briefs:jobs -- retry failed   # đưa mọi việc lỗi về hàng đợi
+npm run briefs:jobs -- retry <id>     # chạy lại một việc
+```

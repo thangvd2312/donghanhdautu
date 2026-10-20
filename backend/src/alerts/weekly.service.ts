@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { AiUsageService } from '../ai/ai-usage.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { NewsService } from '../news/news.module';
 import type { NewsItem } from '../news/news.module';
@@ -12,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { mentionsCompany } from './aliases';
 import { LlmService } from './llm.service';
+import { BriefQueueService } from './brief-queue.service';
 import { BriefContent, BriefRunService } from './brief-run.service';
 import { weeklyTable } from './weekly';
 
@@ -48,8 +48,10 @@ export class WeeklyBriefService {
     private news: NewsService,
     private llm: LlmService,
     private runs: BriefRunService,
-    private aiUsage: AiUsageService,
-  ) {}
+    private queue: BriefQueueService,
+  ) {
+    queue.register('weekly', (userId, day) => this.generate(userId, false, day));
+  }
 
   @Cron('0 9 * * 6', { timeZone: VN_TZ })
   async runAll() {
@@ -60,24 +62,21 @@ export class WeeklyBriefService {
         where: { profile: { weeklyBrief: true }, transactions: { some: { deletedAt: null } } },
         select: { id: true },
       });
-      this.log.log(`Tổng kết tuần: ${users.length} người dùng`);
-      for (const u of users) {
-        if (await this.aiUsage.overBudget()) {
-          this.log.warn('Tổng kết tuần: dừng vì đã chạm ngân sách AI hôm nay');
-          break;
-        }
-        await this.generate(u.id).catch((e: Error) => this.log.warn(`Tổng kết tuần lỗi (${u.id}): ${e.message}`));
-      }
+      this.log.log(`Tổng kết tuần: xếp việc cho ${users.length} người dùng`);
+      await this.queue.enqueue(
+        'weekly',
+        vnDateKey(),
+        users.map((u) => u.id),
+      );
     } finally {
       this.running = false;
     }
   }
 
   /** `force` = bỏ qua chống trùng (nút "Gửi thử"); bản chính thức mỗi tuần một lần theo ngày kết thúc kỳ */
-  generate(userId: string, force = false) {
-    const today = vnDateKey();
-    const key = `brief:weekly:${today}${force ? `:${Date.now()}` : ''}`;
-    return this.runs.run(userId, key, () => this.build(userId, today));
+  generate(userId: string, force = false, day = vnDateKey()) {
+    const key = `brief:weekly:${day}${force ? `:${Date.now()}` : ''}`;
+    return this.runs.run(userId, key, () => this.build(userId, day));
   }
 
   /** Bảng số liệu + nhận định AI của một tuần; null khi chưa có gì để tổng kết */
