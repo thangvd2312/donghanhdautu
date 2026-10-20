@@ -578,8 +578,24 @@ export interface PeriodResult {
   netFlows: number
   profit: number
   returnPct: number | null
+  /** Lợi suất theo thời gian (%), không phụ thuộc lúc nạp / rút — dùng so với thị trường */
+  twrPct: number | null
+  /** Lợi suất dòng tiền quy năm (%/năm); null khi kỳ < 90 ngày */
+  xirrPct: number | null
+  days: number
+  baseDate: string
   method: string
   isEstimate: boolean
+  notes: string[]
+}
+
+export interface BenchmarkComparison {
+  name: string
+  returnPct: number | null
+  /** TWR danh mục − lợi suất chỉ số (điểm %) */
+  excessPts: number | null
+  /** Đủ điều kiện để nói hơn / kém thị trường */
+  conclusive: boolean
   notes: string[]
 }
 
@@ -587,6 +603,7 @@ export interface PortfolioHistory {
   range: string
   points: HistoryPoint[]
   period: PeriodResult | null
+  benchmark: BenchmarkComparison | null
   notes: string[]
 }
 

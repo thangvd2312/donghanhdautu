@@ -6,7 +6,7 @@ import type { AssetType } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { addDays, daysBetween } from '../plans/plan-rules';
 import { PrismaService } from '../prisma/prisma.module';
-import { assetBreakdown, buildHistory, DayPrice, periodPerformance } from './history';
+import { assetBreakdown, buildHistory, compareBenchmark, DayPrice, periodPerformance } from './history';
 import { ledgerOfAll } from './ledger';
 import { toLedgerTx, TransactionsService } from './transactions';
 
@@ -47,8 +47,35 @@ export class HistoryService implements OnApplicationBootstrap {
       (firstTx, today) => (range === 'all' ? firstTx : addDays(today, -RANGES[range as Range])),
       portfolioId,
     );
-    if (!r) return { range, points: [], period: null, notes: [] };
-    return { range, points: r.points, period: r.period, notes: r.notes };
+    if (!r) return { range, points: [], period: null, benchmark: null, notes: [] };
+    return { range, points: r.points, period: r.period, benchmark: await this.benchmark(r), notes: r.notes };
+  }
+
+  /**
+   * So TWR của kỳ với VN-Index cùng kỳ. Lỗi nguồn chỉ số thì trả null (không làm hỏng lịch sử).
+   * Tỷ trọng cổ phiếu VN cuối kỳ quyết định có nên coi VN-Index là thước đo phù hợp hay không.
+   */
+  private async benchmark(r: NonNullable<Awaited<ReturnType<HistoryService['compute']>>>) {
+    const period = r.period;
+    if (!period || period.twrPct === null) return null;
+    try {
+      const sessions = Math.min(1000, Math.ceil(period.days * 0.75) + 15);
+      const candles = await this.market.stockHistory('VNINDEX', sessions);
+      const closes = new Map(candles.map((c) => [vnDateKey(new Date(c.time * 1000)), c.close]));
+      const current = this.market.snapshot().indices.find((i) => i.symbol === 'VNINDEX')?.price ?? null;
+      const end = assetBreakdown(ledgerOfAll(r.txs), r.today, r.price, r.usdt, (t, sym) => this.displayName(t, sym));
+      const total = end.reduce((s, a) => s + a.value, 0);
+      const stocks = end.filter((a) => a.assetType === 'stock').reduce((s, a) => s + a.value, 0);
+      return compareBenchmark(
+        period,
+        period.baseDate,
+        { name: 'VN-Index', closes, current, today: r.today },
+        total > 0 ? stocks / total : 0,
+      );
+    } catch (e) {
+      this.log.warn(`So sánh VN-Index: ${(e as Error).message}`);
+      return null;
+    }
   }
 
   /**

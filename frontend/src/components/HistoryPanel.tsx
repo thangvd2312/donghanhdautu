@@ -10,7 +10,7 @@ import Typography from '@mui/material/Typography'
 import { AreaSeries, ColorType, createChart, LineSeries, LineStyle, type MouseEventParams, type Time } from 'lightweight-charts'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api'
-import { changeColor, fmtDate, fmtPct, fmtVnd, fmtVndAxis, fmtVndShort } from '../lib/format'
+import { changeColor, fmtDate, fmtNum, fmtPct, fmtVnd, fmtVndAxis, fmtVndShort } from '../lib/format'
 import type { HistoryPoint, PortfolioHistory } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
 import { ChangePill, InfoTip, Panel } from './ui'
@@ -215,6 +215,29 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
                   <Swatch color={dark ? '#94a3b8' : '#64748b'} dashed /> Vốn {fmtVndShort(shown.netContributions)}
                 </Typography>
               </Stack>
+              {p && !hover && (p.twrPct !== null || p.xirrPct !== null || data.benchmark?.returnPct != null) && (
+                <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.75 }}>
+                  {[
+                    p.twrPct !== null ? `TWR ${fmtPct(p.twrPct)}` : null,
+                    p.xirrPct !== null ? `XIRR ${fmtPct(p.xirrPct)}/năm` : null,
+                    data.benchmark?.returnPct != null ? `${data.benchmark.name} cùng kỳ ${fmtPct(data.benchmark.returnPct)}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  {data.benchmark?.conclusive && data.benchmark.excessPts !== null && (
+                    <Box component="span" sx={{ color: changeColor(data.benchmark.excessPts), fontWeight: 600 }}>
+                      {` — ${data.benchmark.excessPts >= 0 ? 'hơn' : 'kém'} ${data.benchmark.name} ${fmtNum(Math.abs(data.benchmark.excessPts), 1)} điểm %`}
+                    </Box>
+                  )}
+                  <InfoTip label="TWR, XIRR và so với VN-Index">
+                    {[
+                      'TWR (lợi suất theo thời gian): nối lợi suất từng ngày, không phụ thuộc lúc bạn nạp / rút tiền — đo cách bạn chọn tài sản, dùng để so với thị trường.',
+                      'XIRR: lợi suất quy năm của chính dòng tiền của bạn (có tính lúc nạp / rút). Chỉ tính khi kỳ từ 90 ngày.',
+                      ...(data.benchmark?.notes ?? []),
+                    ].join('\n\n')}
+                  </InfoTip>
+                </Typography>
+              )}
               {shown.status !== 'complete' && (
                 <Typography variant="caption" color="warning.main" component="div">
                   {STATUS_LABEL[shown.status]}

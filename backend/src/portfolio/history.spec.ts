@@ -218,4 +218,20 @@ describe('periodPerformance', () => {
     expect(pts[0].uncertainOpenings).toEqual(['BTCUSDT']);
     expect(periodPerformance(pts, '2026-09-01', '2026-10-01')!.isEstimate).toBe(true);
   });
+
+  it('kỳ có TWR, XIRR (từ 90 ngày) và mốc đầu kỳ', () => {
+    const long = [
+      tx({ type: 'deposit', amt: 10_000_000, date: '2026-01-01' }),
+      tx({ type: 'buy', assetType: 'stock', symbol: 'FPT', q: 100, px: 20_000, date: '2026-01-01' }),
+    ];
+    const pts = run(long, '2026-01-01', '2026-07-01', { '2026-01-01': 20_000, '2026-07-01': 30_000 });
+    const p = periodPerformance(pts, '2025-12-01', '2026-01-01')!;
+    expect(p.baseDate).toBe('2025-12-31');
+    // 10tr → 11tr: TWR 10%
+    expect(p.twrPct).toBeCloseTo(10);
+    expect(p.xirrPct).toBeGreaterThan(20);
+    const short = periodPerformance(pts.slice(-30), '2026-06-02', '2026-01-01')!;
+    expect(short.xirrPct).toBeNull();
+    expect(short.notes.join(' ')).toContain('XIRR');
+  });
 });

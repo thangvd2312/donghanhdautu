@@ -14,7 +14,7 @@
 | ACQ-01 | tự động | Khảo sát có nút "Để sau"; giữ trang đích qua đăng ký và khảo sát; đo phễu trang mẫu |
 | PF-01 | tự động + đối soát production | Kiểm tra ngày có thật; nhận cổ phiếu thưởng / chia tách; gợi ý sự kiện quyền chưa ghi theo Vietcap. Đối soát Holding với sổ trên production: "Khớp" |
 | PF-02 | tự động | Gửi lại cùng yêu cầu nhập không tạo thêm giao dịch; xem trước không ghi DB |
-| PF-03 | tự động | Lịch sử dùng giá đóng cửa gốc (VNDirect); thiếu giá ngày khai báo thì kết quả kỳ là ước tính. TWR/XIRR, benchmark để sau |
+| PF-03 | tự động | Lịch sử dùng giá đóng cửa gốc (VNDirect); Modified Dietz, TWR, XIRR (kỳ ≥ 90 ngày), so với VN-Index cùng kỳ / cùng đồng tiền, chỉ kết luận khi đủ dữ liệu; thiếu giá thì kết quả là ước tính |
 | HOME-01 | tự động | Tăng/giảm hôm nay tính theo vị thế đầu ngày và giao dịch trong ngày |
 | BRIEF-01 | tự động | Mỗi người một bản tin mỗi kỳ (`BriefRun`, hàng đợi `BriefJob`); số AI viết được đối chiếu với số đã tính; đo lượt mở và hỏi tiếp |
 | PLAN-01 | tự động | Giao dịch được ghi rõ là trước / trong / sau thời gian kế hoạch |
