@@ -89,7 +89,7 @@ export default function StockPage() {
       <Paper sx={{ p: 2.5 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>
           <Box>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+            <Stack useFlexGap direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
               <AssetAvatar assetType="stock" symbol={q.symbol} size={44} />
               <Typography variant="h4">{q.symbol}</Typography>
               <Chip size="small" label={q.board} />
@@ -98,36 +98,6 @@ export default function StockPage() {
             <Typography color="text.secondary" sx={{ mt: 0.5 }}>
               {c?.name ?? q.name}
             </Typography>
-            <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
-              <Button
-                variant="contained"
-                component={RouterLink}
-                to={ask(
-                  `Phân tích toàn diện cổ phiếu ${q.symbol} giúp tôi: dài hạn có đáng đầu tư không, ngắn hạn thế nào, và có hợp với tôi không?`,
-                )}
-              >
-                Hỏi cố vấn về {q.symbol}
-              </Button>
-              <Button
-                variant="outlined"
-                component={RouterLink}
-                to={ask(`Tôi đang muốn mua ${q.symbol}. Có phải tôi đang FOMO không? Nếu mua thì nên mua thế nào?`)}
-              >
-                Tôi có đang FOMO không?
-              </Button>
-              <Button
-                variant="outlined"
-                component={RouterLink}
-                to={ask(`So sánh ${q.symbol} với các cổ phiếu cùng ngành, mã nào đáng đầu tư hơn và vì sao?`)}
-              >
-                So với cùng ngành
-              </Button>
-              <Button variant="outlined" color="inherit" startIcon={<NotificationsActiveOutlined />} onClick={() => setAlertOpen(true)}>
-                Đặt cảnh báo giá
-              </Button>
-              <WatchButton assetType="stock" symbol={q.symbol} />
-              <PlanButton assetType="stock" symbol={q.symbol} label={q.symbol} />
-            </Stack>
           </Box>
           <Box sx={{ textAlign: { md: 'right' } }}>
             <Typography className="num" sx={{ fontSize: 34, fontWeight: 700, color, lineHeight: 1.1 }}>
@@ -148,6 +118,36 @@ export default function StockPage() {
               </Typography>
             </Stack>
           </Box>
+        </Stack>
+        <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
+          <Button
+            variant="contained"
+            component={RouterLink}
+            to={ask(
+              `Phân tích toàn diện cổ phiếu ${q.symbol} giúp tôi: dài hạn có đáng đầu tư không, ngắn hạn thế nào, và có hợp với tôi không?`,
+            )}
+          >
+            Hỏi cố vấn về {q.symbol}
+          </Button>
+          <Button
+            variant="outlined"
+            component={RouterLink}
+            to={ask(`Tôi đang muốn mua ${q.symbol}. Có phải tôi đang FOMO không? Nếu mua thì nên mua thế nào?`)}
+          >
+            Tôi có đang FOMO không?
+          </Button>
+          <Button
+            variant="outlined"
+            component={RouterLink}
+            to={ask(`So sánh ${q.symbol} với các cổ phiếu cùng ngành, mã nào đáng đầu tư hơn và vì sao?`)}
+          >
+            So với cùng ngành
+          </Button>
+          <Button variant="outlined" color="inherit" startIcon={<NotificationsActiveOutlined />} onClick={() => setAlertOpen(true)}>
+            Đặt cảnh báo giá
+          </Button>
+          <WatchButton assetType="stock" symbol={q.symbol} />
+          <PlanButton assetType="stock" symbol={q.symbol} label={q.symbol} />
         </Stack>
       </Paper>
 

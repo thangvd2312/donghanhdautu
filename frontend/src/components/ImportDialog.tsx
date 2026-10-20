@@ -8,7 +8,6 @@ import Collapse from '@mui/material/Collapse'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import Link from '@mui/material/Link'
@@ -28,6 +27,7 @@ import { fmtDate, fmtNum, fmtVndShort } from '../lib/format'
 import { TX_LABEL } from '../lib/tx'
 import type { PortfolioAccount, TxType } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
+import { DialogHeader } from './ui'
 
 const FIELDS = ['date', 'type', 'assetType', 'symbol', 'quantity', 'price', 'amount', 'fee', 'tax', 'currency', 'fxRate', 'note'] as const
 type Field = (typeof FIELDS)[number]
@@ -230,7 +230,7 @@ export default function ImportDialog({
 
   return (
     <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Nhập giao dịch từ file CSV</DialogTitle>
+      <DialogHeader onClose={onClose}>Nhập giao dịch từ file CSV</DialogHeader>
       <DialogContent>
         <Stack spacing={2}>
           {!preview && (

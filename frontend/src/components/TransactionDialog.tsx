@@ -4,7 +4,6 @@ import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import Grid from '@mui/material/Grid'
 import InputAdornment from '@mui/material/InputAdornment'
 import MenuItem from '@mui/material/MenuItem'
@@ -22,6 +21,7 @@ import { parseNum, todayVn } from '../lib/num'
 import { TX_LABEL } from '../lib/tx'
 import type { AssetType, PortfolioAccount, Transaction, TxType } from '../lib/types'
 import StockSearch from './StockSearch'
+import { DialogHeader } from './ui'
 
 type TradeAsset = Exclude<AssetType, 'cash'>
 const ASSET_LABEL: Record<TradeAsset, string> = { stock: 'Cổ phiếu', crypto: 'Crypto', gold: 'Vàng' }
@@ -169,7 +169,7 @@ export default function TransactionDialog({
 
   return (
     <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{title}</DialogTitle>
+      <DialogHeader onClose={onClose}>{title}</DialogHeader>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {!editing && !preset?.symbol && (
@@ -335,11 +335,11 @@ export default function TransactionDialog({
 
           {usdt && (
             <NumField
-              label="Tỷ giá lúc giao dịch (tuỳ chọn)"
+              label="Tỷ giá lúc giao dịch"
               value={fxRate}
               onChange={setFxRate}
               unit="₫ / USDT"
-              helper={`Để tính đúng lãi/lỗ theo VND. Bỏ trống thì quy theo tỷ giá hiện tại${snapshot?.usdt ? ` (${fmtNum(snapshot.usdt.mid)} ₫)` : ''}.`}
+              helper={`Tuỳ chọn — để tính đúng lãi/lỗ theo VND. Bỏ trống thì quy theo tỷ giá hiện tại${snapshot?.usdt ? ` (${fmtNum(snapshot.usdt.mid)} ₫)` : ''}.`}
             />
           )}
 

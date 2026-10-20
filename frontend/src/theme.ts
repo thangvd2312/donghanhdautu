@@ -64,8 +64,16 @@ export const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        // Ô nhập được focus không bị header dính / thanh điều hướng dưới che mất
+        html: { scrollPaddingTop: 72, scrollPaddingBottom: 96 },
         body: { fontFeatureSettings: '"tnum" 1' },
         '.num': { fontVariantNumeric: 'tabular-nums' },
+        // Safari iOS căn giữa và co chiều cao ô ngày/giờ khi còn trống
+        'input[type="date"], input[type="time"], input[type="datetime-local"]': {
+          minHeight: '1.4375em',
+          textAlign: 'left',
+        },
+        '::-webkit-date-and-time-value': { textAlign: 'left' },
       },
     },
     MuiPaper: {
@@ -84,7 +92,17 @@ export const theme = createTheme({
         }),
       },
     },
-    MuiButton: { defaultProps: { disableElevation: true } },
+    // Trên điện thoại nút nhỏ vẫn đủ lớn để chạm (≥ 36px)
+    MuiButton: {
+      defaultProps: { disableElevation: true },
+      styleOverrides: { sizeSmall: ({ theme }) => ({ [theme.breakpoints.down('md')]: { minHeight: 36 } }) },
+    },
+    MuiIconButton: {
+      styleOverrides: { sizeSmall: ({ theme }) => ({ [theme.breakpoints.down('md')]: { padding: 8 } }) },
+    },
+    MuiToggleButton: {
+      styleOverrides: { sizeSmall: ({ theme }) => ({ [theme.breakpoints.down('md')]: { minHeight: 36 } }) },
+    },
     // Hộp thoại toàn màn hình trên iPhone: chừa thanh vuốt home ở đáy
     MuiDialogActions: { styleOverrides: { root: { paddingBottom: 'max(8px, env(safe-area-inset-bottom))' } } },
     MuiTableCell: {
@@ -105,6 +123,11 @@ export const theme = createTheme({
         root: ({ theme }) => ({
           '&.MuiTableRow-hover:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
         }),
+      },
+    },
+    MuiBottomNavigationAction: {
+      styleOverrides: {
+        label: { fontSize: 12, whiteSpace: 'nowrap', '&.Mui-selected': { fontSize: 12, fontWeight: 600 } },
       },
     },
     MuiTab: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600, minHeight: 44 } } },

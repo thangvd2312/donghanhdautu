@@ -3,7 +3,6 @@ import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import InputAdornment from '@mui/material/InputAdornment'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
@@ -16,6 +15,7 @@ import { api, post } from '../lib/api'
 import { fmtNum } from '../lib/format'
 import { useIsMobile } from '../lib/useIsMobile'
 import StockSearch from './StockSearch'
+import { DialogHeader } from './ui'
 
 type AlertAsset = 'stock' | 'crypto' | 'gold'
 
@@ -89,7 +89,7 @@ export default function PriceAlertDialog({
 
   return (
     <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>Cảnh báo giá {fixed ? fixed.label : ''}</DialogTitle>
+      <DialogHeader onClose={onClose}>Cảnh báo giá {fixed ? fixed.label : ''}</DialogHeader>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {!fixed && (

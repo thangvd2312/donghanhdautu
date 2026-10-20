@@ -104,7 +104,8 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   <GoogleLogin
                     text={mode === 'login' ? 'signin_with' : 'signup_with'}
-                    width={340}
+                    // Nút Google có bề rộng cố định (200–400px): co theo màn hình điện thoại để không tràn ngang
+                    width={Math.min(340, Math.max(200, window.innerWidth - 104))}
                     onSuccess={(r) => r.credential && void run(() => loginWithGoogle(r.credential!))}
                     onError={() => setError('Đăng nhập Google thất bại, thử lại nhé')}
                   />

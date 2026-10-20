@@ -42,7 +42,7 @@ import Tabs from '@mui/material/Tabs'
 import Toolbar from '@mui/material/Toolbar'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth-context'
 import { useChat } from '../lib/chat-context'
@@ -91,6 +91,25 @@ const MORE = [
 /** Chiều cao thanh đáy (chưa tính vùng an toàn của iPhone) */
 const BOTTOM_NAV_HEIGHT = 60
 
+const TEXT_INPUT =
+  'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]):not([type=submit]), textarea, select, [contenteditable="true"]'
+
+/** Đang gõ vào ô nhập — trên điện thoại ẩn thanh điều hướng dưới để không che ô nhập khi bàn phím mở */
+function useTyping() {
+  const [typing, setTyping] = useState(false)
+  useEffect(() => {
+    const onIn = (e: FocusEvent) => setTyping(e.target instanceof Element && e.target.matches(TEXT_INPUT))
+    const onOut = () => setTimeout(() => setTyping(!!document.activeElement?.matches(TEXT_INPUT)), 0)
+    document.addEventListener('focusin', onIn)
+    document.addEventListener('focusout', onOut)
+    return () => {
+      document.removeEventListener('focusin', onIn)
+      document.removeEventListener('focusout', onOut)
+    }
+  }, [])
+  return typing
+}
+
 const DISCLAIMER =
   'Dữ liệu: Vietcap, DNSE, Binance, vang.today, Vietcombank, CafeF, VnExpress. Phân tích của cố vấn chỉ mang tính tham khảo, không phải khuyến nghị đầu tư được cấp phép — quyết định cuối cùng là của bạn.'
 
@@ -106,12 +125,15 @@ export default function Layout() {
     .find((n) => matches(loc.pathname, n.to))?.to
   const [searchOpen, setSearchOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const typing = useTyping()
   const bottomValue =
     BOTTOM.find((n) => matches(loc.pathname, n.to))?.to ??
     (MORE.some((n) => matches(loc.pathname, n.to)) || loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto')
       ? 'more'
       : false)
-  const pageTitle = [...BOTTOM, ...MORE].find((n) => matches(loc.pathname, n.to))?.label
+  const pageTitle =
+    [...BOTTOM, ...MORE].find((n) => matches(loc.pathname, n.to))?.label ??
+    (loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto') ? 'Bảng giá' : undefined)
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -187,7 +209,7 @@ export default function Layout() {
         </Container>
       )}
 
-      {mobile && (
+      {mobile && !typing && (
         <Paper
           elevation={0}
           sx={{
@@ -248,7 +270,7 @@ export default function Layout() {
                 }}
               />
             </Box>
-            <Button onClick={() => setSearchOpen(false)}>Đóng</Button>
+            <Button aria-label="Đóng" onClick={() => setSearchOpen(false)}>Đóng</Button>
           </Stack>
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
             Gõ mã hoặc tên công ty, ví dụ FPT, Hòa Phát, ngân hàng…

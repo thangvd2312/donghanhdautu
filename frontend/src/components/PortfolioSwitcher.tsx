@@ -1,4 +1,6 @@
 import AddIcon from '@mui/icons-material/Add'
+import CheckIcon from '@mui/icons-material/Check'
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
@@ -90,7 +92,7 @@ export default function PortfolioSwitcher({
       {accounts.length > 0 && (
         <Tooltip title="Đổi tên / xoá danh mục">
           <IconButton
-            size="small"
+            aria-label="Đổi tên / xoá danh mục"
             onClick={() => {
               setNames(Object.fromEntries(accounts.map((a) => [a.id, a.name])))
               setManaging(true)
@@ -124,7 +126,7 @@ export default function PortfolioSwitcher({
         <DialogContent>
           <Stack spacing={1.5} sx={{ pt: 1 }}>
             {accounts.map((a) => (
-              <Stack key={a.id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Stack key={a.id} direction="row" spacing={0.5} sx={{ alignItems: 'flex-start' }}>
                 <TextField
                   size="small"
                   fullWidth
@@ -132,12 +134,25 @@ export default function PortfolioSwitcher({
                   onChange={(e) => setNames((m) => ({ ...m, [a.id]: e.target.value }))}
                   helperText={`${a.transactionCount} giao dịch${a.isDefault ? ' · danh mục chính' : ''}`}
                 />
-                <Button size="small" disabled={!names[a.id]?.trim() || names[a.id] === a.name} onClick={() => void rename(a.id)}>
-                  Lưu
-                </Button>
-                <Button size="small" color="error" disabled={a.isDefault} onClick={() => void remove(a.id)}>
-                  Xoá
-                </Button>
+                <Tooltip title="Lưu tên">
+                  <span>
+                    <IconButton
+                      color="primary"
+                      aria-label="Lưu tên"
+                      disabled={!names[a.id]?.trim() || names[a.id] === a.name}
+                      onClick={() => void rename(a.id)}
+                    >
+                      <CheckIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title={a.isDefault ? 'Không xoá được danh mục chính' : 'Xoá danh mục'}>
+                  <span>
+                    <IconButton color="error" aria-label="Xoá danh mục" disabled={a.isDefault} onClick={() => void remove(a.id)}>
+                      <DeleteOutlined />
+                    </IconButton>
+                  </span>
+                </Tooltip>
               </Stack>
             ))}
             <Typography variant="caption" color="text.secondary">

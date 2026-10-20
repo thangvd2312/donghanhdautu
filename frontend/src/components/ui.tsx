@@ -1,4 +1,7 @@
+import CloseIcon from '@mui/icons-material/Close'
 import Box from '@mui/material/Box'
+import DialogTitle from '@mui/material/DialogTitle'
+import IconButton from '@mui/material/IconButton'
 import Paper, { type PaperProps } from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -112,5 +115,17 @@ export function Logo({ size = 32 }: { size?: number }) {
       <rect width="32" height="32" rx="7" fill="currentColor" />
       <path d="M7 21l5-6 4 3 6-8 3 3" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Box>
+  )
+}
+
+/** Tiêu đề hộp thoại có nút đóng — cần thiết khi hộp thoại phủ toàn màn hình trên điện thoại */
+export function DialogHeader({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  return (
+    <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 1.5 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
+      <IconButton aria-label="Đóng" onClick={onClose} edge="end" sx={{ width: 40, height: 40 }}>
+        <CloseIcon />
+      </IconButton>
+    </DialogTitle>
   )
 }

@@ -5,7 +5,6 @@ import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import Grid from '@mui/material/Grid'
 import InputAdornment from '@mui/material/InputAdornment'
 import MenuItem from '@mui/material/MenuItem'
@@ -20,6 +19,7 @@ import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum } from '../lib/num'
 import type { Plan, PlanDraft } from '../lib/types'
 import StockSearch from './StockSearch'
+import { DialogHeader } from './ui'
 
 type PlanAsset = Plan['assetType']
 const UNIT: Record<PlanAsset, string> = { stock: '₫ / cp', crypto: 'USDT', gold: '₫ / lượng' }
@@ -129,7 +129,7 @@ export default function PlanEditor({
 
   return (
     <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{editing ? `Sửa kế hoạch ${label}` : label ? `Kế hoạch cho ${label}` : 'Lập kế hoạch đầu tư'}</DialogTitle>
+      <DialogHeader onClose={onClose}>{editing ? `Sửa kế hoạch ${label}` : label ? `Kế hoạch cho ${label}` : 'Lập kế hoạch đầu tư'}</DialogHeader>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {!locked && (
@@ -248,7 +248,7 @@ export default function PlanEditor({
                 }}
               />
             </Grid>
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 size="small"
                 fullWidth
@@ -261,7 +261,7 @@ export default function PlanEditor({
                 }}
               />
             </Grid>
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 size="small"
                 fullWidth

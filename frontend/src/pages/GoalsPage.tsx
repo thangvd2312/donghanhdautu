@@ -7,7 +7,6 @@ import Collapse from '@mui/material/Collapse'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -21,7 +20,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { KV } from '../components/ui'
+import { DialogHeader, KV } from '../components/ui'
 import { api, del, post, put } from '../lib/api'
 import { changeColor, fmtDate, fmtNum, fmtVndShort } from '../lib/format'
 import { project, requiredMonthly } from '../lib/goalMath'
@@ -204,14 +203,14 @@ function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: () => void; onCha
       <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-            Tỷ trọng so với mong muốn
+            Tỷ trọng hiện tại / mong muốn
           </Typography>
           {p.deviation ? (
             p.deviation.map((d) => (
               <KV
                 key={d.assetType}
                 k={TYPE_LABEL[d.assetType]}
-                v={`${fmtNum(d.actual, 0)}% / mong muốn ${fmtNum(d.target, 0)}% (${d.diff > 0 ? '+' : ''}${fmtNum(d.diff, 0)} điểm)`}
+                v={`${fmtNum(d.actual, 0)}% / ${fmtNum(d.target, 0)}% (${d.diff > 0 ? '+' : ''}${fmtNum(d.diff, 0)} điểm)`}
                 color={Math.abs(d.diff) >= 10 ? 'warning.main' : undefined}
               />
             ))
@@ -354,7 +353,7 @@ function GoalEditor({
 
   return (
     <Dialog fullScreen={mobile} open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{goal ? `Sửa mục tiêu "${goal.name}"` : 'Thêm mục tiêu tài chính'}</DialogTitle>
+      <DialogHeader onClose={onClose}>{goal ? `Sửa mục tiêu "${goal.name}"` : 'Thêm mục tiêu tài chính'}</DialogHeader>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <TextField size="small" label="Tên mục tiêu" placeholder="VD: Quỹ dự phòng, Mua nhà 2030" value={name} onChange={(e) => setName(e.target.value)} />
@@ -380,7 +379,7 @@ function GoalEditor({
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: todayVn() } }}
               />
             </Grid>
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 size="small"
                 fullWidth
@@ -390,7 +389,7 @@ function GoalEditor({
                 slotProps={{ input: { endAdornment: <InputAdornment position="end">₫</InputAdornment> }, htmlInput: { inputMode: 'decimal' } }}
               />
             </Grid>
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 size="small"
                 fullWidth
