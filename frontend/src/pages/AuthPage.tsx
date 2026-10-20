@@ -4,6 +4,7 @@ import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
+import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -27,13 +28,29 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [googleClientId, setGoogleClientId] = useState<string | null>(null)
+  // undefined: đang tải · null: máy chủ chưa cấu hình Google · 'error': mạng lỗi sau vài lần thử
+  const [googleClientId, setGoogleClientId] = useState<string | null | undefined | 'error'>(undefined)
+  const [googleTry, setGoogleTry] = useState(0)
 
   useEffect(() => {
-    api<{ googleClientId: string | null }>('/auth/config')
-      .then((c) => setGoogleClientId(c.googleClientId))
-      .catch(() => setGoogleClientId(null))
-  }, [])
+    let alive = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const load = (attempt: number) =>
+      api<{ googleClientId: string | null }>('/auth/config')
+        .then((c) => alive && setGoogleClientId(c.googleClientId))
+        .catch(() => {
+          if (!alive) return
+          // Mạng chập chờn (4G, vừa mở app): thử lại thay vì ẩn hẳn nút Google
+          if (attempt < 3) timer = setTimeout(() => void load(attempt + 1), 1000 * (attempt + 1))
+          else setGoogleClientId('error')
+        })
+    setGoogleClientId(undefined)
+    void load(0)
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [googleTry])
 
   const run = async (fn: () => Promise<void>) => {
     setError('')
@@ -99,19 +116,29 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             {mode === 'login' ? 'Chào mừng bạn quay lại.' : 'Mất khoảng 2 phút, gồm cả bài khảo sát khẩu vị rủi ro.'}
           </Typography>
 
-          {googleClientId && (
+          {googleClientId !== null && (
             <>
-              <GoogleOAuthProvider clientId={googleClientId} locale="vi">
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <GoogleLogin
-                    text={mode === 'login' ? 'signin_with' : 'signup_with'}
-                    // Nút Google có bề rộng cố định (200–400px): co theo màn hình điện thoại để không tràn ngang
-                    width={Math.min(340, Math.max(200, window.innerWidth - 104))}
-                    onSuccess={(r) => r.credential && void run(() => loginWithGoogle(r.credential!))}
-                    onError={() => setError('Đăng nhập Google thất bại, thử lại nhé')}
-                  />
-                </Box>
-              </GoogleOAuthProvider>
+              {googleClientId === undefined ? (
+                <Skeleton variant="rounded" height={44} sx={{ borderRadius: 1 }} />
+              ) : googleClientId === 'error' ? (
+                <Button fullWidth variant="outlined" onClick={() => setGoogleTry((n) => n + 1)}>
+                  Không tải được đăng nhập Google — thử lại
+                </Button>
+              ) : (
+                <GoogleOAuthProvider clientId={googleClientId} locale="vi">
+                  <Box sx={{ display: 'flex', justifyContent: 'center', minHeight: 44 }}>
+                    <GoogleLogin
+                      text={mode === 'login' ? 'signin_with' : 'signup_with'}
+                      // Nút Google có bề rộng cố định (200–400px): co theo màn hình điện thoại để không tràn ngang
+                      width={Math.min(340, Math.max(200, window.innerWidth - 104))}
+                      // Tự hiện hộp chọn tài khoản Google (One Tap) khi mở trang
+                      useOneTap
+                      onSuccess={(r) => r.credential && void run(() => loginWithGoogle(r.credential!))}
+                      onError={() => setError('Đăng nhập Google thất bại, thử lại nhé')}
+                    />
+                  </Box>
+                </GoogleOAuthProvider>
+              )}
               <Divider sx={{ my: 3 }}>
                 <Typography variant="caption" color="text.secondary">
                   hoặc dùng email

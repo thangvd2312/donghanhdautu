@@ -242,7 +242,7 @@ export function InfoTip({ children, label = 'Giải thích' }: { children: React
           e.stopPropagation()
           setAnchor(e.currentTarget)
         }}
-        sx={{ p: 0.5, m: -0.5, color: 'text.secondary', verticalAlign: 'middle' }}
+        sx={{ p: 1, m: -1, color: 'text.secondary', verticalAlign: 'middle' }}
       >
         <InfoOutlined sx={{ fontSize: 16 }} />
       </IconButton>

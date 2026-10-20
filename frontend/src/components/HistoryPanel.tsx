@@ -1,20 +1,19 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Grid from '@mui/material/Grid'
+import Link from '@mui/material/Link'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import { useColorScheme } from '@mui/material/styles'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
-import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
-import { ColorType, createChart, LineSeries, LineStyle, type MouseEventParams, type Time } from 'lightweight-charts'
+import { AreaSeries, ColorType, createChart, LineSeries, LineStyle, type MouseEventParams, type Time } from 'lightweight-charts'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api'
-import { changeColor, fmtDate, fmtPct, fmtVndAxis, fmtVndShort } from '../lib/format'
+import { changeColor, fmtDate, fmtPct, fmtVnd, fmtVndAxis, fmtVndShort } from '../lib/format'
 import type { HistoryPoint, PortfolioHistory } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
-import { Panel, Stat } from './ui'
+import { ChangePill, InfoTip, Panel } from './ui'
 
 const RANGES = [
   { value: '1m', label: '1T' },
@@ -60,32 +59,47 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
   useEffect(() => {
     if (!ref.current || points.length < 2) return
     const grid = dark ? '#222a37' : '#eef1f5'
+    const main = dark ? '#60a5fa' : '#2563eb'
+    const faded = dark ? '#475569' : '#b6c2d4'
     const chart = createChart(ref.current, {
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: dark ? '#949db0' : '#5b6475',
         fontFamily: 'Inter, system-ui, sans-serif',
+        // Ghi nguồn bằng dòng chữ dưới biểu đồ thay cho logo đè lên đường vẽ
+        attributionLogo: false,
       },
-      grid: { vertLines: { color: grid }, horzLines: { color: grid } },
-      rightPriceScale: { borderColor: grid, scaleMargins: { top: 0.1, bottom: 0.08 } },
-      timeScale: { borderColor: grid, fixLeftEdge: true, fixRightEdge: true },
-      crosshair: { mode: 0 },
+      // Điện thoại: bỏ lưới dọc và trục giá để đường tài sản dùng trọn bề ngang; số liệu đọc ở chú thích phía trên
+      grid: { vertLines: { visible: false }, horzLines: { color: grid, visible: !mobile } },
+      rightPriceScale: { visible: !mobile, borderVisible: false, scaleMargins: { top: 0.12, bottom: 0.06 } },
+      timeScale: { borderVisible: false, fixLeftEdge: true, fixRightEdge: true },
+      crosshair: {
+        mode: 0,
+        horzLine: { visible: false, labelVisible: false },
+        vertLine: { color: dark ? '#64748b' : '#94a3b8', style: LineStyle.Dashed, labelBackgroundColor: main },
+      },
       localization: { locale: 'vi-VN', priceFormatter: fmtVndAxis },
       // Điện thoại: vuốt trên biểu đồ phải cuộn trang, không kéo / zoom biểu đồ (luôn hiện trọn kỳ đã chọn)
       handleScroll: !mobile,
       handleScale: !mobile,
       autoSize: true,
     })
-    const main = dark ? '#60a5fa' : '#2563eb'
-    const faded = dark ? '#475569' : '#b6c2d4'
-    const value = chart.addSeries(LineSeries, { color: main, lineWidth: 2, priceLineVisible: false })
+    // Vùng tô dưới đường tài sản: nhìn ra xu hướng ngay cả trên màn hình nhỏ
+    const value = chart.addSeries(AreaSeries, {
+      lineColor: main,
+      lineWidth: 2,
+      topColor: dark ? 'rgba(96,165,250,0.30)' : 'rgba(37,99,235,0.22)',
+      bottomColor: dark ? 'rgba(96,165,250,0.02)' : 'rgba(37,99,235,0.01)',
+      priceLineVisible: false,
+      lastValueVisible: !mobile,
+    })
     value.setData(
       points.map((p) => ({
         time: p.date as Time,
         value: p.value,
         // Đoạn kết thúc ở ngày thiếu / ước tính giá vẽ nhạt để không trông như số liệu đầy đủ
-        color: p.status === 'complete' ? main : faded,
+        lineColor: p.status === 'complete' ? main : faded,
       })),
     )
     chart
@@ -99,15 +113,37 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
       .setData(points.map((p) => ({ time: p.date as Time, value: p.netContributions })))
     chart.timeScale().fitContent()
     const byDate = new Map(points.map((p) => [p.date, p]))
+    const keyOf = (t: Time | null | undefined) =>
+      typeof t === 'string' ? t : t && typeof t === 'object' ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : null
     const onMove = (e: MouseEventParams<Time>) => {
-      const t = e.time
-      if (!t) return setHover(null)
-      const key =
-        typeof t === 'string' ? t : typeof t === 'object' ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : null
+      if (!e.time) return setHover(null)
+      const key = keyOf(e.time)
       setHover((key && byDate.get(key)) || null)
     }
     chart.subscribeCrosshairMove(onMove)
+    // Chạm / kéo ngang trên điện thoại: hiện số liệu ngày đó (biểu đồ không tự xử lý chạm vì đã tắt kéo / zoom)
+    const el = ref.current
+    const onTouch = (ev: TouchEvent) => {
+      const touch = ev.touches[0]
+      if (!touch) return
+      const t = chart.timeScale().coordinateToTime(touch.clientX - el.getBoundingClientRect().left)
+      const key = keyOf(t)
+      const pt = key ? byDate.get(key) : undefined
+      if (!pt || t === null) return
+      setHover(pt)
+      chart.setCrosshairPosition(pt.value, t, value)
+    }
+    const onTouchEnd = () => {
+      setHover(null)
+      chart.clearCrosshairPosition()
+    }
+    el.addEventListener('touchstart', onTouch, { passive: true })
+    el.addEventListener('touchmove', onTouch, { passive: true })
+    el.addEventListener('touchend', onTouchEnd)
     return () => {
+      el.removeEventListener('touchstart', onTouch)
+      el.removeEventListener('touchmove', onTouch)
+      el.removeEventListener('touchend', onTouchEnd)
       chart.unsubscribeCrosshairMove(onMove)
       chart.remove()
     }
@@ -119,7 +155,7 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
   return (
     <Panel
       title="Tài sản theo thời gian"
-      subtitle="Khoảng cách giữa tài sản và vốn đã đưa vào là lãi/lỗ"
+      subtitle="Khoảng cách giữa đường tài sản và đường vốn là lãi/lỗ"
       action={
         <ToggleButtonGroup exclusive size="small" value={range} onChange={(_, v: string | null) => v && setRange(v)}>
           {RANGES.map((r) => (
@@ -141,53 +177,59 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
       )}
       {data && points.length >= 2 && (
         <>
-          {p && (
-            <Grid container spacing={2} sx={{ mb: 1.5 }}>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Stat
-                  label={`Lãi / lỗ trong kỳ${p.isEstimate ? ' (ước tính)' : ''}`}
-                  value={fmtVndShort(p.profit)}
-                  color={changeColor(p.profit)}
-                />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Tooltip title={p.method}>
-                  <span>
-                    <Stat label="Tỷ suất trong kỳ ⓘ" value={p.returnPct === null ? '—' : fmtPct(p.returnPct)} color={changeColor(p.returnPct)} />
-                  </span>
-                </Tooltip>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Stat label="Tiền vào / ra ròng" value={fmtVndShort(p.netFlows)} />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Stat label={`Từ ${fmtDate(p.start)}`} value={`${fmtVndShort(p.startValue)} → ${fmtVndShort(p.endValue)}`} size="sm" />
-              </Grid>
-            </Grid>
-          )}
+          {/* Phần đọc số kiểu app chứng khoán: giá trị tại điểm đang chạm (mặc định: hôm nay) + lãi/lỗ trong kỳ */}
           {shown && (
-            <Stack useFlexGap direction="row" spacing={2} sx={{ flexWrap: 'wrap', rowGap: 0.5, mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                {fmtDate(shown.date)}
+            <Box sx={{ mb: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                {hover ? fmtDate(shown.date) : 'Tổng tài sản'}
               </Typography>
-              <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                <Swatch color={dark ? '#60a5fa' : '#2563eb'} /> Tài sản {fmtVndShort(shown.value)}
+              <Typography className="num" sx={{ fontSize: 24, fontWeight: 800, lineHeight: 1.25 }}>
+                {fmtVnd(shown.value)}
               </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                <Swatch color={dark ? '#94a3b8' : '#64748b'} dashed /> Vốn {fmtVndShort(shown.netContributions)}
-              </Typography>
-              <Typography variant="caption" sx={{ color: changeColor(shown.profit) }}>
-                Lãi/lỗ {fmtVndShort(shown.profit)}
-              </Typography>
+              <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5, mt: 0.5 }}>
+                {hover || !p ? (
+                  <ChangePill small color={changeColor(shown.profit)}>
+                    Lãi/lỗ {fmtVndShort(shown.profit)}
+                  </ChangePill>
+                ) : (
+                  <ChangePill small color={changeColor(p.profit)}>
+                    {p.profit > 0 ? '+' : ''}
+                    {fmtVndShort(p.profit)}
+                    {p.returnPct !== null && ` · ${fmtPct(p.returnPct)}`}
+                  </ChangePill>
+                )}
+                <Typography variant="caption" color="text.secondary">
+                  {hover ? '' : `trong kỳ${p?.isEstimate ? ' (ước tính)' : ''}`}
+                </Typography>
+                {p && !hover && (
+                  <InfoTip label="Cách tính">
+                    {`Từ ${fmtDate(p.start)}: ${fmtVndShort(p.startValue)} → ${fmtVndShort(p.endValue)}. Tiền vào / ra ròng ${fmtVndShort(p.netFlows)} — không tính là lãi.\n\n${p.method}`}
+                  </InfoTip>
+                )}
+              </Stack>
+              <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                  <Swatch color={dark ? '#60a5fa' : '#2563eb'} /> Tài sản
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                  <Swatch color={dark ? '#94a3b8' : '#64748b'} dashed /> Vốn {fmtVndShort(shown.netContributions)}
+                </Typography>
+              </Stack>
               {shown.status !== 'complete' && (
-                <Typography variant="caption" color="warning.main">
+                <Typography variant="caption" color="warning.main" component="div">
                   {STATUS_LABEL[shown.status]}
                   {shown.missing.length > 0 && `: ${shown.missing.join(', ')} (tạm tính theo giá vốn)`}
                 </Typography>
               )}
-            </Stack>
+            </Box>
           )}
-          <Box ref={ref} sx={{ height }} onMouseLeave={() => setHover(null)} />
+          <Box ref={ref} sx={{ height, touchAction: 'pan-y' }} onMouseLeave={() => setHover(null)} />
+          <Typography variant="caption" color="text.disabled" component="div" sx={{ textAlign: 'right', fontSize: 10 }}>
+            Biểu đồ:{' '}
+            <Link href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer" color="inherit">
+              TradingView
+            </Link>
+          </Typography>
           {[...(p?.notes ?? []), ...data.notes].length > 0 && (
             <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
               {[...(p?.notes ?? []), ...data.notes].join(' ')}

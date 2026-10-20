@@ -145,7 +145,7 @@ export default function Layout() {
               spacing={1.25}
               component={RouterLink}
               to="/"
-              sx={{ alignItems: 'center', color: 'text.primary', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}
+              sx={{ alignItems: 'center', color: 'text.primary', textDecoration: 'none', flexShrink: 0, minWidth: 0, minHeight: 44 }}
             >
               <Logo size={28} />
               <Typography sx={{ fontWeight: 700, display: { xs: 'none', md: 'block' } }}>Đồng Hành Đầu Tư</Typography>

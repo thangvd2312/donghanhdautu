@@ -214,7 +214,8 @@ export function NewsRow({ news, tags }: { news: HomeFeed['macro'][number]; tags?
         rel="noopener noreferrer"
         underline="hover"
         color="text.primary"
-        sx={{ fontWeight: 600, ...CLAMP2 }}
+        // Khối cắt 2 dòng: bỏ phần đệm vùng chạm chung của link (sẽ làm lộ dòng thứ 3)
+        sx={{ fontWeight: 600, ...CLAMP2, '&&': { py: 0 } }}
       >
         {news.title}
       </Link>

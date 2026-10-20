@@ -74,6 +74,10 @@ export const theme = createTheme({
           textAlign: 'left',
         },
         '::-webkit-date-and-time-value': { textAlign: 'left' },
+        // Điện thoại: link chữ có vùng chạm cao ≥ 32px (padding của phần tử inline không đẩy dòng chữ)
+        '@media (max-width: 899.95px)': {
+          'a.MuiLink-root, button.MuiLink-root': { paddingTop: 8, paddingBottom: 8 },
+        },
       },
     },
     MuiPaper: {
@@ -99,6 +103,15 @@ export const theme = createTheme({
     },
     MuiIconButton: {
       styleOverrides: { sizeSmall: ({ theme }) => ({ [theme.breakpoints.down('md')]: { padding: 8 } }) },
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        popupIndicator: ({ theme }) => ({ [theme.breakpoints.down('md')]: { padding: 6 } }),
+        clearIndicator: ({ theme }) => ({ [theme.breakpoints.down('md')]: { padding: 6, visibility: 'visible' } }),
+      },
+    },
+    MuiTableSortLabel: {
+      styleOverrides: { root: ({ theme }) => ({ [theme.breakpoints.down('md')]: { minHeight: 32 } }) },
     },
     MuiToggleButton: {
       styleOverrides: { sizeSmall: ({ theme }) => ({ [theme.breakpoints.down('md')]: { minHeight: 36 } }) },
