@@ -2,16 +2,25 @@
 
 - Ngày lập: 20/10/2026.
 - Liên quan: [định hướng sản phẩm và roadmap](PRODUCT_ROADMAP.md).
-- Trạng thái (cập nhật 20/10/2026):
+- Trạng thái (cập nhật tối 20/10/2026, sau khi sửa các điểm trong review). Mức: **code** = đã có code; **tự động** = có unit test và/hoặc test tích hợp PostgreSQL trong CI; **luồng thật** = đã nghiệm thu trên môi trường thật.
 
-| Hạng mục | Trạng thái |
-|---|---|
-| QA-01 | Đã làm: CI chạy unit test, lint frontend (0 cảnh báo) và backend. Chưa: đo tải trang / tách bundle |
-| DATA-01, WL-01, HOME-01, ACQ-01 | Đã làm |
-| PF-01, PF-02, PF-03 | Đã làm (TWR/XIRR, benchmark để sau) |
-| PLAN-01, BRIEF-01, GOAL-01 | Đã làm |
-| NT-01 | Đã làm với Telegram (qua Cloudflare Worker vì server bị chặn Telegram) |
-| OBS-01, AI-01, BIZ-01 | Chưa làm — ưu tiên tính năng sản phẩm trước |
+| Hạng mục | Mức | Ghi chú |
+|---|---|---|
+| DATA-01 | tự động | Giá hôm nay cũ / dự phòng và tỷ giá ước tính được giữ trạng thái tới lịch sử và báo cáo kỳ. Còn cần product chốt cách thể hiện lãi crypto quy VND |
+| OBS-01 | tự động | Bảng `AnalyticsEvent`, từ điển và báo cáo `npm run report:usage` ([ANALYTICS.md](ANALYTICS.md)). D7/D30 chỉ có số từ ngày triển khai |
+| AI-01 | tự động (bản tối thiểu) | Usage và chi phí, quota, ngân sách, trần hội thoại dài ([AI_COSTS.md](AI_COSTS.md)). Chưa có hàng đợi bản tin riêng. Router cần khai `AI_PRICES` để có chi phí |
+| QA-01 | tự động | CI chạy unit + test tích hợp PostgreSQL. Audit mobile fail khi có lỗi. Đã tách bundle và đo tải trang ([PERFORMANCE.md](PERFORMANCE.md)) |
+| WL-01 | tự động | Giới hạn số mã giữ đúng khi thêm đồng thời |
+| ACQ-01 | tự động | Khảo sát có nút "Để sau"; giữ trang đích qua đăng ký và khảo sát; đo phễu trang mẫu |
+| PF-01 | tự động | Kiểm tra ngày có thật trên lịch. Migration mới đã chạy thử trên bản sao dữ liệu dev; chưa nghiệm thu trên production |
+| PF-02 | tự động | Gửi lại cùng yêu cầu nhập không tạo thêm giao dịch; xem trước không ghi DB |
+| PF-03 | tự động | Thiếu giá ngày khai báo thì kết quả kỳ là ước tính. TWR/XIRR, benchmark để sau |
+| HOME-01 | tự động | Tăng/giảm hôm nay tính theo vị thế đầu ngày và giao dịch trong ngày |
+| BRIEF-01 | tự động | Mỗi người một bản tin mỗi kỳ (`BriefRun`), chạy tiếp được sau lỗi; đo lượt mở và hỏi tiếp |
+| PLAN-01 | tự động | Giao dịch được ghi rõ là trước / trong / sau thời gian kế hoạch |
+| NT-01 | tự động | Thông báo và việc gửi được lưu cùng transaction. Chưa thử gửi Telegram / Web Push thật |
+| GOAL-01 | tự động | Phân bổ không vượt 100% khi tạo/sửa đồng thời |
+| BIZ-01 | chưa | Việc của product: phỏng vấn, giá, mô hình chi phí (có số liệu từ OBS-01 / AI-01) |
 - Các lựa chọn dưới đây là phạm vi đề xuất. Khi chia ticket, dev ghi rõ quyết định kỹ thuật, phụ thuộc và phần được hoãn.
 
 ## Quy ước triển khai
