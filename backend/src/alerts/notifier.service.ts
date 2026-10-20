@@ -36,6 +36,10 @@ export class NotifierService {
         data: { userId, ...n, title: stripEmoji(n.title).trim(), body: stripEmoji(n.body).trim(), sources: n.sources ?? [] },
       });
       this.gateway.notifyUser(userId, 'notification', created);
+      // Người dùng đã chủ động kết nối Telegram: đưa vào hàng đợi gửi (loại tin / giờ yên lặng kiểm tra lúc gửi)
+      if (await this.prisma.telegramLink.findFirst({ where: { userId, active: true }, select: { userId: true } })) {
+        await this.prisma.telegramDelivery.create({ data: { userId, notificationId: created.id } }).catch(() => null);
+      }
       return created;
     } catch {
       // Trùng dedupeKey do hai lượt quét chạy chồng — bỏ qua

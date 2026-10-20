@@ -28,6 +28,7 @@ model User {
   plans         InvestmentPlan[]
   importBatches ImportBatch[]
   goals         Goal[]
+  telegram      TelegramLink?
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -141,6 +142,7 @@ model Notification {
   link      String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  telegramDelivery TelegramDelivery?
 
   @@unique([userId, dedupeKey])
   @@index([userId, createdAt])
@@ -420,4 +422,50 @@ model GoalAllocation {
   pct       Float
 
   @@unique([goalId, assetType, symbol])
+}
+
+/// Liên kết Telegram do người dùng chủ động tạo (bấm Start với mã một lần). Không có liên kết = không gửi gì ra ngoài
+model TelegramLink {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatId      String   @unique
+  username    String?
+  active      Boolean  @default(true)
+  /// Loại thông báo được gửi: {"price_move":true,"price_target":true,"news":false,...}
+  kinds       Json
+  /// Giờ yên lặng theo giờ VN, phút trong ngày (vd 1320 = 22:00); null = không đặt
+  quietStart  Int?
+  quietEnd    Int?
+  /// false: chỉ gửi tiêu đề chung + link, không gửi nội dung chi tiết (có thể chứa số liệu danh mục)
+  showDetails Boolean  @default(false)
+  linkedAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Mã một lần để liên kết Telegram (t.me/<bot>?start=<code>), hết hạn sau 15 phút
+model TelegramLinkCode {
+  code      String    @id
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([userId])
+}
+
+/// Hàng đợi gửi Telegram: mỗi thông báo tối đa một lần gửi (unique), có thử lại và trạng thái
+model TelegramDelivery {
+  id             String       @id @default(cuid())
+  userId         String
+  notificationId String       @unique
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  /// pending | sending | sent | failed | skipped
+  status         String       @default("pending")
+  attempts       Int          @default(0)
+  lastError      String?
+  nextAttemptAt  DateTime     @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([status, nextAttemptAt])
+  @@index([userId, sentAt])
 }

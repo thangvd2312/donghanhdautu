@@ -38,7 +38,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 401) {
     setToken(null)
     if (!location.pathname.startsWith('/login') && !location.pathname.startsWith('/register')) {
-      location.href = '/login'
+      location.href = `/login?next=${encodeURIComponent(location.pathname + location.search)}`
     }
   }
   if (!res.ok) {

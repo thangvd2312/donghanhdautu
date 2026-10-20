@@ -9,7 +9,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import { Logo } from '../components/ui'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
@@ -17,6 +17,10 @@ import { useAuth } from '../lib/auth'
 export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { login, register, loginWithGoogle } = useAuth()
   const nav = useNavigate()
+  const [params] = useSearchParams()
+  // Chỉ nhận đường dẫn nội bộ (chặn chuyển hướng ra trang ngoài kiểu //evil.com)
+  const nextRaw = params.get('next') ?? '/'
+  const next = nextRaw.startsWith('/') && !nextRaw.startsWith('//') && !nextRaw.startsWith('/login') ? nextRaw : '/'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,7 +39,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     setBusy(true)
     try {
       await fn()
-      nav('/')
+      nav(next, { replace: true })
     } catch (err) {
       setError((err as Error).message)
     } finally {

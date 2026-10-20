@@ -8,6 +8,7 @@ import { HomeModule } from './home/home.module';
 import { PlansModule } from './plans/plans.module';
 import { DemoModule } from './demo/demo.module';
 import { GoalsModule } from './goals/goals.module';
+import { TelegramModule } from './telegram/telegram.module';
 import { MacroModule } from './macro/macro.module';
 import { MarketModule } from './market/market.module';
 import { NewsModule } from './news/news.module';
@@ -40,6 +41,7 @@ class HealthController {
     PlansModule,
     DemoModule,
     GoalsModule,
+    TelegramModule,
     AdvisorModule,
     AlertsModule,
   ],
