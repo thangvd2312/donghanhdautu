@@ -18,7 +18,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 const ts = (d: Date) => Prisma.sql`(${d.toISOString()}::timestamptz AT TIME ZONE 'UTC')`;
 
 /** Sự kiện hệ thống tự phát, không phải hành động của người dùng */
-const SYSTEM = Prisma.join(['brief_generated']);
+const SYSTEM = Prisma.join(['brief_generated', 'portfolio_valued']);
 
 export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; now?: Date } = {}) {
   const now = opts.now ?? new Date();
@@ -139,6 +139,60 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
     WHERE "userId" IS NULL AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
   `);
 
+  // Thời gian tới giá trị đầu tiên: từ đăng ký tới lần đầu xem danh mục sau khi đã có giao dịch thật
+  const [ttfv] = await prisma.$queryRaw<{ users: number; median_hours: number | null; p90_hours: number | null }[]>(
+    Prisma.sql`
+    WITH u AS (SELECT id, "createdAt" AS signup_at FROM "User" WHERE "createdAt" >= ${ts(since)} AND "createdAt" <= ${ts(now)}),
+    first_tx AS (SELECT "userId", min("createdAt") AS at FROM "Transaction" WHERE source IN ('manual', 'csv') GROUP BY "userId"),
+    first_view AS (
+      SELECT u.id, min(e."createdAt") AS at FROM u
+      JOIN first_tx f ON f."userId" = u.id
+      JOIN "AnalyticsEvent" e ON e."userId" = u.id AND e.name = 'portfolio_viewed' AND e."createdAt" >= f.at
+      GROUP BY u.id
+    )
+    SELECT count(*)::int AS users,
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM v.at - u.signup_at) / 3600) AS median_hours,
+      percentile_cont(0.9) WITHIN GROUP (ORDER BY extract(epoch FROM v.at - u.signup_at) / 3600) AS p90_hours
+    FROM first_view v JOIN u ON u.id = v.id
+  `,
+  );
+
+  // Duy trì nhật ký: người có kế hoạch, bao nhiêu người xem lại ít nhất một lần trong 30 ngày; kế hoạch quá hạn
+  const [plans] = await prisma.$queryRaw<{ users_with_plans: number; users_reviewed: number; overdue_plans: number }[]>(
+    Prisma.sql`
+    SELECT
+      count(DISTINCT p."userId")::int AS users_with_plans,
+      count(DISTINCT p."userId") FILTER (WHERE EXISTS (
+        SELECT 1 FROM "PlanReview" r JOIN "InvestmentPlan" p2 ON p2.id = r."planId"
+        WHERE p2."userId" = p."userId" AND r."createdAt" >= ${ts(d30)} AND r."createdAt" <= ${ts(now)}))::int AS users_reviewed,
+      count(*) FILTER (WHERE p.status = 'active'
+        AND p."nextReviewAt" < (${ts(now)} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')::date - 7)::int AS overdue_plans
+    FROM "InvestmentPlan" p WHERE p."createdAt" <= ${ts(now)}
+  `,
+  );
+
+  // Chất lượng dữ liệu: ngày-người theo trạng thái giá của danh mục (ok / thiếu giá / giá cũ)
+  const quality = await prisma.$queryRaw<{ status: string; user_days: number }[]>(Prisma.sql`
+    SELECT props->>'status' AS status, count(*)::int AS user_days FROM "AnalyticsEvent"
+    WHERE name = 'portfolio_valued' AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+    GROUP BY 1 ORDER BY 1
+  `);
+
+  // Chất lượng AI: tỷ lệ câu trả lời bị báo sai (theo lý do) và kết quả tự đối chiếu nguồn
+  const [asked] = await prisma.$queryRaw<{ questions: number }[]>(Prisma.sql`
+    SELECT count(*)::int AS questions FROM "AnalyticsEvent"
+    WHERE name = 'advisor_asked' AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+  `);
+  const feedback = await prisma.$queryRaw<{ reason: string; reports: number }[]>(Prisma.sql`
+    SELECT reason, count(*)::int AS reports FROM "AnswerFeedback"
+    WHERE "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)} GROUP BY 1 ORDER BY 2 DESC
+  `);
+  const verification = await prisma.$queryRaw<{ status: string; answers: number }[]>(Prisma.sql`
+    SELECT meta->'verification'->>'status' AS status, count(*)::int AS answers FROM "ChatMessage"
+    WHERE role = 'assistant' AND meta ? 'verification' AND "createdAt" >= ${ts(d30)} AND "createdAt" <= ${ts(now)}
+    GROUP BY 1 ORDER BY 1
+  `);
+
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : null);
   return {
     generatedAt: now.toISOString(),
@@ -156,6 +210,25 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
     })),
     last30Days: counts,
     aiCost30Days: ai,
+    timeToFirstValue: ttfv,
+    planReviews30Days: { ...plans, reviewedPct: pct(plans.users_reviewed, plans.users_with_plans) },
+    dataQuality30Days: {
+      byStatus: quality,
+      okPct: pct(
+        quality.find((q) => q.status === 'ok')?.user_days ?? 0,
+        quality.reduce((s, q) => s + q.user_days, 0),
+      ),
+    },
+    aiQuality30Days: {
+      questions: asked.questions,
+      reports: feedback.reduce((s, f) => s + f.reports, 0),
+      reportPct: pct(
+        feedback.reduce((s, f) => s + f.reports, 0),
+        asked.questions,
+      ),
+      byReason: feedback,
+      verification,
+    },
     aiCostPerUser30Days: {
       ...perUser,
       sharedUsd: shared.cost_usd,

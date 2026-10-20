@@ -24,6 +24,7 @@ import type { AssetType } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
 import { TEMPLATE_CSV } from './csv-import';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { CorporateActionsService } from './corporate-actions.service';
 import { HistoryService } from './history.service';
 import { ImportDto, ImportService } from './import.service';
@@ -256,6 +257,7 @@ class PortfolioController {
     private market: MarketService,
     private prisma: PrismaService,
     private corporateActions: CorporateActionsService,
+    private analytics: AnalyticsService,
   ) {}
 
   /** Sự kiện quyền (cổ phiếu thưởng, chia tách, cổ tức) được hưởng nhưng chưa ghi vào sổ */
@@ -280,6 +282,14 @@ class PortfolioController {
       this.portfolio.valuation(user.id).then((x) => this.portfolio.withVndActual(user.id, x)),
       this.portfolio.breakdown(user.id),
     ]);
+    // Đo chất lượng dữ liệu: trạng thái giá của danh mục mỗi ngày người dùng mở (chỉ khi có tài sản)
+    if (v.holdings.length) {
+      void this.analytics.track('portfolio_valued', {
+        userId: user.id,
+        props: { status: v.dataQuality.status },
+        dedupeKey: `portfolio_valued:${vnDateKey()}`,
+      });
+    }
     return {
       ...v,
       holdings: v.holdings.map((h) => ({ ...h, portfolios: breakdown[`${h.assetType}:${h.symbol}`] ?? [] })),

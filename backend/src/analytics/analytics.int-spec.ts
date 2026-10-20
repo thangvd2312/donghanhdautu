@@ -99,6 +99,69 @@ describe('đo hành vi (PostgreSQL)', () => {
         { feature: 'news_tag', model: 'm', costUsd: 0.2, durationMs: 1, outcome: 'ok', createdAt: at(60) },
       ],
     });
+    // Thời gian tới giá trị đầu tiên: A có giao dịch thật ngày 2, xem danh mục ngày 3 → 72 giờ
+    await ev(a.id, 'portfolio_viewed', 3, 'portfolio_viewed:d3');
+    // Kế hoạch: A xem lại trong 30 ngày, B có kế hoạch quá hạn
+    const planOf = (userId: string, nextReview: number) =>
+      prisma.investmentPlan.create({
+        data: {
+          userId,
+          assetType: 'stock',
+          symbol: 'FPT',
+          thesis: 't',
+          exitConditions: 'e',
+          nextReviewAt: at(nextReview),
+          createdAt: at(1),
+        },
+      });
+    const pa = await planOf(a.id, 90);
+    await planOf(b.id, 40);
+    await prisma.planReview.create({ data: { planId: pa.id, decision: 'keep', createdAt: at(55) } });
+    // Chất lượng dữ liệu: 3 ngày đủ giá, 1 ngày thiếu giá
+    for (const [i, status] of (['ok', 'ok', 'ok', 'partial'] as const).entries()) {
+      await ev(a.id, 'portfolio_valued', 50 + i, `pv:${i}`, { status });
+    }
+    // Chất lượng AI: 4 câu hỏi, 1 lần báo sai số; 1 câu trả lời tự đối chiếu có lỗi
+    for (let i = 0; i < 4; i++) await ev(a.id, 'advisor_asked', 50 + i);
+    await prisma.answerFeedback.create({
+      data: {
+        userId: a.id,
+        conversationId: 'c',
+        answerId: 'm',
+        reason: 'wrong_number',
+        question: 'q',
+        answer: 'a',
+        createdAt: at(51),
+      },
+    });
+    const conv = await prisma.conversation.create({ data: { userId: a.id, title: 't' } });
+    await prisma.chatMessage.create({
+      data: {
+        conversationId: conv.id,
+        role: 'assistant',
+        content: [],
+        meta: { verification: { status: 'issues', issues: [] } },
+        createdAt: at(51),
+      },
+    });
+
+    const full = await usageReport(prisma, { weeks: 10, now: at(62) });
+    expect(full.timeToFirstValue).toMatchObject({ users: 1, median_hours: 72 });
+    expect(full.planReviews30Days).toEqual({
+      users_with_plans: 2,
+      users_reviewed: 1,
+      overdue_plans: 1,
+      reviewedPct: 50,
+    });
+    expect(full.dataQuality30Days.okPct).toBe(75);
+    expect(full.aiQuality30Days).toMatchObject({
+      questions: 4,
+      reports: 1,
+      reportPct: 25,
+      byReason: [{ reason: 'wrong_number', reports: 1 }],
+      verification: [{ status: 'issues', answers: 1 }],
+    });
+
     const c = (await usageReport(prisma, { weeks: 10, now: at(62) })).aiCostPerUser30Days;
     expect(c).toMatchObject({ users: 2, max_usd: 0.3, sharedUsd: 0.2, sharedPerActiveUserUsd: 0.2 });
     expect(c.avg_usd).toBeCloseTo(0.2);

@@ -24,6 +24,7 @@ Sự kiện lưu trong bảng `AnalyticsEvent` của PostgreSQL hiện có. Khô
 | `first_real_asset_added` | server | Giao dịch hoặc số dư thật đầu tiên, ghi tay hoặc qua CSV; không tính dữ liệu chuyển đổi | `via` | Một lần / người |
 | `import_completed` | server | Xác nhận nhập CSV, trừ trường hợp gửi lại cùng file | `rows` | Theo đợt nhập |
 | `portfolio_viewed` | client | Mở trang Danh mục | — | Một lần / người / ngày |
+| `portfolio_valued` | server | Mở danh mục (gộp) có tài sản; ghi trạng thái giá | `status` | Một lần / người / ngày |
 | `app_active` | client | Mở app khi đã đăng nhập | — | Một lần / người / ngày |
 | `brief_generated` | server | Bản tin sáng, chiều hoặc tuần đã tạo và gửi thông báo | `kind`, `test` | Theo người và kỳ |
 | `brief_opened` | server | Mở cuộc trò chuyện chứa bản tin | `kind` | Lần mở đầu tiên / bản tin |
@@ -45,6 +46,11 @@ Sự kiện lưu trong bảng `AnalyticsEvent` của PostgreSQL hiện có. Khô
 - **D30**: có hoạt động trong ngày 30–59 sau đăng ký. Chỉ tính cho cohort đã qua ít nhất 60 ngày.
 - **DAU / WAU / MAU**: số người dùng có hoạt động trong 1 / 7 / 30 ngày gần nhất.
 - **Bản tin**: trong 30 ngày, đếm số bản đã tạo (không tính "Gửi thử"), số bản được mở và số bản có hỏi tiếp.
+
+- **Thời gian tới giá trị đầu tiên**: từ lúc đăng ký tới lần đầu xem danh mục sau khi đã có giao dịch thật (trung vị và p90, theo giờ), cho người đăng ký trong khoảng báo cáo.
+- **Duy trì nhật ký**: trong số người có kế hoạch, tỷ lệ người có ít nhất một lần xem lại kế hoạch trong 30 ngày; kèm số kế hoạch đang theo dõi đã quá hạn xem lại hơn 7 ngày.
+- **Chất lượng dữ liệu**: tỷ lệ lượt mở danh mục (ngày-người, sự kiện `portfolio_valued`) có giá đầy đủ và còn mới (`ok`), so với thiếu giá (`partial`) hoặc giá cũ / tỷ giá dự phòng (`degraded`).
+- **Chất lượng AI**: số lần người dùng báo sai câu trả lời (theo lý do) chia cho số câu hỏi trong 30 ngày; kèm kết quả tự đối chiếu nguồn của các câu trả lời (`verified` / `issues` / `skipped`). Kết quả eval offline xem `npm run eval`.
 
 Sự kiện chỉ có từ khi triển khai đo lường, nên D7/D30 của các cohort trước đó sẽ thấp hơn thực tế.
 

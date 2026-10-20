@@ -19,7 +19,22 @@ async function main() {
         D30: c.d30_eligible ? `${c.d30_retained}/${c.d30_eligible} (${c.d30Pct}%)` : 'chưa đủ ngày',
       })),
     );
-    console.log(`Người dùng hoạt động: DAU ${r.active.dau} · WAU ${r.active.wau} · MAU ${r.active.mau}\n`);
+    console.log(`Người dùng hoạt động: DAU ${r.active.dau} · WAU ${r.active.wau} · MAU ${r.active.mau}`);
+    const h = (x: number | null) => (x === null ? '–' : `${Math.round(x * 10) / 10} giờ`);
+    console.log(
+      `Thời gian tới giá trị đầu tiên (đăng ký → xem danh mục có dữ liệu thật): ${r.timeToFirstValue.users} người, trung vị ${h(r.timeToFirstValue.median_hours)}, p90 ${h(r.timeToFirstValue.p90_hours)}`,
+    );
+    const pr = r.planReviews30Days;
+    console.log(
+      `Duy trì nhật ký: ${pr.users_reviewed}/${pr.users_with_plans} người có kế hoạch đã xem lại trong 30 ngày (${pr.reviewedPct ?? '–'}%); ${pr.overdue_plans} kế hoạch quá hạn xem lại > 7 ngày`,
+    );
+    console.log(
+      `Chất lượng dữ liệu: ${r.dataQuality30Days.okPct ?? '–'}% lượt mở danh mục có giá đầy đủ và mới (${r.dataQuality30Days.byStatus.map((q) => `${q.status} ${q.user_days}`).join(', ') || 'chưa có'})`,
+    );
+    const aq = r.aiQuality30Days;
+    console.log(
+      `Chất lượng AI: ${aq.reports}/${aq.questions} câu trả lời bị báo sai (${aq.reportPct ?? '–'}%) — ${aq.byReason.map((f) => `${f.reason} ${f.reports}`).join(', ') || 'không có'}; tự đối chiếu nguồn: ${aq.verification.map((v) => `${v.status} ${v.answers}`).join(', ') || 'chưa có'}\n`,
+    );
     console.log('Bản tin 30 ngày qua');
     console.table(r.briefs);
     console.log('Sự kiện 30 ngày qua');

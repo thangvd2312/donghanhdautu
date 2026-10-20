@@ -49,6 +49,12 @@ export const EVENTS = {
     props: {},
     dedupe: 'Một lần mỗi người mỗi ngày (giờ VN)',
   },
+  portfolio_valued: {
+    source: 'server',
+    description: 'Danh mục được định giá khi người dùng mở — ghi trạng thái dữ liệu giá để đo chất lượng dữ liệu',
+    props: { status: 'ok | partial (thiếu giá) | degraded (giá cũ / tỷ giá dự phòng)' },
+    dedupe: 'Một lần mỗi người mỗi ngày (giờ VN)',
+  },
   app_active: {
     source: 'client',
     description: 'Mở app khi đã đăng nhập — dùng tính người dùng hoạt động và giữ chân D7/D30',
