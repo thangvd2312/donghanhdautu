@@ -49,8 +49,24 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-/** Giới hạn độ dài mỗi mục bằng chứng để một trang quá dài không chiếm hết ngữ cảnh */
-const MAX_EVIDENCE_CHARS = 20000;
+/**
+ * Giới hạn độ dài bằng chứng: mỗi mục tối đa 80k ký tự, tổng tối đa 300k (~100k token, vừa ngữ cảnh model
+ * kiểm tra). Dữ liệu cổ phiếu đầy đủ đã ~45–65k ký tự — cắt ngắn hơn sẽ làm mất phần cổ đông, giao dịch nội bộ
+ * ở cuối và bộ kiểm tra báo nhầm "không có nguồn".
+ */
+const MAX_EVIDENCE_CHARS = 80_000;
+const MAX_TOTAL_EVIDENCE_CHARS = 300_000;
+
+/** Cắt bằng chứng theo giới hạn; mục nào bị cắt được đánh dấu để bộ kiểm tra không kết luận "không có nguồn" */
+export function fitEvidence(evidence: Evidence[]) {
+  const total = evidence.reduce((s, e) => s + Math.min(e.content.length, MAX_EVIDENCE_CHARS), 0);
+  const cap = total > MAX_TOTAL_EVIDENCE_CHARS
+    ? Math.floor(MAX_EVIDENCE_CHARS * (MAX_TOTAL_EVIDENCE_CHARS / total))
+    : MAX_EVIDENCE_CHARS;
+  return evidence.map((e) =>
+    e.content.length > cap ? { ...e, content: e.content.slice(0, cap), truncated: true } : e,
+  );
+}
 
 /**
  * Đối chiếu câu trả lời của cố vấn với chính dữ liệu cố vấn đã dùng.
@@ -69,7 +85,7 @@ export class VerifierService {
     if (answer.trim().length < 150 || !evidence.length) {
       return { status: 'skipped', issues: [], discarded: 0, checkedAt, reason: 'Câu trả lời ngắn hoặc không dùng dữ liệu' };
     }
-    const ev = evidence.map((e) => ({ ...e, content: e.content.slice(0, MAX_EVIDENCE_CHARS) }));
+    const ev = fitEvidence(evidence);
     const result = await this.llm.json<{ issues: VerificationIssue[] }>({
       tier: 'fast',
       system: VERIFY_PROMPT,

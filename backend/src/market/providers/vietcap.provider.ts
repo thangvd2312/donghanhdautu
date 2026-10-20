@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
+import { cashQuality, netDebt, StatRow, StatementRow } from '../fundamentals';
 import { IndexQuote, StockQuote } from '../types';
 
 const SYMBOLS_FILE = join(process.cwd(), 'data', 'symbols.json');
@@ -242,6 +243,8 @@ export class VietcapProvider {
         name: d.viOrganName,
         sector: d.sectorVn,
         isBank: d.isBank,
+        /** NH ngân hàng, CK chứng khoán, BH bảo hiểm, CT doanh nghiệp thường */
+        companyType: d.comTypeCode as string | undefined,
         marketCapBn: Math.round(Number(d.marketCap) / 1e9),
         sharesOutstanding: d.numberOfSharesMktCap,
         high52w: d.highestPrice1Year,
@@ -270,11 +273,8 @@ export class VietcapProvider {
   /** Chỉ số tài chính TTM theo quý, 8 quý gần nhất */
   async ratios(symbol: string) {
     return this.cached(`ratios:${symbol}`, 6 * 3600_000, async () => {
-      const res = await this.get<{ data: Record<string, number | string | null>[] | null }>(
-        `${IQ}/company/${symbol}/statistics-financial`,
-      );
       // quarter = 5 là số liệu cả năm, trùng với quý 4 — bỏ đi
-      const rows = (res.data ?? [])
+      const rows = (await this.statsRaw(symbol))
         .filter((r) => Number(r.quarter) >= 1 && Number(r.quarter) <= 4)
         .sort(
           (a, b) =>
@@ -293,7 +293,10 @@ export class VietcapProvider {
         for (const k of keep) {
           const v = r[k];
           if (v === null || v === undefined || v === 0) continue;
-          o[k] = k === 'marketCap' ? Math.round(Number(v) / 1e9) : round(Number(v), 4);
+          // Vietcap gọi là debtToEquity nhưng thực chất là tổng nợ phải trả / vốn chủ — đổi tên cho khỏi nhầm
+          // với "nợ vay / vốn chủ" của bảng cân đối kế toán
+          const key = k === 'debtToEquity' ? 'liabilitiesToEquity' : k;
+          o[key] = k === 'marketCap' ? Math.round(Number(v) / 1e9) : round(Number(v), 4);
         }
         return o;
       });
@@ -303,16 +306,10 @@ export class VietcapProvider {
   /** Báo cáo KQKD: các dòng cấp 1, 5 năm + 6 quý gần nhất, đơn vị tỷ VND */
   async incomeStatement(symbol: string) {
     return this.cached(`is:${symbol}`, 6 * 3600_000, async () => {
-      const [meta, data] = await Promise.all([
-        this.get<{ data: { INCOME_STATEMENT: { field: string; level: number; titleVi: string }[] } }>(
-          `${IQ}/company/${symbol}/financial-statement/metrics`,
-        ),
-        this.get<{
-          data: { years: Record<string, number>[]; quarters: Record<string, number>[] };
-        }>(`${IQ}/company/${symbol}/financial-statement?section=INCOME_STATEMENT`),
-      ]);
-      const lines = meta.data.INCOME_STATEMENT.filter(
-        (m) => m.level === 1 || /Tổng lợi nhuận|Tổng thu nhập hoạt động|Trích lập dự phòng/.test(m.titleVi),
+      const [meta, data] = await Promise.all([this.metrics(symbol), this.statementRows(symbol, 'INCOME_STATEMENT')]);
+      const lines = meta.INCOME_STATEMENT.filter(
+        (m): m is VcMetric & { field: string } =>
+          !!m.field && (m.level === 1 || /Tổng lợi nhuận|Tổng thu nhập hoạt động|Trích lập dự phòng/.test(m.titleVi)),
       );
       const pick = (row: Record<string, number>, label: string) => {
         const o: Record<string, number | string> = { period: label };
@@ -323,13 +320,8 @@ export class VietcapProvider {
         }
         return o;
       };
-      const years = [...data.data.years]
-        .sort((a, b) => a.yearReport - b.yearReport)
-        .slice(-5)
-        .map((r) => pick(r, `${r.yearReport}`));
-      const quarters = [...data.data.quarters]
-        .filter((r) => r.lengthReport >= 1 && r.lengthReport <= 4)
-        .sort((a, b) => a.yearReport - b.yearReport || a.lengthReport - b.lengthReport)
+      const years = data.years.slice(-5).map((r) => pick(r, `${r.yearReport}`));
+      const quarters = data.quarters
         .slice(-6)
         .map((r) => pick(r, `Q${r.lengthReport}/${r.yearReport}`));
       // Bỏ các dòng toàn 0 (vd. EPS pha loãng không được công bố)
@@ -341,6 +333,237 @@ export class VietcapProvider {
     });
   }
 
+  /** Bảng P/E, P/B… TTM theo từng quý (từ 2018) — dùng chung cho ratios() và dải định giá lịch sử */
+  async statsRaw(symbol: string): Promise<(StatRow & Record<string, number | string | null>)[]> {
+    return this.cached(`stats:${symbol}`, 6 * 3600_000, async () => {
+      const res = await this.get<{ data: (StatRow & Record<string, number | string | null>)[] | null }>(
+        `${IQ}/company/${symbol}/statistics-financial`,
+      );
+      return res.data ?? [];
+    });
+  }
+
+  private metrics(symbol: string) {
+    return this.cached(`metrics:${symbol}`, 24 * 3600_000, async () => {
+      const res = await this.get<{ data: Record<string, VcMetric[]> }>(
+        `${IQ}/company/${symbol}/financial-statement/metrics`,
+      );
+      return res.data;
+    });
+  }
+
+  /** Số liệu một báo cáo tài chính: năm tăng dần, quý (riêng từng quý, không cộng dồn) tăng dần */
+  private statementRows(symbol: string, section: string) {
+    return this.cached(`fs:${section}:${symbol}`, 6 * 3600_000, async () => {
+      const res = await this.get<{ data: { years: Record<string, number>[]; quarters: Record<string, number>[] } }>(
+        `${IQ}/company/${symbol}/financial-statement?section=${section}`,
+      );
+      const years = [...(res.data?.years ?? [])].sort((a, b) => a.yearReport - b.yearReport);
+      const quarters = [...(res.data?.quarters ?? [])]
+        .filter((r) => r.lengthReport >= 1 && r.lengthReport <= 4)
+        .sort((a, b) => a.yearReport - b.yearReport || a.lengthReport - b.lengthReport);
+      return { years, quarters };
+    });
+  }
+
+  /**
+   * Chọn các dòng quan trọng của một báo cáo theo mã trường. Dạng báo cáo khác (công ty chứng khoán,
+   * bảo hiểm) không có đủ các trường này thì lấy các dòng cấp 1.
+   */
+  private async keyLines(symbol: string, section: 'BALANCE_SHEET' | 'CASH_FLOW', wanted: [string, string?][]) {
+    const [meta, data] = await Promise.all([this.metrics(symbol), this.statementRows(symbol, section)]);
+    const all = meta[section] ?? [];
+    const byField = new Map(all.filter((m) => m.field).map((m) => [m.field as string, m]));
+    let lines = wanted
+      .filter(([f]) => byField.has(f))
+      .map(([f, label]) => ({ field: f, label: label ?? byField.get(f)!.titleVi }));
+    const standard = lines.length >= 5;
+    if (!standard) lines = all.filter((m) => m.level === 1 && m.field).map((m) => ({ field: m.field as string, label: m.titleVi }));
+    const pick = (row: Record<string, number>, period: string) => {
+      const o: StatementRow = { period };
+      for (const l of lines) {
+        const v = row[l.field];
+        // Mẫu báo cáo riêng có nhiều dòng không dùng (toàn 0) — bỏ cho gọn
+        if (typeof v === 'number' && (standard || v !== 0)) o[l.field] = round(v / 1e9, 1);
+      }
+      return o;
+    };
+    return {
+      standard,
+      lines,
+      years: data.years.slice(-5).map((r) => pick(r, `${r.yearReport}`)),
+      quarters: data.quarters.map((r) => pick(r, `Q${r.lengthReport}/${r.yearReport}`)),
+    };
+  }
+
+  /** Đổi mã trường sang tên dòng tiếng Việt cho dễ đọc */
+  private labelled(rows: StatementRow[], lines: { field: string; label: string }[]) {
+    return rows.map((r) => {
+      const o: StatementRow = {};
+      for (const [k, v] of Object.entries(r)) o[lines.find((l) => l.field === k)?.label ?? k] = v;
+      return o;
+    });
+  }
+
+  /** Loại doanh nghiệp quyết định cách đọc báo cáo tài chính */
+  private async kind(symbol: string): Promise<'bank' | 'securities' | 'insurance' | 'corporate'> {
+    const [meta, company] = await Promise.all([this.metrics(symbol), this.safe('company', () => this.company(symbol), null)]);
+    if (company?.isBank || (meta.BALANCE_SHEET ?? []).some((m) => m.field === 'bsb103')) return 'bank';
+    if (company?.companyType === 'CK') return 'securities';
+    if (company?.companyType === 'BH') return 'insurance';
+    return 'corporate';
+  }
+
+  /** Bảng cân đối kế toán: 5 năm + 4 quý gần nhất (số dư cuối kỳ), tỷ VND, kèm nợ vay ròng */
+  async balanceSheet(symbol: string) {
+    return this.cached(`bs:${symbol}`, 6 * 3600_000, async () => {
+      const kind = await this.kind(symbol);
+      // Chứng khoán / bảo hiểm có mẫu báo cáo riêng: lấy các dòng cấp 1, không tính chỉ tiêu nợ vay ròng
+      const k = await this.keyLines(symbol, 'BALANCE_SHEET', kind === 'bank' ? BANK_BS : kind === 'corporate' ? CORP_BS : []);
+      const derive = (r: StatementRow): StatementRow => {
+        if (kind !== 'corporate' || !k.standard) return r;
+        const d = netDebt(r, { stDebt: 'bsa56', ltDebt: 'bsa71', cash: 'bsa2', stInv: 'bsa5' });
+        const equity = typeof r.bsa78 === 'number' ? r.bsa78 : 0;
+        return {
+          ...r,
+          'Tổng nợ vay (ngắn + dài hạn)': d.totalDebt,
+          'Nợ vay ròng (nợ vay − tiền − đầu tư ngắn hạn; âm = tiền nhiều hơn nợ vay)': d.netDebt,
+          'Nợ vay / Vốn chủ sở hữu (lần)': equity > 0 ? round(d.totalDebt / equity, 2) : '',
+        };
+      };
+      return {
+        unit: 'tỷ VND, số dư cuối kỳ',
+        type: KIND_LABEL[kind],
+        note: KIND_NOTE[kind],
+        years: this.labelled(k.years.map(derive), k.lines),
+        quarters: this.labelled(k.quarters.slice(-4).map(derive), k.lines),
+      };
+    });
+  }
+
+  /** Lưu chuyển tiền tệ: 5 năm + 4 quý gần nhất + tổng 4 quý (TTM), tỷ VND, kèm dòng tiền tự do */
+  async cashFlow(symbol: string) {
+    return this.cached(`cf:${symbol}`, 6 * 3600_000, async () => {
+      const kind = await this.kind(symbol);
+      if (kind !== 'corporate') return { type: KIND_LABEL[kind], note: KIND_NOTE[kind] };
+      const k = await this.keyLines(symbol, 'CASH_FLOW', CORP_CF);
+      const derive = (r: StatementRow): StatementRow => {
+        if (!k.standard) return r;
+        const q = cashQuality(r, { cfo: 'cfa18', capex: 'cfa19', pretax: 'cfa1' });
+        return {
+          ...r,
+          'Dòng tiền tự do (kinh doanh + chi mua sắm TSCĐ)': q.freeCashFlow ?? '',
+          'Dòng tiền kinh doanh / Lợi nhuận trước thuế (lần)': q.cfoToPretaxProfit ?? '',
+        };
+      };
+      const last4 = k.quarters.slice(-4);
+      const consecutive =
+        last4.length === 4 &&
+        last4.every((r, i) => i === 0 || quarterIndex(String(r.period)) - quarterIndex(String(last4[i - 1].period)) === 1);
+      let ttm: StatementRow | null = null;
+      if (consecutive) {
+        ttm = { period: `TTM (${last4[0].period} – ${last4[3].period})` };
+        for (const l of k.lines) {
+          if (last4.every((r) => typeof r[l.field] === 'number')) {
+            ttm[l.field] = round(last4.reduce((s, r) => s + Number(r[l.field]), 0), 1);
+          }
+        }
+      }
+      const years = k.years.map(derive);
+      const sum = (f: string) => years.reduce((s, r) => s + (typeof r[f] === 'number' ? r[f] : 0), 0);
+      return {
+        unit: 'tỷ VND; số âm là tiền chi ra; số quý là riêng từng quý (không cộng dồn)',
+        type: k.standard ? KIND_LABEL.corporate : 'mẫu báo cáo riêng — chỉ các dòng cấp 1',
+        years: this.labelled(years, k.lines),
+        quarters: this.labelled(last4.map(derive), k.lines),
+        ttm: ttm ? this.labelled([derive(ttm)], k.lines)[0] : null,
+        cumulative:
+          k.standard && years.length >= 3
+            ? {
+                period: `${years[0].period}–${years[years.length - 1].period}`,
+                'Tổng dòng tiền kinh doanh': round(sum('cfa18'), 1),
+                'Tổng lợi nhuận trước thuế': round(sum('cfa1'), 1),
+                'Tổng chi mua sắm TSCĐ': round(sum('cfa19'), 1),
+                'Tổng cổ tức đã trả': round(sum('cfa32'), 1),
+                'Dòng tiền kinh doanh / Lợi nhuận trước thuế (lần)': sum('cfa1') > 0 ? round(sum('cfa18') / sum('cfa1'), 2) : '',
+              }
+            : null,
+      };
+    });
+  }
+
+  /** Cổ đông lớn còn cập nhật (bỏ các bản ghi cũ hơn 18 tháng so với kỳ công bố mới nhất) */
+  async shareholders(symbol: string) {
+    return this.cached(`sh:${symbol}`, 12 * 3600_000, async () => {
+      const res = await this.get<{ data: VcShareholder[] | null }>(`${IQ}/company/${symbol}/shareholder`);
+      const rows = (res.data ?? []).filter((r) => r.publicDate && r.percentage);
+      if (!rows.length) return null;
+      const latest = rows.map((r) => r.publicDate).sort().at(-1)!;
+      const cutoff = new Date(latest);
+      cutoff.setMonth(cutoff.getMonth() - 18);
+      // Bỏ người nắm dưới 0,1% — không phải cổ đông lớn theo nghĩa thông thường
+      const fresh = rows
+        .filter((r) => new Date(r.publicDate) >= cutoff && r.percentage >= 0.001)
+        .sort((a, b) => b.percentage - a.percentage);
+      const top = fresh.slice(0, 10);
+      return {
+        latestDisclosure: latest,
+        note: 'Theo công bố gần nhất của từng cổ đông, chỉ người nắm từ 0,1% trở lên. Bản ghi cũ hơn 18 tháng so với kỳ công bố mới nhất đã bị loại vì có thể không còn đúng.',
+        top: top.map((r) => ({
+          name: r.ownerName,
+          type: r.ownerType === 'INDIVIDUAL' ? 'cá nhân' : 'tổ chức',
+          position: r.positionName ?? undefined,
+          ownershipPct: round(r.percentage * 100, 2),
+          asOf: r.publicDate,
+        })),
+        top10TotalPct: round(top.reduce((s, r) => s + r.percentage, 0) * 100, 2),
+        excludedStale: rows.filter((r) => new Date(r.publicDate) < cutoff).length,
+      };
+    });
+  }
+
+  /** Giao dịch của người nội bộ và người liên quan đã hoàn tất trong 12 tháng (không tính cổ phiếu thưởng/ESOP) */
+  async insiderTrades(symbol: string) {
+    return this.cached(`insider:${symbol}`, 6 * 3600_000, async () => {
+      const res = await this.get<{ data: { content: VcInsider[] } | null }>(
+        `${IQ}/company/${symbol}/insider-transaction?page=0&size=200`,
+      );
+      const since = new Date();
+      since.setFullYear(since.getFullYear() - 1);
+      const done = (res.data?.content ?? []).filter(
+        (r) =>
+          r.tradeStatusVi === 'Đã thực hiện xong' &&
+          (r.actionTypeCode === 'B' || r.actionTypeCode === 'S') &&
+          new Date(r.publicDate) >= since,
+      );
+      // Vietcap ghi khối lượng bán là số âm; một số bản ghi "đã thực hiện" không có khối lượng
+      const shares = (r: VcInsider) =>
+        Math.abs(r.shareAcquire || 0) || Math.abs((r.shareAfterTrade || 0) - (r.shareBeforeTrade || 0)) || null;
+      const total = (code: string) =>
+        done.filter((r) => r.actionTypeCode === code).reduce((s, r) => s + (shares(r) ?? 0), 0);
+      const bought = total('B');
+      const sold = total('S');
+      return {
+        period: '12 tháng gần nhất',
+        note: 'Chỉ tính giao dịch đã hoàn tất (không tính đăng ký chưa thực hiện, không tính cổ phiếu thưởng/ESOP). Người liên quan = người thân hoặc tổ chức liên quan của lãnh đạo.',
+        sharesBought: bought,
+        sharesSold: sold,
+        net: bought - sold,
+        count: done.length,
+        withoutVolume: done.filter((r) => shares(r) == null).length,
+        recent: done.slice(0, 10).map((r) => ({
+          date: r.endDate?.slice(0, 10) ?? r.publicDate.slice(0, 10),
+          trader: r.traderNameVi ?? r.eventTitleVi?.split(' - ')[0] ?? 'không rõ',
+          position: r.traderPositionVi ?? undefined,
+          relatedTo: r.relativeNameVi && r.relativeNameVi !== r.traderNameVi ? r.relativeNameVi : undefined,
+          action: r.actionTypeVi,
+          shares: shares(r) ?? 'chưa ghi nhận khối lượng',
+          ownershipAfterPct: r.ownershipAfterTrade ? round(r.ownershipAfterTrade * 100, 3) : undefined,
+        })),
+      };
+    });
+  }
+
   async safe<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
     try {
       return await fn();
@@ -349,6 +572,75 @@ export class VietcapProvider {
       return fallback;
     }
   }
+}
+
+function quarterIndex(period: string) {
+  const m = /Q(\d)\/(\d{4})/.exec(period);
+  return m ? Number(m[2]) * 4 + Number(m[1]) : NaN;
+}
+
+const KIND_LABEL = {
+  bank: 'ngân hàng',
+  securities: 'công ty chứng khoán',
+  insurance: 'công ty bảo hiểm',
+  corporate: 'doanh nghiệp',
+} as const;
+
+const KIND_NOTE = {
+  bank: 'Ngân hàng: dòng tiền kinh doanh chủ yếu phản ánh biến động tiền gửi và cho vay, không dùng để đánh giá chất lượng lợi nhuận như doanh nghiệp thường. Đọc theo NIM, nợ xấu, CASA, tăng trưởng tín dụng, CAR.',
+  securities:
+    'Công ty chứng khoán: nợ vay chủ yếu tài trợ cho vay margin và danh mục tự doanh, dòng tiền kinh doanh biến động theo dư nợ margin — không dùng nợ vay ròng hay dòng tiền/lợi nhuận như doanh nghiệp thường. Đọc theo cơ cấu doanh thu (môi giới, cho vay margin, tự doanh, ngân hàng đầu tư), dư nợ margin/vốn chủ và ROE.',
+  insurance:
+    'Công ty bảo hiểm: phần lớn nợ phải trả là dự phòng nghiệp vụ, tài sản chủ yếu là danh mục đầu tư — không dùng nợ vay ròng hay dòng tiền/lợi nhuận như doanh nghiệp thường. Đọc theo doanh thu phí bảo hiểm, tỷ lệ bồi thường, lợi nhuận hoạt động đầu tư và ROE.',
+  corporate: undefined,
+} as const;
+
+/** Mã trường các dòng chính — doanh nghiệp thường. Nhãn bỏ trống thì dùng tên dòng của Vietcap */
+const CORP_BS: [string, string?][] = [
+  ['bsa2'], ['bsa5'], ['bsa8'], ['bsa15'], ['bsa1', 'Tài sản ngắn hạn'], ['bsa53', 'Tổng tài sản'],
+  ['bsa55', 'Nợ ngắn hạn'], ['bsa56', 'Vay ngắn hạn'], ['bsa71', 'Vay dài hạn'], ['bsa54', 'Nợ phải trả'],
+  ['bsa78'], ['bsa90', 'Lợi nhuận chưa phân phối'],
+];
+const BANK_BS: [string, string?][] = [
+  ['bsa53', 'Tổng tài sản'], ['bsb104', 'Cho vay khách hàng (gộp)'], ['bsb105', 'Dự phòng rủi ro cho vay khách hàng'],
+  ['bsb106'], ['bsb113'], ['bsb116'], ['bsb112'], ['bsa54', 'Tổng nợ phải trả'], ['bsa78', 'Vốn chủ sở hữu'],
+  ['bsa90', 'Lợi nhuận chưa phân phối'],
+];
+const CORP_CF: [string, string?][] = [
+  ['cfa1', 'Lợi nhuận trước thuế'], ['cfa2', 'Khấu hao'], ['cfa18', 'Dòng tiền từ hoạt động kinh doanh'],
+  ['cfa19', 'Chi mua sắm, xây dựng TSCĐ'], ['cfa26', 'Dòng tiền từ hoạt động đầu tư'], ['cfa29', 'Tiền vay nhận được'],
+  ['cfa30', 'Tiền trả nợ gốc vay'], ['cfa32', 'Cổ tức đã trả'], ['cfa34', 'Dòng tiền từ hoạt động tài chính'],
+  ['cfa35', 'Lưu chuyển tiền thuần trong kỳ'],
+];
+
+interface VcMetric {
+  field: string | null;
+  level: number;
+  titleVi: string;
+}
+
+interface VcShareholder {
+  ownerName: string;
+  ownerType: string;
+  positionName: string | null;
+  percentage: number;
+  publicDate: string;
+}
+
+interface VcInsider {
+  publicDate: string;
+  endDate?: string;
+  traderNameVi: string | null;
+  eventTitleVi?: string;
+  shareBeforeTrade?: number | null;
+  shareAfterTrade?: number | null;
+  traderPositionVi?: string | null;
+  relativeNameVi?: string | null;
+  actionTypeCode: string;
+  actionTypeVi: string;
+  tradeStatusVi: string;
+  shareAcquire: number;
+  ownershipAfterTrade?: number | null;
 }
 
 function pct(v: unknown) {

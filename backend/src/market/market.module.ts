@@ -26,6 +26,11 @@ class MarketController {
     return this.market.stockDetail(symbol);
   }
 
+  @Get('stocks/:symbol/fundamentals')
+  stockFundamentals(@Param('symbol') symbol: string) {
+    return this.market.stockFundamentals(symbol);
+  }
+
   @Get('stocks/:symbol/history')
   stockHistory(
     @Param('symbol') symbol: string,

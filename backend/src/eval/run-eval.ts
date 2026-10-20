@@ -43,7 +43,9 @@ const JUDGE_PROMPT = `Bạn là chuyên gia đầu tư lâu năm, chấm chất 
 Chấm theo tiêu chí riêng (rubric) của câu hỏi, cộng các tiêu chí chung: dẫn chứng có nguồn, phân biệt dữ kiện và nhận định, kết luận rõ ràng, phù hợp hồ sơ người dùng, không hứa lợi nhuận, độ dài hợp với câu hỏi.
 score: 1–5 (5 = như một chuyên gia giỏi viết, 3 = dùng được nhưng có thiếu sót, 1 = sai hoặc có hại).
 pass: true nếu đáp ứng các điểm bắt buộc trong rubric và không có lỗi nghiêm trọng.
-reasons: tối đa 4 ý ngắn, nêu điểm mạnh/yếu chính.`;
+reasons: tối đa 4 ý ngắn, nêu điểm mạnh/yếu chính.
+
+Lưu ý khi chấm: câu hỏi được hỏi vào thời điểm today (có thể sau mốc kiến thức của bạn). Cố vấn lấy số liệu từ công cụ thời gian thực (bảng giá, báo cáo tài chính, trang Ngân hàng Nhà nước, Fed…), nên ngày tháng và số liệu gần today là bình thường — không coi là bịa chỉ vì bạn chưa biết. Trường sourceCheck là kết quả bộ đối chiếu tự động giữa câu trả lời và dữ liệu công cụ: "verified" nghĩa là các con số đã khớp nguồn. Chỉ trừ điểm về số liệu khi sourceCheck báo sai lệch hoặc con số rõ ràng mâu thuẫn nội bộ.`;
 
 const JUDGE_SCHEMA = {
   type: 'object',
@@ -194,8 +196,10 @@ async function runCase(
         tier: 'brief',
         system: JUDGE_PROMPT,
         user: JSON.stringify({
+          today: new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
           question: c.question,
           rubric: c.rubric,
+          sourceCheck: (verification as Verification | null)?.status ?? 'không chạy (không có dữ liệu công cụ)',
           toolsCalled: tools,
           userContext:
             'Hồ sơ: Cân bằng, dài hạn, chịu lỗ tối đa 20%, dễ FOMO. Danh mục: vàng SJC ~48%, BTC ~18%, tiền mặt ~17%, FPT ~10% (lỗ ~22%), HPG ~7% (lỗ ~25%).',

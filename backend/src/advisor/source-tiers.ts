@@ -32,6 +32,8 @@ const TIER2 = [
   // Công ty chứng khoán (báo cáo phân tích)
   'ssi.com.vn', 'vndirect.com.vn', 'vietcap.com.vn', 'vcsc.com.vn', 'hsc.com.vn', 'mbs.com.vn', 'vcbs.com.vn',
   'bsc.com.vn', 'fpts.com.vn', 'acbs.com.vn', 'kbsec.com.vn', 'mas.com.vn', 'tcbs.com.vn', 'vps.com.vn', 'shs.com.vn',
+  'bsi.com.vn', 'vdsc.com.vn', 'kisvn.vn', 'yuanta.com.vn', 'masvn.com', 'phs.vn', 'agriseco.com.vn', 'pinetree.vn',
+  'dsc.com.vn', 'abs.vn', 'vietinbanksc.com.vn', 'ors.com.vn', 'vixs.vn', 'fiingroup.vn', 'fiintrade.vn',
   // Quốc tế
   'reuters.com', 'bloomberg.com', 'ft.com', 'wsj.com', 'cnbc.com', 'apnews.com', 'bbc.com', 'bbc.co.uk',
   'economist.com', 'nikkei.com', 'asia.nikkei.com', 'scmp.com', 'marketwatch.com', 'theguardian.com', 'nytimes.com',

@@ -64,7 +64,7 @@ export class AdvisorTools {
         tool: {
           name: 'get_stock_analysis',
           description:
-            'Dữ liệu đầy đủ cho một mã cổ phiếu Việt Nam: giá realtime (tham chiếu, trần, sàn, khối lượng, khối ngoại), hồ sơ doanh nghiệp (ngành, vốn hoá, sở hữu nước ngoài/nhà nước, khuyến nghị & giá mục tiêu của Vietcap Research), chỉ số tài chính TTM 8 quý (P/E, P/B, ROE, ROA, biên lợi nhuận, nợ/vốn; ngân hàng có NIM, NPL, CASA...), báo cáo kết quả kinh doanh 5 năm + 6 quý (tỷ VND), và chỉ báo kỹ thuật tính sẵn (MA20/50/200, RSI14, MACD, lợi suất 1 tuần–1 năm, đỉnh/đáy 52 tuần, biến động, drawdown).',
+            'Dữ liệu đầy đủ cho một mã cổ phiếu Việt Nam: giá realtime (tham chiếu, trần, sàn, khối lượng, khối ngoại), hồ sơ doanh nghiệp (ngành, vốn hoá, sở hữu nước ngoài/nhà nước, khuyến nghị & giá mục tiêu của Vietcap Research), chỉ số tài chính TTM 8 quý (P/E, P/B, ROE, ROA, biên lợi nhuận, nợ phải trả/vốn chủ (liabilitiesToEquity); ngân hàng có NIM, NPL, CASA...), báo cáo kết quả kinh doanh 5 năm + 6 quý (tỷ VND), bảng cân đối kế toán 5 năm + 4 quý (nợ vay, nợ vay ròng, nợ vay/vốn chủ), lưu chuyển tiền tệ 5 năm + 4 quý + TTM (dòng tiền kinh doanh, dòng tiền tự do, dòng tiền kinh doanh/lợi nhuận trước thuế, cổ tức đã trả), dải định giá P/E–P/B ~8 năm của chính doanh nghiệp (min, 25%, trung vị, 75%, max và vị trí hiện tại), cổ đông lớn, giao dịch nội bộ 12 tháng, và chỉ báo kỹ thuật tính sẵn (MA20/50/200, RSI14, MACD, lợi suất 1 tuần–1 năm, đỉnh/đáy 52 tuần, biến động, drawdown).',
           input_schema: {
             type: 'object',
             properties: { symbol: { type: 'string', description: 'Mã cổ phiếu, ví dụ FPT, VCB, HPG' } },
@@ -79,7 +79,7 @@ export class AdvisorTools {
         tool: {
           name: 'compare_stocks',
           description:
-            'So sánh nhanh 2–10 mã cổ phiếu cạnh nhau: giá, % thay đổi, P/E, P/B, ROE, biên lãi ròng, nợ/vốn, tăng trưởng lợi nhuận năm gần nhất, xu hướng kỹ thuật, RSI, lợi suất 3 tháng/1 năm, khuyến nghị Vietcap. Dùng để so với cùng ngành hoặc lọc mã tốt trong một nhóm.',
+            'So sánh nhanh 2–10 mã cổ phiếu cạnh nhau: giá, % thay đổi, P/E, P/B, ROE, biên lãi ròng, nợ phải trả/vốn chủ, tăng trưởng lợi nhuận năm gần nhất, xu hướng kỹ thuật, RSI, lợi suất 3 tháng/1 năm, khuyến nghị Vietcap. Dùng để so với cùng ngành hoặc lọc mã tốt trong một nhóm.',
           input_schema: {
             type: 'object',
             properties: {
@@ -327,7 +327,15 @@ export class AdvisorTools {
 
   private async stock(symbol: string) {
     const d = await this.market.stockDetail(symbol);
-    return { source: 'Vietcap (giá, hồ sơ, BCTC, chỉ số), chỉ báo kỹ thuật tính từ nến ngày', ...d };
+    const f = await this.market.stockFundamentals(symbol, d.quote.price);
+    // Chuỗi từng quý chỉ để vẽ biểu đồ — cố vấn dùng thống kê đã tính sẵn
+    const valuationHistory = f.valuationHistory ? { ...f.valuationHistory, series: undefined } : null;
+    return {
+      source: 'Vietcap (giá, hồ sơ, BCTC, chỉ số, cổ đông, giao dịch nội bộ), chỉ báo kỹ thuật tính từ nến ngày',
+      ...d,
+      ...f,
+      valuationHistory,
+    };
   }
 
   private async compare(symbols: string[]) {
@@ -335,6 +343,7 @@ export class AdvisorTools {
       symbols.map(async (s) => {
         try {
           const d = await this.market.stockDetail(s);
+          const vh = await this.market.valuationHistory(s, d.quote.price).catch(() => null);
           const lastRatio = d.ratios.at(-1) ?? {};
           const years = d.income?.years ?? [];
           const profitKey = (row?: Record<string, unknown>) =>
@@ -356,9 +365,14 @@ export class AdvisorTools {
             ratiosPeriod: lastRatio.period,
             pe: lastRatio.pe,
             pb: lastRatio.pb,
+            peNow: vh?.current.pe ?? null,
+            peHistoryMedian: vh?.pe?.median ?? null,
+            pePercentileInOwnHistory: vh?.pe && 'currentPercentile' in vh.pe ? vh.pe.currentPercentile : null,
+            pbPercentileInOwnHistory: vh?.pb && 'currentPercentile' in vh.pb ? vh.pb.currentPercentile : null,
+            valuationHistoryPeriod: vh?.period ?? null,
             roe: lastRatio.roe,
             netMargin: lastRatio.afterTaxProfitMargin,
-            debtToEquity: lastRatio.debtToEquity,
+            liabilitiesToEquity: lastRatio.liabilitiesToEquity,
             nim: lastRatio.netInterestMargin,
             npl: lastRatio.npl,
             profitGrowthLastYearPct: growth,
@@ -377,7 +391,11 @@ export class AdvisorTools {
         }
       }),
     );
-    return { source: 'Vietcap; chỉ số TTM theo quý gần nhất', rows };
+    return {
+      source: 'Vietcap; chỉ số TTM theo quý gần nhất',
+      note: 'pe/pb là số tại quý báo cáo gần nhất; peNow là P/E theo giá hiện tại. pePercentileInOwnHistory = % số quý trong lịch sử (~8 năm) có P/E thấp hơn hiện tại (thấp = rẻ so với chính nó).',
+      rows,
+    };
   }
 }
 

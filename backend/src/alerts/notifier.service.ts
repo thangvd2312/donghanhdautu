@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { stripEmoji } from '../common/text';
 import { MarketGateway } from '../market/market.gateway';
 import { PrismaService } from '../prisma/prisma.module';
 
@@ -32,7 +33,7 @@ export class NotifierService {
   async send(userId: string, n: NotificationInput) {
     try {
       const created = await this.prisma.notification.create({
-        data: { userId, ...n, sources: n.sources ?? [] },
+        data: { userId, ...n, title: stripEmoji(n.title).trim(), body: stripEmoji(n.body).trim(), sources: n.sources ?? [] },
       });
       this.gateway.notifyUser(userId, 'notification', created);
       return created;

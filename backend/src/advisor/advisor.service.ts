@@ -6,6 +6,7 @@ import { compatMode, createAnthropicClient } from '../common/anthropic';
 import { Prisma } from '@prisma/client';
 import { VN_TZ } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
+import { stripEmoji } from '../common/text';
 import { ADVISOR_SYSTEM_PROMPT } from './prompt';
 import { AdvisorTools } from './tools';
 import { Evidence, Verification, VerifierService } from './verifier.service';
@@ -107,7 +108,7 @@ export class AdvisorService {
       const meta = m.meta as { verification?: Verification } | null;
       if (meta?.verification) last.verification = meta.verification;
       for (const b of blocks) {
-        if (b.type === 'text') last.text += b.text;
+        if (b.type === 'text') last.text += stripEmoji(b.text);
         if (b.type === 'tool_use') {
           last.tools.push(this.tools.label(b.name, b.input));
           toolNameById.set(b.id, b.name);
@@ -297,7 +298,7 @@ export class AdvisorService {
           );
 
       stream.on('thinking', (delta) => emit({ type: 'thinking', text: delta }));
-      stream.on('text', (delta) => emit({ type: 'text', text: delta }));
+      stream.on('text', (delta) => emit({ type: 'text', text: stripEmoji(delta) }));
       stream.on('contentBlock', (block) => {
         // Nhãn tool_use phát sau khi có finalMessage: qua router, block lúc stream có thể chưa đúng tên
         if (block.type === 'server_tool_use') emit({ type: 'tool', label: searchLabel(block.input) });

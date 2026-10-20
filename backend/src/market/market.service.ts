@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { BinanceProvider, FEATURED_COINS } from './providers/binance.provider';
 import { GoldFxProvider, OZ_PER_LUONG } from './providers/gold-fx.provider';
 import { VietcapProvider } from './providers/vietcap.provider';
+import { valuationBand } from './fundamentals';
 import { technicals } from './technicals';
 import {
   CryptoQuote,
@@ -227,6 +228,29 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       this.vietcap.safe('history', () => this.vietcap.history(symbol, 400), []),
     ]);
     return { quote, company, ratios, income, technicals: technicals(candles) };
+  }
+
+  /** Dải P/E, P/B ~8 năm của chính doanh nghiệp so với định giá theo giá hiện tại */
+  async valuationHistory(symbol: string, price?: number | null) {
+    symbol = symbol.toUpperCase();
+    const rows = await this.vietcap.statsRaw(symbol);
+    return valuationBand(rows, price ?? this.stocks.get(symbol)?.price ?? null);
+  }
+
+  /** Dữ liệu cơ bản sâu: định giá lịch sử, cân đối kế toán, dòng tiền, cổ đông lớn, giao dịch nội bộ */
+  async stockFundamentals(symbol: string, price?: number | null) {
+    symbol = symbol.toUpperCase();
+    const v = this.vietcap;
+    // Mã ngoài bảng giá đang theo dõi: lấy giá hiện tại để định giá theo giá mới nhất
+    price ??= this.stocks.get(symbol)?.price ?? (await this.stockQuote(symbol).catch(() => null))?.price ?? null;
+    const [valuationHistory, balanceSheet, cashFlow, majorShareholders, insiderTrades] = await Promise.all([
+      v.safe('valuation', () => this.valuationHistory(symbol, price), null),
+      v.safe('balance', () => v.balanceSheet(symbol), null),
+      v.safe('cashflow', () => v.cashFlow(symbol), null),
+      v.safe('shareholders', () => v.shareholders(symbol), null),
+      v.safe('insider', () => v.insiderTrades(symbol), null),
+    ]);
+    return { valuationHistory, balanceSheet, cashFlow, majorShareholders, insiderTrades };
   }
 
   stockHistory(symbol: string, days: number) {

@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import PriceAlertDialog from '../components/PriceAlertDialog'
 import PriceChart from '../components/PriceChart'
+import StockFundamentals, { StatementTable } from '../components/StockFundamentals'
 import TechnicalsPanel from '../components/TechnicalsPanel'
 import { KV, Panel } from '../components/ui'
 import { api } from '../lib/api'
@@ -36,7 +37,7 @@ const RATIO_ROWS: [string, string, 'x' | '%'][] = [
   ['roic', 'ROIC', '%'],
   ['grossMargin', 'Biên LN gộp', '%'],
   ['afterTaxProfitMargin', 'Biên LN ròng', '%'],
-  ['debtToEquity', 'Nợ / Vốn CSH', 'x'],
+  ['liabilitiesToEquity', 'Nợ phải trả / Vốn CSH', 'x'],
   ['currentRatio', 'Thanh toán hiện hành', 'x'],
   ['netInterestMargin', 'NIM', '%'],
   ['npl', 'Nợ xấu (NPL)', '%'],
@@ -77,7 +78,6 @@ export default function StockPage() {
   const c = d.company
   const ratioCols = d.ratios.slice(-5)
   const income = d.income?.[incomeView] ?? []
-  const incomeKeys = income.length ? Object.keys(income[income.length - 1]).filter((k) => k !== 'period') : []
   const ask = (text: string) => `/advisor?q=${encodeURIComponent(text)}`
   const color = stockPriceColor(q)
 
@@ -268,46 +268,11 @@ export default function StockPage() {
             </ToggleButtonGroup>
           }
         >
-          <TableContainer>
-            <Table size="small" sx={{ minWidth: 760 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Khoản mục</TableCell>
-                  {income.map((r) => (
-                    <TableCell key={String(r.period)} align="right">
-                      {r.period}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {incomeKeys.map((k) => {
-                  const strong = HIGHLIGHT.test(k)
-                  return (
-                    <TableRow key={k} hover>
-                      <TableCell sx={{ color: strong ? 'text.primary' : 'text.secondary', fontWeight: strong ? 600 : 400 }}>
-                        {k}
-                      </TableCell>
-                      {income.map((r) => {
-                        const v = r[k] as number
-                        return (
-                          <TableCell
-                            key={String(r.period)}
-                            align="right"
-                            sx={{ fontWeight: strong ? 600 : 400, color: v < 0 ? 'price.down' : undefined }}
-                          >
-                            {fmtNum(v, /VND/.test(k) ? 0 : 1)}
-                          </TableCell>
-                        )
-                      })}
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <StatementTable rows={income} highlight={(k) => HIGHLIGHT.test(k)} digits={(k) => (/VND/.test(k) ? 0 : 1)} />
         </Panel>
       )}
+
+      <StockFundamentals symbol={q.symbol} />
     </Stack>
   )
 }

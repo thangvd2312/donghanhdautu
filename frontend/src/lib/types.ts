@@ -226,6 +226,66 @@ export interface StockDetail {
   technicals: Technicals
 }
 
+export type StatementRow = Record<string, number | string>
+
+export interface ValuationBand {
+  min: number
+  p25: number
+  median: number
+  p75: number
+  max: number
+  quarters: number
+  currentPercentile?: number
+  position?: string
+}
+
+export interface StockFundamentals {
+  valuationHistory: {
+    period: string
+    note: string
+    current: { pe: number | null; pb: number | null; basedOnQuarter: string }
+    pe: ValuationBand | null
+    pb: ValuationBand | null
+    excludedQuarters: { pe: number; pb: number }
+    series: { period: string; time: number; pe: number | null; pb: number | null }[]
+  } | null
+  balanceSheet: { unit: string; type: string; note?: string; years: StatementRow[]; quarters: StatementRow[] } | null
+  cashFlow: {
+    unit?: string
+    type: string
+    note?: string
+    years?: StatementRow[]
+    quarters?: StatementRow[]
+    ttm?: StatementRow | null
+    cumulative?: StatementRow | null
+  } | null
+  majorShareholders: {
+    latestDisclosure: string
+    note: string
+    top: { name: string; type: string; position?: string; ownershipPct: number; asOf: string }[]
+    top10TotalPct: number
+    excludedStale: number
+  } | null
+  insiderTrades: {
+    period: string
+    note: string
+    sharesBought: number
+    sharesSold: number
+    net: number
+    count: number
+    withoutVolume: number
+    recent: {
+      date: string
+      trader: string
+      position?: string
+      relatedTo?: string
+      action: string
+      shares: number | string
+      ownershipAfterPct?: number
+    }[]
+  } | null
+}
+
 export const RISK_LABEL: Record<string, string> = {
   conservative: 'Thận trọng',
   balanced: 'Cân bằng',
