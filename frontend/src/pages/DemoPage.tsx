@@ -71,21 +71,14 @@ export default function DemoPage() {
 
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Stack spacing={2.5}>
-          <Alert severity="info" variant="outlined">
-            <b>Bạn đang xem dữ liệu mẫu.</b> Danh mục dưới đây là ví dụ, được định giá bằng giá thị trường thật hôm nay. Tạo
-            tài khoản để theo dõi danh mục của chính bạn, nhận cảnh báo và hỏi cố vấn AI.
-          </Alert>
-
           <Box>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                Hôm nay của nhà đầu tư mẫu
-              </Typography>
-              <Chip size="small" label="Dữ liệu mẫu" color="info" />
-            </Stack>
+            <Chip size="small" label="Danh mục mẫu · giá thật hôm nay" color="info" variant="outlined" />
+            <Typography sx={{ fontWeight: 800, fontSize: { xs: 22, md: 26 }, lineHeight: 1.25, mt: 1 }}>
+              Xem app làm gì cho bạn
+            </Typography>
             {d && (
-              <Typography color="text.secondary">
-                Hồ sơ mẫu: {d.profile.label} · {d.profile.goal} · {d.profile.horizon} · chịu lỗ tối đa {d.profile.maxDrawdownPct}%
+              <Typography variant="body2" color="text.secondary">
+                Nhà đầu tư {d.profile.label.toLowerCase()} · {d.profile.horizon.toLowerCase()} · chịu lỗ tối đa {d.profile.maxDrawdownPct}%
               </Typography>
             )}
           </Box>

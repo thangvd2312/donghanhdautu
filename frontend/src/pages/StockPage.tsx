@@ -1,10 +1,6 @@
-import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import Grid from '@mui/material/Grid'
-import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -17,10 +13,9 @@ import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
-import { Link as RouterLink, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import PriceAlertDialog from '../components/PriceAlertDialog'
-import PlanButton from '../components/PlanButton'
-import WatchButton from '../components/WatchButton'
+import AssetHero from '../components/AssetHero'
 import PriceChart from '../components/PriceChart'
 import StockFundamentals, { StatementTable } from '../components/StockFundamentals'
 import TechnicalsPanel from '../components/TechnicalsPanel'
@@ -29,7 +24,6 @@ import { api } from '../lib/api'
 import { changeColor, fmtNum, fmtPct, fmtStockPrice, fmtVnd, stockPriceColor } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import type { Candle, StockDetail } from '../lib/types'
-import AssetAvatar from '../components/AssetAvatar'
 
 const RATIO_ROWS: [string, string, 'x' | '%'][] = [
   ['pe', 'P/E', 'x'],
@@ -81,75 +75,40 @@ export default function StockPage() {
   const c = d.company
   const ratioCols = d.ratios.slice(-5)
   const income = d.income?.[incomeView] ?? []
-  const ask = (text: string) => `/advisor?q=${encodeURIComponent(text)}`
   const color = stockPriceColor(q)
 
   return (
     <Stack spacing={2.5}>
-      <Paper sx={{ p: 2.5 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>
-          <Box>
-            <Stack useFlexGap direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
-              <AssetAvatar assetType="stock" symbol={q.symbol} size={44} />
-              <Typography variant="h4">{q.symbol}</Typography>
-              <Chip size="small" label={q.board} />
-              {c?.sector && <Chip size="small" variant="outlined" label={c.sector} />}
-            </Stack>
-            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-              {c?.name ?? q.name}
+      <AssetHero
+        assetType="stock"
+        symbol={q.symbol}
+        watchSymbol={q.symbol}
+        tags={[q.board, c?.sector].filter((t): t is string => !!t)}
+        name={c?.name ?? q.name}
+        price={fmtStockPrice(q.price)}
+        change={`${q.change > 0 ? '+' : ''}${fmtNum(q.change / 1000, 2)}  ${fmtPct(q.changePct)}`}
+        color={color}
+        extra={
+          <Stack direction="row" spacing={2}>
+            <Typography variant="caption" className="num" sx={{ color: 'price.ceil' }}>
+              Trần {fmtStockPrice(q.ceiling)}
             </Typography>
-          </Box>
-          <Box sx={{ textAlign: { md: 'right' } }}>
-            <Typography className="num" sx={{ fontSize: 34, fontWeight: 700, color, lineHeight: 1.1 }}>
-              {fmtStockPrice(q.price)}
+            <Typography variant="caption" className="num" sx={{ color: 'price.ref' }}>
+              TC {fmtStockPrice(q.ref)}
             </Typography>
-            <Typography className="num" sx={{ color, fontWeight: 600 }}>
-              {fmtNum(q.change / 1000, 2)} ({fmtPct(q.changePct)})
+            <Typography variant="caption" className="num" sx={{ color: 'price.floor' }}>
+              Sàn {fmtStockPrice(q.floor)}
             </Typography>
-            <Stack direction="row" spacing={2} sx={{ mt: 1, justifyContent: { md: 'flex-end' } }}>
-              <Typography variant="caption" className="num" sx={{ color: 'price.ceil' }}>
-                Trần {fmtStockPrice(q.ceiling)}
-              </Typography>
-              <Typography variant="caption" className="num" sx={{ color: 'price.ref' }}>
-                TC {fmtStockPrice(q.ref)}
-              </Typography>
-              <Typography variant="caption" className="num" sx={{ color: 'price.floor' }}>
-                Sàn {fmtStockPrice(q.floor)}
-              </Typography>
-            </Stack>
-          </Box>
-        </Stack>
-        <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
-          <Button
-            variant="contained"
-            component={RouterLink}
-            to={ask(
-              `Phân tích toàn diện cổ phiếu ${q.symbol} giúp tôi: dài hạn có đáng đầu tư không, ngắn hạn thế nào, và có hợp với tôi không?`,
-            )}
-          >
-            Hỏi cố vấn về {q.symbol}
-          </Button>
-          <Button
-            variant="outlined"
-            component={RouterLink}
-            to={ask(`Tôi đang muốn mua ${q.symbol}. Có phải tôi đang FOMO không? Nếu mua thì nên mua thế nào?`)}
-          >
-            Tôi có đang FOMO không?
-          </Button>
-          <Button
-            variant="outlined"
-            component={RouterLink}
-            to={ask(`So sánh ${q.symbol} với các cổ phiếu cùng ngành, mã nào đáng đầu tư hơn và vì sao?`)}
-          >
-            So với cùng ngành
-          </Button>
-          <Button variant="outlined" color="inherit" startIcon={<NotificationsActiveOutlined />} onClick={() => setAlertOpen(true)}>
-            Đặt cảnh báo giá
-          </Button>
-          <WatchButton assetType="stock" symbol={q.symbol} />
-          <PlanButton assetType="stock" symbol={q.symbol} label={q.symbol} />
-        </Stack>
-      </Paper>
+          </Stack>
+        }
+        askText={`Phân tích toàn diện cổ phiếu ${q.symbol} giúp tôi: dài hạn có đáng đầu tư không, ngắn hạn thế nào, và có hợp với tôi không?`}
+        suggestions={[
+          { label: 'Tôi có đang FOMO không?', text: `Tôi đang muốn mua ${q.symbol}. Có phải tôi đang FOMO không? Nếu mua thì nên mua thế nào?` },
+          { label: 'So với cùng ngành', text: `So sánh ${q.symbol} với các cổ phiếu cùng ngành, mã nào đáng đầu tư hơn và vì sao?` },
+          { label: 'Định giá đắt hay rẻ?', text: `${q.symbol} đang được định giá đắt hay rẻ so với lịch sử và cùng ngành?` },
+        ]}
+        onAlert={() => setAlertOpen(true)}
+      />
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, lg: 8 }}>

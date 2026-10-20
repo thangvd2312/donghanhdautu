@@ -5,9 +5,19 @@ import Tooltip from '@mui/material/Tooltip'
 import { useEffect, useState } from 'react'
 import { api, del, post } from '../lib/api'
 import type { WatchItem } from '../lib/types'
+import { QuickAction } from './ui'
 
 /** Nút theo dõi / bỏ theo dõi một tài sản (không cần sở hữu). `symbol` đã chuẩn hoá: FPT, BTCUSDT, SJL1L10 */
-export default function WatchButton({ assetType, symbol }: { assetType: WatchItem['assetType']; symbol: string }) {
+export default function WatchButton({
+  assetType,
+  symbol,
+  tile,
+}: {
+  assetType: WatchItem['assetType']
+  symbol: string
+  /** Hiển thị dạng ô hành động nhanh (icon + nhãn) */
+  tile?: boolean
+}) {
   const [item, setItem] = useState<{ id: string } | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -44,6 +54,17 @@ export default function WatchButton({ assetType, symbol }: { assetType: WatchIte
       setBusy(false)
     }
   }
+
+  if (tile)
+    return (
+      <QuickAction
+        icon={item ? <Star /> : <StarBorder />}
+        label={error ? 'Lỗi, thử lại' : item ? 'Đang theo dõi' : 'Theo dõi'}
+        active={!!item}
+        disabled={!loaded || busy}
+        onClick={() => void toggle()}
+      />
+    )
 
   return (
     <Tooltip title={error || (item ? 'Bỏ khỏi danh sách theo dõi' : 'Theo dõi giá trên trang tổng quan mà không cần mua')}>

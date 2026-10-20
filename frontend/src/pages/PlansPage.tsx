@@ -1,8 +1,9 @@
 import AddIcon from '@mui/icons-material/Add'
+import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
@@ -15,6 +16,7 @@ import { api } from '../lib/api'
 import { changeColor, fmtDate, fmtPct, fmtPrice } from '../lib/format'
 import type { PlanListItem } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
+import { ChangePill } from '../components/ui'
 
 
 /** Danh sách kế hoạch: đang theo dõi (ưu tiên cái đến hạn / chạm mốc) và đã kết thúc */
@@ -47,13 +49,12 @@ export default function PlansPage() {
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
             Kế hoạch đầu tư
           </Typography>
-          <Typography color="text.secondary">
-            Ghi lại vì sao bạn mua, khi nào cần xem lại và điều gì khiến bạn bán — để quyết định theo kế hoạch, không theo
-            cảm xúc.
+          <Typography variant="body2" color="text.secondary">
+            Mua vì đâu, khi nào xem lại, khi nào bán — quyết định theo kế hoạch, không theo cảm xúc.
           </Typography>
         </Box>
         <Box>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} sx={{ whiteSpace: 'nowrap' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} sx={{ whiteSpace: 'nowrap', borderRadius: 99 }}>
             Lập kế hoạch
           </Button>
         </Box>
@@ -108,34 +109,61 @@ function PlanCard({ p }: { p: PlanListItem }) {
       to={`/plans/${p.id}`}
       sx={{ p: 2, display: 'block', textDecoration: 'none', color: 'inherit', height: '100%', '&:hover': { borderColor: 'primary.main' } }}
     >
-      <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-        <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={30} />
-        <Typography sx={{ fontWeight: 700 }}>{p.displayName}</Typography>
-        {p.held && <Chip size="small" label="Đang nắm giữ" sx={{ height: 20, fontSize: 11 }} />}
-        {p.status === 'closed' && <Chip size="small" label="Đã kết thúc" sx={{ height: 20, fontSize: 11 }} />}
-        <Box sx={{ flex: 1 }} />
-        <Typography variant="body2" className="num">
-          {fmtPrice(p.price.value, p.currency)}
-        </Typography>
-        {p.held?.pnlPct != null && (
-          <Typography variant="body2" className="num" sx={{ color: changeColor(p.held.pnlPct) }}>
-            {fmtPct(p.held.pnlPct, 1)}
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+        <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={40} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 700 }} noWrap>
+            {p.displayName}
           </Typography>
-        )}
+          <Typography variant="caption" color="text.secondary" component="div" noWrap>
+            {p.status === 'active' ? `Xem lại ${fmtDate(p.nextReviewAt)}` : `Kết thúc ${p.closedAt ? fmtDate(p.closedAt) : ''}`}
+            {p.held ? ' · đang nắm giữ' : ''}
+          </Typography>
+        </Box>
+        <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+          <Typography variant="body2" className="num" sx={{ fontWeight: 600 }}>
+            {fmtPrice(p.price.value, p.currency)}
+          </Typography>
+          {p.held?.pnlPct != null && (
+            <ChangePill small color={changeColor(p.held.pnlPct)}>
+              {fmtPct(p.held.pnlPct, 1)}
+            </ChangePill>
+          )}
+        </Box>
       </Stack>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ mt: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+      >
         {p.thesis}
       </Typography>
+      {(p.stopPrice != null || p.targetPrice != null) && (
+        <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+          {p.stopPrice != null && (
+            <Typography variant="caption" className="num" sx={{ color: 'price.down' }}>
+              Cắt lỗ {fmtPrice(p.stopPrice, p.currency)}
+            </Typography>
+          )}
+          {p.targetPrice != null && (
+            <Typography variant="caption" className="num" sx={{ color: 'price.up' }}>
+              Chốt lời {fmtPrice(p.targetPrice, p.currency)}
+            </Typography>
+          )}
+        </Stack>
+      )}
       {p.signals.map((s) => (
-        <Alert key={s.kind} severity={s.kind === 'stop' ? 'error' : 'warning'} sx={{ mt: 1, py: 0 }}>
-          {s.message}
-        </Alert>
+        <Stack key={s.kind} direction="row" spacing={0.75} sx={{ mt: 1, alignItems: 'flex-start' }}>
+          {s.kind === 'stop' ? (
+            <ErrorOutlined color="error" sx={{ fontSize: 18, mt: '1px' }} />
+          ) : (
+            <WarningAmberOutlined color="warning" sx={{ fontSize: 18, mt: '1px' }} />
+          )}
+          <Typography variant="body2" sx={{ color: s.kind === 'stop' ? 'error.main' : 'warning.main', fontWeight: 500 }}>
+            {s.message}
+          </Typography>
+        </Stack>
       ))}
-      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1 }}>
-        {p.status === 'active' ? `Xem lại: ${fmtDate(p.nextReviewAt)}` : `Kết thúc: ${p.closedAt ? fmtDate(p.closedAt) : ''}`}
-        {p.stopPrice != null && ` · Cắt lỗ ${fmtPrice(p.stopPrice, p.currency)}`}
-        {p.targetPrice != null && ` · Chốt lời ${fmtPrice(p.targetPrice, p.currency)}`}
-      </Typography>
     </Paper>
   )
 }

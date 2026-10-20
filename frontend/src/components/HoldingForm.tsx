@@ -25,7 +25,7 @@ const TYPES: { value: AssetType; label: string }[] = [
   { value: 'stock', label: 'Cổ phiếu' },
   { value: 'gold', label: 'Vàng' },
   { value: 'crypto', label: 'Crypto' },
-  { value: 'cash', label: 'Tiền mặt / tiết kiệm' },
+  { value: 'cash', label: 'Tiền mặt' },
 ]
 
 const QTY_LABEL: Record<AssetType, string> = {

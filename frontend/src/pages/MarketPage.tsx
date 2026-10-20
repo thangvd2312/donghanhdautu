@@ -16,7 +16,7 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Flash from '../components/Flash'
-import { Stat } from '../components/ui'
+import { ChangePill, Stat } from '../components/ui'
 import {
   changeColor,
   fmtNum,
@@ -87,40 +87,53 @@ export default function MarketPage() {
 
   return (
     <Stack spacing={2.5}>
-      <Grid container spacing={2}>
+      {/* Điện thoại: chỉ số cuộn ngang trên một hàng thẻ nhỏ, nhường chỗ cho bảng giá */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridAutoFlow: { xs: 'column', lg: 'row' },
+          gridAutoColumns: { xs: '60%', sm: '36%' },
+          gridTemplateColumns: { lg: 'repeat(4, 1fr)' },
+          gap: { xs: 1.25, md: 2 },
+          overflowX: { xs: 'auto', lg: 'visible' },
+          scrollSnapType: 'x mandatory',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          mx: { xs: -2, md: 0 },
+          px: { xs: 2, md: 0 },
+        }}
+      >
         {snapshot.indices.map((i) => (
-          <Grid key={i.symbol} size={{ xs: 6, lg: 3 }}>
-            <Paper sx={{ p: 2 }}>
-              <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {INDEX_NAME[i.symbol] ?? i.symbol}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" className="num">
-                  {fmtNum(i.valueBn, 0)} tỷ
-                </Typography>
-              </Stack>
-              <Typography className="num" sx={{ fontSize: 22, fontWeight: 700, mt: 0.5, color: changeColor(i.change) }}>
-                <Flash value={i.price}>{fmtNum(i.price, 2)}</Flash>
+          <Paper key={i.symbol} sx={{ p: { xs: 1.5, md: 2 }, scrollSnapAlign: 'start' }}>
+            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline', gap: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                {INDEX_NAME[i.symbol] ?? i.symbol}
               </Typography>
-              <Typography variant="body2" className="num" sx={{ color: changeColor(i.change), fontWeight: 500 }}>
-                {i.change > 0 ? '+' : ''}
-                {fmtNum(i.change, 2)} ({fmtPct(i.changePct)})
+              <Typography variant="caption" color="text.secondary" className="num" noWrap>
+                {fmtNum(i.valueBn, 0)} tỷ
               </Typography>
-              <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
-                <Typography variant="caption" className="num" sx={{ color: 'price.up' }}>
-                  ▲ {i.advances}
-                </Typography>
-                <Typography variant="caption" className="num" sx={{ color: 'price.ref' }}>
-                  ● {i.unchanged}
-                </Typography>
-                <Typography variant="caption" className="num" sx={{ color: 'price.down' }}>
-                  ▼ {i.declines}
-                </Typography>
-              </Stack>
-            </Paper>
-          </Grid>
+            </Stack>
+            <Typography className="num" sx={{ fontSize: { xs: 20, md: 22 }, fontWeight: 800, mt: 0.5, color: changeColor(i.change) }}>
+              <Flash value={i.price}>{fmtNum(i.price, 2)}</Flash>
+            </Typography>
+            <ChangePill small color={changeColor(i.change)}>
+              {i.change > 0 ? '+' : ''}
+              {fmtNum(i.change, 2)} · {fmtPct(i.changePct)}
+            </ChangePill>
+            <Stack direction="row" spacing={1.25} sx={{ mt: 1 }}>
+              <Typography variant="caption" className="num" sx={{ color: 'price.up' }}>
+                ▲ {i.advances}
+              </Typography>
+              <Typography variant="caption" className="num" sx={{ color: 'price.ref' }}>
+                ● {i.unchanged}
+              </Typography>
+              <Typography variant="caption" className="num" sx={{ color: 'price.down' }}>
+                ▼ {i.declines}
+              </Typography>
+            </Stack>
+          </Paper>
         ))}
-      </Grid>
+      </Box>
 
       <Paper>
         <Stack

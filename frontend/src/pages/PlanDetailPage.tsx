@@ -1,12 +1,15 @@
+import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
 import EditOutlined from '@mui/icons-material/EditOutlined'
+import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Grid from '@mui/material/Grid'
 import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import Skeleton from '@mui/material/Skeleton'
@@ -59,14 +62,14 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
 
   return (
     <Stack spacing={2.5}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-        <Box>
-          <Link component={RouterLink} to="/plans" variant="body2">
-            ← Kế hoạch đầu tư
-          </Link>
-          <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
-            <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={36} />
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+      <Box>
+        <Link component={RouterLink} to="/plans" variant="body2" underline="hover">
+          ← Kế hoạch
+        </Link>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mt: 1 }}>
+          <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={44} />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 22, lineHeight: 1.2 }} noWrap>
               {p.link ? (
                 <Link component={RouterLink} to={p.link} underline="hover" color="inherit">
                   {p.displayName}
@@ -75,35 +78,44 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
                 p.displayName
               )}
             </Typography>
-            <Chip
-              size="small"
-              color={p.status === 'active' ? 'primary' : 'default'}
-              label={p.status === 'active' ? 'Đang theo dõi' : 'Đã kết thúc'}
-            />
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            Lập ngày {fmtDate(p.createdAt)}
-            {p.versions.length > 0 && ` · đã sửa ${p.versions.length} lần, lần gần nhất ${fmtDate(p.updatedAt)}`}
-          </Typography>
-        </Box>
-        {p.status === 'active' && (
-          <Box>
-            <Button variant="outlined" startIcon={<EditOutlined />} onClick={() => setEditing(true)}>
-              Sửa kế hoạch
-            </Button>
+            <Typography variant="caption" color="text.secondary" component="div" noWrap>
+              <Box component="span" sx={{ color: p.status === 'active' ? 'primary.main' : 'text.secondary', fontWeight: 600 }}>
+                {p.status === 'active' ? 'Đang theo dõi' : 'Đã kết thúc'}
+              </Box>
+              {` · lập ${fmtDate(p.createdAt)}`}
+              {p.versions.length > 0 && ` · sửa ${p.versions.length} lần`}
+            </Typography>
           </Box>
-        )}
-      </Stack>
+          {p.status === 'active' && (
+            <Button variant="outlined" startIcon={<EditOutlined />} onClick={() => setEditing(true)} sx={{ borderRadius: 99, flexShrink: 0 }}>
+              Sửa
+            </Button>
+          )}
+        </Stack>
+      </Box>
 
-      {p.signals.map((s) => (
-        <Alert key={s.kind} severity={s.kind === 'stop' ? 'error' : 'warning'}>
-          {s.message}
-        </Alert>
-      ))}
+      {p.signals.length > 0 && (
+        <Paper sx={{ p: 1.5 }}>
+          <Stack spacing={1}>
+            {p.signals.map((s) => (
+              <Stack key={s.kind} direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+                {s.kind === 'stop' ? (
+                  <ErrorOutlined color="error" sx={{ fontSize: 20 }} />
+                ) : (
+                  <WarningAmberOutlined color="warning" sx={{ fontSize: 20 }} />
+                )}
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {s.message}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+        </Paper>
+      )}
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 7 }}>
-          <Panel title="Kế hoạch của bạn" subtitle="Do bạn tự đặt">
+          <Panel title="Kế hoạch của bạn">
             <Typography variant="caption" color="text.secondary">
               Vì sao tôi mua / nắm giữ
             </Typography>
@@ -126,6 +138,9 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack spacing={2.5}>
             <Panel title="Dữ liệu hiện tại" subtitle="Dữ kiện có nguồn, không phải nhận định">
+              {p.stopPrice != null && p.targetPrice != null && p.price.value != null && (
+                <PriceRange stop={p.stopPrice} target={p.targetPrice} price={p.price.value} fmt={(v) => fmtPrice(v, p.currency)} />
+              )}
               <KV
                 k="Giá hiện tại"
                 v={
@@ -165,11 +180,15 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
                 {p.price.asOf && ` · ${timeAgo(p.price.asOf)}`}
               </Typography>
             </Panel>
-            <Panel title="Nhận định của AI" subtitle="Cố vấn đối chiếu kế hoạch với dữ liệu mới nhất">
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                Cố vấn sẽ xem từng điều kiện bạn đặt đã xảy ra chưa. Đây là nhận định tham khảo, quyết định vẫn là của bạn.
-              </Typography>
-              <Button variant="contained" component={RouterLink} to={`/advisor?q=${encodeURIComponent(askAdvisor)}`}>
+            <Panel title="Nhận định của AI" subtitle="Cố vấn xem từng điều kiện bạn đặt đã xảy ra chưa — chỉ để tham khảo">
+              <Button
+                variant="contained"
+                fullWidth
+                startIcon={<AutoAwesomeOutlined />}
+                component={RouterLink}
+                to={`/advisor?q=${encodeURIComponent(askAdvisor)}`}
+                sx={{ borderRadius: 99 }}
+              >
                 Nhờ cố vấn đánh giá
               </Button>
             </Panel>
@@ -333,5 +352,47 @@ function ReviewForm({ plan, onDone }: { plan: PlanDetail; onDone: () => void }) 
         </Box>
       </Stack>
     </Panel>
+  )
+}
+
+/** Thanh vị trí giá giữa mốc cắt lỗ và chốt lời — nhìn là biết đang gần mốc nào */
+function PriceRange({ stop, target, price, fmt }: { stop: number; target: number; price: number; fmt: (v: number) => string }) {
+  const lo = Math.min(stop, target)
+  const hi = Math.max(stop, target)
+  const pos = hi > lo ? Math.min(100, Math.max(0, ((price - lo) / (hi - lo)) * 100)) : 50
+  return (
+    <Box sx={{ mb: 2, pt: 3 }}>
+      <Box sx={{ position: 'relative', height: 8, borderRadius: 4, background: 'linear-gradient(90deg, #ef4444, #f59e0b 50%, #22c55e)' }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            left: `${pos}%`,
+            top: -4,
+            width: 16,
+            height: 16,
+            borderRadius: '50%',
+            bgcolor: 'background.paper',
+            border: 3,
+            borderColor: 'text.primary',
+            transform: 'translateX(-50%)',
+          }}
+        />
+        <Typography
+          variant="caption"
+          className="num"
+          sx={{ position: 'absolute', left: `${pos}%`, top: -26, transform: 'translateX(-50%)', fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          {fmt(price)}
+        </Typography>
+      </Box>
+      <Stack direction="row" sx={{ justifyContent: 'space-between', mt: 0.75 }}>
+        <Typography variant="caption" className="num" sx={{ color: 'price.down' }}>
+          Cắt lỗ {fmt(stop)}
+        </Typography>
+        <Typography variant="caption" className="num" sx={{ color: 'price.up' }}>
+          Chốt lời {fmt(target)}
+        </Typography>
+      </Stack>
+    </Box>
   )
 }

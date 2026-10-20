@@ -5,9 +5,21 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { Plan } from '../lib/types'
 import PlanEditor from './PlanEditor'
+import { QuickAction } from './ui'
 
 /** "Lập kế hoạch" cho tài sản đang xem; đã có kế hoạch đang theo dõi thì mở kế hoạch đó */
-export default function PlanButton({ assetType, symbol, label }: { assetType: Plan['assetType']; symbol: string; label: string }) {
+export default function PlanButton({
+  assetType,
+  symbol,
+  label,
+  tile,
+}: {
+  assetType: Plan['assetType']
+  symbol: string
+  label: string
+  /** Hiển thị dạng ô hành động nhanh (icon + nhãn) */
+  tile?: boolean
+}) {
   const nav = useNavigate()
   const [plan, setPlan] = useState<Plan | null | undefined>(undefined)
   const [open, setOpen] = useState(false)
@@ -22,6 +34,20 @@ export default function PlanButton({ assetType, symbol, label }: { assetType: Pl
     }
   }, [assetType, symbol])
 
+  if (tile)
+    return (
+      <>
+        <QuickAction
+          icon={<FlagOutlined />}
+          label={plan ? 'Kế hoạch' : 'Lập kế hoạch'}
+          active={!!plan}
+          disabled={plan === undefined}
+          to={plan ? `/plans/${plan.id}` : undefined}
+          onClick={plan ? undefined : () => setOpen(true)}
+        />
+        <PlanEditor open={open} fixed={{ assetType, symbol, label }} onClose={() => setOpen(false)} onSaved={(p) => nav(`/plans/${p.id}`)} />
+      </>
+    )
   if (plan === undefined) return null
   if (plan) {
     return (

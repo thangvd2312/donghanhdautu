@@ -1,11 +1,15 @@
 import AddIcon from '@mui/icons-material/Add'
+import ArrowForward from '@mui/icons-material/ArrowForward'
+import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
 import Collapse from '@mui/material/Collapse'
 import Divider from '@mui/material/Divider'
-import Grid from '@mui/material/Grid'
+import Drawer from '@mui/material/Drawer'
 import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -16,7 +20,7 @@ import TableRow from '@mui/material/TableRow'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
-import { Link as RouterLink, useSearchParams } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import AllocationBar from '../components/AllocationBar'
 import { DataQualityAlert, PriceStatusChip } from '../components/DataStatus'
 import HoldingForm from '../components/HoldingForm'
@@ -24,7 +28,8 @@ import HistoryPanel from '../components/HistoryPanel'
 import LedgerPanel from '../components/LedgerPanel'
 import PortfolioSwitcher from '../components/PortfolioSwitcher'
 import TransactionDialog, { type TxPreset } from '../components/TransactionDialog'
-import { Panel, Stat } from '../components/ui'
+import { HERO_BG, HeroPill } from '../components/HomeBlocks'
+import { ChangePill, InfoTip, Panel, Stat } from '../components/ui'
 import { api } from '../lib/api'
 import { useIsMobile } from '../lib/useIsMobile'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../lib/format'
@@ -84,113 +89,102 @@ export default function PortfolioPage() {
   }, [load, loadTxs])
   // Mua / bán từ dòng tài sản: đang xem một danh mục thì dùng danh mục đó; xem gộp mà tài sản chỉ nằm ở một nơi thì chọn sẵn nơi đó
   const mobile = useIsMobile()
+  const valuationNote = `Vàng định giá theo giá mua vào của cửa hàng (số tiền bạn thực nhận nếu bán ngay). Coin: giá vốn và giá hiện tại tính bằng USDT; giá trị và lãi/lỗ quy ra VND theo tỷ giá 1 USDT = ${fmtNum(p?.usdtVnd)} ₫ (${p?.usdtSource ?? ''}). Lãi/lỗ coin là lãi/lỗ USDT quy đổi theo tỷ giá hôm nay, không phải lãi/lỗ VND thực tế từ ngày mua.`
   const pfFor = (h: { portfolios?: { portfolioId: string }[] }) =>
     pf || (h.portfolios?.length === 1 ? h.portfolios[0].portfolioId : undefined)
 
   return (
     <Stack spacing={2.5}>
       <PortfolioSwitcher accounts={accounts} value={pf} onChange={setPf} onChanged={() => void loadAccounts()} />
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12 }}>
-          <Panel
-            title={pf ? `Tổng quan · ${accounts.find((a) => a.id === pf)?.name ?? ''}` : 'Tổng quan danh mục'}
-            sx={{ height: '100%' }}
-            action={
-              <Button
-                variant="contained"
-                size="small"
-                component={RouterLink}
-                to={`/advisor?q=${encodeURIComponent('Nhận xét toàn bộ danh mục của tôi: phân bổ đã hợp với khẩu vị rủi ro chưa, mã nào nên giữ, mã nào cần xem lại, và tôi nên làm gì tiếp theo?')}`}
-              >
-                Nhờ cố vấn nhận xét
-              </Button>
-            }
-          >
-            <Grid container spacing={3}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <Stat
-                  label={p?.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
-                  value={`${p?.totalIsEstimate ? '≈ ' : ''}${fmtVnd(p?.totalValue)}`}
-                  size="lg"
-                />
-              </Grid>
-              <Grid size={{ xs: 6, sm: 4 }}>
-                <Tooltip title="Giá trị hiện tại trừ số vốn bạn đã đưa vào (nạp − rút + tài sản khai báo đầu kỳ theo giá vốn). Tiền nạp thêm không được tính là lãi.">
-                  <span>
-                    <Stat
-                      label={perf?.isEstimate ? 'Tổng lãi / lỗ (ước tính)' : 'Tổng lãi / lỗ'}
-                      value={perf ? `${fmtVndShort(perf.totalProfit)} (${fmtPct(perf.totalProfitPct)})` : '—'}
-                      color={changeColor(perf?.totalProfit)}
-                      size="lg"
-                    />
-                  </span>
-                </Tooltip>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 4 }}>
-                <Stat label="Vốn đã đưa vào (ròng)" value={fmtVndShort(perf?.netContributions)} />
-              </Grid>
-            </Grid>
-            {perf && (
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <Stat label="Lãi đã chốt" value={fmtVndShort(perf.realized)} color={changeColor(perf.realized)} size="sm" />
-                </Grid>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <Stat
-                    label={
-                      p && p.pnlCoverage.priced < p.pnlCoverage.total
-                        ? `Lãi chưa chốt (${p.pnlCoverage.priced}/${p.pnlCoverage.total} có giá)`
-                        : 'Lãi chưa chốt'
-                    }
-                    value={fmtVndShort(perf.unrealized)}
-                    color={changeColor(perf.unrealized)}
-                    size="sm"
-                  />
-                </Grid>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <Stat label="Cổ tức đã nhận" value={fmtVndShort(perf.dividends)} size="sm" />
-                </Grid>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <Stat label="Phí + thuế đã trả" value={fmtVndShort(perf.feesAndTaxes)} size="sm" />
-                </Grid>
-              </Grid>
-            )}
-            {perf && perf.notes.length > 0 && (
-              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
-                {perf.notes.join(' ')}
-              </Typography>
-            )}
-            {p && (
-              <Box sx={{ mt: 2, '&:empty': { display: 'none' } }}>
-                <DataQualityAlert quality={p.dataQuality} />
-              </Box>
-            )}
-            {p && p.holdings.length > 0 && (
-              <>
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="caption" color="text.secondary">
-                  Phân bổ tài sản
-                </Typography>
-                <AllocationBar allocation={p.allocationPct} />
-              </>
-            )}
-          </Panel>
-        </Grid>
-      </Grid>
+      <Paper sx={{ overflow: 'hidden' }}>
+        <Box sx={{ p: 2.5, color: '#fff', background: HERO_BG }}>
+          <Typography sx={{ fontSize: 13, opacity: 0.85 }} noWrap>
+            {p?.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
+            {pf ? ` · ${accounts.find((a) => a.id === pf)?.name ?? ''}` : ''}
+          </Typography>
+          <Typography className="num" sx={{ fontSize: { xs: 30, sm: 34 }, fontWeight: 800, lineHeight: 1.2, mt: 0.25 }}>
+            {p?.totalIsEstimate ? '≈ ' : ''}
+            {fmtVnd(p?.totalValue)}
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1.5 }}>
+            <HeroPill
+              label={perf?.isEstimate ? 'Lãi / lỗ (ước tính)' : 'Lãi / lỗ'}
+              vnd={perf?.totalProfit ?? null}
+              pct={perf?.totalProfitPct ?? null}
+            />
+            <HeroPill label="Vốn đã đưa vào" vnd={perf?.netContributions ?? null} pct={null} neutral />
+          </Box>
+        </Box>
+        <Box sx={{ p: 2.5, pt: 2 }}>
+          {perf && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+              <Stat label="Lãi đã chốt" value={fmtVndShort(perf.realized)} color={changeColor(perf.realized)} size="sm" />
+              <Stat
+                label={
+                  p && p.pnlCoverage.priced < p.pnlCoverage.total
+                    ? `Lãi chưa chốt (${p.pnlCoverage.priced}/${p.pnlCoverage.total} có giá)`
+                    : 'Lãi chưa chốt'
+                }
+                value={fmtVndShort(perf.unrealized)}
+                color={changeColor(perf.unrealized)}
+                size="sm"
+              />
+              <Stat label="Cổ tức đã nhận" value={fmtVndShort(perf.dividends)} size="sm" />
+              <Stat label="Phí + thuế đã trả" value={fmtVndShort(perf.feesAndTaxes)} size="sm" />
+            </Box>
+          )}
+          {p && (
+            <Box sx={{ mt: 2, '&:empty': { display: 'none' } }}>
+              <DataQualityAlert quality={p.dataQuality} />
+            </Box>
+          )}
+          {p && p.holdings.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <AllocationBar allocation={p.allocationPct} />
+            </Box>
+          )}
+          <Stack direction="row" spacing={1} sx={{ mt: 2, alignItems: 'center' }}>
+            <Button
+              variant="contained"
+              startIcon={<AutoAwesomeOutlined />}
+              component={RouterLink}
+              to={`/advisor?q=${encodeURIComponent('Nhận xét toàn bộ danh mục của tôi: phân bổ đã hợp với khẩu vị rủi ro chưa, mã nào nên giữ, mã nào cần xem lại, và tôi nên làm gì tiếp theo?')}`}
+              sx={{ flex: { xs: 1, sm: 'none' }, borderRadius: 99 }}
+            >
+              Nhờ cố vấn nhận xét
+            </Button>
+            <InfoTip label="Cách tính lãi / lỗ">
+              {[
+                'Tổng lãi / lỗ = giá trị hiện tại − vốn đã đưa vào (nạp − rút + tài sản khai báo đầu kỳ theo giá vốn). Tiền nạp thêm không được tính là lãi.',
+                ...(perf?.notes ?? []),
+              ].join('\n\n')}
+            </InfoTip>
+          </Stack>
+        </Box>
+      </Paper>
 
       <HistoryPanel refreshKey={version} portfolioId={pf || undefined} />
 
       <Panel
-        title="Tài sản đang nắm giữ"
+        title={
+          <>
+            Tài sản đang nắm giữ
+            {mobile && (
+              <Box component="span" sx={{ ml: 0.75 }}>
+                <InfoTip label="Cách định giá">{valuationNote}</InfoTip>
+              </Box>
+            )}
+          </>
+        }
         noPadding
         action={
           !declaring && (
             <Stack direction="row" spacing={1}>
               <Button size="small" onClick={() => setDeclaring(true)}>
-                Khai báo tài sản đang có
+                {mobile ? 'Khai báo' : 'Khai báo tài sản đang có'}
               </Button>
-              <Button startIcon={<AddIcon />} variant="contained" size="small" onClick={() => setPreset({ type: 'buy' })}>
-                Ghi giao dịch
+              <Button startIcon={<AddIcon />} variant="contained" size="small" onClick={() => setPreset({ type: 'buy' })} sx={{ borderRadius: 99 }}>
+                {mobile ? 'Giao dịch' : 'Ghi giao dịch'}
               </Button>
             </Stack>
           )
@@ -199,8 +193,7 @@ export default function PortfolioPage() {
         <Collapse in={declaring} unmountOnExit>
           <Stack spacing={1} sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
             <Typography variant="caption" color="text.secondary">
-              Tài sản bạn đã có từ trước: ghi vào sổ thành số dư đầu kỳ theo giá vốn bình quân, không tính là lãi. Lần mua
-              / bán sau đó hãy dùng "Ghi giao dịch".
+              Tài sản có từ trước, ghi theo giá vốn — không tính là lãi.
             </Typography>
             <HoldingForm
               portfolioId={pf || undefined}
@@ -393,14 +386,18 @@ export default function PortfolioPage() {
             Chưa có tài sản nào.
           </Typography>
         )}
-        <Alert severity="info" icon={false} sx={{ borderRadius: 0, bgcolor: 'transparent' }}>
-          <Typography variant="caption" color="text.secondary">
-            Vàng định giá theo giá mua vào của cửa hàng (số tiền bạn thực nhận nếu bán ngay). Coin: giá vốn và giá hiện
-            tại tính bằng USDT; giá trị và lãi/lỗ quy ra VND theo tỷ giá <b>1 USDT = {fmtNum(p?.usdtVnd)} ₫</b> (
-            {p?.usdtSource}){p?.usdtStatus === 'fallback' && <b> — tỷ giá dự phòng, chưa lấy được tỷ giá USDT thực tế</b>}
-            . Lãi/lỗ coin là lãi/lỗ USDT quy đổi theo tỷ giá hôm nay, không phải lãi/lỗ VND thực tế từ ngày mua.
-          </Typography>
-        </Alert>
+        {!mobile && (
+          <Alert severity="info" icon={false} sx={{ borderRadius: 0, bgcolor: 'transparent' }}>
+            <Typography variant="caption" color="text.secondary">
+              {valuationNote}
+            </Typography>
+          </Alert>
+        )}
+        {p?.usdtStatus === 'fallback' && (
+          <Alert severity="warning" sx={{ borderRadius: 0 }}>
+            Đang dùng tỷ giá USDT dự phòng — chưa lấy được tỷ giá thực tế.
+          </Alert>
+        )}
       </Panel>
 
       <LedgerPanel txs={txs} onChanged={changed} accounts={accounts} portfolioId={pf || undefined} />
@@ -427,73 +424,135 @@ function HoldingCards({
   showPortfolios: boolean
   onTrade: (h: HoldingRow, type: 'buy' | 'sell' | 'deposit' | 'withdraw') => void
 }) {
+  // Chạm một tài sản → bảng hành động trượt từ dưới lên, thay cho hai nút lặp lại ở mỗi dòng
+  const [sheet, setSheet] = useState<HoldingRow | null>(null)
+  const nav = useNavigate()
+  const linkOf = (h: HoldingRow) =>
+    h.assetType === 'stock' ? `/stock/${h.symbol}` : h.assetType === 'crypto' ? `/crypto/${h.symbol.replace(/USDT$/, '')}` : null
+  const act = (fn: () => void) => {
+    setSheet(null)
+    fn()
+  }
   return (
-    <Stack divider={<Divider flexItem />}>
-      {holdings.map((h) => {
-        const to =
-          h.assetType === 'stock' ? `/stock/${h.symbol}` : h.assetType === 'crypto' ? `/crypto/${h.symbol.replace(/USDT$/, '')}` : null
-        const cash = h.assetType === 'cash'
-        return (
-          <Box key={h.id} sx={{ px: 2, py: 1.5 }}>
-            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
-              <AssetAvatar assetType={h.assetType} symbol={h.symbol} size={36} />
-              <Box sx={{ minWidth: 0, flex: 1 }}>
-                {to ? (
-                  <Link component={RouterLink} to={to} underline="hover" sx={{ fontWeight: 700 }}>
+    <>
+      <Stack divider={<Divider flexItem />}>
+        {holdings.map((h) => {
+          const cash = h.assetType === 'cash'
+          return (
+            <ButtonBase key={h.id} onClick={() => setSheet(h)} sx={{ display: 'block', textAlign: 'left', px: 2, py: 1.5, width: '100%' }}>
+              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                <AssetAvatar assetType={h.assetType} symbol={h.symbol} size={40} />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography sx={{ fontWeight: 700 }} noWrap>
                     {h.displayName}
-                  </Link>
-                ) : (
-                  <Typography sx={{ fontWeight: 700 }}>{h.displayName}</Typography>
-                )}
-                <Typography variant="caption" color="text.secondary" component="div">
-                  {h.typeLabel}
-                  {showPortfolios && h.portfolios?.length ? ` · ${h.portfolios.map((x) => x.name).join(', ')}` : ''}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'right' }}>
-                <Typography className="num" sx={{ fontWeight: 700 }}>
-                  {h.valuedAtCost ? '≈ ' : ''}
-                  {fmtVndShort(h.marketValue ?? h.costValue)}
-                </Typography>
-                {!cash && (
-                  <Typography variant="body2" className="num" sx={{ color: changeColor(h.pnl) }}>
-                    {h.pnl === null ? '—' : `${fmtVndShort(h.pnl)} (${fmtPct(h.pnlPct, 1)})`}
                   </Typography>
-                )}
-              </Box>
-            </Stack>
-            {!cash && (
-              <Stack direction="row" spacing={1.5} sx={{ mt: 0.5, alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
-                <Typography variant="caption" color="text.secondary" className="num">
-                  {fmtNum(h.quantity, h.assetType === 'stock' ? 0 : 4)} ×{' '}
-                  {h.currency === 'USDT' ? `${fmtNum(h.priceNative, 2)} USDT` : fmtVnd(h.priceVnd)}
-                </Typography>
-                <Typography variant="caption" className="num" sx={{ color: changeColor(h.dayChangePct) }}>
-                  Hôm nay {fmtPct(h.dayChangePct)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" className="num">
-                  {fmtNum(h.weightPct, 1)}% danh mục
-                </Typography>
-                <PriceStatusChip price={h.price} />
+                  <Typography variant="caption" color="text.secondary" component="div" noWrap className="num">
+                    {cash
+                      ? h.typeLabel
+                      : `${fmtNum(h.quantity, h.assetType === 'stock' ? 0 : 4)} × ${
+                          h.currency === 'USDT' ? `${fmtNum(h.priceNative, 2)} USDT` : fmtVndShort(h.priceVnd)
+                        }`}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                  <Typography className="num" sx={{ fontWeight: 700 }}>
+                    {h.valuedAtCost ? '≈ ' : ''}
+                    {fmtVndShort(h.marketValue ?? h.costValue)}
+                  </Typography>
+                  {!cash && h.pnl !== null ? (
+                    <ChangePill small color={changeColor(h.pnl)}>
+                      {fmtPct(h.pnlPct, 1)}
+                    </ChangePill>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      {fmtNum(h.weightPct, 1)}%
+                    </Typography>
+                  )}
+                </Box>
               </Stack>
-            )}
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-              <Button size="small" variant="outlined" onClick={() => onTrade(h, cash ? 'deposit' : 'buy')} sx={{ flex: 1 }}>
-                {cash ? 'Nạp tiền' : 'Mua thêm'}
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                color={cash ? 'inherit' : 'error'}
-                onClick={() => onTrade(h, cash ? 'withdraw' : 'sell')}
-                sx={{ flex: 1 }}
-              >
-                {cash ? 'Rút tiền' : 'Bán'}
-              </Button>
+            </ButtonBase>
+          )
+        })}
+      </Stack>
+
+      <Drawer
+        anchor="bottom"
+        open={!!sheet}
+        onClose={() => setSheet(null)}
+        slotProps={{ paper: { sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, pb: 'env(safe-area-inset-bottom)' } } }}
+      >
+        {sheet && (
+          <Box sx={{ p: 2.5 }}>
+            <Box sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: 'divider', mx: 'auto', mb: 2 }} />
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+              <AssetAvatar assetType={sheet.assetType} symbol={sheet.symbol} size={44} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: 18 }} noWrap>
+                  {sheet.displayName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" component="div">
+                  {sheet.typeLabel} · {fmtNum(sheet.weightPct, 1)}% danh mục
+                  {showPortfolios && sheet.portfolios?.length ? ` · ${sheet.portfolios.map((x) => x.name).join(', ')}` : ''}
+                </Typography>
+              </Box>
+              <PriceStatusChip price={sheet.price} />
             </Stack>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, mt: 2 }}>
+              <Stat label="Giá trị" value={fmtVnd(sheet.marketValue ?? sheet.costValue)} size="sm" />
+              {sheet.assetType !== 'cash' && (
+                <>
+                  <Stat
+                    label="Lãi / lỗ"
+                    value={sheet.pnl === null ? '—' : `${fmtVndShort(sheet.pnl)} (${fmtPct(sheet.pnlPct, 1)})`}
+                    color={changeColor(sheet.pnl)}
+                    size="sm"
+                  />
+                  <Stat
+                    label="Số lượng × giá vốn"
+                    value={`${fmtNum(sheet.quantity, sheet.assetType === 'stock' ? 0 : 4)} × ${
+                      sheet.currency === 'USDT' ? `${fmtNum(sheet.avgCost, 2)} USDT` : fmtVndShort(sheet.avgCost)
+                    }`}
+                    size="sm"
+                  />
+                  <Stat label="Hôm nay" value={fmtPct(sheet.dayChangePct)} color={changeColor(sheet.dayChangePct)} size="sm" />
+                </>
+              )}
+            </Box>
+            <Stack direction="row" spacing={1} sx={{ mt: 2.5 }}>
+              {sheet.assetType === 'cash' ? (
+                <>
+                  <Button fullWidth variant="contained" sx={{ borderRadius: 99 }} onClick={() => act(() => onTrade(sheet, 'deposit'))}>
+                    Nạp tiền
+                  </Button>
+                  <Button fullWidth variant="outlined" sx={{ borderRadius: 99 }} onClick={() => act(() => onTrade(sheet, 'withdraw'))}>
+                    Rút tiền
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button fullWidth variant="contained" sx={{ borderRadius: 99 }} onClick={() => act(() => onTrade(sheet, 'buy'))}>
+                    Mua thêm
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="error"
+                    sx={{ borderRadius: 99 }}
+                    onClick={() => act(() => onTrade(sheet, 'sell'))}
+                  >
+                    Bán
+                  </Button>
+                </>
+              )}
+            </Stack>
+            {linkOf(sheet) && (
+              <Button fullWidth endIcon={<ArrowForward />} sx={{ mt: 1 }} onClick={() => act(() => nav(linkOf(sheet)!))}>
+                Xem chi tiết {sheet.displayName}
+              </Button>
+            )}
           </Box>
-        )
-      })}
-    </Stack>
+        )}
+      </Drawer>
+    </>
   )
 }

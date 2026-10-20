@@ -17,7 +17,7 @@ interface Scenario {
   act?: (page: Page) => Promise<void>
 }
 
-const click = async (page: Page, name: string | RegExp, role: 'button' | 'tab' | 'link' = 'button') => {
+const click = async (page: Page, name: string | RegExp, role: 'button' | 'tab' | 'link' | 'menuitem' = 'button') => {
   await page.getByRole(role, { name }).first().click()
   await page.waitForTimeout(700)
 }
@@ -39,16 +39,17 @@ const scenarios: Scenario[] = [
   { name: 'portfolio', path: '/portfolio' },
   { name: 'portfolio-add-account', path: '/portfolio', act: (p) => click(p, 'Thêm danh mục') },
   { name: 'portfolio-manage-accounts', path: '/portfolio', act: (p) => click(p, 'Đổi tên / xoá danh mục') },
-  { name: 'portfolio-new-tx', path: '/portfolio', act: (p) => click(p, 'Ghi giao dịch') },
-  { name: 'portfolio-declare', path: '/portfolio', act: (p) => click(p, 'Khai báo tài sản đang có') },
-  { name: 'portfolio-sell', path: '/portfolio', act: (p) => click(p, /^Bán$/) },
+  { name: 'portfolio-new-tx', path: '/portfolio', act: (p) => click(p, /^(Ghi giao dịch|Giao dịch)$/) },
+  { name: 'portfolio-declare', path: '/portfolio', act: (p) => click(p, 'Khai báo', 'button') },
+  { name: 'portfolio-sell', path: '/portfolio', act: async (p) => { await p.getByRole('button', { name: /BTC/ }).first().click(); await p.waitForTimeout(500); await click(p, /^Bán$/) } },
+  { name: 'portfolio-holding-sheet', path: '/portfolio', act: async (p) => { await p.getByRole('button', { name: /FPT/ }).first().click(); await p.waitForTimeout(600) } },
   { name: 'portfolio-import', path: '/portfolio', act: (p) => click(p, 'Nhập từ CSV') },
-  { name: 'portfolio-edit-tx', path: '/portfolio', act: (p) => click(p, 'Sửa') },
-  { name: 'portfolio-delete-tx', path: '/portfolio', act: (p) => click(p, 'Huỷ giao dịch') },
+  { name: 'portfolio-edit-tx', path: '/portfolio', act: async (p) => { await click(p, 'Tuỳ chọn giao dịch'); await click(p, 'Sửa', 'menuitem') } },
+  { name: 'portfolio-delete-tx', path: '/portfolio', act: async (p) => { await click(p, 'Tuỳ chọn giao dịch'); await click(p, 'Huỷ giao dịch', 'menuitem') } },
   { name: 'plans', path: '/plans' },
   { name: 'plans-new', path: '/plans', act: (p) => click(p, 'Lập kế hoạch') },
   { name: 'plan-detail', path: '/plans', act: async (p) => { await p.locator('a[href^="/plans/"]').first().click(); await p.waitForTimeout(2500) } },
-  { name: 'plan-edit', path: '/plans', act: async (p) => { await p.locator('a[href^="/plans/"]').first().click(); await p.waitForTimeout(2500); await click(p, 'Sửa kế hoạch') } },
+  { name: 'plan-edit', path: '/plans', act: async (p) => { await p.locator('a[href^="/plans/"]').first().click(); await p.waitForTimeout(2500); await click(p, /^Sửa$/) } },
   { name: 'goals', path: '/goals' },
   { name: 'goals-new', path: '/goals', act: (p) => click(p, 'Thêm mục tiêu') },
   { name: 'goals-sim', path: '/goals', act: async (p) => { const l = p.getByText('Thử thay đổi mức góp').first(); if (await l.count()) { await l.click(); await p.waitForTimeout(600) } } },
@@ -59,10 +60,10 @@ const scenarios: Scenario[] = [
   { name: 'settings', path: '/settings' },
   { name: 'settings-price-alert', path: '/settings', act: (p) => click(p, 'Thêm mốc') },
   { name: 'stock', path: '/stock/FPT' },
-  { name: 'stock-alert', path: '/stock/FPT', act: (p) => click(p, 'Đặt cảnh báo giá') },
+  { name: 'stock-alert', path: '/stock/FPT', act: (p) => click(p, 'Cảnh báo giá') },
   { name: 'stock-plan', path: '/stock/HPG', act: async (p) => { const b = p.getByRole('button', { name: 'Lập kế hoạch' }); if (await b.count()) await click(p, 'Lập kế hoạch') } },
   { name: 'crypto', path: '/crypto/BTC' },
-  { name: 'crypto-alert', path: '/crypto/BTC', act: (p) => click(p, 'Đặt cảnh báo giá') },
+  { name: 'crypto-alert', path: '/crypto/BTC', act: (p) => click(p, 'Cảnh báo giá') },
   { name: 'onboarding', path: '/onboarding' },
 ]
 
@@ -84,5 +85,6 @@ for (const s of scenarios) {
     for (const e of errors) issues.push({ kind: 'js-error', detail: e })
     results[s.name] = issues
     await page.screenshot({ path: `${OUT}/${s.name}.png` })
+    if (!s.act) await page.screenshot({ path: `${OUT}/${s.name}-full.png`, fullPage: true })
   })
 }

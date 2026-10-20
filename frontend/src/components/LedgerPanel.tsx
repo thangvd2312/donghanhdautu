@@ -1,6 +1,8 @@
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import EditOutlined from '@mui/icons-material/EditOutlined'
+import HistoryOutlined from '@mui/icons-material/HistoryOutlined'
+import MoreVert from '@mui/icons-material/MoreVert'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -11,6 +13,8 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -69,6 +73,7 @@ export default function LedgerPanel({
 }) {
   const showPortfolio = accounts.length > 1 && !portfolioId
   const mobile = useIsMobile()
+  const [menu, setMenu] = useState<{ anchor: HTMLElement; t: Transaction } | null>(null)
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
@@ -103,8 +108,8 @@ export default function LedgerPanel({
           <Button size="small" onClick={() => setImporting(true)}>
             Nhập từ CSV
           </Button>
-          <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
-            Thêm giao dịch
+          <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)} sx={{ borderRadius: 99 }}>
+            {mobile ? 'Thêm' : 'Thêm giao dịch'}
           </Button>
         </Stack>
       }
@@ -112,37 +117,60 @@ export default function LedgerPanel({
       {txs && txs.length > 0 && mobile ? (
         <Stack divider={<Divider flexItem />}>
           {txs.map((t) => (
-            <Stack key={t.id} direction="row" spacing={1.25} sx={{ px: 2, py: 1.25, alignItems: 'center' }}>
-              <AssetAvatar assetType={t.assetType ?? 'cash'} symbol={t.symbol ?? t.currency} size={32} />
+            <Stack key={t.id} direction="row" spacing={1.25} sx={{ pl: 2, pr: 1, py: 1.25, alignItems: 'center' }}>
+              <AssetAvatar assetType={t.assetType ?? 'cash'} symbol={t.symbol ?? t.currency} size={36} />
               <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
-                  <Chip size="small" variant="outlined" color={TYPE_COLOR[t.type]} label={TX_LABEL[t.type]} sx={{ height: 22 }} />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {t.displayName ?? (t.currency === 'USDT' ? 'Tiền USDT' : 'Tiền mặt')}
-                  </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                  <Box component="span" sx={{ color: TYPE_COLOR[t.type] === 'default' ? 'text.secondary' : `${TYPE_COLOR[t.type]}.main` }}>
+                    {TX_LABEL[t.type]}
+                  </Box>{' '}
+                  {t.displayName ?? (t.currency === 'USDT' ? 'Tiền USDT' : 'Tiền mặt')}
                   {t.edited && (
-                    <Chip size="small" label="Đã sửa" variant="outlined" onClick={() => void showHistory(t)} sx={{ height: 20, fontSize: 11 }} />
+                    <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400 }}>
+                      {' '}
+                      · đã sửa
+                    </Box>
                   )}
-                </Stack>
-                <Typography variant="caption" color="text.secondary" component="div" className="num">
+                </Typography>
+                <Typography variant="caption" color="text.secondary" component="div" className="num" noWrap>
                   {t.date.split('-').reverse().join('/')} · {describe(t)}
-                  {t.fee + t.tax ? ` · phí ${money(t.fee + t.tax, t.currency)}` : ''}
                   {showPortfolio && t.portfolioName ? ` · ${t.portfolioName}` : ''}
                 </Typography>
-                {t.note && (
-                  <Typography variant="caption" color="text.secondary" component="div" noWrap>
-                    {t.note}
-                  </Typography>
-                )}
               </Box>
-              <IconButton onClick={() => setEditing(t)} aria-label="Sửa">
-                <EditOutlined fontSize="small" />
-              </IconButton>
-              <IconButton onClick={() => setRemoving(t)} aria-label="Huỷ giao dịch">
-                <DeleteOutlined fontSize="small" />
+              <IconButton onClick={(e) => setMenu({ anchor: e.currentTarget, t })} aria-label="Tuỳ chọn giao dịch">
+                <MoreVert fontSize="small" />
               </IconButton>
             </Stack>
           ))}
+          <Menu anchorEl={menu?.anchor} open={!!menu} onClose={() => setMenu(null)}>
+            <MenuItem
+              onClick={() => {
+                setEditing(menu!.t)
+                setMenu(null)
+              }}
+            >
+              <EditOutlined fontSize="small" sx={{ mr: 1.5 }} /> Sửa
+            </MenuItem>
+            {menu?.t.edited && (
+              <MenuItem
+                onClick={() => {
+                  void showHistory(menu.t)
+                  setMenu(null)
+                }}
+              >
+                <HistoryOutlined fontSize="small" sx={{ mr: 1.5 }} /> Lịch sử sửa
+              </MenuItem>
+            )}
+            <MenuItem
+              sx={{ color: 'error.main' }}
+              onClick={() => {
+                setRemoving(menu!.t)
+                setMenu(null)
+              }}
+            >
+              <DeleteOutlined fontSize="small" sx={{ mr: 1.5 }} /> Huỷ giao dịch
+            </MenuItem>
+          </Menu>
         </Stack>
       ) : txs && txs.length > 0 ? (
         <TableContainer sx={{ maxHeight: 480 }}>

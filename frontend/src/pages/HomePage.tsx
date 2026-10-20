@@ -70,11 +70,11 @@ export default function HomePage() {
   return (
     <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>
-          Chào {me?.name || 'bạn'}
-        </Typography>
-        <Typography color="text.secondary" sx={{ '&::first-letter': { textTransform: 'uppercase' } }}>
+        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
           {dateLabel}
+        </Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: { xs: 22, md: 26 }, lineHeight: 1.25 }}>
+          Chào {me?.name || 'bạn'}
         </Typography>
       </Box>
 

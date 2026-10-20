@@ -1,17 +1,20 @@
 import AddIcon from '@mui/icons-material/Add'
+import MoreVert from '@mui/icons-material/MoreVert'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
+import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
-import LinearProgress from '@mui/material/LinearProgress'
 import Link from '@mui/material/Link'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Slider from '@mui/material/Slider'
@@ -56,13 +59,12 @@ export default function GoalsPage() {
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
             Mục tiêu tài chính
           </Typography>
-          <Typography color="text.secondary">
-            Gắn tài sản đang có với từng mục tiêu (mua nhà, quỹ dự phòng, nghỉ hưu…) để biết mình đã đi được bao xa và cần góp
-            bao nhiêu mỗi tháng.
+          <Typography variant="body2" color="text.secondary">
+            Mua nhà, quỹ dự phòng, nghỉ hưu… — đã đi được bao xa, cần góp bao nhiêu mỗi tháng.
           </Typography>
         </Box>
         <Box>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')} sx={{ whiteSpace: 'nowrap' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')} sx={{ whiteSpace: 'nowrap', borderRadius: 99 }}>
             Thêm mục tiêu
           </Button>
         </Box>
@@ -110,6 +112,7 @@ export default function GoalsPage() {
 
 function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: () => void; onChanged: () => void }) {
   const [simOpen, setSimOpen] = useState(false)
+  const [menu, setMenu] = useState<HTMLElement | null>(null)
   const [monthly, setMonthly] = useState(g.monthlyContribution)
   const [ret, setRet] = useState(g.expectedReturnPct)
   const [error, setError] = useState('')
@@ -134,57 +137,71 @@ function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: () => void; onCha
 
   return (
     <Paper sx={{ p: 2.5, opacity: g.status === 'active' ? 1 : 0.8 }}>
-      <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          {g.name}
-        </Typography>
-        <Chip size="small" label={STATUS_LABEL[g.status]} color={g.status === 'achieved' ? 'success' : g.status === 'paused' ? 'default' : 'primary'} />
-        {g.status === 'active' && (
-          <Chip
-            size="small"
-            variant="outlined"
-            color={g.simulation.onTrack ? 'success' : 'warning'}
-            label={g.simulation.onTrack ? 'Đúng hướng (theo giả định)' : 'Chưa đủ theo giả định'}
-          />
-        )}
-        <Box sx={{ flex: 1 }} />
-        <Button size="small" onClick={onEdit}>
-          Sửa
-        </Button>
-        {g.status === 'active' ? (
-          <Button size="small" color="inherit" onClick={() => void setStatus('paused')}>
-            Tạm dừng
-          </Button>
-        ) : (
-          <Button size="small" color="inherit" onClick={() => void setStatus('active')}>
-            Tiếp tục
-          </Button>
-        )}
-        {g.status !== 'achieved' && p.progressPct >= 100 && (
-          <Button size="small" color="success" onClick={() => void setStatus('achieved')}>
-            Đánh dấu đã đạt
-          </Button>
-        )}
-        <Button size="small" color="error" onClick={() => void remove()}>
-          Xoá
-        </Button>
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+        <ProgressRing value={p.progressPct} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 17 }} noWrap>
+            {g.name}
+          </Typography>
+          <Typography className="num" sx={{ fontSize: 18, fontWeight: 800, lineHeight: 1.3 }}>
+            {p.isEstimate ? '≈ ' : ''}
+            {fmtVndShort(p.current)}
+            <Box component="span" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: 14, whiteSpace: 'nowrap' }}>
+              {' '}
+              / {fmtVndShort(g.targetAmount)}
+            </Box>
+          </Typography>
+          <Typography variant="caption" color="text.secondary" component="div" noWrap>
+            {g.status !== 'active' ? `${STATUS_LABEL[g.status]} · ` : ''}còn {g.monthsLeft} tháng · hạn {fmtDate(g.targetDate)}
+          </Typography>
+          {g.status === 'active' && (
+            <Typography variant="caption" sx={{ color: g.simulation.onTrack ? 'success.main' : 'warning.main', fontWeight: 600 }}>
+              {g.simulation.onTrack ? '● Đúng hướng' : '● Chưa đủ'} theo giả định
+            </Typography>
+          )}
+        </Box>
+        <IconButton aria-label="Tuỳ chọn mục tiêu" onClick={(e) => setMenu(e.currentTarget)} sx={{ alignSelf: 'flex-start' }}>
+          <MoreVert />
+        </IconButton>
+        <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
+          <MenuItem
+            onClick={() => {
+              setMenu(null)
+              onEdit()
+            }}
+          >
+            Sửa
+          </MenuItem>
+          {g.status !== 'achieved' && p.progressPct >= 100 && (
+            <MenuItem
+              onClick={() => {
+                setMenu(null)
+                void setStatus('achieved')
+              }}
+            >
+              Đánh dấu đã đạt
+            </MenuItem>
+          )}
+          <MenuItem
+            onClick={() => {
+              setMenu(null)
+              void setStatus(g.status === 'active' ? 'paused' : 'active')
+            }}
+          >
+            {g.status === 'active' ? 'Tạm dừng' : 'Tiếp tục'}
+          </MenuItem>
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setMenu(null)
+              void remove()
+            }}
+          >
+            Xoá
+          </MenuItem>
+        </Menu>
       </Stack>
-
-      <Stack useFlexGap direction="row" spacing={2} sx={{ mt: 1.5, alignItems: 'baseline', flexWrap: 'wrap' }}>
-        <Typography className="num" sx={{ fontSize: 24, fontWeight: 700 }}>
-          {p.isEstimate ? '≈ ' : ''}
-          {fmtVndShort(p.current)}
-        </Typography>
-        <Typography color="text.secondary" className="num">
-          / {fmtVndShort(g.targetAmount)} · hạn {fmtDate(g.targetDate)} (còn {g.monthsLeft} tháng)
-        </Typography>
-      </Stack>
-      <LinearProgress
-        variant="determinate"
-        value={Math.min(100, p.progressPct)}
-        sx={{ height: 8, borderRadius: 4, my: 1 }}
-        color={p.progressPct >= 100 ? 'success' : 'primary'}
-      />
+      <Box sx={{ mt: 1.5 }} />
       <Typography variant="caption" color="text.secondary">
         {fmtNum(p.progressPct, 1)}% · từ{' '}
         {p.assets.length ? p.assets.map((a) => `${a.pct}% ${a.name.replace(/USDT$/, '')}`).join(', ') : 'chưa gán tài sản nào'}
@@ -475,5 +492,28 @@ function GoalEditor({
         </Button>
       </DialogActions>
     </Dialog>
+  )
+}
+
+/** Vòng tiến độ mục tiêu — trực quan hơn một thanh mảnh */
+function ProgressRing({ value }: { value: number }) {
+  const v = Math.min(100, Math.max(0, value))
+  return (
+    <Box sx={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+      <CircularProgress variant="determinate" value={100} size={72} thickness={5} sx={{ color: 'action.hover', position: 'absolute' }} />
+      <CircularProgress
+        variant="determinate"
+        value={v}
+        size={72}
+        thickness={5}
+        color={value >= 100 ? 'success' : 'primary'}
+        sx={{ position: 'absolute', '& circle': { strokeLinecap: 'round' } }}
+      />
+      <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+        <Typography className="num" sx={{ fontWeight: 800, fontSize: 15 }}>
+          {fmtNum(value, value >= 10 ? 0 : 1)}%
+        </Typography>
+      </Box>
+    </Box>
   )
 }
