@@ -29,6 +29,8 @@ model User {
   importBatches ImportBatch[]
   goals         Goal[]
   telegram      TelegramLink?
+  pushSettings  PushSettings?
+  pushSubscriptions PushSubscription[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -143,6 +145,7 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
   telegramDelivery TelegramDelivery?
+  pushDelivery     PushDelivery?
 
   @@unique([userId, dedupeKey])
   @@index([userId, createdAt])
@@ -454,6 +457,57 @@ model TelegramLinkCode {
 
 /// Hàng đợi gửi Telegram: mỗi thông báo tối đa một lần gửi (unique), có thử lại và trạng thái
 model TelegramDelivery {
+  id             String       @id @default(cuid())
+  userId         String
+  notificationId String       @unique
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  /// pending | sending | sent | failed | skipped
+  status         String       @default("pending")
+  attempts       Int          @default(0)
+  lastError      String?
+  nextAttemptAt  DateTime     @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([status, nextAttemptAt])
+  @@index([userId, sentAt])
+}
+
+/// Cài đặt chung của ứng dụng dạng key–value (vd khoá VAPID cho Web Push tự tạo lần đầu)
+model AppSetting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+}
+
+/// Thông báo trình duyệt (Web Push): loại tin, giờ yên lặng, mức chi tiết — áp dụng cho mọi thiết bị đã bật
+model PushSettings {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kinds       Json
+  quietStart  Int?
+  quietEnd    Int?
+  showDetails Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+/// Một thiết bị / trình duyệt đã cho phép nhận thông báo
+model PushSubscription {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+  lastSuccessAt DateTime?
+
+  @@index([userId])
+}
+
+/// Hàng đợi Web Push: mỗi thông báo tối đa một lần (gửi tới mọi thiết bị của người dùng)
+model PushDelivery {
   id             String       @id @default(cuid())
   userId         String
   notificationId String       @unique

@@ -1,0 +1,16 @@
+{
+  "name": "Đồng Hành Đầu Tư",
+  "short_name": "Đầu Tư",
+  "description": "Danh mục, kế hoạch và cố vấn đầu tư cá nhân có dẫn nguồn",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

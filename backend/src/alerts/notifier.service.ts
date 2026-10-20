@@ -46,6 +46,10 @@ export class NotifierService {
       if (await this.prisma.telegramLink.findFirst({ where: { userId, active: true }, select: { userId: true } })) {
         await this.prisma.telegramDelivery.create({ data: { userId, notificationId: created.id } }).catch(() => null);
       }
+      // Thiết bị đã bật thông báo trình duyệt (Web Push)
+      if (await this.prisma.pushSubscription.findFirst({ where: { userId }, select: { id: true } })) {
+        await this.prisma.pushDelivery.create({ data: { userId, notificationId: created.id } }).catch(() => null);
+      }
       return created;
     } catch {
       // Trùng dedupeKey do hai lượt quét chạy chồng — bỏ qua

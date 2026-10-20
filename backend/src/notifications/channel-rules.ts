@@ -1,4 +1,4 @@
-/** Quy tắc gửi Telegram (thuần, để test): loại tin, giờ yên lặng, giới hạn tần suất, nội dung */
+/** Quy tắc gửi thông báo ra ngoài app (Telegram, Web Push): loại tin, giờ yên lặng, giới hạn tần suất, nội dung */
 
 export const KINDS = ['price_target', 'price_move', 'plan_review', 'brief', 'news', 'macro'] as const;
 export type Kind = (typeof KINDS)[number];
@@ -105,4 +105,17 @@ export function formatMessage(
     lines.push('', `<a href="${escapeHtml(url)}">Mở trong Đồng Hành Đầu Tư</a>`);
   }
   return lines.join('\n');
+}
+
+/** Nội dung Web Push (chữ thường, không HTML). Cùng quy tắc riêng tư với Telegram */
+export function pushPayload(
+  n: { kind: string; title: string; body: string; link: string | null },
+  showDetails: boolean,
+) {
+  return {
+    title: showDetails ? n.title : (GENERIC_TITLE[n.kind] ?? 'Bạn có thông báo mới'),
+    body: showDetails ? (n.body.length > 300 ? `${n.body.slice(0, 300)}…` : n.body) : 'Mở ứng dụng để xem chi tiết',
+    url: n.link && n.link.startsWith('/') ? n.link : '/',
+    tag: n.kind,
+  };
 }

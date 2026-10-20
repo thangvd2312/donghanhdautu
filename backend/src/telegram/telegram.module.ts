@@ -19,7 +19,7 @@ import { IsBoolean, IsInt, IsObject, IsOptional, Max, Min } from 'class-validato
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { PrismaService } from '../prisma/prisma.module';
-import { decide, DEFAULT_KINDS, formatMessage, KIND_LABEL, KINDS, retryAt } from './telegram-rules';
+import { decide, DEFAULT_KINDS, formatMessage, KIND_LABEL, KINDS, retryAt } from '../notifications/channel-rules';
 
 class SettingsDto {
   @IsOptional() @IsObject() kinds?: Record<string, boolean>;

@@ -1,4 +1,13 @@
-import { decide, formatMessage, inQuietHours, MAX_PER_HOUR, quietEndsAt, retryAt, vnMinutes } from './telegram-rules';
+import {
+  decide,
+  formatMessage,
+  inQuietHours,
+  MAX_PER_HOUR,
+  pushPayload,
+  quietEndsAt,
+  retryAt,
+  vnMinutes,
+} from './channel-rules';
 
 const link = { active: true, kinds: { price_target: true, brief: false }, quietStart: 22 * 60, quietEnd: 7 * 60 };
 /** Giờ VN → Date */
@@ -62,5 +71,22 @@ describe('formatMessage', () => {
     expect(m).toContain('A &lt;b&gt; &amp; B');
     expect(m).toContain('x &lt; y');
     expect(m).not.toContain('href');
+  });
+});
+
+describe('pushPayload', () => {
+  const n = { kind: 'brief', title: 'Tổng kết tuần: lãi 12 triệu', body: 'Danh mục 760 triệu', link: '/advisor/abc' };
+
+  it('mặc định không đưa số liệu lên màn hình khoá', () => {
+    const p = pushPayload(n, false);
+    expect(p.title).toBe('Bản tin mới của bạn đã sẵn sàng');
+    expect(JSON.stringify(p)).not.toContain('12 triệu');
+    expect(p.url).toBe('/advisor/abc');
+  });
+
+  it('bật chi tiết thì gửi tiêu đề thật; link ngoài bị thay bằng trang chủ', () => {
+    const p = pushPayload({ ...n, link: 'https://evil.example' }, true);
+    expect(p.title).toContain('12 triệu');
+    expect(p.url).toBe('/');
   });
 });

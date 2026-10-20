@@ -4,15 +4,12 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
-import Switch from '@mui/material/Switch'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
 import { api, del, patch, post } from '../lib/api'
 import { timeAgo } from '../lib/format'
+import ChannelSettings from './ChannelSettings'
 import { Panel } from './ui'
 
 interface TelegramStatus {
@@ -30,7 +27,6 @@ interface TelegramStatus {
   recent: { id: string; title: string; status: string; lastError: string | null; sentAt: string | null; createdAt: string }[]
 }
 
-const HOURS = Array.from({ length: 24 }, (_, h) => h)
 const STATUS_LABEL: Record<string, string> = {
   sent: 'Đã gửi',
   pending: 'Đang chờ',
@@ -120,79 +116,10 @@ export default function TelegramPanel() {
               Ngắt kết nối
             </Button>
           </Stack>
-          <Typography variant="caption" color="text.secondary">
-            Loại tin gửi qua Telegram
-          </Typography>
-          {Object.entries(s.kindLabels).map(([k, label]) => (
-            <FormControlLabel
-              key={k}
-              control={
-                <Switch
-                  size="small"
-                  checked={!!link.kinds[k]}
-                  onChange={(_, v) => void run(() => patch('/telegram/settings', { kinds: { [k]: v } }))}
-                />
-              }
-              label={<Typography variant="body2">{label}</Typography>}
-            />
-          ))}
-          <Divider />
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
-            <Typography variant="body2">Giờ yên lặng</Typography>
-            <TextField
-              select
-              size="small"
-              value={link.quietStart === null ? '' : Math.floor(link.quietStart / 60)}
-              onChange={(e) => {
-                const v = e.target.value === '' ? null : Number(e.target.value) * 60
-                void run(() =>
-                  patch('/telegram/settings', { quietStart: v, quietEnd: v === null ? null : (link.quietEnd ?? 7 * 60) }),
-                )
-              }}
-              sx={{ minWidth: 110 }}
-            >
-              <MenuItem value="">Không đặt</MenuItem>
-              {HOURS.map((h) => (
-                <MenuItem key={h} value={h}>
-                  từ {h}:00
-                </MenuItem>
-              ))}
-            </TextField>
-            {link.quietStart !== null && (
-              <TextField
-                select
-                size="small"
-                value={Math.floor((link.quietEnd ?? 420) / 60)}
-                onChange={(e) => void run(() => patch('/telegram/settings', { quietEnd: Number(e.target.value) * 60 }))}
-                sx={{ minWidth: 110 }}
-              >
-                {HOURS.map((h) => (
-                  <MenuItem key={h} value={h}>
-                    đến {h}:00
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            Tin phát sinh trong giờ yên lặng được gửi khi hết giờ. Tối đa 10 tin mỗi giờ.
-          </Typography>
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={link.showDetails}
-                onChange={(_, v) => void run(() => patch('/telegram/settings', { showDetails: v }))}
-              />
-            }
-            label={
-              <Box>
-                <Typography variant="body2">Hiện nội dung chi tiết trong tin</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Tắt (mặc định): chỉ gửi tiêu đề chung và link, không lộ số liệu danh mục trên màn hình khoá.
-                </Typography>
-              </Box>
-            }
+          <ChannelSettings
+            kindLabels={s.kindLabels}
+            prefs={link}
+            onChange={(p) => void run(() => patch('/telegram/settings', p))}
           />
           {s.recent.length > 0 && (
             <>

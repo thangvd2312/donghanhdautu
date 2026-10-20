@@ -26,6 +26,7 @@ import { DataQualityAlert, PriceStatusChip } from '../components/DataStatus'
 import HoldingForm from '../components/HoldingForm'
 import HistoryPanel from '../components/HistoryPanel'
 import LedgerPanel from '../components/LedgerPanel'
+import PushPanel from '../components/PushPanel'
 import TelegramPanel from '../components/TelegramPanel'
 import TransactionDialog, { type TxPreset } from '../components/TransactionDialog'
 import { KV, Panel, Stat } from '../components/ui'
@@ -402,6 +403,7 @@ export default function PortfolioPage() {
         <Grid size={{ xs: 12, lg: 5 }}>
           <Stack spacing={2.5}>
             <NotificationSettingsPanel />
+            <PushPanel />
             <TelegramPanel />
           </Stack>
         </Grid>
