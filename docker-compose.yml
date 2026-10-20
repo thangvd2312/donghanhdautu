@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dautu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dautu
+      POSTGRES_PASSWORD: dautu
+      POSTGRES_DB: dautu
+    ports:
+      - "5434:5432"
+    volumes:
+      - dautu-pg:/var/lib/postgresql/data
+
+volumes:
+  dautu-pg:

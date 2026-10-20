@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  /// null với tài khoản chỉ đăng nhập bằng Google
+  passwordHash  String?
+  /// "sub" trong ID token của Google
+  googleId      String?        @unique
+  avatarUrl     String?
+  name          String
+  createdAt     DateTime       @default(now())
+  profile       InvestorProfile?
+  holdings      Holding[]
+  watchlist     WatchItem[]
+  conversations Conversation[]
+  notifications Notification[]
+  priceAlerts   PriceAlert[]
+  feedback      AnswerFeedback[]
+}
+
+/// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
+model InvestorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Câu trả lời thô, giữ lại để giải thích vì sao ra kiểu nhà đầu tư này
+  answers         Json
+  /// 0-100, càng cao càng chịu được rủi ro
+  riskScore       Int
+  /// conservative | balanced | growth | aggressive
+  riskType        String
+  /// preserve | accumulate | trade
+  goal            String
+  /// short (<1 năm) | medium (1-3 năm) | long (>3 năm)
+  horizon         String
+  /// % lỗ tối đa chịu được trước khi muốn bán
+  maxDrawdownPct  Int
+  /// Người dùng tự nhận hay mua theo đám đông / hội nhóm
+  fomoProne       Boolean
+  /// % thay đổi giá trong ngày để bắn cảnh báo cho tài sản đang nắm giữ
+  alertThresholdPct Float @default(3)
+  /// Bản tin sáng 8:30 (thứ 2–6)
+  morningBrief      Boolean @default(true)
+  /// Tổng kết cuối phiên 15:10 (thứ 2–6)
+  closingBrief      Boolean @default(true)
+  /// Cảnh báo tin vĩ mô quan trọng, biến động tỷ giá
+  macroAlerts       Boolean @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+model Holding {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// stock | crypto | gold | cash
+  assetType String
+  /// Mã: FPT, BTCUSDT, BTSJC (mã vàng theo nguồn), VND
+  symbol    String
+  /// Số lượng: cổ phiếu, coin, lượng vàng (1 lượng = 10 chỉ), số tiền
+  quantity  Float
+  /// Giá vốn trung bình, VND (coin: USDT)
+  avgCost   Float
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WatchItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetType String
+  symbol    String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, assetType, symbol])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  ChatMessage[]
+
+  @@index([userId])
+}
+
+/// Lưu nguyên khối content của Claude (kể cả thinking / tool_use / tool_result)
+/// để gửi lại y nguyên ở lượt sau — lịch sử chỉ được nối thêm, không sửa.
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// user | assistant
+  role           String
+  content        Json
+  /// false cho các message nội bộ (tool_result) không cần hiển thị
+  visible        Boolean      @default(true)
+  /// Thông tin ngoài nội dung gửi cho model, vd kết quả tự động đối chiếu nguồn của câu trả lời
+  meta           Json?
+  createdAt      DateTime     @default(now())
+  seq            Int          @default(autoincrement())
+
+  @@index([conversationId, seq])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// price_move | news | macro
+  kind      String
+  /// info | warning | critical
+  severity  String
+  title     String
+  body      String
+  /// [{title, url}]
+  sources   Json
+  /// Khoá chống bắn trùng: cùng sự kiện chỉ báo 1 lần / user
+  dedupeKey String
+  /// Đường dẫn trong app để xem chi tiết (vd. cuộc trò chuyện chứa bản tin)
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt])
+}
+
+/// Cảnh báo khi giá chạm mốc người dùng tự đặt; bắn 1 lần rồi tự tắt
+model PriceAlert {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// stock | crypto | gold
+  assetType   String
+  symbol      String
+  /// above (giá ≥ mốc) | below (giá ≤ mốc)
+  direction   String
+  /// Mốc giá theo đơn vị gốc: VND/cp, USDT/coin, VND/lượng (giá bán ra)
+  targetPrice Float
+  note        String?
+  active      Boolean   @default(true)
+  triggeredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([active])
+  @@index([userId])
+}
+
+/// Kết quả AI đọc tin: bài nói về mã nào, có phải tin vĩ mô quan trọng không
+model NewsTag {
+  url        String   @id
+  title      String
+  tickers    String[]
+  /// 0 = không phải tin vĩ mô; 1–5 = mức quan trọng với nhà đầu tư cá nhân
+  macroScore Int      @default(0)
+  /// lai_suat | ty_gia | chinh_sach | thue | vang | thi_truong | khac
+  topic      String?
+  /// Một câu tóm tắt tác động
+  impact     String?
+  publishedAt DateTime
+  taggedAt   DateTime @default(now())
+
+  @@index([publishedAt])
+}
+
+/// Số liệu vĩ mô tham chiếu lấy trực tiếp từ nguồn chính thức (NHNN, Fed…), có kiểm tra hợp lệ
+model MacroFact {
+  key          String   @id
+  label        String
+  /// Giá trị hiển thị (có thể là khoảng, vd "3,75–4,00")
+  value        String
+  numericValue Float?
+  unit         String
+  /// Ngày của số liệu theo nguồn (ngày áp dụng / kỳ báo cáo)
+  asOf         String
+  /// Văn bản gốc nếu có, vd "1123/QĐ-NHNN ngày 16/06/2023"
+  document     String?
+  note         String?
+  sourceName   String
+  sourceUrl    String
+  /// Lần cuối đọc thành công từ nguồn
+  fetchedAt    DateTime
+  /// Lần cuối giá trị thay đổi
+  changedAt    DateTime
+  previousValue String?
+}
+
+model MacroFactHistory {
+  id        String   @id @default(cuid())
+  key       String
+  value     String
+  asOf      String
+  sourceUrl String
+  fetchedAt DateTime @default(now())
+
+  @@index([key, fetchedAt])
+}
+
+/// Người dùng báo một câu trả lời của cố vấn là sai / chưa tốt. Dùng để bổ sung bộ câu hỏi chấm điểm (eval).
+model AnswerFeedback {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String
+  /// id message đầu tiên của câu trả lời bị báo
+  answerId       String
+  /// wrong_number | wrong_source | outdated | bad_advice | other
+  reason         String
+  note           String?
+  /// Câu hỏi và câu trả lời tại thời điểm báo (giữ lại kể cả khi cuộc trò chuyện bị xoá)
+  question       String
+  answer         String
+  /// open | reviewed | added_to_eval
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, answerId])
+  @@index([status, createdAt])
+}
