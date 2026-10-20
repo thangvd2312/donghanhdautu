@@ -219,7 +219,8 @@ function NewsList({ feed }: { feed: HomeFeed }) {
                   component={RouterLink}
                   to={`/stock/${t}`}
                   clickable
-                  sx={{ height: 20, fontSize: 11 }}
+                  // Điện thoại: đủ 32px để bấm trúng
+                  sx={{ height: { xs: 32, sm: 20 }, fontSize: { xs: 12, sm: 11 } }}
                 />
               ))}
             />

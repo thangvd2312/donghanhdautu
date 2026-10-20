@@ -226,7 +226,13 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
           <Box ref={ref} sx={{ height, touchAction: 'pan-y' }} onMouseLeave={() => setHover(null)} />
           <Typography variant="caption" color="text.disabled" component="div" sx={{ textAlign: 'right', fontSize: 10 }}>
             Biểu đồ:{' '}
-            <Link href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer" color="inherit">
+            <Link
+              href="https://www.tradingview.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              color="inherit"
+              sx={{ display: 'inline-flex', alignItems: 'center', minHeight: 32 }}
+            >
               TradingView
             </Link>
           </Typography>

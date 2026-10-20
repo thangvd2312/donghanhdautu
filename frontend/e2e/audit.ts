@@ -102,11 +102,19 @@ export async function audit(page: Page): Promise<Issue[]> {
       }
     }
 
+    // Phần tử bị hộp thoại / lớp phủ che thì người dùng không bấm được lúc đó: không tính
+    const reachable = (el: Element, r: DOMRect) => {
+      const x = Math.min(Math.max(r.left + r.width / 2, 0), vw - 1)
+      const y = Math.min(Math.max(r.top + r.height / 2, 0), vh - 1)
+      const top = document.elementFromPoint(x, y)
+      return !!top && (top === el || el.contains(top) || top.contains(el))
+    }
     const small: string[] = []
     for (const el of Array.from(document.querySelectorAll('button, a[href], [role=button], [role=tab]'))) {
       if (!visible(el)) continue
       const r = el.getBoundingClientRect()
-      if (r.height < 32 && r.width < 200 && r.top < vh && r.bottom > 0) small.push(`${describe(el).slice(0, 40)} ${Math.round(r.width)}×${Math.round(r.height)}`)
+      if (r.height < 32 && r.width < 200 && r.top < vh && r.bottom > 0 && reachable(el, r))
+        small.push(`${describe(el).slice(0, 40)} ${Math.round(r.width)}×${Math.round(r.height)}`)
     }
     if (small.length) issues.push({ kind: 'small-tap-target', detail: `${small.length} vùng bấm < 32px: ${small.slice(0, 6).join(' | ')}` })
 
