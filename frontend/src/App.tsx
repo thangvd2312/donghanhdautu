@@ -7,6 +7,7 @@ import AdvisorPage from './pages/AdvisorPage'
 import AuthPage from './pages/AuthPage'
 import CryptoPage from './pages/CryptoPage'
 import DemoPage from './pages/DemoPage'
+import GoalsPage from './pages/GoalsPage'
 import HomePage from './pages/HomePage'
 import MarketPage from './pages/MarketPage'
 import NewsPage from './pages/NewsPage'
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/news" element={<NewsPage />} />
             <Route path="/plans" element={<PlansPage />} />
             <Route path="/plans/:id" element={<PlanDetailPage />} />
+            <Route path="/goals" element={<GoalsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

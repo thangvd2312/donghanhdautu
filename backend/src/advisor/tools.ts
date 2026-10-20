@@ -251,12 +251,13 @@ export class AdvisorTools {
   }
 
   private async myPortfolio(userId: string) {
-    const [profile, valuation, user, performance, plans] = await Promise.all([
+    const [profile, valuation, user, performance, plans, goals] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
       this.portfolio.valuation(userId),
       this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
       this.portfolio.performance(userId).catch(() => null),
       this.prisma.investmentPlan.findMany({ where: { userId, status: 'active' } }),
+      this.prisma.goal.findMany({ where: { userId, status: 'active' }, include: { allocations: true } }),
     ]);
     return {
       name: user.name,
@@ -298,6 +299,18 @@ export class AdvisorTools {
             nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10),
           }))
         : 'Chưa có kế hoạch nào',
+      // Mục tiêu tài chính người dùng tự đặt; expectedReturnPct là GIẢ ĐỊNH của họ, không phải dự báo
+      financialGoals: goals.length
+        ? goals.map((g) => ({
+            name: g.name,
+            targetAmountVnd: g.targetAmount,
+            targetDate: g.targetDate.toISOString().slice(0, 10),
+            monthlyContributionVnd: g.monthlyContribution,
+            assumedAnnualReturnPct: g.expectedReturnPct,
+            targetAllocationPct: g.targetAllocation,
+            assignedAssets: g.allocations.map((a) => ({ asset: a.symbol.replace(/USDT$/, ''), pctOfHolding: a.pct })),
+          }))
+        : 'Chưa đặt mục tiêu tài chính',
     };
   }
 

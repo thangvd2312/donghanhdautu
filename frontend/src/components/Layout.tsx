@@ -40,6 +40,7 @@ const NAV = [
   { to: '/market', label: 'Bảng giá' },
   { to: '/portfolio', label: 'Danh mục' },
   { to: '/plans', label: 'Kế hoạch' },
+  { to: '/goals', label: 'Mục tiêu' },
   { to: '/advisor', label: 'Cố vấn' },
   { to: '/news', label: 'Tin tức' },
 ]

@@ -576,3 +576,38 @@ export interface PortfolioHistory {
   period: PeriodResult | null
   notes: string[]
 }
+
+export type GoalAssetType = 'stock' | 'crypto' | 'gold' | 'cash'
+
+export interface Goal {
+  id: string
+  name: string
+  targetAmount: number
+  targetDate: string
+  monthlyContribution: number
+  expectedReturnPct: number
+  targetAllocation: Partial<Record<GoalAssetType, number>> | null
+  status: 'active' | 'paused' | 'achieved'
+  note: string | null
+  allocations: { assetType: GoalAssetType; symbol: string; pct: number }[]
+  progress: {
+    current: number
+    progressPct: number
+    assets: { assetType: string; symbol: string; pct: number; name: string; value: number; held: boolean }[]
+    actualAllocation: Record<string, number>
+    deviation: { assetType: GoalAssetType; target: number; actual: number; diff: number }[] | null
+    isEstimate: boolean
+    missingAssets: string[]
+  }
+  monthsLeft: number
+  simulation: { projected: number; onTrack: boolean; requiredMonthly: number }
+  updatedAt: string
+}
+
+export interface GoalAsset {
+  assetType: GoalAssetType
+  symbol: string
+  displayName: string
+  value: number
+  usedPct: number
+}

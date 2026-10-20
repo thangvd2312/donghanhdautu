@@ -27,6 +27,7 @@ model User {
   transactions  Transaction[]
   plans         InvestmentPlan[]
   importBatches ImportBatch[]
+  goals         Goal[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -381,4 +382,42 @@ model PriceDaily {
   createdAt DateTime @default(now())
 
   @@id([assetType, symbol, date])
+}
+
+/// Mục tiêu tài chính: số tiền đích, ngày đích, tài sản được gán (theo %), tỷ trọng mong muốn
+model Goal {
+  id                  String           @id @default(cuid())
+  userId              String
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  /// VND
+  targetAmount        Float
+  targetDate          DateTime         @db.Date
+  /// Dự định góp thêm mỗi tháng (VND)
+  monthlyContribution Float            @default(0)
+  /// Lợi suất năm GIẢ ĐỊNH để mô phỏng (%), không phải cam kết
+  expectedReturnPct   Float            @default(6)
+  /// Tỷ trọng mong muốn theo loại tài sản, vd {"stock":50,"gold":20,"cash":30}; tổng 100
+  targetAllocation    Json?
+  /// active | paused | achieved
+  status              String           @default("active")
+  note                String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  allocations         GoalAllocation[]
+
+  @@index([userId])
+}
+
+/// Phần trăm của một tài sản được gán cho mục tiêu. Tổng % của một tài sản qua mọi mục tiêu ≤ 100
+model GoalAllocation {
+  id        String @id @default(cuid())
+  goalId    String
+  goal      Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  /// stock | crypto | gold | cash
+  assetType String
+  symbol    String
+  pct       Float
+
+  @@unique([goalId, assetType, symbol])
 }
