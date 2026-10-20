@@ -2,6 +2,7 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import EditOutlined from '@mui/icons-material/EditOutlined'
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
@@ -28,6 +29,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { NotificationSettingsPanel, PriceAlertsPanel } from '../components/AlertsPanels'
 import AllocationBar from '../components/AllocationBar'
+import { DataQualityAlert, PriceStatusChip } from '../components/DataStatus'
 import HoldingForm from '../components/HoldingForm'
 import { KV, Panel, Stat } from '../components/ui'
 import { api, del, patch } from '../lib/api'
@@ -90,12 +92,20 @@ export default function PortfolioPage() {
           >
             <Grid container spacing={3}>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <Stat label="Tổng tài sản" value={fmtVnd(p?.totalValue)} size="lg" />
+                <Stat
+                  label={p?.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
+                  value={`${p?.totalIsEstimate ? '≈ ' : ''}${fmtVnd(p?.totalValue)}`}
+                  size="lg"
+                />
               </Grid>
               <Grid size={{ xs: 6, sm: 4 }}>
                 <Stat
-                  label="Lãi / lỗ"
-                  value={p ? `${fmtVndShort(p.totalPnl)} (${fmtPct(p.totalPnlPct)})` : '—'}
+                  label={
+                    p && p.pnlCoverage.priced < p.pnlCoverage.total
+                      ? `Lãi / lỗ (${p.pnlCoverage.priced}/${p.pnlCoverage.total} tài sản có giá)`
+                      : 'Lãi / lỗ'
+                  }
+                  value={p && p.totalPnl !== null ? `${fmtVndShort(p.totalPnl)} (${fmtPct(p.totalPnlPct)})` : '—'}
                   color={changeColor(p?.totalPnl)}
                 />
               </Grid>
@@ -103,6 +113,11 @@ export default function PortfolioPage() {
                 <Stat label="Tổng vốn" value={fmtVndShort(p?.totalCost)} />
               </Grid>
             </Grid>
+            {p && (
+              <Box sx={{ mt: 2, '&:empty': { display: 'none' } }}>
+                <DataQualityAlert quality={p.dataQuality} />
+              </Box>
+            )}
             {p && p.holdings.length > 0 && (
               <>
                 <Divider sx={{ my: 2 }} />
@@ -239,22 +254,37 @@ export default function PortfolioPage() {
                     <TableCell align="right">
                       {h.assetType === 'cash' ? (
                         '—'
-                      ) : h.currency === 'USDT' ? (
+                      ) : h.currency === 'USDT' && h.priceVnd !== null ? (
                         <Tooltip title={`≈ ${fmtVnd(h.priceVnd)}`}>
                           <span>{fmtNum(h.priceNative, 2)} USDT</span>
                         </Tooltip>
                       ) : (
                         fmtVnd(h.priceVnd)
                       )}
+                      <PriceStatusChip price={h.price} />
                     </TableCell>
                     <TableCell align="right" sx={{ color: changeColor(h.dayChangePct) }}>
                       {fmtPct(h.dayChangePct)}
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
-                      {fmtVndShort(h.marketValue ?? h.costValue)}
+                      {h.valuedAtCost ? (
+                        <Tooltip title="Chưa có giá thị trường: đang tạm tính theo giá vốn">
+                          <span>≈ {fmtVndShort(h.costValue)}</span>
+                        </Tooltip>
+                      ) : (
+                        fmtVndShort(h.marketValue)
+                      )}
                     </TableCell>
                     <TableCell align="right" sx={{ color: changeColor(h.pnl) }}>
-                      {h.assetType === 'cash' ? '—' : `${fmtVndShort(h.pnl)} (${fmtPct(h.pnlPct, 1)})`}
+                      {h.assetType === 'cash' || h.pnl === null ? (
+                        '—'
+                      ) : h.currency === 'USDT' ? (
+                        <Tooltip title={`Theo USDT: ${fmtNum(h.pnlNative, 2)} USDT. Quy ra VND theo tỷ giá hiện tại.`}>
+                          <span>{`${fmtVndShort(h.pnl)} (${fmtPct(h.pnlPct, 1)})`}</span>
+                        </Tooltip>
+                      ) : (
+                        `${fmtVndShort(h.pnl)} (${fmtPct(h.pnlPct, 1)})`
+                      )}
                     </TableCell>
                     <TableCell align="right">{fmtNum(h.weightPct, 1)}%</TableCell>
                     <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
@@ -284,7 +314,8 @@ export default function PortfolioPage() {
           <Typography variant="caption" color="text.secondary">
             Vàng định giá theo giá mua vào của cửa hàng (số tiền bạn thực nhận nếu bán ngay). Coin: giá vốn và giá hiện
             tại tính bằng USDT; giá trị và lãi/lỗ quy ra VND theo tỷ giá <b>1 USDT = {fmtNum(p?.usdtVnd)} ₫</b> (
-            {p?.usdtSource}).
+            {p?.usdtSource}){p?.usdtStatus === 'fallback' && <b> — tỷ giá dự phòng, chưa lấy được tỷ giá USDT thực tế</b>}
+            . Lãi/lỗ coin là lãi/lỗ USDT quy đổi theo tỷ giá hôm nay, không phải lãi/lỗ VND thực tế từ ngày mua.
           </Typography>
         </Alert>
       </Panel>

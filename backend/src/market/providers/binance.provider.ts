@@ -22,6 +22,8 @@ export class BinanceProvider implements OnModuleDestroy {
   private ws: WebSocket | null = null;
   private stopped = false;
   readonly quotes = new Map<string, CryptoQuote>();
+  /** Lần cuối nhận được giá (websocket hoặc REST) */
+  lastMessageAt: Date | null = null;
   onUpdate: (changed: CryptoQuote[]) => void = () => {};
 
   async start() {
@@ -48,7 +50,10 @@ export class BinanceProvider implements OnModuleDestroy {
           this.quotes.set(m.s, q);
           changed.push(q);
         }
-        if (changed.length) this.onUpdate(changed);
+        if (changed.length) {
+          this.lastMessageAt = new Date();
+          this.onUpdate(changed);
+        }
       } catch (e) {
         this.log.warn(`Lỗi parse Binance: ${(e as Error).message}`);
       }
@@ -82,6 +87,7 @@ export class BinanceProvider implements OnModuleDestroy {
           toQuote(t.symbol, +t.lastPrice, +t.openPrice, +t.highPrice, +t.lowPrice, +t.quoteVolume, t.closeTime),
         );
       }
+      if (rows.length) this.lastMessageAt = new Date();
     } catch (e) {
       this.log.warn(`Binance REST: ${(e as Error).message}`);
     }

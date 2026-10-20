@@ -18,6 +18,7 @@ import { MarketModule } from '../market/market.module';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import type { AssetType } from '../market/market.service';
 import { PrismaService } from '../prisma/prisma.module';
+import { valuePortfolio } from './valuation';
 
 class HoldingDto {
   @IsIn(['stock', 'crypto', 'gold', 'cash']) assetType!: AssetType;
@@ -26,13 +27,6 @@ class HoldingDto {
   @IsNumber() @Min(0) avgCost!: number;
   @IsOptional() @IsString() note?: string;
 }
-
-const TYPE_LABEL: Record<AssetType, string> = {
-  stock: 'Cổ phiếu',
-  crypto: 'Crypto',
-  gold: 'Vàng',
-  cash: 'Tiền mặt / tiết kiệm',
-};
 
 @Injectable()
 export class PortfolioService {
@@ -76,7 +70,7 @@ export class PortfolioService {
     return h;
   }
 
-  /** Định giá danh mục theo giá thị trường hiện tại, tất cả quy ra VND */
+  /** Định giá danh mục theo giá thị trường hiện tại, tất cả quy ra VND, kèm trạng thái dữ liệu */
   async valuation(userId: string) {
     const holdings = await this.prisma.holding.findMany({
       where: { userId },
@@ -88,56 +82,15 @@ export class PortfolioService {
         .filter((h) => h.assetType === 'stock')
         .map((h) => this.market.stockQuote(h.symbol).catch(() => null)),
     );
-    const usdt = this.market.usdtVnd;
-    const rows = holdings.map((h) => {
-      const type = h.assetType as AssetType;
-      const price = this.market.priceVnd(type, h.symbol);
-      // Coin: giá vốn và giá hiện tại tính bằng USDT; giá trị / lãi lỗ quy ra VND theo cùng tỷ giá USDT
-      const costVnd = type === 'crypto' ? h.avgCost * usdt.rate : h.avgCost;
-      const marketValue = price !== null ? price * h.quantity : null;
-      const costValue = costVnd * h.quantity;
-      return {
-        id: h.id,
-        assetType: type,
-        typeLabel: TYPE_LABEL[type],
-        symbol: h.symbol,
-        displayName:
-          type === 'gold'
-            ? (this.market.goldQuotes().find((g) => g.code === h.symbol)?.name ?? h.symbol)
-            : h.symbol.replace(/USDT$/, ''),
-        quantity: h.quantity,
-        avgCost: h.avgCost,
-        note: h.note,
-        priceVnd: price,
-        /** Giá theo đơn vị gốc của tài sản: USDT với coin, VND với phần còn lại */
-        priceNative: type === 'crypto' && price !== null ? price / usdt.rate : price,
-        currency: type === 'crypto' ? 'USDT' : 'VND',
-        marketValue,
-        costValue,
-        pnl: marketValue !== null ? marketValue - costValue : null,
-        pnlPct: marketValue !== null && costValue ? ((marketValue - costValue) / costValue) * 100 : null,
-        dayChangePct: this.market.dayChangePct(type, h.symbol),
-      };
+    return valuePortfolio(holdings, {
+      priceInfo: (type, symbol) => this.market.priceInfo(type, symbol),
+      dayChangePct: (type, symbol) => this.market.dayChangePct(type, symbol),
+      displayName: (type, symbol) =>
+        type === 'gold'
+          ? (this.market.goldQuotes().find((g) => g.code === symbol)?.name ?? symbol)
+          : symbol.replace(/USDT$/, ''),
+      usdt: this.market.usdtVnd,
     });
-    const total = rows.reduce((s, r) => s + (r.marketValue ?? r.costValue), 0);
-    const totalCost = rows.reduce((s, r) => s + r.costValue, 0);
-    const allocation: Record<string, number> = {};
-    for (const r of rows) {
-      allocation[r.typeLabel] = (allocation[r.typeLabel] ?? 0) + (r.marketValue ?? r.costValue);
-    }
-    return {
-      holdings: rows.map((r) => ({ ...r, weightPct: total ? ((r.marketValue ?? r.costValue) / total) * 100 : 0 })),
-      totalValue: total,
-      totalCost,
-      totalPnl: total - totalCost,
-      totalPnlPct: totalCost ? ((total - totalCost) / totalCost) * 100 : 0,
-      allocationPct: Object.fromEntries(
-        Object.entries(allocation).map(([k, v]) => [k, total ? Math.round((v / total) * 1000) / 10 : 0]),
-      ),
-      usdtVnd: usdt.rate,
-      usdtSource: usdt.source,
-      notes: `Vàng định giá theo giá MUA VÀO của cửa hàng (số tiền thực nhận nếu bán). Coin: giá vốn và giá hiện tại tính bằng USDT, giá trị và lãi/lỗ quy ra VND theo tỷ giá USDT/VND ${usdt.rate} (${usdt.source}).`,
-    };
   }
 }
 

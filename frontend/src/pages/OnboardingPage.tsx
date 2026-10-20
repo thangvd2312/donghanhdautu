@@ -209,6 +209,7 @@ export default function OnboardingPage() {
                   <Stack direction="row" sx={{ justifyContent: 'space-between', pt: 1 }}>
                     <Typography variant="subtitle2">Tổng</Typography>
                     <Typography variant="subtitle2" className="num">
+                      {portfolio.totalIsEstimate ? '≈ ' : ''}
                       {fmtVndShort(portfolio.totalValue)}
                     </Typography>
                   </Stack>

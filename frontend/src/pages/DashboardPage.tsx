@@ -31,9 +31,10 @@ import {
   fmtVnd,
   fmtVndShort,
   stockPriceColor,
+  timeAgo,
 } from '../lib/format'
 import { useMarket } from '../lib/market'
-import type { MarketSnapshot, Portfolio } from '../lib/types'
+import type { MarketSnapshot, Portfolio, SourceStatus } from '../lib/types'
 
 const INDEX_NAME: Record<string, string> = {
   VNINDEX: 'VN-Index',
@@ -43,6 +44,16 @@ const INDEX_NAME: Record<string, string> = {
 }
 
 type Tab = 'stocks' | 'gold' | 'crypto' | 'fx'
+
+/** Lần gọi nguồn gần nhất bị lỗi (đang hiển thị dữ liệu cũ) hoặc chưa từng lấy được */
+function sourceProblem(s: SourceStatus | undefined) {
+  if (!s) return null
+  if (!s.lastSuccessAt) return `Chưa lấy được dữ liệu từ ${s.source}`
+  if (s.lastErrorAt && s.lastErrorAt > s.lastSuccessAt) {
+    return `${s.source} đang lỗi · dữ liệu lần cuối lấy được ${timeAgo(s.lastSuccessAt)}`
+  }
+  return null
+}
 
 export default function DashboardPage() {
   const { snapshot } = useMarket()
@@ -73,6 +84,7 @@ export default function DashboardPage() {
         : tab === 'gold'
           ? 'Cập nhật 5 phút/lần'
           : 'Vietcombank'
+  const problem = sourceProblem(snapshot.sources?.[tab])
 
   return (
     <Stack spacing={2.5}>
@@ -127,8 +139,8 @@ export default function DashboardPage() {
           <Chip
             size="small"
             variant="outlined"
-            color={tab === 'stocks' && snapshot.stockSessionOpen ? 'success' : 'default'}
-            label={status}
+            color={problem ? 'warning' : tab === 'stocks' && snapshot.stockSessionOpen ? 'success' : 'default'}
+            label={problem ?? status}
           />
         </Stack>
         {tab === 'stocks' && <StockBoard snapshot={snapshot} />}
@@ -174,14 +186,32 @@ function PortfolioStrip() {
     <Paper sx={{ p: 2 }}>
       <Grid container spacing={3} sx={{ alignItems: 'center' }}>
         <Grid size={{ xs: 6, md: 'auto' }}>
-          <Stat label="Tổng tài sản" value={fmtVndShort(p.totalValue)} size="lg" />
+          <Stat
+            label={p.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
+            value={`${p.totalIsEstimate ? '≈ ' : ''}${fmtVndShort(p.totalValue)}`}
+            size="lg"
+          />
         </Grid>
         <Grid size={{ xs: 6, md: 'auto' }}>
           <Stat
             label="Lãi / lỗ"
-            value={`${fmtVndShort(p.totalPnl)} (${fmtPct(p.totalPnlPct)})`}
+            value={p.totalPnl !== null ? `${fmtVndShort(p.totalPnl)} (${fmtPct(p.totalPnlPct)})` : '—'}
             color={changeColor(p.totalPnl)}
           />
+          {p.dataQuality.status !== 'ok' && (
+            <Chip
+              size="small"
+              variant="outlined"
+              color={p.dataQuality.status === 'partial' ? 'error' : 'warning'}
+              label={
+                p.dataQuality.status === 'partial'
+                  ? `${p.dataQuality.missing.length} tài sản chưa có giá`
+                  : 'Có giá cũ / tỷ giá dự phòng'
+              }
+              title={p.dataQuality.messages.join(' ')}
+              sx={{ mt: 0.5 }}
+            />
+          )}
         </Grid>
         <Grid size={{ xs: 12, md: 'grow' }}>
           <AllocationBar allocation={p.allocationPct} />

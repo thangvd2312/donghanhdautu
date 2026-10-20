@@ -158,7 +158,9 @@ export class BriefsService {
         : 'chưa khảo sát',
       portfolio: {
         totalValueVnd: Math.round(valuation.totalValue),
-        totalPnlPct: round(valuation.totalPnlPct),
+        totalIsEstimate: valuation.totalIsEstimate,
+        totalPnlPct: valuation.totalPnlPct === null ? null : round(valuation.totalPnlPct),
+        dataQuality: valuation.dataQuality.messages.length ? valuation.dataQuality.messages : 'đủ giá, dữ liệu mới',
         allocationPct: valuation.allocationPct,
         holdings: valuation.holdings.map((h) => ({
           name: h.displayName,
@@ -166,11 +168,12 @@ export class BriefsService {
           weightPct: round(h.weightPct),
           pnlPct: h.pnlPct === null ? null : round(h.pnlPct),
           dayChangePct: h.dayChangePct === null ? null : round(h.dayChangePct),
+          priceStatus: h.price.status,
           // Tính sẵn để AI không tự so sánh số (dễ sai)
           exceedsYourMaxLoss:
             profile && h.pnlPct !== null ? h.pnlPct <= -profile.maxDrawdownPct : null,
         })),
-        note: 'pnlPct = lãi/lỗ so với giá vốn. dayChangePct = thay đổi trong phiên gần nhất (coin: 24 giờ). exceedsYourMaxLoss = true nghĩa là khoản này đã lỗ vượt mức lỗ tối đa người dùng chấp nhận (maxDrawdownPct).',
+        note: 'totalIsEstimate = true nghĩa là có tài sản chưa có giá, tổng tài sản đang tạm tính phần đó theo giá vốn và totalPnlPct chỉ tính trên phần đã có giá. priceStatus: fresh = mới, stale = cũ, fallback = quy đổi bằng tỷ giá dự phòng, missing = chưa có giá (pnlPct null, KHÔNG phải hoà vốn). pnlPct = lãi/lỗ so với giá vốn. dayChangePct = thay đổi trong phiên gần nhất (coin: 24 giờ). exceedsYourMaxLoss = true nghĩa là khoản này đã lỗ vượt mức lỗ tối đa người dùng chấp nhận (maxDrawdownPct).',
       },
       market: {
         source: 'Vietcap, Binance, vang.today, Vietcombank, Binance P2P',

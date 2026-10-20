@@ -5,6 +5,7 @@ import { BinanceProvider, FEATURED_COINS } from './providers/binance.provider';
 import { GoldFxProvider, OZ_PER_LUONG } from './providers/gold-fx.provider';
 import { VietcapProvider } from './providers/vietcap.provider';
 import { valuationBand } from './fundamentals';
+import { ageStatus, PriceInfo, SourceStatus, STALE_AFTER_MS, stockStatus, worst } from './freshness';
 import { technicals } from './technicals';
 import {
   CryptoQuote,
@@ -27,6 +28,11 @@ export type MarketEvent =
 
 export type AssetType = 'stock' | 'crypto' | 'gold' | 'cash';
 
+type SourceKey = 'stocks' | 'indices' | 'gold' | 'fx' | 'usdt';
+
+/** Chỉ dùng khi chưa từng lấy được tỷ giá Vietcombank, để không chặn quy đổi; luôn gắn nhãn dự phòng */
+const DEFAULT_USD_VND = 25500;
+
 @Injectable()
 export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   private log = new Logger(MarketService.name);
@@ -38,6 +44,15 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   private fx: FxRate[] = [];
   private usdt: UsdtRate | null = null;
   private tracked = new Set<string>();
+  /** Lần cuối lấy được giá từng mã cổ phiếu từ nguồn */
+  private stockFetchedAt = new Map<string, Date>();
+  private sources: Record<SourceKey, SourceStatus> = {
+    stocks: emptyStatus('Vietcap'),
+    indices: emptyStatus('Vietcap'),
+    gold: emptyStatus('vang.today / BTMC'),
+    fx: emptyStatus('Vietcombank'),
+    usdt: emptyStatus('Binance P2P'),
+  };
   /** Danh sách dự phòng khi API nhóm VN30 lỗi; được cập nhật lại từ Vietcap mỗi 5 phút */
   private vn30: string[] = [
     'ACB', 'BID', 'BSR', 'CTG', 'FPT', 'GAS', 'GVR', 'HDB', 'HPG', 'LPB', 'MBB', 'MCH', 'MSN', 'MWG', 'SAB',
@@ -116,51 +131,117 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     this.tracked = new Set([...this.vn30, ...[...h, ...w, ...a].map((x) => x.symbol)]);
   }
 
+  /** Gọi nguồn, ghi lại lần thành công/lỗi; lỗi thì trả về giá trị dự phòng (thường là dữ liệu cũ) */
+  private async fetchSource<T>(key: SourceKey, fn: () => Promise<T>, fallback: T): Promise<T> {
+    const st = this.sources[key];
+    try {
+      const v = await fn();
+      st.lastSuccessAt = new Date().toISOString();
+      return v;
+    } catch (e) {
+      const msg = (e as Error).message;
+      this.log.warn(`${key}: ${msg}`);
+      st.lastErrorAt = new Date().toISOString();
+      st.lastError = msg;
+      return fallback;
+    }
+  }
+
   private async pollStocks() {
     const [quotes, indices] = await Promise.all([
-      this.vietcap.safe('board', () => this.vietcap.board([...this.tracked]), []),
-      this.vietcap.safe('indices', () => this.vietcap.indices(), this.indices),
+      this.fetchSource('stocks', () => this.vietcap.board([...this.tracked]), []),
+      this.fetchSource('indices', () => this.vietcap.indices(), this.indices),
     ]);
-    for (const q of quotes) this.stocks.set(q.symbol, q);
+    const now = new Date();
+    for (const q of quotes) {
+      this.stocks.set(q.symbol, q);
+      this.stockFetchedAt.set(q.symbol, now);
+    }
     this.indices = indices;
     if (quotes.length) this.events$.next({ type: 'stocks', data: quotes });
     this.events$.next({ type: 'indices', data: indices });
   }
 
   private async pollGold() {
-    this.gold = await this.vietcap.safe('gold', () => this.goldFx.gold(this.gold), this.gold);
+    this.gold = await this.fetchSource('gold', () => this.goldFx.gold(this.gold), this.gold);
     this.events$.next({ type: 'gold', data: this.gold });
   }
 
   private async pollFx() {
-    this.fx = await this.vietcap.safe('fx', () => this.goldFx.fx(), this.fx);
+    this.fx = await this.fetchSource('fx', () => this.goldFx.fx(), this.fx);
     this.events$.next({ type: 'fx', data: this.fx });
   }
 
   private async pollUsdt() {
-    this.usdt = await this.vietcap.safe('usdt', () => this.goldFx.usdtVnd(), this.usdt);
+    this.usdt = await this.fetchSource('usdt', () => this.goldFx.usdtVnd(), this.usdt);
     if (this.usdt) this.events$.next({ type: 'usdt', data: this.usdt });
   }
 
   /** Tỷ giá USD/VND chuyển khoản Vietcombank — dùng quy đổi vàng thế giới */
   get usdVnd() {
-    return this.fx.find((f) => f.code === 'USD')?.transfer ?? 25500;
+    return this.usdVndInfo.rate;
+  }
+
+  get usdVndInfo(): FxInfo {
+    const usd = this.fx.find((f) => f.code === 'USD');
+    if (!usd?.transfer) {
+      return {
+        rate: DEFAULT_USD_VND,
+        source: 'Giá trị mặc định (chưa lấy được tỷ giá Vietcombank)',
+        status: 'fallback',
+        asOf: null,
+      };
+    }
+    const fetched = this.sources.fx.lastSuccessAt;
+    return {
+      rate: usd.transfer,
+      source: 'Vietcombank',
+      status: ageStatus(fetched ? new Date(fetched) : null, STALE_AFTER_MS.fx),
+      asOf: usd.updatedAt || fetched,
+    };
   }
 
   /** Tỷ giá USDT/VND dùng quy đổi coin: giá giữa P2P, lỗi thì lùi về tỷ giá USD Vietcombank */
-  get usdtVnd(): { rate: number; source: string } {
-    return this.usdt
-      ? { rate: this.usdt.mid, source: 'Binance P2P' }
-      : { rate: this.usdVnd, source: 'Vietcombank USD (dự phòng)' };
+  get usdtVnd(): FxInfo {
+    if (this.usdt) {
+      return {
+        rate: this.usdt.mid,
+        source: 'Binance P2P',
+        status: ageStatus(new Date(this.usdt.updatedAt), STALE_AFTER_MS.usdt),
+        asOf: this.usdt.updatedAt,
+      };
+    }
+    const usd = this.usdVndInfo;
+    return {
+      rate: usd.rate,
+      source: usd.status === 'fallback' ? usd.source : 'Vietcombank USD (dự phòng)',
+      status: 'fallback',
+      asOf: usd.asOf,
+    };
   }
 
   get stockSessionOpen() {
     return isStockSessionOpen();
   }
 
+  /** null khi chưa có tỷ giá thật: không quy đổi bằng tỷ giá mặc định */
   worldGoldVndPerLuong() {
     const xau = this.gold.find((g) => g.code === 'XAUUSD');
-    return xau ? Math.round(xau.buy * OZ_PER_LUONG * this.usdVnd) : null;
+    const usd = this.usdVndInfo;
+    return xau && usd.status !== 'fallback' ? Math.round(xau.buy * OZ_PER_LUONG * usd.rate) : null;
+  }
+
+  /** Trạng thái từng nguồn dữ liệu (lần lấy thành công/lỗi gần nhất) */
+  sourceStatus(): Record<SourceKey | 'crypto', SourceStatus> {
+    return {
+      ...this.sources,
+      crypto: {
+        source: 'Binance',
+        lastSuccessAt: this.binance.lastMessageAt?.toISOString() ?? null,
+        lastErrorAt: null,
+        lastError: null,
+      },
+    };
   }
 
   snapshot(): MarketSnapshot {
@@ -173,7 +254,8 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       usdt: this.usdt,
       worldGoldVndPerLuong: this.worldGoldVndPerLuong(),
       stockSessionOpen: isStockSessionOpen(),
-      updatedAt: new Date().toISOString(),
+      sources: this.sourceStatus(),
+      generatedAt: new Date().toISOString(),
     };
   }
 
@@ -193,6 +275,7 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     const [q] = await this.vietcap.board([symbol]);
     if (!q) throw new NotFoundException(`Không có dữ liệu giá cho ${symbol}`);
     this.stocks.set(symbol, q);
+    this.stockFetchedAt.set(symbol, new Date());
     this.tracked.add(symbol);
     return q;
   }
@@ -261,7 +344,8 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     symbol = normalizeCrypto(symbol);
     const candles = await this.binance.history(symbol, 400);
     const quote = this.binance.quotes.get(symbol) ?? null;
-    return { quote, usdtVnd: this.usdtVnd.rate, usdtSource: this.usdtVnd.source, technicals: technicals(candles) };
+    const usdt = this.usdtVnd;
+    return { quote, usdtVnd: usdt.rate, usdtSource: usdt.source, usdtStatus: usdt.status, technicals: technicals(candles) };
   }
 
   cryptoHistory(symbol: string, days: number) {
@@ -286,6 +370,61 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     }
   }
 
+  /** Giá hiện tại quy ra VND kèm nguồn, thời điểm dữ liệu và trạng thái (mới / cũ / dự phòng / thiếu) */
+  priceInfo(assetType: AssetType, symbol: string, now = new Date()): PriceInfo {
+    switch (assetType) {
+      case 'stock': {
+        const q = this.stocks.get(symbol);
+        const fetchedAt = this.stockFetchedAt.get(symbol) ?? null;
+        if (!q) return { value: null, status: 'missing', source: 'Vietcap', asOf: null, reason: 'Chưa lấy được giá mã này' };
+        const status = stockStatus(fetchedAt, now);
+        return {
+          value: q.price,
+          status,
+          source: 'Vietcap',
+          asOf: fetchedAt?.toISOString() ?? null,
+          reason: status === 'stale' ? 'Quá lâu chưa cập nhật được giá từ nguồn' : undefined,
+        };
+      }
+      case 'crypto': {
+        const q = this.binance.quotes.get(normalizeCrypto(symbol));
+        if (!q) return { value: null, status: 'missing', source: 'Binance', asOf: null, reason: 'Chưa lấy được giá coin này' };
+        const fx = this.usdtVnd;
+        // Coin ít giao dịch có thể lâu không đổi giá: chỉ coi là cũ khi cả luồng giá Binance ngừng cập nhật
+        const priceStatus = ageStatus(this.binance.lastMessageAt ?? new Date(q.time), STALE_AFTER_MS.crypto, now);
+        const status = worst(priceStatus, fx.status);
+        return {
+          value: q.price * fx.rate,
+          status,
+          source: `Binance; quy đổi theo ${fx.source}`,
+          asOf: new Date(q.time).toISOString(),
+          reason:
+            fx.status === 'fallback'
+              ? 'Quy ra VND bằng tỷ giá dự phòng'
+              : status === 'stale'
+                ? priceStatus === 'stale'
+                  ? 'Giá coin quá lâu chưa cập nhật'
+                  : 'Tỷ giá USDT/VND quá lâu chưa cập nhật'
+                : undefined,
+        };
+      }
+      case 'gold': {
+        const g = this.gold.find((x) => x.code === symbol);
+        if (!g) return { value: null, status: 'missing', source: 'vang.today', asOf: null, reason: 'Nguồn không còn loại vàng này' };
+        const status = ageStatus(new Date(g.updatedAt), STALE_AFTER_MS.gold, now);
+        return {
+          value: g.buy,
+          status,
+          source: g.source,
+          asOf: g.updatedAt,
+          reason: status === 'stale' ? 'Giá vàng của nguồn đã lâu chưa cập nhật' : undefined,
+        };
+      }
+      case 'cash':
+        return { value: 1, status: 'fresh', source: 'Người dùng khai báo', asOf: null };
+    }
+  }
+
   /** % thay đổi trong ngày (cổ phiếu: so tham chiếu; coin: 24h; vàng: so hôm trước) */
   dayChangePct(assetType: AssetType, symbol: string): number | null {
     switch (assetType) {
@@ -307,4 +446,15 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
 export function normalizeCrypto(symbol: string) {
   const s = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
   return s.endsWith('USDT') ? s : `${s}USDT`;
+}
+
+export interface FxInfo {
+  rate: number;
+  source: string;
+  status: PriceInfo['status'];
+  asOf: string | null;
+}
+
+function emptyStatus(source: string): SourceStatus {
+  return { source, lastSuccessAt: null, lastErrorAt: null, lastError: null };
 }

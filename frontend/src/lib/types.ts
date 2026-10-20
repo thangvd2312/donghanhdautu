@@ -80,7 +80,27 @@ export interface MarketSnapshot {
   usdt: UsdtRate | null
   worldGoldVndPerLuong: number | null
   stockSessionOpen: boolean
-  updatedAt: string
+  /** Lần lấy thành công / lỗi gần nhất của từng nguồn */
+  sources: Record<string, SourceStatus>
+  /** Thời điểm server tạo bản tổng hợp, không phải thời điểm dữ liệu */
+  generatedAt: string
+}
+
+export interface SourceStatus {
+  source: string
+  lastSuccessAt: string | null
+  lastErrorAt: string | null
+  lastError: string | null
+}
+
+/** fresh: mới · stale: cũ · fallback: quy đổi bằng tỷ giá dự phòng · missing: chưa có giá */
+export type PriceStatus = 'fresh' | 'stale' | 'fallback' | 'missing'
+
+export interface PriceMeta {
+  status: PriceStatus
+  source: string
+  asOf: string | null
+  reason: string | null
 }
 
 export type AssetType = 'stock' | 'crypto' | 'gold' | 'cash'
@@ -97,23 +117,47 @@ export interface HoldingRow {
   priceVnd: number | null
   priceNative: number | null
   currency: 'VND' | 'USDT'
+  price: PriceMeta
   marketValue: number | null
   costValue: number
+  /** Chưa có giá thị trường: giá trị và tỷ trọng tạm tính theo giá vốn */
+  valuedAtCost: boolean
   pnl: number | null
   pnlPct: number | null
+  /** Lãi/lỗ theo đồng tiền gốc (coin: USDT) */
+  pnlNative: number | null
   dayChangePct: number | null
   weightPct: number
 }
 
+export interface DataQuality {
+  /** ok: mọi giá mới · partial: có tài sản thiếu giá · degraded: có giá cũ hoặc dự phòng */
+  status: 'ok' | 'partial' | 'degraded'
+  missing: string[]
+  stale: string[]
+  fallback: string[]
+  oldestPriceAt: string | null
+  messages: string[]
+}
+
 export interface Portfolio {
   holdings: HoldingRow[]
+  /** = pricedValue + unpricedCost; là ước tính khi totalIsEstimate */
   totalValue: number
+  pricedValue: number
+  unpricedCost: number
+  totalIsEstimate: boolean
   totalCost: number
-  totalPnl: number
-  totalPnlPct: number
+  /** Chỉ tính trên tài sản đã có giá; null khi chưa định giá được tài sản nào */
+  totalPnl: number | null
+  totalPnlPct: number | null
+  pnlCoverage: { priced: number; total: number }
   allocationPct: Record<string, number>
   usdtVnd: number
   usdtSource: string
+  usdtStatus: PriceStatus
+  dataQuality: DataQuality
+  generatedAt: string
 }
 
 export interface InvestorProfile {

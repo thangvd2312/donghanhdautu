@@ -44,7 +44,16 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     s.on('disconnect', () => setConnected(false))
     s.on('snapshot', (snap: MarketSnapshot) => setSnapshot(snap))
     s.on('stocks', (rows: StockQuote[]) =>
-      setSnapshot((p) => (p ? { ...p, stocks: mergeBy(p.stocks, rows, (r) => r.symbol), updatedAt: new Date().toISOString() } : p)),
+      setSnapshot((p) => {
+        if (!p) return p
+        // Server chỉ đẩy giá sau khi lấy thành công từ nguồn
+        const stocksSource = p.sources.stocks && { ...p.sources.stocks, lastSuccessAt: new Date().toISOString() }
+        return {
+          ...p,
+          stocks: mergeBy(p.stocks, rows, (r) => r.symbol),
+          sources: stocksSource ? { ...p.sources, stocks: stocksSource } : p.sources,
+        }
+      }),
     )
     s.on('indices', (rows: IndexQuote[]) => setSnapshot((p) => (p && rows.length ? { ...p, indices: rows } : p)))
     s.on('crypto', (rows: CryptoQuote[]) =>

@@ -1,3 +1,5 @@
+import type { SourceStatus } from './freshness';
+
 export interface StockQuote {
   symbol: string;
   name: string;
@@ -90,7 +92,10 @@ export interface MarketSnapshot {
   /** Giá vàng thế giới quy đổi VND/lượng, để so chênh lệch với SJC */
   worldGoldVndPerLuong: number | null;
   stockSessionOpen: boolean;
-  updatedAt: string;
+  /** Lần lấy thành công / lỗi gần nhất của từng nguồn — đây mới là độ mới của dữ liệu */
+  sources: Record<string, SourceStatus>;
+  /** Thời điểm tạo bản tổng hợp này (không phải thời điểm dữ liệu) */
+  generatedAt: string;
 }
 
 export const VN_TZ = 'Asia/Ho_Chi_Minh';

@@ -295,7 +295,8 @@ export class AdvisorTools {
     });
     return {
       source: 'Vietcap (cổ phiếu), Binance (crypto), vang.today (vàng), Vietcombank (tỷ giá USD), Binance P2P (USDT/VND)',
-      asOf: s.updatedAt,
+      // Độ mới thật của dữ liệu theo từng nguồn (lần lấy thành công/lỗi gần nhất), không phải giờ tạo phản hồi
+      dataSources: s.sources,
       stockSessionOpen: s.stockSessionOpen,
       indices: s.indices,
       vn30: {
@@ -321,7 +322,7 @@ export class AdvisorTools {
       quotes: quotes.map((g) => ({ ...g, spread: g.sell && g.buy ? g.sell - g.buy : null })),
       worldGoldVndPerLuong: world,
       sjcPremiumVsWorld: sjc && world ? { vnd: sjc.sell - world, pct: round(((sjc.sell - world) / world) * 100) } : null,
-      usdVnd: this.market.usdVnd,
+      usdVnd: this.market.usdVndInfo,
     };
   }
 
