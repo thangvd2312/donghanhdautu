@@ -71,6 +71,27 @@ const scenarios: Scenario[] = [
     },
   },
   { name: 'events-reminders', path: '/events', act: (p) => click(p, /Cài đặt nhắc sự kiện/) },
+  { name: 'screener', path: '/screener' },
+  { name: 'screener-picker', path: '/screener', act: (p) => click(p, 'Tự chọn điều kiện') },
+  {
+    name: 'screener-results',
+    path: '/screener',
+    act: async (p) => {
+      // Bộ lọc mẫu "P/E dưới 10" chạy trên backend thật: đợi kết quả (hoặc thông báo lỗi nguồn) hiện ra
+      await click(p, /P\/E dưới 10/)
+      await p.getByText(/mã khớp|Chưa lọc được|đang bận|Chưa có mã nào/).first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(800)
+    },
+  },
+  {
+    name: 'screener-range-editor',
+    path: '/screener',
+    act: async (p) => {
+      await click(p, /P\/E dưới 10/)
+      await p.getByRole('button', { name: /Sửa điều kiện P\/E/ }).waitFor({ timeout: 10_000 })
+      await click(p, /Sửa điều kiện P\/E/)
+    },
+  },
   { name: 'compare-prompt', path: '/compare?symbols=FPT' },
   { name: 'compare-picker', path: '/compare?symbols=FPT', act: (p) => click(p, 'Thêm mã để so sánh') },
   { name: 'compare', path: '/compare?symbols=FPT,VCB' },

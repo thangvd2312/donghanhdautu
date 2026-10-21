@@ -786,3 +786,59 @@ export interface CompareResponse {
   source: 'Vietcap'
   asOf: string
 }
+
+// ── Lọc cổ phiếu (FREE-03) ──
+export type ScreenGroup = 'Cơ bản' | 'Định giá' | 'Hiệu quả' | 'Tăng trưởng' | 'Cổ tức'
+
+export interface ScreenCriterion {
+  key: string
+  label: string
+  group: ScreenGroup
+  type: 'range' | 'multi'
+  unit: '₫' | 'tỷ ₫' | '%' | 'x' | null
+  min?: number
+  max?: number
+  step?: number
+  options?: { value: string; label: string }[]
+  presets?: { label: string; min?: number; max?: number }[]
+  hint: string
+  period: string | null
+}
+
+export type ScreenFilter = { key: string; min?: number; max?: number } | { key: string; values: string[] }
+
+export interface ScreenSort {
+  key: string
+  dir: 'asc' | 'desc'
+}
+
+export interface ScreenItem {
+  symbol: string
+  name: string | null
+  exchange: string
+  price: number | null
+  changePct: number | null
+  values: Record<string, number | null>
+  watched: boolean
+  held: boolean
+}
+
+export interface ScreenResult {
+  items: ScreenItem[]
+  total: number
+  universe: number
+  universeNote: string
+  missingNote: string | null
+  postFiltered: boolean
+  source: 'Vietcap'
+  asOf: string
+}
+
+export interface SavedScreen {
+  id: string
+  name: string
+  filters: ScreenFilter[]
+  sort: ScreenSort | null
+  createdAt: string
+  updatedAt: string
+}

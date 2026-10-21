@@ -35,6 +35,7 @@ model User {
   briefRuns     BriefRun[]
   dismissedActions DismissedAction[]
   eventReminder EventReminderSetting?
+  savedScreens  SavedScreen[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -679,4 +680,19 @@ model EventReminderSetting {
   /// Mã không muốn nhận nhắc
   mutedSymbols String[] @default([])
   updatedAt    DateTime @updatedAt
+}
+
+/// Bộ lọc cổ phiếu người dùng đã lưu. filters/sort giữ đúng dạng gửi lên /screener/run (đã kiểm tra khi lưu); tối đa 20 / người
+model SavedScreen {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  filters   Json
+  sort      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, updatedAt])
 }

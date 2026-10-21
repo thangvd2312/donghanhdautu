@@ -8,6 +8,7 @@ import EventOutlined from '@mui/icons-material/EventOutlined'
 import FlagOutlined from '@mui/icons-material/FlagOutlined'
 import ForumOutlined from '@mui/icons-material/ForumOutlined'
 import HomeOutlined from '@mui/icons-material/HomeOutlined'
+import FilterAltOutlined from '@mui/icons-material/FilterAltOutlined'
 import MenuOutlined from '@mui/icons-material/MenuOutlined'
 import NewspaperOutlined from '@mui/icons-material/NewspaperOutlined'
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined'
@@ -88,6 +89,7 @@ const MORE = [
   { to: '/market', label: 'Bảng giá', icon: <ShowChartOutlined /> },
   { to: '/goals', label: 'Mục tiêu tài chính', icon: <SavingsOutlined /> },
   { to: '/events', label: 'Lịch sự kiện', icon: <EventOutlined /> },
+  { to: '/screener', label: 'Lọc cổ phiếu', icon: <FilterAltOutlined /> },
   { to: '/compare', label: 'So sánh cổ phiếu', icon: <CompareArrowsOutlined /> },
   { to: '/news', label: 'Tin tức', icon: <NewspaperOutlined /> },
   { to: '/settings', label: 'Cài đặt & thông báo', icon: <SettingsOutlined /> },
@@ -410,6 +412,17 @@ function UserMenu() {
             <EventOutlined fontSize="small" />
           </ListItemIcon>
           Lịch sự kiện
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchor(null)
+            nav('/screener')
+          }}
+        >
+          <ListItemIcon>
+            <FilterAltOutlined fontSize="small" />
+          </ListItemIcon>
+          Lọc cổ phiếu
         </MenuItem>
         <MenuItem
           onClick={() => {
