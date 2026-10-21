@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.module';
 import { BinanceProvider, FEATURED_COINS } from './providers/binance.provider';
 import { GoldFxProvider, OZ_PER_LUONG } from './providers/gold-fx.provider';
 import { VietcapProvider } from './providers/vietcap.provider';
+import { dividendHistory } from './dividends';
 import { valuationBand } from './fundamentals';
 import { ageStatus, PriceInfo, SourceStatus, STALE_AFTER_MS, stockStatus, worst } from './freshness';
 import { technicals } from './technicals';
@@ -16,6 +17,7 @@ import {
   MarketSnapshot,
   StockQuote,
   UsdtRate,
+  vnDateKey,
 } from './types';
 
 export type MarketEvent =
@@ -368,6 +370,17 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       v.safe('insider', () => v.insiderTrades(symbol), null),
     ]);
     return { valuationHistory, balanceSheet, cashFlow, majorShareholders, insiderTrades };
+  }
+
+  /** Lịch sử cổ tức tiền mặt / cổ phiếu (sự kiện quyền Vietcap từ 2018) và tỷ suất cổ tức 12 tháng theo giá hiện tại */
+  async stockDividends(symbol: string) {
+    symbol = symbol.toUpperCase();
+    await this.assertStock(symbol);
+    const [events, quote] = await Promise.all([
+      this.vietcap.corporateEvents(symbol),
+      this.stockQuote(symbol).catch(() => null),
+    ]);
+    return { ...dividendHistory(events, quote?.price ?? null, vnDateKey()), source: 'Vietcap', since: '2018' };
   }
 
   stockHistory(symbol: string, days: number) {

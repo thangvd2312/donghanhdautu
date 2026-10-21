@@ -32,6 +32,11 @@ class MarketController {
     return this.market.stockFundamentals(symbol);
   }
 
+  @Get('stocks/:symbol/dividends')
+  stockDividends(@Param('symbol') symbol: string) {
+    return this.market.stockDividends(symbol);
+  }
+
   @Get('stocks/:symbol/history')
   stockHistory(@Param('symbol') symbol: string, @Query('days', new DefaultValuePipe(365), ParseIntPipe) days: number) {
     return this.market.stockHistory(symbol, days);

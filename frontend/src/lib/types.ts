@@ -252,6 +252,28 @@ export type Technicals = {
   note?: string
 }
 
+export interface DividendItem {
+  kind: 'cash' | 'stock'
+  title: string
+  exDate: string
+  recordDate: string | null
+  payoutDate: string | null
+  /** cash: VND / cổ phiếu, trước thuế */
+  valuePerShare: number | null
+  /** cash: % mệnh giá; stock: số cổ phiếu nhận thêm trên 100 cổ phiếu */
+  pct: number
+  upcoming: boolean
+}
+
+export interface StockDividends {
+  items: DividendItem[]
+  trailingCashPerShare: number
+  trailingYieldPct: number | null
+  price: number | null
+  source: string
+  since: string
+}
+
 export interface StockDetail {
   quote: StockQuote
   company: {

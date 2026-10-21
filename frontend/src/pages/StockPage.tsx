@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import PriceAlertDialog from '../components/PriceAlertDialog'
 import AssetHero from '../components/AssetHero'
+import DividendPanel from '../components/DividendPanel'
 import PriceChart from '../components/PriceChart'
 import StockFundamentals, { StatementTable } from '../components/StockFundamentals'
 import TechnicalsPanel from '../components/TechnicalsPanel'
@@ -215,6 +216,8 @@ export default function StockPage() {
         onClose={() => setAlertOpen(false)}
         fixed={{ assetType: 'stock', symbol: q.symbol, label: q.symbol, currentPrice: q.price }}
       />
+
+      <DividendPanel symbol={q.symbol} />
 
       {d.income && (
         <Panel
