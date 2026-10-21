@@ -2,13 +2,14 @@
  * Đọc file CSV giao dịch: tách cột, nhận diện tiêu đề, chuyển từng dòng thành giao dịch.
  * Thuần (không gọi DB / mạng) để test được; kiểm tra mã tài sản và cả sổ nằm ở ImportService.
  */
+import type { ImportField } from '@dautu/contracts';
 import type { TransactionDto } from './transactions';
 import type { TxType } from './ledger';
 
 export const MAX_ROWS = 1000;
 export const MAX_BYTES = 1_000_000;
 
-export const FIELDS = [
+export const FIELDS: readonly ImportField[] = [
   'date',
   'type',
   'assetType',
@@ -21,8 +22,8 @@ export const FIELDS = [
   'currency',
   'fxRate',
   'note',
-] as const;
-export type Field = (typeof FIELDS)[number];
+];
+export type Field = ImportField;
 /** field → chỉ số cột (bỏ trống = không có cột) */
 export type Mapping = Partial<Record<Field, number>>;
 

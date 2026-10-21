@@ -30,6 +30,19 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
       "prettier/prettier": ["error", { endOfLine: "auto" }],
+      // contracts/ chỉ có kiểu: import thường sẽ thành require lúc chạy và không có mã nào để nạp
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@dautu/contracts',
+              allowTypeImports: true,
+              message: '@dautu/contracts chỉ chứa kiểu: dùng `import type`.',
+            },
+          ],
+        },
+      ],
     },
   },
 );

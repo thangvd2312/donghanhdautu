@@ -23,6 +23,19 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // contracts/ chỉ có kiểu: import thường sẽ thành import lúc chạy mà không có mã nào để nạp
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@dautu/contracts',
+              allowTypeImports: true,
+              message: '@dautu/contracts chỉ chứa kiểu: dùng `import type`.',
+            },
+          ],
+        },
+      ],
     },
   },
 )

@@ -1,15 +1,9 @@
 import { Controller, Get, Injectable, Logger, Module, Query, UseGuards } from '@nestjs/common';
 import { XMLParser } from 'fast-xml-parser';
+import type { NewsItem } from '@dautu/contracts';
 import { JwtAuthGuard } from '../auth/auth.module';
 
-export interface NewsItem {
-  title: string;
-  url: string;
-  summary: string;
-  source: string;
-  category: string;
-  publishedAt: string;
-}
+export type { NewsItem };
 
 const FEEDS = [
   { url: 'https://cafef.vn/thi-truong-chung-khoan.rss', source: 'CafeF', category: 'Chứng khoán' },
@@ -119,7 +113,7 @@ class NewsController {
   constructor(private news: NewsService) {}
 
   @Get()
-  list(@Query('q') q?: string) {
+  list(@Query('q') q?: string): Promise<NewsItem[]> {
     return this.news.search(q, 40);
   }
 }

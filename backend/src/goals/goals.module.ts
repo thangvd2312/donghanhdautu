@@ -28,6 +28,16 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import type {
+  GoalAllocationRequest,
+  GoalIdResponse,
+  GoalRequest,
+  GoalsResponse,
+  GoalStatus,
+  GoalStatusRequest,
+  GoalStatusResponse,
+  OkResponse,
+} from '@dautu/contracts';
 import { IsDateKey } from '../common/dates';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
@@ -48,13 +58,13 @@ import {
 } from './goal-math';
 import type { Allocation, GoalAssetType } from './goal-math';
 
-class AllocationDto {
+class AllocationDto implements GoalAllocationRequest {
   @IsIn(ASSET_TYPES) assetType!: GoalAssetType;
   @IsString() @MaxLength(20) symbol!: string;
   @IsNumber() @Min(0) @Max(100) pct!: number;
 }
 
-class GoalDto {
+class GoalDto implements GoalRequest {
   @IsString() @MinLength(1) @MaxLength(100) name!: string;
   @IsNumber() @Min(1) targetAmount!: number;
   @IsDateKey() targetDate!: string;
@@ -65,8 +75,8 @@ class GoalDto {
   @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => AllocationDto) allocations!: AllocationDto[];
 }
 
-class StatusDto {
-  @IsIn(['active', 'paused', 'achieved']) status!: 'active' | 'paused' | 'achieved';
+class StatusDto implements GoalStatusRequest {
+  @IsIn(['active', 'paused', 'achieved']) status!: GoalStatus;
 }
 
 @Injectable()
@@ -76,7 +86,7 @@ export class GoalsService {
     private portfolio: PortfolioService,
   ) {}
 
-  async list(userId: string) {
+  async list(userId: string): Promise<GoalsResponse> {
     const [goals, v] = await Promise.all([
       this.prisma.goal.findMany({
         where: { userId },
@@ -113,10 +123,10 @@ export class GoalsService {
           monthlyContribution: g.monthlyContribution,
           expectedReturnPct: g.expectedReturnPct,
           targetAllocation: target,
-          status: g.status,
+          status: g.status as GoalStatus,
           note: g.note,
           allocations: g.allocations.map((a) => ({
-            assetType: a.assetType,
+            assetType: a.assetType as GoalAssetType,
             symbol: normalizeSymbol(a.symbol),
             pct: a.pct,
           })),
@@ -128,7 +138,7 @@ export class GoalsService {
             onTrack: projected >= g.targetAmount,
             requiredMonthly: requiredMonthly(progress.current, g.targetAmount, g.expectedReturnPct, months),
           },
-          updatedAt: g.updatedAt,
+          updatedAt: g.updatedAt.toISOString(),
         };
       }),
       /** Tài sản có thể gán và % còn trống */
@@ -142,7 +152,7 @@ export class GoalsService {
     };
   }
 
-  async create(userId: string, dto: GoalDto) {
+  async create(userId: string, dto: GoalDto): Promise<GoalIdResponse> {
     return this.locked(userId, async (db) => {
       const allocations = this.normalized(dto);
       await this.validate(db, userId, dto, allocations, null);
@@ -154,7 +164,7 @@ export class GoalsService {
   }
 
   /** Sửa mục tiêu: chỉ đổi mục tiêu và phần gán, không đụng tới sổ giao dịch */
-  async update(userId: string, id: string, dto: GoalDto) {
+  async update(userId: string, id: string, dto: GoalDto): Promise<GoalIdResponse> {
     return this.locked(userId, async (db) => {
       await this.own(userId, id, db);
       const allocations = this.normalized(dto);
@@ -179,13 +189,13 @@ export class GoalsService {
     });
   }
 
-  async setStatus(userId: string, id: string, dto: StatusDto) {
+  async setStatus(userId: string, id: string, dto: StatusDto): Promise<GoalStatusResponse> {
     await this.own(userId, id);
     await this.prisma.goal.update({ where: { id }, data: { status: dto.status } });
     return { id, status: dto.status };
   }
 
-  async remove(userId: string, id: string) {
+  async remove(userId: string, id: string): Promise<OkResponse> {
     await this.own(userId, id);
     await this.prisma.goal.delete({ where: { id } });
     return { ok: true };
@@ -249,27 +259,27 @@ class GoalsController {
   constructor(private goals: GoalsService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
+  list(@CurrentUser() user: AuthUser): Promise<GoalsResponse> {
     return this.goals.list(user.id);
   }
 
   @Post()
-  create(@CurrentUser() user: AuthUser, @Body() dto: GoalDto) {
+  create(@CurrentUser() user: AuthUser, @Body() dto: GoalDto): Promise<GoalIdResponse> {
     return this.goals.create(user.id, dto);
   }
 
   @Put(':id')
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: GoalDto) {
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: GoalDto): Promise<GoalIdResponse> {
     return this.goals.update(user.id, id, dto);
   }
 
   @Post(':id/status')
-  status(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: StatusDto) {
+  status(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: StatusDto): Promise<GoalStatusResponse> {
     return this.goals.setStatus(user.id, id, dto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<OkResponse> {
     return this.goals.remove(user.id, id);
   }
 }

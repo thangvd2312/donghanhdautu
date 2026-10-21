@@ -1,6 +1,13 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { PaperAccount, PaperTrade } from '@prisma/client';
+import type {
+  PracticeOrderResponse,
+  PracticeResponse,
+  PracticeState,
+  PracticeTrade,
+  PracticeTradesPage,
+} from '@dautu/contracts';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
@@ -51,12 +58,12 @@ export class PracticeService {
     private market: MarketService,
   ) {}
 
-  async state(userId: string) {
+  async state(userId: string): Promise<PracticeResponse> {
     const account = await this.prisma.paperAccount.findUnique({ where: { userId } });
     return account ? this.buildState(this.prisma, account) : { account: null };
   }
 
-  async start(userId: string, startCash: number) {
+  async start(userId: string, startCash: number): Promise<PracticeState> {
     assertStartCash(startCash);
     const account = await this.prisma.$transaction(async (db) => {
       await lock(db, userId);
@@ -68,7 +75,7 @@ export class PracticeService {
     return this.buildState(this.prisma, account);
   }
 
-  async reset(userId: string, startCash: number) {
+  async reset(userId: string, startCash: number): Promise<PracticeState> {
     assertStartCash(startCash);
     const account = await this.prisma.$transaction(async (db) => {
       await lock(db, userId);
@@ -83,7 +90,7 @@ export class PracticeService {
     return this.buildState(this.prisma, account);
   }
 
-  async placeOrder(userId: string, input: PlaceOrderInput) {
+  async placeOrder(userId: string, input: PlaceOrderInput): Promise<PracticeOrderResponse> {
     const { symbol, price, source } = await this.quote(input.assetType, input.symbol);
     const { trade, updated } = await this.prisma.$transaction(async (db) => {
       await lock(db, userId);
@@ -122,7 +129,7 @@ export class PracticeService {
     return { trade, state: await this.buildState(this.prisma, updated) };
   }
 
-  async trades(userId: string, cursor?: string) {
+  async trades(userId: string, cursor?: string): Promise<PracticeTradesPage> {
     const account = await this.prisma.paperAccount.findUnique({ where: { userId } });
     if (!account) return { items: [], nextCursor: null };
     if (cursor && !(await this.prisma.paperTrade.findFirst({ where: { id: cursor, accountId: account.id } }))) {
@@ -183,7 +190,7 @@ export class PracticeService {
     };
   }
 
-  private async buildState(db: Db | PrismaService, account: PaperAccount) {
+  private async buildState(db: Db | PrismaService, account: PaperAccount): Promise<PracticeState> {
     const trades = await db.paperTrade.findMany({
       where: { accountId: account.id },
       orderBy: [{ executedAt: 'asc' }, { id: 'asc' }],
@@ -268,7 +275,7 @@ function toRecord(t: PaperTrade): TradeRecord {
   };
 }
 
-function serializeTrade(t: PaperTrade, realizedPnl: number | null) {
+function serializeTrade(t: PaperTrade, realizedPnl: number | null): PracticeTrade {
   const side = t.side as PracticeSide;
   const quantity = roundQty(num(t.quantity));
   const price = num(t.price);

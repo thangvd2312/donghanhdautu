@@ -1,5 +1,6 @@
+import type { AssetType, Portfolio } from '@dautu/contracts';
 import type { PriceInfo, PriceStatus } from '../market/freshness';
-import type { AssetType, FxInfo } from '../market/market.service';
+import type { FxInfo } from '../market/market.service';
 
 export const TYPE_LABEL: Record<AssetType, string> = {
   stock: 'Cổ phiếu',
@@ -31,7 +32,7 @@ export interface ValuationDeps {
  *   và phần tạm tính theo giá vốn.
  * - Giá cũ / tỷ giá dự phòng vẫn dùng để định giá nhưng được gắn trạng thái.
  */
-export function valuePortfolio(holdings: HoldingInput[], deps: ValuationDeps) {
+export function valuePortfolio(holdings: HoldingInput[], deps: ValuationDeps): Portfolio {
   const { usdt } = deps;
   const rows = holdings.map((h) => {
     const type = h.assetType as AssetType;
@@ -160,4 +161,4 @@ function sum(xs: number[]) {
   return xs.reduce((s, x) => s + x, 0);
 }
 
-export type Valuation = ReturnType<typeof valuePortfolio>;
+export type Valuation = Portfolio;

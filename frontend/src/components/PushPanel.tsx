@@ -10,16 +10,9 @@ import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
 import { api, patch, post } from '../lib/api'
 import { timeAgo } from '../lib/format'
-import ChannelSettings, { type ChannelPrefs } from './ChannelSettings'
+import type { PushStatus } from '../lib/types'
+import ChannelSettings from './ChannelSettings'
 import { Panel } from './ui'
-
-interface PushStatus {
-  publicKey: string | null
-  kindLabels: Record<string, string>
-  settings: ChannelPrefs
-  devices: { endpoint: string; userAgent: string | null; createdAt: string }[]
-  recent: { id: string; title: string; status: string; sentAt: string | null; createdAt: string }[]
-}
 
 /** Sự kiện cài app của Chrome/Edge (không có trong kiểu DOM chuẩn) */
 interface InstallPromptEvent extends Event {

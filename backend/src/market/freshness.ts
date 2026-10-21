@@ -1,13 +1,7 @@
+import type { PriceStatus, SourceStatus } from '@dautu/contracts';
 import { isStockSessionOpen, vnClock } from './types';
 
-/**
- * Trạng thái một mức giá dùng để định giá:
- * - fresh: lấy thành công gần đây (ngoài phiên: giá đóng cửa phiên gần nhất)
- * - stale: có giá nhưng đã quá lâu không cập nhật được từ nguồn
- * - fallback: giá/tỷ giá dự phòng, không phải số vừa lấy từ nguồn chính
- * - missing: không có giá
- */
-export type PriceStatus = 'fresh' | 'stale' | 'fallback' | 'missing';
+export type { PriceStatus, SourceStatus };
 
 export interface PriceInfo {
   /** VND/đơn vị; null khi missing */
@@ -18,14 +12,6 @@ export interface PriceInfo {
   asOf: string | null;
   /** Lý do khi không phải fresh */
   reason?: string;
-}
-
-/** Trạng thái một nguồn dữ liệu: lần lấy thành công / lỗi gần nhất */
-export interface SourceStatus {
-  source: string;
-  lastSuccessAt: string | null;
-  lastErrorAt: string | null;
-  lastError: string | null;
 }
 
 /** Ngưỡng coi là dữ liệu cũ, theo loại tài sản */

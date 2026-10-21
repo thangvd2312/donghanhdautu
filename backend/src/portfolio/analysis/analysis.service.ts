@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type { RebalanceResponse, SimulateResponse } from '@dautu/contracts';
 import { MarketService } from '../../market/market.service';
 import { PrismaService } from '../../prisma/prisma.module';
 import { PortfolioService } from '../portfolio.service';
@@ -22,7 +23,7 @@ export class AnalysisService {
    * Mô phỏng kịch bản giá trên tài sản đang giữ. "Trước" lấy từ đúng valuation() mà màn Danh mục dùng
    * (cùng danh mục, giá, trạng thái giá, tỷ giá); không ghi gì vào DB.
    */
-  async simulate(userId: string, dto: SimulateDto) {
+  async simulate(userId: string, dto: SimulateDto): Promise<SimulateResponse> {
     const portfolioId = dto.portfolioId || undefined;
     if (portfolioId) await this.transactions.resolvePortfolio(this.prisma, userId, portfolioId);
     const v = await this.portfolio.valuation(userId, portfolioId);
@@ -33,7 +34,7 @@ export class AnalysisService {
    * Mô phỏng tái cân bằng về tỷ trọng mục tiêu. "Trước" lấy từ đúng valuation() mà màn Danh mục dùng;
    * mã cổ phiếu mới được kiểm tra tồn tại; không ghi gì vào DB.
    */
-  async rebalance(userId: string, dto: RebalanceDto) {
+  async rebalance(userId: string, dto: RebalanceDto): Promise<RebalanceResponse> {
     const portfolioId = dto.portfolioId || undefined;
     if (portfolioId) await this.transactions.resolvePortfolio(this.prisma, userId, portfolioId);
     const v = await this.portfolio.valuation(userId, portfolioId);

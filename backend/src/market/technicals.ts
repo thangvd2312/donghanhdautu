@@ -1,10 +1,10 @@
-import type { Candle } from './providers/vietcap/history.adapter';
+import type { Candle, Technicals } from '@dautu/contracts';
 
 /**
  * Tính sẵn chỉ báo kỹ thuật trên server để AI không phải tự nhẩm (dễ sai).
  * Nến ngày, mới nhất ở cuối.
  */
-export function technicals(candles: Candle[]) {
+export function technicals(candles: Candle[]): Technicals {
   const closes = candles.map((c) => c.close);
   const n = closes.length;
   if (n < 2) return { note: 'Không đủ dữ liệu lịch sử' };

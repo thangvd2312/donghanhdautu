@@ -1,17 +1,19 @@
 import { BadRequestException, Body, Controller, Get, Module, Patch, Put, UseGuards } from '@nestjs/common';
 import { IsBoolean, IsNumber, IsObject, IsOptional, Max, Min } from 'class-validator';
+import type { InvestorProfile, ProfileSettingsRequest, QuizQuestion, SubmitQuizRequest } from '@dautu/contracts';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
+import { toInvestorProfile } from './investor-profile';
 import { QUIZ, scoreQuiz } from './quiz';
 import type { QuizAnswers } from './quiz';
 
-class SubmitQuizDto {
+class SubmitQuizDto implements SubmitQuizRequest {
   @IsObject() answers!: QuizAnswers;
 }
 
-class SettingsDto {
+class SettingsDto implements ProfileSettingsRequest {
   @IsOptional() @IsNumber() @Min(1) @Max(20) alertThresholdPct?: number;
   @IsOptional() @IsBoolean() morningBrief?: boolean;
   @IsOptional() @IsBoolean() closingBrief?: boolean;
@@ -28,7 +30,7 @@ class ProfileController {
   ) {}
 
   @Get('quiz')
-  quiz() {
+  quiz(): QuizQuestion[] {
     return QUIZ.map((q) => ({
       ...q,
       options: q.options.map(({ value, label }) => ({ value, label })),
@@ -36,7 +38,7 @@ class ProfileController {
   }
 
   @Put()
-  async submit(@CurrentUser() user: AuthUser, @Body() dto: SubmitQuizDto) {
+  async submit(@CurrentUser() user: AuthUser, @Body() dto: SubmitQuizDto): Promise<InvestorProfile> {
     let result: ReturnType<typeof scoreQuiz>;
     try {
       result = scoreQuiz(dto.answers);
@@ -51,15 +53,17 @@ class ProfileController {
     });
     // Lần đầu (làm lại khảo sát không tính: chống trùng theo người dùng)
     void this.analytics.track('onboarding_completed', { userId: user.id, dedupeKey: 'onboarding_completed' });
-    return saved;
+    return toInvestorProfile(saved);
   }
 
   @Patch('settings')
-  settings(@CurrentUser() user: AuthUser, @Body() dto: SettingsDto) {
-    return this.prisma.investorProfile.update({
-      where: { userId: user.id },
-      data: dto,
-    });
+  async settings(@CurrentUser() user: AuthUser, @Body() dto: SettingsDto): Promise<InvestorProfile> {
+    return toInvestorProfile(
+      await this.prisma.investorProfile.update({
+        where: { userId: user.id },
+        data: dto,
+      }),
+    );
   }
 }
 

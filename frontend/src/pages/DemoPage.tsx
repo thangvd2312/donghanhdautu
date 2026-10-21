@@ -15,40 +15,21 @@ import { NewsRow, ReviewList, TodayBlock } from '../components/HomeBlocks'
 import { KV, Logo, Panel } from '../components/ui'
 import { api } from '../lib/api'
 import { changeColor, fmtPct, fmtPrice, fmtVndShort } from '../lib/format'
-import type { HomeFeed, HomeToday, ReviewPoint } from '../lib/types'
+import type { DemoResponse } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
 import { track } from '../lib/track'
-
-interface Demo {
-  sample: true
-  profile: { label: string; goal: string; horizon: string; maxDrawdownPct: number }
-  today: HomeToday
-  holdings: {
-    displayName: string
-    symbol: string
-    typeLabel: string
-    assetType: string
-    marketValue: number | null
-    pnl: number | null
-    pnlPct: number | null
-    weightPct: number
-  }[]
-  review: ReviewPoint[]
-  plan: { displayName: string; thesis: string; exitConditions: string; stopPrice: number; nextReviewInDays: number } | null
-  news: (HomeFeed['related'][number] & { tickers: string[] })[]
-}
 
 /**
  * Trải nghiệm thử cho khách chưa đăng nhập: danh mục MẪU định giá bằng giá thật.
  * Không đọc dữ liệu của bất kỳ người dùng nào; mọi hành động cá nhân dẫn tới đăng ký.
  */
 export default function DemoPage() {
-  const [d, setD] = useState<Demo | null>(null)
+  const [d, setD] = useState<DemoResponse | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     track('demo_viewed')
-    api<Demo>('/demo')
+    api<DemoResponse>('/demo')
       .then(setD)
       .catch((e: Error) => setError(e.message))
   }, [])

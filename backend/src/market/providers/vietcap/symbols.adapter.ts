@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { StockHit } from '@dautu/contracts';
 import { MarketDataCache } from '../../cache/market-data-cache';
 import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import { VietcapQuotesAdapter } from './quotes.adapter';
@@ -7,12 +8,8 @@ import { VietcapHttpClient } from './vietcap-http.client';
 /** Bản Map dựng từ danh sách giữ trong tiến trình tối đa chừng này rồi hỏi lại cache (rẻ: thường trúng L1/L2) */
 const MAP_TTL_MS = 3600_000;
 
-export interface SymbolInfo {
-  symbol: string;
-  name: string;
-  board: string;
-  type: string;
-}
+/** Một mã niêm yết; cũng là phần tử của GET /market/search */
+export type SymbolInfo = StockHit;
 
 /** Danh mục mã niêm yết (HSX, HNX, UPCOM) và các nhóm chỉ số như VN30 */
 @Injectable()

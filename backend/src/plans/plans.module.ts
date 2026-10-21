@@ -17,6 +17,20 @@ import {
 import { InvestmentPlan, Prisma } from '@prisma/client';
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { IsDateKey } from '../common/dates';
+import type { PlanReview as PlanReviewRow, PlanVersion as PlanVersionRow } from '@prisma/client';
+import type {
+  Currency,
+  Plan,
+  PlanDetail,
+  PlanDraft,
+  PlanDraftRequest,
+  PlanListItem,
+  PlanRequest,
+  PlanReview,
+  PlanReviewRequest,
+  TrackedAssetType,
+  TxType,
+} from '@dautu/contracts';
 import { AlertsModule } from '../alerts/alerts.module';
 import { LlmService } from '../alerts/llm.service';
 import { NotifierService } from '../alerts/notifier.service';
@@ -34,10 +48,10 @@ import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { addDays, DEFAULT_REVIEW_DAYS, displaySymbol, distancePct, planSignals } from './plan-rules';
 
-const PLAN_ASSETS = ['stock', 'crypto', 'gold'] as const;
-type PlanAsset = (typeof PLAN_ASSETS)[number];
+const PLAN_ASSETS: readonly TrackedAssetType[] = ['stock', 'crypto', 'gold'];
+type PlanAsset = TrackedAssetType;
 
-class PlanDto {
+class PlanDto implements PlanRequest {
   @IsIn(PLAN_ASSETS) assetType!: PlanAsset;
   @IsString() @MaxLength(20) symbol!: string;
   @IsString()
@@ -55,25 +69,15 @@ class PlanDto {
   @IsOptional() @IsDateKey() nextReviewAt?: string;
 }
 
-class ReviewDto {
+class ReviewDto implements PlanReviewRequest {
   @IsIn(['keep', 'adjust', 'close']) decision!: 'keep' | 'adjust' | 'close';
   @IsOptional() @IsString() @MaxLength(2000) note?: string;
   @IsOptional() @IsDateKey() nextReviewAt?: string;
 }
 
-class DraftDto {
+class DraftDto implements PlanDraftRequest {
   @IsIn(PLAN_ASSETS) assetType!: PlanAsset;
   @IsString() @MaxLength(20) symbol!: string;
-}
-
-interface PlanDraft {
-  thesis: string;
-  horizon: string;
-  exitConditions: string;
-  reviewEveryDays: number;
-  targetPrice: number | null;
-  stopPrice: number | null;
-  caveat: string;
 }
 
 const DRAFT_SCHEMA = {
@@ -163,7 +167,7 @@ export class PlansService {
     };
   }
 
-  async list(userId: string) {
+  async list(userId: string): Promise<PlanListItem[]> {
     const plans = await this.prisma.investmentPlan.findMany({
       where: { userId },
       orderBy: [{ status: 'asc' }, { nextReviewAt: 'asc' }],
@@ -179,12 +183,12 @@ export class PlansService {
         price,
         held: held ? { quantity: held.quantity, pnlPct: held.pnlPct } : null,
         signals: p.status === 'active' ? planSignals(this.lite(p), today, price.value) : [],
-        lastReview: p.reviews[0] ?? null,
+        lastReview: p.reviews[0] ? presentReview(p.reviews[0]) : null,
       };
     });
   }
 
-  async detail(userId: string, id: string) {
+  async detail(userId: string, id: string): Promise<PlanDetail> {
     const p = await this.prisma.investmentPlan.findFirst({
       where: { id, userId },
       include: { versions: { orderBy: { createdAt: 'desc' } }, reviews: { orderBy: { createdAt: 'desc' } } },
@@ -223,22 +227,22 @@ export class PlansService {
       toTargetPct: distancePct(price.value, p.targetPrice),
       toStopPct: distancePct(price.value, p.stopPrice),
       signals: p.status === 'active' ? planSignals(this.lite(p), vnDateKey(), price.value) : [],
-      versions: p.versions,
-      reviews: p.reviews,
+      versions: p.versions.map(presentVersion),
+      reviews: p.reviews.map(presentReview),
       transactions: txs.map((t) => ({
         id: t.id,
-        type: t.type,
+        type: t.type as TxType,
         date: t.date.toISOString().slice(0, 10),
         quantity: t.quantity?.toNumber() ?? null,
         price: t.price?.toNumber() ?? null,
         amount: t.amount?.toNumber() ?? null,
-        currency: t.currency,
+        currency: t.currency as Currency,
         period: period(t.date.toISOString().slice(0, 10)),
       })),
     };
   }
 
-  async create(userId: string, dto: PlanDto) {
+  async create(userId: string, dto: PlanDto): Promise<Plan> {
     const symbol = await this.normalizeAsset(dto.assetType, dto.symbol);
     const existing = await this.prisma.investmentPlan.findFirst({
       where: { userId, assetType: dto.assetType, symbol, status: 'active' },
@@ -254,7 +258,7 @@ export class PlansService {
   }
 
   /** Sửa kế hoạch: lưu bản trước vào lịch sử */
-  async update(userId: string, id: string, dto: PlanDto) {
+  async update(userId: string, id: string, dto: PlanDto): Promise<Plan> {
     const before = await this.own(userId, id);
     if (before.status !== 'active') throw new BadRequestException('Kế hoạch đã kết thúc, không sửa được');
     const data = this.fields(dto, vnDateKey());
@@ -266,7 +270,7 @@ export class PlansService {
   }
 
   /** Ghi một lần xem lại: giữ / điều chỉnh (đặt ngày xem lại mới) / kết thúc kế hoạch */
-  async review(userId: string, id: string, dto: ReviewDto) {
+  async review(userId: string, id: string, dto: ReviewDto): Promise<PlanReview> {
     const plan = await this.own(userId, id);
     if (plan.status !== 'active') throw new BadRequestException('Kế hoạch đã kết thúc');
     const today = vnDateKey();
@@ -296,11 +300,11 @@ export class PlansService {
       return review;
     });
     void this.analytics.track('plan_reviewed', { userId, props: { decision: dto.decision } });
-    return saved;
+    return presentReview(saved);
   }
 
   /** AI viết nháp kế hoạch từ hồ sơ, vị thế đang có và dữ liệu thị trường; không lưu gì */
-  async draft(userId: string, dto: DraftDto) {
+  async draft(userId: string, dto: DraftDto): Promise<PlanDraft> {
     if (!this.llm.enabled) throw new ServiceUnavailableException('Trợ lý AI đang tắt, bạn có thể tự viết kế hoạch');
     return this.aiUsage.run(userId, 'plan_draft', () => this.writeDraft(userId, dto));
   }
@@ -392,7 +396,7 @@ export class PlansService {
     return { ...p, nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10) };
   }
 
-  private present(p: InvestmentPlan) {
+  private present(p: InvestmentPlan): Plan {
     return {
       id: p.id,
       assetType: p.assetType as PlanAsset,
@@ -404,7 +408,7 @@ export class PlansService {
           : p.assetType === 'crypto'
             ? `/crypto/${displaySymbol('crypto', p.symbol)}`
             : null,
-      currency: p.assetType === 'crypto' ? 'USDT' : 'VND',
+      currency: p.assetType === 'crypto' ? ('USDT' as const) : ('VND' as const),
       thesis: p.thesis,
       horizon: p.horizon,
       exitConditions: p.exitConditions,
@@ -414,11 +418,20 @@ export class PlansService {
       nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10),
       status: p.status as 'active' | 'closed',
       closedReason: p.closedReason,
-      closedAt: p.closedAt,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
+      closedAt: p.closedAt?.toISOString() ?? null,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
     };
   }
+}
+
+/** Dòng Prisma → hợp đồng API; Date → chuỗi ISO như JSON vẫn serialize, các cột còn lại (planId) giữ nguyên */
+function presentReview(r: PlanReviewRow): PlanReview {
+  return { ...r, decision: r.decision as PlanReview['decision'], createdAt: r.createdAt.toISOString() };
+}
+
+function presentVersion(v: PlanVersionRow): PlanDetail['versions'][number] {
+  return { ...v, snapshot: v.snapshot as Record<string, unknown>, createdAt: v.createdAt.toISOString() };
 }
 
 function snapshot(p: InvestmentPlan): Prisma.InputJsonValue {
@@ -431,32 +444,32 @@ class PlansController {
   constructor(private plans: PlansService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
+  list(@CurrentUser() user: AuthUser): Promise<PlanListItem[]> {
     return this.plans.list(user.id);
   }
 
   @Post('draft')
-  draft(@CurrentUser() user: AuthUser, @Body() dto: DraftDto) {
+  draft(@CurrentUser() user: AuthUser, @Body() dto: DraftDto): Promise<PlanDraft> {
     return this.plans.draft(user.id, dto);
   }
 
   @Get(':id')
-  detail(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  detail(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<PlanDetail> {
     return this.plans.detail(user.id, id);
   }
 
   @Post()
-  create(@CurrentUser() user: AuthUser, @Body() dto: PlanDto) {
+  create(@CurrentUser() user: AuthUser, @Body() dto: PlanDto): Promise<Plan> {
     return this.plans.create(user.id, dto);
   }
 
   @Put(':id')
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: PlanDto) {
+  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: PlanDto): Promise<Plan> {
     return this.plans.update(user.id, id, dto);
   }
 
   @Post(':id/reviews')
-  review(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ReviewDto) {
+  review(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ReviewDto): Promise<PlanReview> {
     return this.plans.review(user.id, id, dto);
   }
 }

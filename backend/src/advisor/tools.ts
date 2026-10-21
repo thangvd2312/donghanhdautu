@@ -413,7 +413,7 @@ export class AdvisorTools {
             ly && py && k && typeof ly[k] === 'number' && typeof py[k] === 'number' && py[k]
               ? round(((Number(ly[k]) - Number(py[k])) / Math.abs(Number(py[k]))) * 100)
               : null;
-          const t = d.technicals as Record<string, unknown>;
+          const t: Record<string, unknown> = { ...d.technicals };
           return {
             symbol: d.quote.symbol,
             sector: d.company?.sector,

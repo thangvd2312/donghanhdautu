@@ -1,35 +1,27 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type {
+  AssetType,
+  RebalanceAction,
+  RebalanceFees,
+  RebalanceLots,
+  RebalanceMode,
+  RebalanceRequest as RebalanceReq,
+  RebalanceResponse,
+  RebalanceRow,
+  RebalanceTarget,
+} from '@dautu/contracts';
 import type { PriceStatus } from '../../market/freshness';
 
 const D = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
 type Dec = Prisma.Decimal;
 
-export type RebalanceGroup = 'stock' | 'crypto' | 'gold' | 'cash';
-export type RebalanceMode = 'buy_only' | 'allow_sell';
-export type LotMode = 'board' | 'odd';
-
-export interface RebalanceTarget {
-  assetType: RebalanceGroup;
-  symbol: string;
-  pct: number;
-}
-
-export interface RebalanceFees {
-  stockBuyPct?: number;
-  stockSellPct?: number;
-  stockSellTaxPct?: number;
-  cryptoPct?: number;
-}
-
-export interface RebalanceRequest {
-  targets: RebalanceTarget[];
-  newMoney: number;
-  mode: RebalanceMode;
-  lots: LotMode;
-  fees?: RebalanceFees;
-}
+export type { RebalanceAction, RebalanceFees, RebalanceMode, RebalanceRow, RebalanceTarget };
+export type RebalanceGroup = AssetType;
+export type LotMode = RebalanceLots;
+/** Yêu cầu tái cân bằng như tầng tính toán nhận (danh mục đã được resolve ở service) */
+export type RebalanceRequest = Omit<RebalanceReq, 'portfolioId'>;
 
 /** Phần của một dòng định giá (valuePortfolio) mà tính tái cân bằng cần: đúng giá trị màn Danh mục */
 export interface RebalanceHolding {
@@ -53,41 +45,8 @@ export interface RebalanceContext {
   asOf: string;
 }
 
-export interface RebalanceRow {
-  assetType: string;
-  symbol: string;
-  label: string;
-  value: number;
-  weightPct: number;
-  targetPct: number;
-}
-
-export interface RebalanceAction {
-  assetType: string;
-  symbol: string;
-  label: string;
-  side: 'buy' | 'sell';
-  quantity: number;
-  unit: 'cp' | 'coin' | 'lượng';
-  price: number;
-  gross: number;
-  fee: number;
-  tax: number;
-  net: number;
-  reason: string;
-}
-
-export interface RebalanceResult {
-  before: { total: number; rows: RebalanceRow[] };
-  investable: number;
-  actions: RebalanceAction[];
-  after: { total: number; rows: RebalanceRow[] };
-  cash: { start: number; newMoney: number; fromSales: number; spent: number; fees: number; left: number };
-  maxDeviationPct: { before: number; after: number };
-  notes: string[];
-  warnings: string[];
-  asOf: string;
-}
+/** Kết quả tái cân bằng, giống phản hồi API */
+export type RebalanceResult = RebalanceResponse;
 
 export const DEFAULT_FEES: Required<RebalanceFees> = {
   stockBuyPct: 0.15,

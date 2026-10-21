@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { Verification, VerificationIssue } from '@dautu/contracts';
 import { LlmService } from '../alerts/llm.service';
 import { VERIFY_PROMPT } from './prompt';
 
@@ -9,22 +10,7 @@ export interface Evidence {
   content: string;
 }
 
-export interface VerificationIssue {
-  type: 'misattribution' | 'number_mismatch' | 'unsupported';
-  quote: string;
-  evidenceQuote: string;
-  explanation: string;
-  correction: string;
-}
-
-export interface Verification {
-  status: 'verified' | 'issues' | 'skipped';
-  issues: VerificationIssue[];
-  /** Số lỗi model kiểm tra đưa ra nhưng bị loại vì không trích được nguyên văn (chống bịa lỗi) */
-  discarded: number;
-  checkedAt: string;
-  reason?: string;
-}
+export type { Verification, VerificationIssue };
 
 const SCHEMA = {
   type: 'object',

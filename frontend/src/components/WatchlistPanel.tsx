@@ -26,7 +26,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { api, del, post } from '../lib/api'
 import { changeColor, fmtNum, fmtPct, fmtVnd } from '../lib/format'
-import type { WatchItem } from '../lib/types'
+import type { GoldOption, WatchItem } from '../lib/types'
 import { PriceStatusChip } from './DataStatus'
 import PriceAlertDialog from './PriceAlertDialog'
 import StockSearch from './StockSearch'
@@ -185,12 +185,12 @@ export default function WatchlistPanel() {
 function AddWatchForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const [assetType, setAssetType] = useState<WatchType>('stock')
   const [symbol, setSymbol] = useState('')
-  const [gold, setGold] = useState<{ code: string; name: string }[]>([])
+  const [gold, setGold] = useState<GoldOption[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    api<{ code: string; name: string }[]>('/portfolio/gold-options').then(setGold).catch(() => {})
+    api<GoldOption[]>('/portfolio/gold-options').then(setGold).catch(() => {})
   }, [])
 
   const submit = async (s = symbol) => {

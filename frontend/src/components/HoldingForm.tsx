@@ -11,15 +11,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api, post } from '../lib/api'
 import { fmtVnd } from '../lib/format'
 import { parseNum } from '../lib/num'
-import type { AssetType } from '../lib/types'
+import type { AssetType, GoldOption } from '../lib/types'
 import StockSearch from './StockSearch'
-
-interface GoldOption {
-  code: string
-  name: string
-  buy: number
-  sell: number
-}
 
 const TYPES: { value: AssetType; label: string }[] = [
   { value: 'stock', label: 'Cổ phiếu' },

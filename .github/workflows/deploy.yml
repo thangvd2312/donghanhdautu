@@ -66,6 +66,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # contracts/ (kiểu API dùng chung) được đồng bộ như mã nguồn; contracts/dist nằm trong `--exclude dist` và được
+      # dựng lại trên server bởi bước `npm run build` (backend: prebuild → tsc -p ../contracts)
       - name: Sync code into the app directory (keeps .env, node_modules)
         run: |
           mkdir -p "$APP_DIR"

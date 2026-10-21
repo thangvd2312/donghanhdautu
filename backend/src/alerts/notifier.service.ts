@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Notification, Prisma } from '@prisma/client';
+import type { Notification as NotificationView, NotificationSeverity, SourceLink } from '@dautu/contracts';
 import { stripEmoji } from '../common/text';
 import { MarketGateway } from '../market/market.gateway';
 import { PrismaService } from '../prisma/prisma.module';
@@ -12,6 +13,19 @@ export interface NotificationInput {
   dedupeKey: string;
   sources?: { title: string; url: string }[];
   link?: string;
+}
+
+/**
+ * Dòng Prisma → hợp đồng API (cũng là dạng gửi qua socket). `sources` do `send` ghi nên đúng dạng; Date → chuỗi ISO
+ * như JSON vẫn serialize. Giữ mọi cột còn lại để phản hồi không đổi.
+ */
+export function toNotificationView(n: Notification): NotificationView {
+  return {
+    ...n,
+    severity: n.severity as NotificationSeverity,
+    sources: n.sources as unknown as SourceLink[],
+    createdAt: n.createdAt.toISOString(),
+  };
 }
 
 /** Lưu thông báo (mỗi dedupeKey một lần / người dùng) và đẩy realtime xuống trình duyệt */

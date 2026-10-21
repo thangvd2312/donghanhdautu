@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react'
 import { api, post, put } from '../lib/api'
 import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum } from '../lib/num'
-import type { Plan, PlanDraft } from '../lib/types'
+import type { GoldOption, Plan, PlanDraft } from '../lib/types'
 import StockSearch from './StockSearch'
 import { DialogHeader } from './ui'
 
@@ -50,7 +50,7 @@ export default function PlanEditor({
   const [targetPrice, setTargetPrice] = useState('')
   const [stopPrice, setStopPrice] = useState('')
   const [reviewEveryDays, setReviewEveryDays] = useState('30')
-  const [gold, setGold] = useState<{ code: string; name: string }[]>([])
+  const [gold, setGold] = useState<GoldOption[]>([])
   const [drafting, setDrafting] = useState(false)
   const [aiNote, setAiNote] = useState('')
   const [error, setError] = useState('')
@@ -58,7 +58,7 @@ export default function PlanEditor({
 
   useEffect(() => {
     if (!open) return
-    api<{ code: string; name: string }[]>('/portfolio/gold-options').then(setGold).catch(() => {})
+    api<GoldOption[]>('/portfolio/gold-options').then(setGold).catch(() => {})
     const p = editing
     setAssetType(p?.assetType ?? fixed?.assetType ?? 'stock')
     setSymbol(p?.symbol ?? fixed?.symbol ?? '')

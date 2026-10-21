@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { CalendarEvent as PublicEvent, EventsResponse, ReminderSettingsPatch } from '@dautu/contracts';
 import { NotifierService } from '../alerts/notifier.service';
 import { vnDateKey } from '../market/types';
 import { VietcapEventsAdapter } from '../market/providers/vietcap';
@@ -15,20 +16,7 @@ import {
 } from './calendar';
 import type { CalendarEvent, EventRange, ReminderSettings } from './calendar';
 
-export interface EventsResponse {
-  items: Omit<CalendarEvent, 'sourceId'>[];
-  symbols: { symbol: string; held: boolean; watched: boolean }[];
-  reminders: ReminderSettings;
-  source: 'Vietcap';
-  fetchedAt: string;
-  unavailable: boolean;
-}
-
-export interface ReminderPatch {
-  enabled?: boolean;
-  daysBefore?: 1 | 3;
-  mutedSymbols?: string[];
-}
+export type ReminderPatch = ReminderSettingsPatch;
 
 interface UserSymbols {
   holdings: Map<string, number>;
@@ -36,10 +24,10 @@ interface UserSymbols {
 }
 
 /** Bỏ trường nội bộ (id nguồn) trước khi trả ra API */
-function toPublic(e: CalendarEvent): EventsResponse['items'][number] {
+function toPublic(e: CalendarEvent): PublicEvent {
   const copy: Partial<CalendarEvent> = { ...e };
   delete copy.sourceId;
-  return copy as EventsResponse['items'][number];
+  return copy as PublicEvent;
 }
 
 @Injectable()

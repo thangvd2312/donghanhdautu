@@ -6,13 +6,8 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import type { StockHit } from '../lib/types'
 import AssetAvatar from './AssetAvatar'
-
-export interface StockHit {
-  symbol: string
-  name: string
-  board: string
-}
 
 export default function StockSearch({
   onPick,

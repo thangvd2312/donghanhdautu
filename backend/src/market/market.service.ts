@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { Subject } from 'rxjs';
+import type { AssetType, Candle, CryptoDetail, StockHit } from '@dautu/contracts';
 import { PrismaService } from '../prisma/prisma.module';
 import { AppRuntime } from '../runtime/app-role';
 import { BinanceProvider, FEATURED_COINS } from './providers/binance.provider';
@@ -26,7 +27,7 @@ export type MarketEvent =
   | { type: 'fx'; data: FxRate[] }
   | { type: 'usdt'; data: UsdtRate };
 
-export type AssetType = 'stock' | 'crypto' | 'gold' | 'cash';
+export type { AssetType };
 
 type SourceKey = 'stocks' | 'indices' | 'gold' | 'fx' | 'usdt';
 type DemandKey = 'stocks' | 'crypto' | 'gold' | 'fx' | 'usdt' | 'tracked';
@@ -405,7 +406,7 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     return info;
   }
 
-  async searchStocks(q: string) {
+  async searchStocks(q: string): Promise<StockHit[]> {
     const s = q.trim().toUpperCase();
     if (!s) return [];
     const all = await this.symbols.allSymbols().catch(() => null);
@@ -420,11 +421,11 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     return [...(exact ? [exact] : []), ...rest].slice(0, 15);
   }
 
-  stockHistory(symbol: string, days: number) {
+  stockHistory(symbol: string, days: number): Promise<Candle[]> {
     return this.priceHistory.history(symbol.toUpperCase(), days);
   }
 
-  async cryptoDetail(symbol: string) {
+  async cryptoDetail(symbol: string): Promise<CryptoDetail> {
     symbol = normalizeCrypto(symbol);
     const candles = await this.binance.history(symbol, 400);
     const quote = this.binance.quotes.get(symbol) ?? null;
@@ -438,7 +439,7 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     };
   }
 
-  cryptoHistory(symbol: string, days: number) {
+  cryptoHistory(symbol: string, days: number): Promise<Candle[]> {
     return this.binance.history(normalizeCrypto(symbol), days);
   }
 

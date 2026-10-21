@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Ctx } from './market-context'
 import type { Socket } from 'socket.io-client'
 import { api, getToken } from './api'
-import type { CryptoQuote, FxRate, GoldQuote, IndexQuote, MarketSnapshot, Notification, StockQuote, UsdtRate } from './types'
+import type { CryptoQuote, FxRate, GoldQuote, IndexQuote, MarketSnapshot, Notification, NotificationList, StockQuote, UsdtRate } from './types'
 
 function mergeBy<T>(list: T[], updates: T[], key: (t: T) => string) {
   const map = new Map(updates.map((u) => [key(u), u]))
@@ -19,7 +19,7 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
-    api<{ items: Notification[]; unread: number }>('/notifications')
+    api<NotificationList>('/notifications')
       .then((r) => {
         setNotifications(r.items)
         setUnread(r.unread)

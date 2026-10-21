@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Module, Patch, Query, UseGuards } from '@nestjs/common';
 import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import type { EventsResponse, ReminderSettings, ReminderSettingsPatch } from '@dautu/contracts';
 import { AlertsModule } from '../alerts/alerts.module';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
@@ -9,7 +10,7 @@ import { EventsService } from './events.service';
 
 const RANGES: EventRange[] = ['week', 'month', 'quarter'];
 
-class ReminderSettingsDto {
+class ReminderSettingsDto implements ReminderSettingsPatch {
   @IsOptional() @IsBoolean() enabled?: boolean;
   @IsOptional() @IsIn([1, 3], { message: 'daysBefore chỉ nhận 1 hoặc 3' }) daysBefore?: 1 | 3;
   @IsOptional()
@@ -26,13 +27,13 @@ class EventsController {
   constructor(private events: EventsService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser, @Query('range') range?: string) {
+  list(@CurrentUser() user: AuthUser, @Query('range') range?: string): Promise<EventsResponse> {
     const r = RANGES.find((x) => x === range) ?? 'month';
     return this.events.list(user.id, r);
   }
 
   @Patch('reminders')
-  updateReminders(@CurrentUser() user: AuthUser, @Body() dto: ReminderSettingsDto) {
+  updateReminders(@CurrentUser() user: AuthUser, @Body() dto: ReminderSettingsDto): Promise<ReminderSettings> {
     return this.events.updateSettings(user.id, dto);
   }
 }

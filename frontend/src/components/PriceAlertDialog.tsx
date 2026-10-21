@@ -13,17 +13,12 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { api, post } from '../lib/api'
 import { fmtNum } from '../lib/format'
+import type { GoldOption } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
 import StockSearch from './StockSearch'
 import { DialogHeader } from './ui'
 
 type AlertAsset = 'stock' | 'crypto' | 'gold'
-
-interface GoldOption {
-  code: string
-  name: string
-  sell: number
-}
 
 const UNIT: Record<AlertAsset, string> = { stock: '₫ / cp', crypto: 'USDT', gold: '₫ / lượng' }
 

@@ -13,6 +13,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Holding, InvestorProfile } from '@prisma/client';
+import type { PriceAlert as PriceAlertRow } from '@prisma/client';
+import type {
+  Notification as NotificationView,
+  NotificationList,
+  OkResponse,
+  PriceAlert,
+  PriceAlertListItem,
+  PriceAlertRequest,
+  TrackedAssetType,
+} from '@dautu/contracts';
 import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { ALERT_SYSTEM_PROMPT } from '../advisor/prompt';
 import { AiUsageService } from '../ai/ai-usage.service';
@@ -35,7 +45,7 @@ import { BriefsService } from './briefs.service';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
 import { NotificationRelayService } from './notification-relay.service';
-import { NotifierService } from './notifier.service';
+import { NotifierService, toNotificationView } from './notifier.service';
 import type { NotificationInput } from './notifier.service';
 import { WeeklyBriefService } from './weekly.service';
 
@@ -392,12 +402,23 @@ export class AlertsService {
   }
 }
 
-class PriceAlertDto {
-  @IsIn(['stock', 'crypto', 'gold']) assetType!: 'stock' | 'crypto' | 'gold';
+class PriceAlertDto implements PriceAlertRequest {
+  @IsIn(['stock', 'crypto', 'gold']) assetType!: TrackedAssetType;
   @IsString() symbol!: string;
   @IsIn(['above', 'below']) direction!: 'above' | 'below';
   @IsNumber() @Min(0) targetPrice!: number;
   @IsOptional() @IsString() @MaxLength(200) note?: string;
+}
+
+/** Dòng Prisma → hợp đồng API; Date → chuỗi ISO như JSON vẫn serialize, các cột còn lại giữ nguyên */
+function toPriceAlert(r: PriceAlertRow): PriceAlert {
+  return {
+    ...r,
+    assetType: r.assetType as TrackedAssetType,
+    direction: r.direction as PriceAlert['direction'],
+    triggeredAt: r.triggeredAt?.toISOString() ?? null,
+    createdAt: r.createdAt.toISOString(),
+  };
 }
 
 @UseGuards(JwtAuthGuard)
@@ -413,16 +434,16 @@ class AlertsController {
   ) {}
 
   @Get('price')
-  async list(@CurrentUser() user: AuthUser) {
+  async list(@CurrentUser() user: AuthUser): Promise<PriceAlertListItem[]> {
     const rows = await this.prisma.priceAlert.findMany({
       where: { userId: user.id, OR: [{ active: true }, { triggeredAt: { gt: new Date(Date.now() - 7 * 86400_000) } }] },
       orderBy: [{ active: 'desc' }, { createdAt: 'desc' }],
     });
-    return rows.map((r) => ({ ...r, currentPrice: this.alerts.currentPrice(r.assetType, r.symbol) }));
+    return rows.map((r) => ({ ...toPriceAlert(r), currentPrice: this.alerts.currentPrice(r.assetType, r.symbol) }));
   }
 
   @Post('price')
-  async create(@CurrentUser() user: AuthUser, @Body() dto: PriceAlertDto) {
+  async create(@CurrentUser() user: AuthUser, @Body() dto: PriceAlertDto): Promise<PriceAlert> {
     let symbol = dto.symbol.trim().toUpperCase();
     if (dto.assetType === 'stock') {
       symbol = (await this.market.assertStock(symbol)).symbol;
@@ -439,22 +460,22 @@ class AlertsController {
     if (current !== null && (dto.direction === 'above' ? current >= dto.targetPrice : current <= dto.targetPrice)) {
       throw new BadRequestException('Giá hiện tại đã thoả điều kiện này rồi — hãy đặt một mốc chưa chạm tới');
     }
-    return this.prisma.priceAlert.create({ data: { ...dto, symbol, userId: user.id } });
+    return toPriceAlert(await this.prisma.priceAlert.create({ data: { ...dto, symbol, userId: user.id } }));
   }
 
   @Delete('price/:id')
-  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<OkResponse> {
     await this.prisma.priceAlert.deleteMany({ where: { id, userId: user.id } });
     return { ok: true };
   }
 
   /** Gửi thử bản tin ngay cho chính mình */
   @Post('brief/:kind')
-  async briefNow(@CurrentUser() user: AuthUser, @Param('kind') kind: string) {
+  async briefNow(@CurrentUser() user: AuthUser, @Param('kind') kind: string): Promise<NotificationView> {
     if (kind !== 'weekly' && kind !== 'morning' && kind !== 'closing')
       throw new BadRequestException('kind phải là morning, closing hoặc weekly');
     // Gửi thử cũng gọi AI: giới hạn lượt mỗi ngày, một lượt mỗi lúc
-    return this.aiUsage.run(user.id, 'brief_test', () => this.sendBrief(user.id, kind));
+    return toNotificationView(await this.aiUsage.run(user.id, 'brief_test', () => this.sendBrief(user.id, kind)));
   }
 
   private async sendBrief(userId: string, kind: 'weekly' | 'morning' | 'closing') {
@@ -475,7 +496,7 @@ class NotificationsController {
   constructor(private prisma: PrismaService) {}
 
   @Get()
-  async list(@CurrentUser() user: AuthUser) {
+  async list(@CurrentUser() user: AuthUser): Promise<NotificationList> {
     const [items, unread] = await Promise.all([
       this.prisma.notification.findMany({
         where: { userId: user.id },
@@ -484,17 +505,17 @@ class NotificationsController {
       }),
       this.prisma.notification.count({ where: { userId: user.id, read: false } }),
     ]);
-    return { items, unread };
+    return { items: items.map(toNotificationView), unread };
   }
 
   @Post('read-all')
-  async readAll(@CurrentUser() user: AuthUser) {
+  async readAll(@CurrentUser() user: AuthUser): Promise<OkResponse> {
     await this.prisma.notification.updateMany({ where: { userId: user.id, read: false }, data: { read: true } });
     return { ok: true };
   }
 
   @Post(':id/read')
-  async read(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  async read(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<OkResponse> {
     await this.prisma.notification.updateMany({ where: { id, userId: user.id }, data: { read: true } });
     return { ok: true };
   }

@@ -106,6 +106,7 @@ frontend (React + Vite + MUI)  ──REST /api, SSE chat, socket.io──▶  ba
                                                                          └─ Claude API (claude-opus-5-5)
 ```
 
+- `contracts/` — kiểu của API dùng chung (yêu cầu / phản hồi), một nguồn sự thật cho cả hai phía; xem `contracts/README.md`.
 - `backend/src/advisor/` — system prompt, công cụ và vòng lặp tool-use. Lịch sử hội thoại lưu nguyên khối content của Claude và chỉ nối thêm, để prompt cache và thinking blocks luôn hợp lệ. Bật `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`) để yêu cầu bị từ chối được chạy lại trên model dự phòng.
 - `backend/src/market/` — các provider và `MarketService` giữ trạng thái giá trong bộ nhớ, poll 3 giây/lần trong phiên (9:00–15:00 VN), 5 phút ngoài phiên.
 - `backend/src/alerts/` — quét định kỳ, gắn nhãn tin bằng AI (`news-tagger.service.ts`, kết quả lưu bảng `NewsTag`), bản tin (`briefs.service.ts`, `weekly.service.ts`), cảnh báo mốc giá, soạn thông báo.

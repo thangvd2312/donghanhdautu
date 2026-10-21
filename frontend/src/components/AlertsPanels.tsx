@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import { api, del, patch, post } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
 import { fmtNum, timeAgo } from '../lib/format'
-import type { InvestorProfile, Notification, PriceAlert } from '../lib/types'
+import type { InvestorProfile, Notification, PriceAlert, PriceAlertListItem } from '../lib/types'
 import PriceAlertDialog from './PriceAlertDialog'
 import { Panel } from './ui'
 
@@ -26,10 +26,10 @@ const UNIT: Record<PriceAlert['assetType'], string> = { stock: '₫', crypto: 'U
 
 /** Danh sách mốc giá đã đặt (đang chờ + đã chạm trong 7 ngày) */
 export function PriceAlertsPanel() {
-  const [alerts, setAlerts] = useState<PriceAlert[] | null>(null)
+  const [alerts, setAlerts] = useState<PriceAlertListItem[] | null>(null)
   const [open, setOpen] = useState(false)
 
-  const load = useCallback(() => api<PriceAlert[]>('/alerts/price').then(setAlerts), [])
+  const load = useCallback(() => api<PriceAlertListItem[]>('/alerts/price').then(setAlerts), [])
   useEffect(() => {
     void load()
     const t = setInterval(() => void load(), 30000)

@@ -3,6 +3,7 @@
  * chưa ghi vào sổ. Thuần: sự kiện thị trường và sổ giao dịch truyền vào. Không tự ghi gì — chỉ gợi ý để người dùng
  * xác nhận (số cổ phiếu / tiền thực nhận có thể khác do làm tròn, thuế, phí).
  */
+import type { MissingAction as MissingActionView } from '@dautu/contracts';
 import type { CorporateEvent } from '../../market/providers/vietcap';
 import { addDays } from '../../plans/plan-rules';
 import { computeLedger, sortTxs } from '../ledger';
@@ -13,22 +14,8 @@ export const DIVIDEND_TAX_RATE = 0.05;
 /** Chỉ nhắc sự kiện trong khoảng này trở lại */
 export const LOOKBACK_DAYS = 730;
 
-export interface MissingAction {
-  /** Khoá ổn định để bỏ qua gợi ý: danh mục, mã, loại, ngày GDKHQ */
-  key: string;
-  portfolioId: string | null;
-  symbol: string;
-  kind: 'stock' | 'cash';
-  title: string;
-  exDate: string;
-  payoutDate: string | null;
-  /** Số cổ phiếu đang giữ trước ngày GDKHQ */
-  heldQty: number;
-  /** Giao dịch đề xuất ghi vào sổ */
-  suggestion:
-    | { type: 'bonus'; date: string; symbol: string; quantity: number }
-    | { type: 'dividend'; date: string; symbol: string; amount: number; tax: number };
-}
+/** Gợi ý ghi sổ như service tính ra, chưa kèm tên danh mục (service ghép thêm) */
+export type MissingAction = Omit<MissingActionView, 'portfolioName'>;
 
 export function actionKey(portfolioId: string | null, symbol: string, kind: string, exDate: string) {
   return `${portfolioId ?? '-'}:${symbol}:${kind}:${exDate}`;

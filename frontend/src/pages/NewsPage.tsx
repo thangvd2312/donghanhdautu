@@ -13,15 +13,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import SourceLogo from '../components/SourceLogo'
 import { api } from '../lib/api'
 import { timeAgo } from '../lib/format'
-
-interface NewsItem {
-  title: string
-  url: string
-  summary: string
-  source: string
-  category: string
-  publishedAt: string
-}
+import type { NewsItem } from '../lib/types'
 
 export default function NewsPage() {
   const [q, setQ] = useState('')

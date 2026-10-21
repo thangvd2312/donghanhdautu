@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import type { ScreenCriterion, ScreenResult } from '@dautu/contracts';
 import { dividendHistory } from '../market/dividends';
 import { VietcapEventsAdapter, VietcapScreeningAdapter } from '../market/providers/vietcap';
 import type { CorporateEvent, VcScreenCriterion, VcScreenPage, VcScreenRow } from '../market/providers/vietcap';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
-import { CRITERIA, Criterion, EXCHANGES, FALLBACK_SECTORS, Option } from './screener.catalog';
+import { CRITERIA, EXCHANGES, FALLBACK_SECTORS, Option } from './screener.catalog';
 import {
   Filter,
   MAX_PAGE_SIZE,
@@ -33,17 +34,6 @@ export interface RunRequest {
   pageSize?: number;
 }
 
-export interface ScreenResult {
-  items: ScreenItem[];
-  total: number;
-  universe: number;
-  universeNote: string;
-  missingNote: string | null;
-  postFiltered: boolean;
-  source: 'Vietcap';
-  asOf: string;
-}
-
 @Injectable()
 export class ScreenerService {
   private log = new Logger(ScreenerService.name);
@@ -56,7 +46,7 @@ export class ScreenerService {
   ) {}
 
   /** Danh mục tiêu chí; nhãn ngành và kỳ tăng trưởng lấy từ nguồn, lỗi thì dùng bản dự phòng */
-  async criteria(): Promise<Criterion[]> {
+  async criteria(): Promise<ScreenCriterion[]> {
     const live = await this.screening.screeningCriteria().catch(() => null);
     const sectors = sectorOptions(live);
     const quarter = live?.find((c) => c.name === 'npatmiGrowth')?.conditionExtra2?.find((o) => o.isDefault)?.viName;

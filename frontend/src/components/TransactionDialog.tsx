@@ -19,7 +19,7 @@ import { useMarket } from '../lib/market-context'
 import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum, todayVn } from '../lib/num'
 import { TX_LABEL } from '../lib/tx'
-import type { AssetType, PortfolioAccount, Transaction, TxType } from '../lib/types'
+import type { AssetType, GoldOption, PortfolioAccount, Transaction, TxType } from '../lib/types'
 import StockSearch from './StockSearch'
 import { DialogHeader } from './ui'
 
@@ -80,13 +80,13 @@ export default function TransactionDialog({
   const [fxRate, setFxRate] = useState('')
   const [note, setNote] = useState('')
   const [portfolioId, setPortfolioId] = useState('')
-  const [gold, setGold] = useState<{ code: string; name: string }[]>([])
+  const [gold, setGold] = useState<GoldOption[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    api<{ code: string; name: string }[]>('/portfolio/gold-options').then(setGold).catch(() => {})
+    api<GoldOption[]>('/portfolio/gold-options').then(setGold).catch(() => {})
     setError('')
     const t = editing
     setType(t?.type ?? preset?.type ?? 'buy')

@@ -1,4 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type {
+  CreatedPortfolio,
+  OkResponse,
+  Performance,
+  PortfolioAccount,
+  RenamedPortfolio,
+  Transaction,
+} from '@dautu/contracts';
 import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
@@ -80,7 +88,7 @@ export class PortfolioService {
   }
 
   /** Hiệu quả đầu tư từ sổ giao dịch: vốn đưa vào, lãi đã / chưa chốt, cổ tức, phí, tổng lãi */
-  async performance(userId: string, portfolioId?: string) {
+  async performance(userId: string, portfolioId?: string): Promise<Performance> {
     const ledger = await this.transactions.ledger(userId, portfolioId);
     const v = await this.valuation(userId, portfolioId);
     // Lãi chưa chốt chỉ tính trên tài sản đầu tư (tiền mặt USDT đổi giá theo tỷ giá không phải lãi đầu tư)
@@ -95,7 +103,7 @@ export class PortfolioService {
     });
   }
 
-  addHolding(userId: string, dto: HoldingDto) {
+  addHolding(userId: string, dto: HoldingDto): Promise<Transaction> {
     return this.transactions.create(userId, {
       type: 'opening',
       date: vnDateKey(),
@@ -109,7 +117,7 @@ export class PortfolioService {
   }
 
   /** Danh mục kèm giá trị hiện tại và số giao dịch */
-  async listPortfolios(userId: string) {
+  async listPortfolios(userId: string): Promise<PortfolioAccount[]> {
     const [list, txs] = await Promise.all([
       this.transactions.portfolios(this.prisma, userId),
       this.transactions.activeTransactions(userId),
@@ -148,13 +156,13 @@ export class PortfolioService {
     return out;
   }
 
-  async createPortfolio(userId: string, name: string) {
+  async createPortfolio(userId: string, name: string): Promise<CreatedPortfolio> {
     await this.transactions.portfolios(this.prisma, userId);
     const p = await this.prisma.portfolio.create({ data: { userId, name: name.trim() } });
     return { id: p.id, name: p.name, isDefault: false };
   }
 
-  async renamePortfolio(userId: string, id: string, name: string) {
+  async renamePortfolio(userId: string, id: string, name: string): Promise<RenamedPortfolio> {
     const p = await this.prisma.portfolio.findFirst({ where: { id, userId } });
     if (!p) throw new NotFoundException('Không tìm thấy danh mục');
     await this.prisma.portfolio.update({ where: { id }, data: { name: name.trim() } });
@@ -162,7 +170,7 @@ export class PortfolioService {
   }
 
   /** Chỉ xoá được danh mục trống (không còn giao dịch) và không phải danh mục chính */
-  async deletePortfolio(userId: string, id: string) {
+  async deletePortfolio(userId: string, id: string): Promise<OkResponse> {
     const p = await this.prisma.portfolio.findFirst({ where: { id, userId } });
     if (!p) throw new NotFoundException('Không tìm thấy danh mục');
     if (p.isDefault) throw new BadRequestException('Không xoá được danh mục chính');

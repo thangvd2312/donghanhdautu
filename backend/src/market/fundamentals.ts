@@ -1,3 +1,4 @@
+import type { StatementRow, ValuationBand } from '@dautu/contracts';
 /**
  * Các phép tính trên dữ liệu cơ bản của doanh nghiệp. Tách riêng (hàm thuần, không gọi mạng)
  * để số liệu đưa cho cố vấn luôn do code tính, không để model tự cộng trừ.
@@ -12,14 +13,8 @@ export interface StatRow {
   numberOfSharesMktCap?: number | null;
 }
 
-export interface Band {
-  min: number;
-  p25: number;
-  median: number;
-  p75: number;
-  max: number;
-  quarters: number;
-}
+/** Dải phân vị của một chỉ số định giá, chưa kèm vị trí hiện tại (phần đó do `valuationBand` thêm) */
+export type Band = Omit<ValuationBand, 'currentPercentile' | 'position'>;
 
 /** P/E âm (thua lỗ) hoặc quá cao (lợi nhuận gần 0) không phản ánh định giá — loại khỏi thống kê */
 const PE_VALID = (v: number) => v > 0 && v < 100;
@@ -115,7 +110,7 @@ export function valuationBand(rows: StatRow[], currentPrice: number | null, maxQ
   };
 }
 
-export type StatementRow = Record<string, number | string>;
+export type { StatementRow };
 
 /** Nợ ròng = vay ngắn hạn + vay dài hạn − tiền − đầu tư ngắn hạn (doanh nghiệp thường, tỷ VND) */
 export function netDebt(row: StatementRow, f: { stDebt: string; ltDebt: string; cash: string; stInv: string }) {

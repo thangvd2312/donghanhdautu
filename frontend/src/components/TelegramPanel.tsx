@@ -9,23 +9,9 @@ import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
 import { api, del, patch, post } from '../lib/api'
 import { timeAgo } from '../lib/format'
+import type { TelegramLinkResponse, TelegramStatus } from '../lib/types'
 import ChannelSettings from './ChannelSettings'
 import { Panel } from './ui'
-
-interface TelegramStatus {
-  configured: boolean
-  botUsername: string | null
-  kindLabels: Record<string, string>
-  link: {
-    username: string | null
-    active: boolean
-    kinds: Record<string, boolean>
-    quietStart: number | null
-    quietEnd: number | null
-    showDetails: boolean
-  } | null
-  recent: { id: string; title: string; status: string; lastError: string | null; sentAt: string | null; createdAt: string }[]
-}
 
 const STATUS_LABEL: Record<string, string> = {
   sent: 'Đã gửi',
@@ -75,7 +61,7 @@ export default function TelegramPanel() {
 
   const connect = () =>
     run(async () => {
-      const { url } = await post<{ url: string }>('/telegram/link')
+      const { url } = await post<TelegramLinkResponse>('/telegram/link')
       window.open(url, '_blank', 'noopener')
       setWaiting(true)
     })

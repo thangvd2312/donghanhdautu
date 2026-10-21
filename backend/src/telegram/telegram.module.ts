@@ -17,6 +17,7 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { IsBoolean, IsInt, IsObject, IsOptional, Max, Min } from 'class-validator';
+import type { ChannelSettingsRequest, OkResponse, TelegramLinkResponse, TelegramStatus } from '@dautu/contracts';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { PrismaService } from '../prisma/prisma.module';
@@ -24,7 +25,7 @@ import type { JobRunner } from '../runtime/job-runner';
 import { shutdownGraceMs, waitWhileBusy } from '../runtime/wait';
 import { decide, DEFAULT_KINDS, formatMessage, KIND_LABEL, KINDS, retryAt } from '../notifications/channel-rules';
 
-class SettingsDto {
+class SettingsDto implements ChannelSettingsRequest {
   @IsOptional() @IsObject() kinds?: Record<string, boolean>;
   @IsOptional() @IsInt() @Min(0) @Max(1439) quietStart?: number | null;
   @IsOptional() @IsInt() @Min(0) @Max(1439) quietEnd?: number | null;
@@ -292,7 +293,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy,
     }
   }
 
-  async status(userId: string) {
+  async status(userId: string): Promise<TelegramStatus> {
     const [link, recent] = await Promise.all([
       this.prisma.telegramLink.findUnique({ where: { userId } }),
       this.prisma.telegramDelivery.findMany({
@@ -314,7 +315,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy,
             quietStart: link.quietStart,
             quietEnd: link.quietEnd,
             showDetails: link.showDetails,
-            linkedAt: link.linkedAt,
+            linkedAt: link.linkedAt.toISOString(),
           }
         : null,
       recent: recent.map((d) => ({
@@ -323,14 +324,14 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy,
         kind: d.notification.kind,
         status: d.status,
         lastError: d.lastError,
-        sentAt: d.sentAt,
-        createdAt: d.createdAt,
+        sentAt: d.sentAt?.toISOString() ?? null,
+        createdAt: d.createdAt.toISOString(),
       })),
     };
   }
 
   /** Tạo mã một lần và link mở bot */
-  async createLink(userId: string) {
+  async createLink(userId: string): Promise<TelegramLinkResponse> {
     if (!this.enabled) throw new ServiceUnavailableException('Telegram chưa được cấu hình trên máy chủ');
     if (!(await this.resolveBot())) {
       throw new ServiceUnavailableException('Máy chủ chưa kết nối được tới Telegram, vui lòng thử lại sau');
@@ -342,7 +343,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy,
     return { url: `https://t.me/${this.botUsername}?start=${code}` };
   }
 
-  async updateSettings(userId: string, dto: SettingsDto) {
+  async updateSettings(userId: string, dto: SettingsDto): Promise<TelegramStatus> {
     const link = await this.prisma.telegramLink.findUnique({ where: { userId } });
     if (!link) throw new BadRequestException('Chưa kết nối Telegram');
     const kinds = { ...DEFAULT_KINDS, ...(link.kinds as Record<string, boolean>) };
@@ -366,7 +367,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy,
     return this.status(userId);
   }
 
-  async sendTest(userId: string) {
+  async sendTest(userId: string): Promise<OkResponse> {
     const link = await this.prisma.telegramLink.findUnique({ where: { userId } });
     if (!this.enabled) throw new ServiceUnavailableException('Telegram chưa được cấu hình trên máy chủ');
     if (!link || !link.active) throw new BadRequestException('Chưa kết nối Telegram hoặc đã tắt');
@@ -386,7 +387,7 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy,
     return { ok: true };
   }
 
-  async unlink(userId: string) {
+  async unlink(userId: string): Promise<OkResponse> {
     await this.prisma.telegramLink.deleteMany({ where: { userId } });
     return { ok: true };
   }
@@ -398,27 +399,27 @@ class TelegramController {
   constructor(private telegram: TelegramService) {}
 
   @Get()
-  status(@CurrentUser() user: AuthUser) {
+  status(@CurrentUser() user: AuthUser): Promise<TelegramStatus> {
     return this.telegram.status(user.id);
   }
 
   @Post('link')
-  link(@CurrentUser() user: AuthUser) {
+  link(@CurrentUser() user: AuthUser): Promise<TelegramLinkResponse> {
     return this.telegram.createLink(user.id);
   }
 
   @Patch('settings')
-  settings(@CurrentUser() user: AuthUser, @Body() dto: SettingsDto) {
+  settings(@CurrentUser() user: AuthUser, @Body() dto: SettingsDto): Promise<TelegramStatus> {
     return this.telegram.updateSettings(user.id, dto);
   }
 
   @Post('test')
-  test(@CurrentUser() user: AuthUser) {
+  test(@CurrentUser() user: AuthUser): Promise<OkResponse> {
     return this.telegram.sendTest(user.id);
   }
 
   @Delete()
-  unlink(@CurrentUser() user: AuthUser) {
+  unlink(@CurrentUser() user: AuthUser): Promise<OkResponse> {
     return this.telegram.unlink(user.id);
   }
 }

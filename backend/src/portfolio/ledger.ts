@@ -1,14 +1,23 @@
 import { Prisma } from '@prisma/client';
+import type { AssetType, Currency, Performance, TxType } from '@dautu/contracts';
 
 const D = Prisma.Decimal;
 type Dec = Prisma.Decimal;
 const ZERO = new D(0);
 
 /** bonus: nhận thêm cổ phiếu không mất tiền (cổ phiếu thưởng, cổ tức bằng cổ phiếu, chia tách) */
-export const TX_TYPES = ['opening', 'buy', 'sell', 'deposit', 'withdraw', 'dividend', 'fee', 'bonus'] as const;
-export type TxType = (typeof TX_TYPES)[number];
-export type Currency = 'VND' | 'USDT';
-export type LedgerAsset = 'stock' | 'crypto' | 'gold' | 'cash';
+export const TX_TYPES: readonly TxType[] = [
+  'opening',
+  'buy',
+  'sell',
+  'deposit',
+  'withdraw',
+  'dividend',
+  'fee',
+  'bonus',
+];
+export type { Currency, TxType };
+export type LedgerAsset = AssetType;
 
 export interface LedgerTx {
   id: string;
@@ -329,7 +338,13 @@ export interface PerformanceInput {
 }
 
 /** Hiệu quả đầu tư: tổng lãi = giá trị hiện tại − vốn đưa vào ròng (nạp tiền không phải là lãi) */
-export function performance({ ledger, totalValueVnd, unrealizedVnd, totalIsEstimate, usdtVnd }: PerformanceInput) {
+export function performance({
+  ledger,
+  totalValueVnd,
+  unrealizedVnd,
+  totalIsEstimate,
+  usdtVnd,
+}: PerformanceInput): Performance {
   const c = ledger.contributions;
   const unknownUsdt = c.USDT.unknownFx;
   const netContributions = c.VND.vndKnown.add(c.USDT.vndKnown).add(unknownUsdt.mul(usdtVnd));

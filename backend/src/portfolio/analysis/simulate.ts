@@ -1,5 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type {
+  SimGroupKey as SimGroup,
+  SimHolding,
+  SimShocks as Shocks,
+  SimSnapshot as Snapshot,
+  SimulateResponse,
+} from '@dautu/contracts';
 import type { PriceStatus } from '../../market/freshness';
 import { TYPE_LABEL } from '../valuation';
 
@@ -10,16 +17,11 @@ export const SHOCK_MIN_PCT = -90;
 export const SHOCK_MAX_PCT = 200;
 export const MAX_SYMBOL_OVERRIDES = 50;
 
-export type SimGroup = 'stock' | 'crypto' | 'gold' | 'cash';
-const GROUP_ORDER: SimGroup[] = ['stock', 'crypto', 'gold', 'cash'];
+export type { SimGroup, Shocks, Snapshot, SimHolding };
+/** Kết quả mô phỏng chưa kèm thời điểm giá (`asOf` do service thêm vào) */
+export type SimulationResult = Omit<SimulateResponse, 'asOf'>;
 
-export interface Shocks {
-  stock?: number;
-  crypto?: number;
-  gold?: number;
-  fx?: number;
-  symbols?: Record<string, number>;
-}
+const GROUP_ORDER: SimGroup[] = ['stock', 'crypto', 'gold', 'cash'];
 
 /** Phần của một dòng định giá (xem valuePortfolio) mà mô phỏng cần: đúng giá trị màn Danh mục đang hiển thị */
 export interface SimInputRow {
@@ -29,31 +31,6 @@ export interface SimInputRow {
   marketValue: number | null;
   costValue: number;
   price: { status: PriceStatus; reason?: string | null };
-}
-
-export interface Snapshot {
-  total: number;
-  groups: { group: SimGroup; label: string; value: number; weightPct: number }[];
-}
-
-export interface SimHolding {
-  assetType: string;
-  symbol: string;
-  label: string;
-  before: number;
-  after: number;
-  delta: number;
-  appliedPct: number;
-  priceStatus: PriceStatus;
-}
-
-export interface SimulationResult {
-  before: Snapshot;
-  after: Snapshot;
-  delta: { value: number; pct: number | null };
-  holdings: SimHolding[];
-  notes: string[];
-  missing: { assetType: string; symbol: string; reason: string }[];
 }
 
 const roundVnd = (d: Dec) => d.toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP).toNumber();

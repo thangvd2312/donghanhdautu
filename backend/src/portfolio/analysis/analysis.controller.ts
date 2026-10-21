@@ -1,4 +1,5 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import type { RebalanceResponse, SimulateResponse } from '@dautu/contracts';
 import { CurrentUser, JwtAuthGuard } from '../../auth/auth.module';
 import type { AuthUser } from '../../auth/auth.module';
 import { AnalysisService } from './analysis.service';
@@ -12,13 +13,13 @@ export class AnalysisController {
 
   /** Thử kịch bản giá (cổ phiếu −10%, vàng +5%, tỷ giá +2%…) lên tài sản đang giữ; không ghi vào sổ */
   @Post('simulate')
-  simulate(@CurrentUser() user: AuthUser, @Body() dto: SimulateDto) {
+  simulate(@CurrentUser() user: AuthUser, @Body() dto: SimulateDto): Promise<SimulateResponse> {
     return this.analysis.simulate(user.id, dto);
   }
 
   /** Mô phỏng tái cân bằng (chỉ dùng tiền mới hoặc cho phép bán); không ghi vào sổ */
   @Post('rebalance')
-  rebalance(@CurrentUser() user: AuthUser, @Body() dto: RebalanceDto) {
+  rebalance(@CurrentUser() user: AuthUser, @Body() dto: RebalanceDto): Promise<RebalanceResponse> {
     return this.analysis.rebalance(user.id, dto);
   }
 }

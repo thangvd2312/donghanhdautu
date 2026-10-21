@@ -1,3 +1,4 @@
+import type { HomeToday, ReviewPoint } from '@dautu/contracts';
 import type { AssetType } from '../market/market.service';
 import { REFERENCE_ALLOCATION, RISK_TYPE_LABEL } from '../profile/quiz';
 import type { LedgerTx } from '../portfolio/ledger';
@@ -89,7 +90,7 @@ const keyOf = (h: { assetType: string; symbol: string }) => `${h.assetType}:${h.
  * Cổ tức (sau thuế) cộng vào lãi, phí riêng và phí/thuế đi kèm nạp/rút trừ vào lãi: tiền mặt tăng/giảm vì chúng là lãi/lỗ thật.
  * Không có sổ (`ledger` bỏ trống) thì giả định số lượng không đổi trong ngày.
  */
-export function dayChange(v: Valuation, ledger?: DayLedger) {
+export function dayChange(v: Valuation, ledger?: DayLedger): HomeToday['day'] {
   const tradesOf = (k: string) => ledger?.trades.filter((t) => keyOf(t) === k) ?? [];
   const assets = [
     ...v.holdings.map((h) => ({
@@ -196,15 +197,7 @@ export function dayChange(v: Valuation, ledger?: DayLedger) {
   };
 }
 
-export interface ReviewPoint {
-  id: string;
-  severity: 'high' | 'medium' | 'info';
-  title: string;
-  reason: string;
-  link: string | null;
-  /** Câu hỏi gợi ý gửi cố vấn */
-  ask: string | null;
-}
+export type { ReviewPoint };
 
 export interface ProfileLite {
   riskType: string;

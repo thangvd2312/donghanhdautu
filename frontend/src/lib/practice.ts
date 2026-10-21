@@ -1,50 +1,16 @@
-/** Luyện tập (tiền ảo, FREE-07): kiểu dữ liệu API và phép tính ước lượng lệnh phía giao diện (máy chủ mới là nơi khớp thật) */
+/** Luyện tập (tiền ảo, FREE-07): hằng số và phép tính ước lượng lệnh phía giao diện (máy chủ mới là nơi khớp thật); kiểu API ở contracts/ */
 
-export type PracticeAssetType = 'stock' | 'crypto'
-export type PracticeSide = 'buy' | 'sell'
-export type PracticePriceStatus = 'fresh' | 'stale' | 'fallback' | 'missing'
+import type { PracticeAssetType, PracticePriceStatus, PracticeSide } from './types'
 
-export interface PracticePosition {
-  assetType: PracticeAssetType
-  symbol: string
-  label: string
-  quantity: number
-  avgCost: number
-  price: number | null
-  priceStatus: PracticePriceStatus
-  value: number
-  pnl: number
-  pnlPct: number
-  weightPct: number
-}
-
-export interface PracticeState {
-  account: { startCash: number; cash: number; startedAt: string }
-  positions: PracticePosition[]
-  totals: { value: number; pnl: number; pnlPct: number; tradeCount: number; feesPaid: number }
-  benchmark: { name: 'VN-Index'; changePct: number | null; since: string } | null
-  rules: string[]
-  asOf: string
-}
-
-export interface PracticeTrade {
-  id: string
-  assetType: PracticeAssetType
-  symbol: string
-  label: string
-  side: PracticeSide
-  quantity: number
-  price: number
-  fee: number
-  tax: number
-  gross: number
-  net: number
-  cashAfter: number
-  executedAt: string
-  realizedPnl: number | null
-}
-
-export type PracticeResponse = PracticeState | { account: null }
+export type {
+  PracticeAssetType,
+  PracticePosition,
+  PracticePriceStatus,
+  PracticeResponse,
+  PracticeSide,
+  PracticeState,
+  PracticeTrade,
+} from './types'
 
 export const START_CASH_OPTIONS = [
   { value: 50_000_000, label: '50 triệu' },

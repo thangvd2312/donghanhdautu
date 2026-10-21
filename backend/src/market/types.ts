@@ -1,102 +1,16 @@
-import type { SourceStatus } from './freshness';
-
-export interface StockQuote {
-  symbol: string;
-  name: string;
-  board: string;
-  /** Giá khớp gần nhất (VND). Trước phiên = giá tham chiếu */
-  price: number;
-  ref: number;
-  ceiling: number;
-  floor: number;
-  open: number;
-  high: number;
-  low: number;
-  change: number;
-  changePct: number;
-  volume: number;
-  /** Giá trị khớp, tỷ VND */
-  valueBn: number;
-  foreignBuyVol: number;
-  foreignSellVol: number;
-  session: string;
-  time: string;
-}
-
-export interface IndexQuote {
-  symbol: string;
-  price: number;
-  change: number;
-  changePct: number;
-  advances: number;
-  declines: number;
-  unchanged: number;
-  /** Giá trị giao dịch, tỷ VND */
-  valueBn: number;
-  time: string;
-}
-
-export interface CryptoQuote {
-  symbol: string;
-  base: string;
-  price: number;
-  open24h: number;
-  changePct: number;
-  high: number;
-  low: number;
-  /** Khối lượng 24h tính bằng USDT */
-  quoteVolume: number;
-  time: number;
-}
-
-export interface GoldQuote {
-  code: string;
-  name: string;
-  /** VND/lượng (XAUUSD: USD/oz) */
-  buy: number;
-  sell: number;
-  changeBuy: number;
-  changeSell: number;
-  currency: 'VND' | 'USD';
-  source: string;
-  updatedAt: string;
-}
-
-export interface FxRate {
-  code: string;
-  buy: number;
-  transfer: number;
-  sell: number;
-  updatedAt: string;
-}
-
-/** Tỷ giá USDT/VND trên thị trường P2P (giá người Việt thực sự mua/bán USDT) */
-export interface UsdtRate {
-  /** Giá người bán USDT đang chào (bạn mua USDT ở giá này) */
-  buy: number;
-  /** Giá người mua USDT đang trả (bạn bán USDT ở giá này) */
-  sell: number;
-  /** Giá giữa, dùng để quy đổi danh mục */
-  mid: number;
-  source: string;
-  updatedAt: string;
-}
-
-export interface MarketSnapshot {
-  indices: IndexQuote[];
-  stocks: StockQuote[];
-  crypto: CryptoQuote[];
-  gold: GoldQuote[];
-  fx: FxRate[];
-  usdt: UsdtRate | null;
-  /** Giá vàng thế giới quy đổi VND/lượng, để so chênh lệch với SJC */
-  worldGoldVndPerLuong: number | null;
-  stockSessionOpen: boolean;
-  /** Lần lấy thành công / lỗi gần nhất của từng nguồn — đây mới là độ mới của dữ liệu */
-  sources: Record<string, SourceStatus>;
-  /** Thời điểm tạo bản tổng hợp này (không phải thời điểm dữ liệu) */
-  generatedAt: string;
-}
+/**
+ * Kiểu dữ liệu thị trường là hợp đồng API dùng chung với frontend: định nghĩa ở `contracts/src/market.ts`,
+ * re-export tại đây để mã backend giữ nguyên đường import quen thuộc.
+ */
+export type {
+  CryptoQuote,
+  FxRate,
+  GoldQuote,
+  IndexQuote,
+  MarketSnapshot,
+  StockQuote,
+  UsdtRate,
+} from '@dautu/contracts';
 
 export const VN_TZ = 'Asia/Ho_Chi_Minh';
 

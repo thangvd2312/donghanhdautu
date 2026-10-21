@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import type { CompareResponse, CompareStock } from '@dautu/contracts';
 import { PrismaService } from '../prisma/prisma.module';
 import {
   buildChart,
   buildMetricRows,
   buildNotes,
-  CompanyKind,
   COMPARE_RANGES,
   CompareInputError,
   extractMetrics,
@@ -13,7 +13,6 @@ import {
   parseCompareRange,
   parseCompareSymbols,
   periodReturns,
-  ReturnsByPeriod,
   StatsRow,
 } from './compare';
 import { dividendHistory } from './dividends';
@@ -28,20 +27,6 @@ import {
 } from './providers/vietcap';
 import type { Candle } from './providers/vietcap';
 import { vnDateKey } from './types';
-
-export interface CompareStock {
-  symbol: string;
-  name: string | null;
-  sector: string | null;
-  kind: CompanyKind | null;
-  price: number | null;
-  changePct: number | null;
-  marketCapBn: number | null;
-  returns: ReturnsByPeriod;
-  held: boolean;
-  watched: boolean;
-  unavailable: string[];
-}
 
 /** Đủ cho hiệu suất 1 năm và YTD; dùng cùng số phiên với trang chi tiết để dùng chung cache nến */
 const HISTORY_SESSIONS = 400;
@@ -60,7 +45,11 @@ export class CompareService {
     private prisma: PrismaService,
   ) {}
 
-  async compare(userId: string, rawSymbols: string | undefined, rawRange: string | undefined) {
+  async compare(
+    userId: string,
+    rawSymbols: string | undefined,
+    rawRange: string | undefined,
+  ): Promise<CompareResponse> {
     let symbols: string[];
     let range: ReturnType<typeof parseCompareRange>;
     try {

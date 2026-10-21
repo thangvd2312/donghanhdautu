@@ -1,4 +1,11 @@
 import { Body, Controller, Delete, Get, Header, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import type {
+  ImportBatch,
+  ImportCommitResult,
+  ImportPreview,
+  Transaction,
+  TransactionRevision,
+} from '@dautu/contracts';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { TEMPLATE_CSV } from './csv-import';
@@ -15,22 +22,26 @@ export class TransactionsController {
   ) {}
 
   @Get('transactions')
-  listTransactions(@CurrentUser() user: AuthUser, @Query('portfolioId') portfolioId?: string) {
+  listTransactions(@CurrentUser() user: AuthUser, @Query('portfolioId') portfolioId?: string): Promise<Transaction[]> {
     return this.transactions.list(user.id, portfolioId || undefined);
   }
 
   @Post('transactions')
-  createTransaction(@CurrentUser() user: AuthUser, @Body() dto: TransactionDto) {
+  createTransaction(@CurrentUser() user: AuthUser, @Body() dto: TransactionDto): Promise<Transaction> {
     return this.transactions.create(user.id, dto);
   }
 
   @Put('transactions/:id')
-  updateTransaction(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: TransactionDto) {
+  updateTransaction(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: TransactionDto,
+  ): Promise<Transaction> {
     return this.transactions.update(user.id, id, dto);
   }
 
   @Delete('transactions/:id')
-  removeTransaction(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  removeTransaction(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<Transaction> {
     return this.transactions.remove(user.id, id);
   }
 
@@ -44,17 +55,17 @@ export class TransactionsController {
 
   /** Xem trước file CSV: không ghi gì vào sổ */
   @Post('import/preview')
-  importPreview(@CurrentUser() user: AuthUser, @Body() dto: ImportDto) {
+  importPreview(@CurrentUser() user: AuthUser, @Body() dto: ImportDto): Promise<ImportPreview> {
     return this.imports.preview(user.id, dto);
   }
 
   @Post('import/commit')
-  importCommit(@CurrentUser() user: AuthUser, @Body() dto: ImportDto) {
+  importCommit(@CurrentUser() user: AuthUser, @Body() dto: ImportDto): Promise<ImportCommitResult> {
     return this.imports.commit(user.id, dto);
   }
 
   @Get('import/batches')
-  importBatches(@CurrentUser() user: AuthUser) {
+  importBatches(@CurrentUser() user: AuthUser): Promise<ImportBatch[]> {
     return this.transactions.importBatches(user.id);
   }
 
@@ -64,7 +75,7 @@ export class TransactionsController {
   }
 
   @Get('transactions/:id/revisions')
-  revisions(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  revisions(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<TransactionRevision[]> {
     return this.transactions.revisions(user.id, id);
   }
 }

@@ -1,21 +1,15 @@
 import { createHash } from 'node:crypto';
+import type {
+  ScreenFilter as Filter,
+  ScreenItem,
+  ScreenMultiFilter as MultiFilter,
+  ScreenRangeFilter as RangeFilter,
+  ScreenSort as Sort,
+} from '@dautu/contracts';
 import type { VcScreenFilter, VcScreenRequest, VcScreenRow } from '../market/providers/vietcap';
 import { CRITERIA_BY_KEY, CriterionKey, Option, SORT_FIELDS, VIETCAP_SOURCES } from './screener.catalog';
 
-export interface RangeFilter {
-  key: CriterionKey;
-  min?: number;
-  max?: number;
-}
-export interface MultiFilter {
-  key: CriterionKey;
-  values: string[];
-}
-export type Filter = RangeFilter | MultiFilter;
-export interface Sort {
-  key: CriterionKey;
-  dir: 'asc' | 'desc';
-}
+export type { Filter, MultiFilter, RangeFilter, ScreenItem, Sort };
 
 /** Dữ liệu người dùng gửi sai; controller đổi thành 400 */
 export class ScreenerInputError extends Error {}
@@ -170,17 +164,6 @@ const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : n
 
 /** Vietcap gọi sàn HOSE là HSX */
 export const exchangeLabel = (e: string) => (e === 'HSX' ? 'HOSE' : e);
-
-export interface ScreenItem {
-  symbol: string;
-  name: string | null;
-  exchange: string;
-  price: number | null;
-  changePct: number | null;
-  values: Record<string, number | null>;
-  watched: boolean;
-  held: boolean;
-}
 
 /**
  * Một dòng kết quả. `values` chỉ gồm các chỉ tiêu đang lọc/sắp xếp cùng vốn hoá (tỷ ₫) và giá trị giao dịch bình quân (tỷ ₫/phiên,

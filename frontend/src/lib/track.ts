@@ -1,12 +1,5 @@
 import { getToken } from './api'
-
-/** Sự kiện phía trình duyệt; máy chủ chỉ nhận đúng các tên trong từ điển (backend/src/analytics/events.ts) */
-export type ClientEvent =
-  | 'app_active'
-  | 'portfolio_viewed'
-  | 'onboarding_skipped'
-  | 'demo_viewed'
-  | 'demo_signup_clicked'
+import type { ClientEvent } from './types'
 
 const ANON_KEY = 'dautu_anon_id'
 

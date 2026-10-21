@@ -1,49 +1,15 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Ctx } from './chat-context'
 import { streamPost } from './api'
+import type { AdvisorMessage, AdvisorStreamEvent } from './types'
 
-export interface VerificationIssue {
-  type: 'misattribution' | 'number_mismatch' | 'unsupported'
-  quote: string
-  evidenceQuote: string
-  explanation: string
-  correction: string
-}
-
-export interface Verification {
-  status: 'verified' | 'issues' | 'skipped'
-  issues: VerificationIssue[]
-  discarded: number
-  checkedAt: string
-  reason?: string
-}
-
-export interface ChatMsg {
-  /** id câu trả lời (chỉ có ở tin của cố vấn sau khi lưu xong) */
-  id?: string
-  role: 'user' | 'assistant'
-  text: string
-  tools: string[]
-  sources: { title: string; url: string }[]
+/** Một tin trên màn hình: tin của API (AdvisorMessage) cộng các trạng thái chỉ giao diện dùng khi đang stream */
+export interface ChatMsg extends AdvisorMessage {
   verifying?: boolean
-  verification?: Verification
-  /** Lý do người dùng đã báo sai, nếu có */
-  feedback?: string
   thinking?: string
   error?: string
   streaming?: boolean
 }
-
-type ChatEvent =
-  | { type: 'conversation'; id: string; title: string }
-  | { type: 'thinking'; text: string }
-  | { type: 'text'; text: string }
-  | { type: 'tool'; label: string }
-  | { type: 'sources'; items: { title: string; url: string }[] }
-  | { type: 'verifying' }
-  | ({ type: 'verification' } & Verification)
-  | { type: 'done'; answerId: string | null }
-  | { type: 'error'; message: string }
 
 export interface ActiveChat {
   /** undefined cho tới khi server tạo xong cuộc trò chuyện mới */
@@ -85,7 +51,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setActive((a) => (a ? { ...a, messages: [...a.messages.slice(0, -1), f(a.messages[a.messages.length - 1])] } : a))
 
     try {
-      await streamPost<ChatEvent>(
+      await streamPost<AdvisorStreamEvent>(
         '/advisor/chat',
         { conversationId, message: text },
         (e) => {

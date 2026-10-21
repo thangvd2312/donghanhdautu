@@ -2,52 +2,25 @@
  * So sánh 2–4 cổ phiếu: toàn bộ phép tính là hàm thuần (không gọi mạng, không đọc đồng hồ — ngày hôm nay truyền vào),
  * để số liệu hiển thị luôn do code tính và kiểm thử được. Thiếu dữ liệu luôn là null kèm lý do, không bao giờ điền 0.
  */
+import type {
+  CompanyKind,
+  CompareChart,
+  CompareChartPoint as ChartPoint,
+  CompareMetricKey as MetricKey,
+  CompareMetricRow as MetricRow,
+  CompareMetricValue as MetricValue,
+  CompareRange,
+  CompareReturns as ReturnsByPeriod,
+} from '@dautu/contracts';
 import { currentMultiples, StatRow } from './fundamentals';
 import type { dividendHistory } from './dividends';
 import { vnDateKey } from './types';
 
-export type CompanyKind = 'bank' | 'securities' | 'insurance' | 'corporate';
-export type CompareRange = '3m' | '6m' | '1y' | '3y';
-export type MetricKey =
-  'pe' | 'pb' | 'roe' | 'netMargin' | 'revenueGrowth' | 'profitGrowth' | 'dividendYield' | 'debtToEquity' | 'eps';
-
-export interface MetricValue {
-  value: number | null;
-  period: string | null;
-  reason: string | null;
-}
-
-export interface MetricRow {
-  key: MetricKey;
-  label: string;
-  unit: 'x' | '%' | '₫';
-  hint: string;
-  values: Record<string, MetricValue>;
-  periodsDiffer: boolean;
-}
+export type { ChartPoint, CompanyKind, CompareChart, CompareRange, MetricKey, MetricRow, MetricValue, ReturnsByPeriod };
 
 export interface Candle {
   time: number;
   close: number;
-}
-
-export interface ReturnsByPeriod {
-  '1m': number | null;
-  '3m': number | null;
-  '6m': number | null;
-  '1y': number | null;
-  ytd: number | null;
-}
-
-export interface ChartPoint {
-  date: string;
-  values: Record<string, number | null>;
-}
-
-export interface CompareChart {
-  start: string;
-  points: ChartPoint[];
-  note: string | null;
 }
 
 /** Lỗi đầu vào của người dùng (số lượng mã, định dạng, range) — tầng API đổi thành 400 */

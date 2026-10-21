@@ -2,9 +2,9 @@
  * Quy tắc và phép tính thuần của danh mục luyện tập (tiền ảo, FREE-07). Không phụ thuộc DB hay nguồn giá:
  * nhận số, trả số, để test được từng quy tắc và để người dùng đọc đúng những gì được áp dụng.
  */
+import type { PracticeAssetType, PracticePosition, PracticePriceStatus, PracticeSide } from '@dautu/contracts';
 
-export type PracticeAssetType = 'stock' | 'crypto';
-export type PracticeSide = 'buy' | 'sell';
+export type { PracticeAssetType, PracticeSide };
 
 export const START_CASH_OPTIONS = [50_000_000, 100_000_000, 500_000_000, 1_000_000_000] as const;
 
@@ -150,20 +150,12 @@ export function computePositions(trades: TradeRecord[]): LedgerResult {
   return { positions, realizedPnl };
 }
 
-export interface PricedPosition extends Position {
-  label: string;
-  price: number;
-  priceStatus: string;
-  value: number;
-  pnl: number;
-  pnlPct: number;
-  weightPct: number;
-}
+export type PricedPosition = PracticePosition;
 
 /** Định giá vị thế. Thiếu giá: tạm tính theo giá vốn (lãi/lỗ 0) và đánh dấu trạng thái, không đoán giá */
 export function pricePositions(
   positions: Position[],
-  quote: (p: Position) => { price: number | null; status: string; label: string },
+  quote: (p: Position) => { price: number | null; status: PracticePriceStatus; label: string },
   totalValue: (positionsValue: number) => number,
 ): PricedPosition[] {
   const priced = positions.map((p) => {

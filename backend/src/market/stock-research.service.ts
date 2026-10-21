@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { StockDetail, StockDividends, StockFundamentals, ValuationHistory } from '@dautu/contracts';
 import { dividendHistory } from './dividends';
 import { valuationBand } from './fundamentals';
 import { MarketService } from './market.service';
@@ -25,7 +26,7 @@ export class StockResearchService {
     private corporateEvents: VietcapEventsAdapter,
   ) {}
 
-  async stockDetail(symbol: string) {
+  async stockDetail(symbol: string): Promise<StockDetail> {
     symbol = symbol.toUpperCase();
     const [quote, company, ratios, income, candles] = await Promise.all([
       this.market.stockQuote(symbol),
@@ -38,14 +39,14 @@ export class StockResearchService {
   }
 
   /** Dải P/E, P/B ~8 năm của chính doanh nghiệp so với định giá theo giá hiện tại */
-  async valuationHistory(symbol: string, price?: number | null) {
+  async valuationHistory(symbol: string, price?: number | null): Promise<ValuationHistory | null> {
     symbol = symbol.toUpperCase();
     const rows = await this.companies.statsRaw(symbol);
     return valuationBand(rows, price ?? this.market.priceInfo('stock', symbol).value);
   }
 
   /** Dữ liệu cơ bản sâu: định giá lịch sử, cân đối kế toán, dòng tiền, cổ đông lớn, giao dịch nội bộ */
-  async stockFundamentals(symbol: string, price?: number | null) {
+  async stockFundamentals(symbol: string, price?: number | null): Promise<StockFundamentals> {
     symbol = symbol.toUpperCase();
     // Mã ngoài bảng giá đang theo dõi: lấy giá hiện tại để định giá theo giá mới nhất
     price ??=
@@ -63,7 +64,7 @@ export class StockResearchService {
   }
 
   /** Lịch sử cổ tức tiền mặt / cổ phiếu (sự kiện quyền Vietcap từ 2018) và tỷ suất cổ tức 12 tháng theo giá hiện tại */
-  async stockDividends(symbol: string) {
+  async stockDividends(symbol: string): Promise<StockDividends> {
     symbol = symbol.toUpperCase();
     await this.market.assertStock(symbol);
     const [events, quote] = await Promise.all([

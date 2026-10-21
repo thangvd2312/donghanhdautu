@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
-import { HeartbeatService, WorkerStatus } from '../runtime/heartbeat.service';
+import type { HealthResponse } from '@dautu/contracts';
+import { HeartbeatService } from '../runtime/heartbeat.service';
 
 /**
  * `ok: true` nghĩa là API đang trả lời (CI / deploy kiểm tra dựa vào đây) và không phụ thuộc worker.
@@ -10,7 +11,7 @@ export class HealthController {
   constructor(private readonly heartbeat: HeartbeatService) {}
 
   @Get()
-  async health(): Promise<{ ok: true; worker: WorkerStatus }> {
+  async health(): Promise<HealthResponse> {
     return { ok: true, worker: await this.heartbeat.status() };
   }
 }

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import type { PortfolioHistory } from '@dautu/contracts';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { VndirectProvider } from '../market/providers/vndirect.provider';
 import type { AssetType } from '../market/market.service';
@@ -34,7 +35,7 @@ export class HistoryService {
     private vndirect: VndirectProvider,
   ) {}
 
-  async history(userId: string, range: string, portfolioId?: string) {
+  async history(userId: string, range: string, portfolioId?: string): Promise<PortfolioHistory> {
     if (!(range in RANGES)) throw new BadRequestException('Khoảng thời gian không hợp lệ');
     const r = await this.compute(
       userId,

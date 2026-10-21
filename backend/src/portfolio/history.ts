@@ -2,10 +2,11 @@
  * Lịch sử tài sản theo ngày và hiệu quả theo kỳ, dựng lại từ sổ giao dịch + giá đóng cửa từng ngày.
  * Thuần: nguồn giá truyền vào. Tính lại mỗi lần gọi nên giao dịch nhập lùi ngày tự động làm thay đổi các kỳ bị ảnh hưởng.
  */
+import type { BenchmarkComparison, HistoryPoint, PeriodResult } from '@dautu/contracts';
 import { computeLedger, ledgerOfAll, LedgerResult, LedgerTx, sortTxs } from './ledger';
 import { addDays, daysBetween } from '../plans/plan-rules';
 
-export type DayStatus = 'complete' | 'estimated' | 'partial';
+export type { HistoryPoint, PeriodResult };
 
 export interface DayPrice {
   /** Giá theo đơn vị gốc (VND; coin: USDT); null khi không có */
@@ -23,31 +24,6 @@ export interface HistoryInput {
   /** Tỷ giá VND/USDT của ngày; estimated khi không có số liệu ngày đó */
   usdt: (date: string) => { rate: number; estimated: boolean };
   displayName: (assetType: string, symbol: string) => string;
-}
-
-export interface HistoryPoint {
-  date: string;
-  /** Tổng tài sản cuối ngày (VND); phần thiếu giá tính theo giá vốn */
-  value: number;
-  /** Vốn đưa vào ròng luỹ kế (VND) */
-  netContributions: number;
-  /** Lãi/lỗ luỹ kế = value − netContributions */
-  profit: number;
-  /**
-   * Lãi/lỗ đã có sẵn của tài sản khai báo đầu kỳ (giá thị trường ngày khai báo − giá vốn), luỹ kế.
-   * Hiệu quả theo kỳ coi tài sản đầu kỳ được đưa vào theo giá thị trường nên trừ phần này ra.
-   */
-  preTrackingGain: number;
-  /**
-   * Tài sản khai báo đầu kỳ (luỹ kế) mà ngày khai báo không có giá thị trường đáng tin (thiếu giá, giá cũ, tỷ giá
-   * ước tính): chưa tách được phần lãi/lỗ có từ trước khi theo dõi, nên mọi kỳ chứa ngày khai báo chỉ là ước tính.
-   */
-  uncertainOpenings: string[];
-  /** Cổ tức nhận được luỹ kế (VND, sau thuế / phí); lợi suất danh mục gồm phần này, chỉ số giá thì không */
-  dividends: number;
-  status: DayStatus;
-  /** Tài sản thiếu giá trong ngày */
-  missing: string[];
 }
 
 function contributionsVnd(l: LedgerResult, usdtRate: number) {
@@ -131,38 +107,6 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
   return points;
 }
 
-export interface PeriodResult {
-  start: string;
-  end: string;
-  startValue: number;
-  endValue: number;
-  /** Tiền vào − ra ròng trong kỳ (nạp, rút, nạp ngầm định; tài sản khai báo đầu kỳ theo giá thị trường ngày khai báo) */
-  netFlows: number;
-  /** Lãi/lỗ trong kỳ = giá trị cuối − giá trị đầu − dòng tiền ròng */
-  profit: number;
-  /** Lợi suất Modified Dietz (%); null khi không đủ điều kiện */
-  returnPct: number | null;
-  /**
-   * Lợi suất theo thời gian (TWR, %): nối lợi suất từng ngày, loại bỏ ảnh hưởng của thời điểm nạp / rút — đo năng lực
-   * đầu tư, dùng để so với chỉ số thị trường. null khi không đủ dữ liệu.
-   */
-  twrPct: number | null;
-  /**
-   * Lợi suất theo dòng tiền quy năm (XIRR, %/năm): lợi suất thực tế của chính bạn, có tính thời điểm nạp / rút.
-   * Chỉ tính khi kỳ từ MIN_XIRR_DAYS ngày (quy năm từ kỳ ngắn dễ phóng đại).
-   */
-  xirrPct: number | null;
-  /** Cổ tức nhận được trong kỳ (VND): có trong lợi suất danh mục nhưng không có trong chỉ số giá */
-  dividends: number;
-  /** Số ngày của kỳ */
-  days: number;
-  /** Ngày của mốc đầu kỳ (giá trị chốt cuối ngày này); so với chỉ số thị trường từ đúng mốc này */
-  baseDate: string;
-  method: string;
-  isEstimate: boolean;
-  notes: string[];
-}
-
 /**
  * Hiệu quả trong kỳ. Lợi suất theo Modified Dietz: lãi / (giá trị đầu kỳ + Σ dòng tiền × tỷ lệ thời gian còn lại).
  * Danh mục bắt đầu trong kỳ: giá trị đầu kỳ = 0 vào ngày trước giao dịch đầu tiên, mọi vốn đưa vào là dòng tiền.
@@ -180,7 +124,7 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
         preTrackingGain: 0,
         dividends: 0,
         uncertainOpenings: [] as string[],
-        status: 'complete' as DayStatus,
+        status: 'complete' as HistoryPoint['status'],
       }
     : points[0];
   const body = startedInPeriod ? points : points.slice(1);
@@ -357,7 +301,7 @@ export function compareBenchmark(
   b: BenchmarkInput,
   /** Tỷ trọng cổ phiếu VN trong danh mục cuối kỳ (0–1) */
   stockShare: number,
-) {
+): BenchmarkComparison {
   const dates = [...b.closes.keys()].sort();
   const at = (d: string) => {
     let hit: string | null = null;

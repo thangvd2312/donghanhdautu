@@ -5,23 +5,9 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { api, post } from '../lib/api'
 import { fmtNum, fmtVnd } from '../lib/format'
+import type { CorporateActionsResponse, MissingAction } from '../lib/types'
 import type { TxPreset } from './TransactionDialog'
 import { Panel } from './ui'
-
-interface MissingAction {
-  key: string
-  portfolioId: string | null
-  portfolioName: string | null
-  symbol: string
-  kind: 'stock' | 'cash'
-  title: string
-  exDate: string
-  payoutDate: string | null
-  heldQty: number
-  suggestion:
-    | { type: 'bonus'; date: string; symbol: string; quantity: number }
-    | { type: 'dividend'; date: string; symbol: string; amount: number; tax: number }
-}
 
 const dmy = (d: string) => d.split('-').reverse().join('/')
 
@@ -43,7 +29,7 @@ export default function CorporateActionsPanel({
   const [error, setError] = useState('')
 
   const load = () =>
-    api<{ items: MissingAction[]; unavailable: string[] }>('/portfolio/corporate-actions')
+    api<CorporateActionsResponse>('/portfolio/corporate-actions')
       .then((r) => {
         setItems(r.items)
         setUnavailable(r.unavailable)

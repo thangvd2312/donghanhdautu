@@ -35,7 +35,7 @@ import {
   sameState,
   sortLabel,
 } from '../lib/screener'
-import type { SavedScreen, ScreenCriterion, ScreenFilter, ScreenResult, ScreenSort, WatchItem } from '../lib/types'
+import type { SavedScreen, ScreenCriterion, ScreenFilter, ScreenResult, ScreenSort, WatchEntry } from '../lib/types'
 
 type Sheetstate =
   | { kind: 'picker' }
@@ -221,7 +221,7 @@ export default function ScreenerPage() {
   const watch = async (symbol: string) => {
     setWatching(symbol)
     try {
-      await post<WatchItem>('/watchlist', { assetType: 'stock', symbol })
+      await post<WatchEntry>('/watchlist', { assetType: 'stock', symbol })
       setRes((r) => r && { ...r, items: r.items.map((i) => (i.symbol === symbol ? { ...i, watched: true } : i)) })
       setToast(`Đã thêm ${symbol} vào danh sách theo dõi.`)
     } catch (e) {

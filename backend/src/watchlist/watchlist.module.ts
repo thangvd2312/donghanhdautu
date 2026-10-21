@@ -12,6 +12,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { IsIn, IsString, MaxLength } from 'class-validator';
+import type { WatchItem as WatchItemRow } from '@prisma/client';
+import type { OkResponse, TrackedAssetType, WatchEntry, WatchItem, WatchRequest } from '@dautu/contracts';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
@@ -19,13 +21,13 @@ import { MarketService, normalizeCrypto } from '../market/market.service';
 import { PrismaService } from '../prisma/prisma.module';
 
 /** Phiên bản đầu: các loại có nguồn giá; tiền mặt không cần theo dõi */
-export const WATCH_TYPES = ['stock', 'crypto', 'gold'] as const;
-export type WatchType = (typeof WATCH_TYPES)[number];
+export const WATCH_TYPES: readonly TrackedAssetType[] = ['stock', 'crypto', 'gold'];
+export type WatchType = TrackedAssetType;
 
 /** Mỗi mã cổ phiếu trong watchlist được poll giá, nên giới hạn để không phình danh sách theo dõi */
 export const MAX_WATCH_ITEMS = 50;
 
-class WatchDto {
+class WatchDto implements WatchRequest {
   @IsIn(WATCH_TYPES, { message: 'Chỉ theo dõi được cổ phiếu, crypto hoặc vàng' }) assetType!: WatchType;
   @IsString() @MaxLength(20) symbol!: string;
 }
@@ -55,7 +57,7 @@ export class WatchlistService {
     return symbol;
   }
 
-  async list(userId: string) {
+  async list(userId: string): Promise<WatchItem[]> {
     const [items, held] = await Promise.all([
       this.prisma.watchItem.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       this.prisma.holding.findMany({ where: { userId }, select: { assetType: true, symbol: true } }),
@@ -87,35 +89,40 @@ export class WatchlistService {
               ? `/crypto/${w.symbol.replace(/USDT$/, '')}`
               : null,
         held: heldKeys.has(`${type}:${w.symbol}`),
-        createdAt: w.createdAt,
+        createdAt: w.createdAt.toISOString(),
       };
     });
   }
 
   /** Thêm lại mã đã có không tạo bản ghi mới (unique userId + assetType + symbol) */
-  async add(userId: string, dto: WatchDto) {
+  async add(userId: string, dto: WatchDto): Promise<WatchEntry> {
     const symbol = await this.normalize(dto.assetType, dto.symbol);
     const key = { userId, assetType: dto.assetType, symbol };
     // Đếm và thêm trong cùng transaction có khoá theo người dùng: nhiều yêu cầu thêm cùng lúc không vượt giới hạn
     return this.prisma.$transaction(async (db) => {
       await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`watch:${userId}`}))`;
       const existing = await db.watchItem.findUnique({ where: { userId_assetType_symbol: key } });
-      if (existing) return existing;
+      if (existing) return toEntry(existing);
       const count = await db.watchItem.count({ where: { userId } });
       if (count >= MAX_WATCH_ITEMS) {
         throw new BadRequestException(
           `Danh sách theo dõi tối đa ${MAX_WATCH_ITEMS} mã — hãy bỏ bớt mã không còn quan tâm`,
         );
       }
-      return db.watchItem.create({ data: key });
+      return toEntry(await db.watchItem.create({ data: key }));
     });
   }
 
-  async remove(userId: string, id: string) {
+  async remove(userId: string, id: string): Promise<OkResponse> {
     const { count } = await this.prisma.watchItem.deleteMany({ where: { id, userId } });
     if (!count) throw new NotFoundException('Không tìm thấy mã trong danh sách theo dõi');
     return { ok: true };
   }
+}
+
+/** Dòng Prisma → hợp đồng API; Date → chuỗi ISO như JSON vẫn serialize, các cột còn lại (userId) giữ nguyên */
+function toEntry(row: WatchItemRow): WatchEntry {
+  return { ...row, assetType: row.assetType as TrackedAssetType, createdAt: row.createdAt.toISOString() };
 }
 
 @UseGuards(JwtAuthGuard)
@@ -124,17 +131,17 @@ class WatchlistController {
   constructor(private watchlist: WatchlistService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
+  list(@CurrentUser() user: AuthUser): Promise<WatchItem[]> {
     return this.watchlist.list(user.id);
   }
 
   @Post()
-  add(@CurrentUser() user: AuthUser, @Body() dto: WatchDto) {
+  add(@CurrentUser() user: AuthUser, @Body() dto: WatchDto): Promise<WatchEntry> {
     return this.watchlist.add(user.id, dto);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<OkResponse> {
     return this.watchlist.remove(user.id, id);
   }
 }

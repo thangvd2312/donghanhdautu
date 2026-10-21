@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsNumber, IsObject, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import type { SimulateRequest } from '@dautu/contracts';
 import { SHOCK_MAX_PCT, SHOCK_MIN_PCT } from './simulate';
 
 const PCT_RANGE = `phải nằm trong khoảng ${SHOCK_MIN_PCT}% đến +${SHOCK_MAX_PCT}%`;
@@ -18,7 +19,7 @@ class ShocksDto {
 }
 
 /** Kịch bản mô phỏng: không ghi gì vào sổ */
-export class SimulateDto {
+export class SimulateDto implements SimulateRequest {
   @IsOptional() @IsString() @MaxLength(40) portfolioId?: string | null;
   @IsObject() @ValidateNested() @Type(() => ShocksDto) shocks!: ShocksDto;
 }

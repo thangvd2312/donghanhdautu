@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import type { BalanceSheet, CashFlowStatement, StatementRow } from '@dautu/contracts';
 import { MarketDataCache } from '../../cache/market-data-cache';
 import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import type { CompanyKind } from '../../compare';
 import { cashQuality, netDebt } from '../../fundamentals';
-import type { StatementRow } from '../../fundamentals';
 import { VietcapCompanyAdapter } from './company.adapter';
 import { round } from './numbers';
 import { safe } from './safe';
@@ -144,7 +144,7 @@ export class VietcapStatementsAdapter {
   }
 
   /** Bảng cân đối kế toán: 5 năm + 4 quý gần nhất (số dư cuối kỳ), tỷ VND, kèm nợ vay ròng */
-  async balanceSheet(symbol: string) {
+  async balanceSheet(symbol: string): Promise<BalanceSheet> {
     return this.cache.get(vietcapKey('statements', 'bs', symbol), VIETCAP_POLICIES.statements, async () => {
       const kind = await this.kindStrict(symbol);
       // Chứng khoán / bảo hiểm có mẫu báo cáo riêng: lấy các dòng cấp 1, không tính chỉ tiêu nợ vay ròng
@@ -175,7 +175,7 @@ export class VietcapStatementsAdapter {
   }
 
   /** Lưu chuyển tiền tệ: 5 năm + 4 quý gần nhất + tổng 4 quý (TTM), tỷ VND, kèm dòng tiền tự do */
-  async cashFlow(symbol: string) {
+  async cashFlow(symbol: string): Promise<CashFlowStatement> {
     return this.cache.get(vietcapKey('statements', 'cf', symbol), VIETCAP_POLICIES.statements, async () => {
       const kind = await this.kindStrict(symbol);
       if (kind !== 'corporate') return { type: KIND_LABEL[kind], note: KIND_NOTE[kind] };

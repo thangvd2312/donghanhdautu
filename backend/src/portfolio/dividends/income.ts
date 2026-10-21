@@ -3,6 +3,7 @@
  * Thuần: sổ, sự kiện và ngày hôm nay truyền vào. Không tự ghi sổ; khoản đã ghi (theo đúng logic của gợi ý ghi sổ)
  * không còn là dự kiến nên không bao giờ tính hai lần.
  */
+import type { IncomeExpectedItem, IncomeItem, IncomeMonth, IncomeReceivedItem, IncomeResponse } from '@dautu/contracts';
 import type { CorporateEvent } from '../../market/providers/vietcap';
 import { addDays } from '../../plans/plan-rules';
 import {
@@ -23,64 +24,11 @@ export const MAX_FUTURE_MONTHS = 12;
 /** Chưa biết ngày trả: coi là quá hạn sau chừng này ngày kể từ GDKHQ */
 const DEFAULT_PAYOUT_LAG_DAYS = 45;
 
-export interface ReceivedItem {
-  type: 'received';
-  txId: string;
-  date: string;
-  symbol: string;
-  portfolioId: string | null;
-  portfolioName: string | null;
-  gross: number;
-  tax: number;
-  fee: number;
-  net: number;
-  note: string | null;
-}
-
-export interface ExpectedItem {
-  type: 'expected';
-  key: string;
-  symbol: string;
-  portfolioId: string | null;
-  portfolioName: string | null;
-  exDate: string;
-  recordDate: string | null;
-  payoutDate: string | null;
-  month: string;
-  valuePerShare: number;
-  eligibleQty: number;
-  gross: number;
-  tax: number;
-  net: number;
-  certainty: 'locked' | 'announced';
-  overdue: boolean;
-  basis: string;
-  suggestion: {
-    type: 'dividend';
-    date: string;
-    symbol: string;
-    amount: number;
-    tax: number;
-    portfolioId: string | null;
-  };
-}
-
-export type IncomeItem = ReceivedItem | ExpectedItem;
-
-export interface IncomeMonth {
-  month: string;
-  receivedNet: number;
-  expectedNet: number;
-  items: IncomeItem[];
-}
-
-export interface IncomeResult {
-  months: IncomeMonth[];
-  summary: { receivedNet: number; expectedNet: number; lockedNet: number; yieldOnCostPct: number | null };
-  notes: string[];
-  /** Đang giữ ít nhất một mã cổ phiếu — để phân biệt "chưa có cổ phiếu" với "có cổ phiếu nhưng chưa có cổ tức" */
-  hasHoldings: boolean;
-}
+export type { IncomeItem, IncomeMonth };
+export type ReceivedItem = IncomeReceivedItem;
+export type ExpectedItem = IncomeExpectedItem;
+/** Phần lịch thu nhập tính thuần từ sổ và sự kiện; service thêm nguồn, thời điểm và cờ `unavailable` */
+export type IncomeResult = Pick<IncomeResponse, 'months' | 'summary' | 'notes' | 'hasHoldings'>;
 
 export interface IncomeInput {
   txs: LedgerTx[];

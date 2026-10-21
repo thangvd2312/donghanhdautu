@@ -1,6 +1,15 @@
 import { Body, Controller, Delete, Get, Module, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import type { Request, Response } from 'express';
+import type {
+  AdvisorChatRequest,
+  AdvisorConversation,
+  AdvisorConversationSummary,
+  AdvisorFeedbackReason,
+  AdvisorFeedbackRequest,
+  AdvisorStatus,
+  OkResponse,
+} from '@dautu/contracts';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MacroModule } from '../macro/macro.module';
@@ -13,17 +22,23 @@ import { AdvisorTools } from './tools';
 import { VerifierService } from './verifier.service';
 import { WebService } from './web.service';
 
-class ChatDto {
+class ChatDto implements AdvisorChatRequest {
   @IsOptional() @IsString() conversationId?: string;
   @IsString() @MinLength(1) @MaxLength(4000) message!: string;
 }
 
-export const FEEDBACK_REASONS = ['wrong_number', 'wrong_source', 'outdated', 'bad_advice', 'other'] as const;
+export const FEEDBACK_REASONS: readonly AdvisorFeedbackReason[] = [
+  'wrong_number',
+  'wrong_source',
+  'outdated',
+  'bad_advice',
+  'other',
+];
 
-class FeedbackDto {
+class FeedbackDto implements AdvisorFeedbackRequest {
   @IsString() conversationId!: string;
   @IsString() answerId!: string;
-  @IsIn(FEEDBACK_REASONS) reason!: string;
+  @IsIn(FEEDBACK_REASONS) reason!: AdvisorFeedbackReason;
   @IsOptional() @IsString() @MaxLength(2000) note?: string;
 }
 
@@ -33,27 +48,27 @@ class AdvisorController {
   constructor(private advisor: AdvisorService) {}
 
   @Get('status')
-  status() {
+  status(): AdvisorStatus {
     return { enabled: this.advisor.enabled };
   }
 
   @Get('conversations')
-  list(@CurrentUser() user: AuthUser) {
+  list(@CurrentUser() user: AuthUser): Promise<AdvisorConversationSummary[]> {
     return this.advisor.listConversations(user.id);
   }
 
   @Get('conversations/:id')
-  get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  get(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<AdvisorConversation> {
     return this.advisor.getConversation(user.id, id);
   }
 
   @Delete('conversations/:id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<OkResponse> {
     return this.advisor.deleteConversation(user.id, id);
   }
 
   @Post('feedback')
-  feedback(@CurrentUser() user: AuthUser, @Body() dto: FeedbackDto) {
+  feedback(@CurrentUser() user: AuthUser, @Body() dto: FeedbackDto): Promise<OkResponse> {
     return this.advisor.submitFeedback(user.id, dto.conversationId, dto.answerId, dto.reason, dto.note);
   }
 

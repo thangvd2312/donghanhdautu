@@ -1,48 +1,14 @@
 /** Danh mục tiêu chí của bộ lọc cổ phiếu: nhãn, đơn vị, khoảng hợp lệ, và cách ánh xạ sang tên trường của Vietcap. */
+import type {
+  ScreenCriterion as Criterion,
+  ScreenCriterionKey as CriterionKey,
+  ScreenGroup as CriterionGroup,
+  ScreenOption as Option,
+  ScreenPreset as Preset,
+  ScreenUnit as CriterionUnit,
+} from '@dautu/contracts';
 
-export type CriterionKey =
-  | 'exchange'
-  | 'sector'
-  | 'marketCap'
-  | 'price'
-  | 'adtv'
-  | 'pe'
-  | 'pb'
-  | 'roe'
-  | 'profitGrowth'
-  | 'revenueGrowth'
-  | 'netMargin'
-  | 'grossMargin'
-  | 'dividendYield';
-
-export type CriterionGroup = 'Cơ bản' | 'Định giá' | 'Hiệu quả' | 'Tăng trưởng' | 'Cổ tức';
-export type CriterionUnit = '₫' | 'tỷ ₫' | '%' | 'x' | null;
-
-export interface Preset {
-  label: string;
-  min?: number;
-  max?: number;
-}
-
-export interface Option {
-  value: string;
-  label: string;
-}
-
-export interface Criterion {
-  key: CriterionKey;
-  label: string;
-  group: CriterionGroup;
-  type: 'range' | 'multi';
-  unit: CriterionUnit;
-  min?: number;
-  max?: number;
-  step?: number;
-  options?: Option[];
-  presets?: Preset[];
-  hint: string;
-  period: string | null;
-}
+export type { Criterion, CriterionGroup, CriterionKey, CriterionUnit, Option, Preset };
 
 /** Cách một tiêu chí khoảng được hỏi ở Vietcap và đọc lại từ kết quả */
 export interface VietcapSource {

@@ -1,6 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Holding, Prisma, Transaction } from '@prisma/client';
 import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import type {
+  AssetType,
+  ImportBatch,
+  Transaction as TransactionView,
+  TransactionRevision,
+  TxSource,
+} from '@dautu/contracts';
 import { isDateKey, IsDateKey } from '../common/dates';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService, normalizeCrypto } from '../market/market.service';
@@ -164,7 +171,7 @@ export class TransactionsService {
     };
   }
 
-  async list(userId: string, portfolioId?: string) {
+  async list(userId: string, portfolioId?: string): Promise<TransactionView[]> {
     await this.ensureMigrated(this.prisma, userId);
     const rows = await this.prisma.transaction.findMany({
       where: { userId, deletedAt: null, ...(portfolioId ? { portfolioId } : {}) },
@@ -194,13 +201,23 @@ export class TransactionsService {
     return portfolioId;
   }
 
-  async revisions(userId: string, id: string) {
+  async revisions(userId: string, id: string): Promise<TransactionRevision[]> {
     const tx = await this.prisma.transaction.findFirst({ where: { id, userId } });
     if (!tx) throw new NotFoundException('Không tìm thấy giao dịch');
-    return this.prisma.transactionRevision.findMany({ where: { transactionId: id }, orderBy: { createdAt: 'desc' } });
+    const rows = await this.prisma.transactionRevision.findMany({
+      where: { transactionId: id },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Giữ nguyên mọi cột (JSON trả ra như cũ); chỉ khẳng định kiểu và đổi Date sang chuỗi ISO như JSON vẫn làm
+    return rows.map((r) => ({
+      ...r,
+      action: r.action as TransactionRevision['action'],
+      before: r.before as TransactionRevision['before'],
+      createdAt: r.createdAt.toISOString(),
+    }));
   }
 
-  async create(userId: string, dto: TransactionDto) {
+  async create(userId: string, dto: TransactionDto): Promise<TransactionView> {
     // Kiểm tra mã với nguồn giá trước, ngoài transaction DB
     const data = await this.normalize(dto);
     const result = await this.write(userId, async (db, txs) => {
@@ -212,7 +229,7 @@ export class TransactionsService {
     return result;
   }
 
-  async update(userId: string, id: string, dto: TransactionDto) {
+  async update(userId: string, id: string, dto: TransactionDto): Promise<TransactionView> {
     const data = await this.normalize(dto);
     return this.write(userId, async (db, txs) => {
       const before = txs.find((t) => t.id === id);
@@ -227,7 +244,7 @@ export class TransactionsService {
     });
   }
 
-  remove(userId: string, id: string) {
+  remove(userId: string, id: string): Promise<TransactionView> {
     return this.write(userId, async (db, txs) => {
       const before = txs.find((t) => t.id === id);
       if (!before) throw new NotFoundException('Không tìm thấy giao dịch');
@@ -306,8 +323,17 @@ export class TransactionsService {
     });
   }
 
-  async importBatches(userId: string) {
-    return this.prisma.importBatch.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 });
+  async importBatches(userId: string): Promise<ImportBatch[]> {
+    const rows = await this.prisma.importBatch.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((b) => ({
+      ...b,
+      undoneAt: b.undoneAt?.toISOString() ?? null,
+      createdAt: b.createdAt.toISOString(),
+    }));
   }
 
   /** Giao dịch hiện có (chưa huỷ) để so trùng khi nhập */
@@ -447,7 +473,7 @@ export class TransactionsService {
     if (missing.length) await db.holding.createMany({ data: missing });
   }
 
-  private present(t: Transaction, revisionCount: number) {
+  private present(t: Transaction, revisionCount: number): TransactionView {
     const gold = t.assetType === 'gold' ? this.market.goldQuotes().find((g) => g.code === t.symbol)?.name : null;
     const qty = t.quantity?.toNumber() ?? null;
     const price = t.price?.toNumber() ?? null;
@@ -455,7 +481,7 @@ export class TransactionsService {
       id: t.id,
       type: t.type as TxType,
       date: dateKey(t.date),
-      assetType: t.assetType,
+      assetType: t.assetType as AssetType | null,
       symbol: t.symbol,
       displayName: gold ?? (t.symbol ? (t.assetType === 'cash' ? t.symbol : t.symbol.replace(/USDT$/, '')) : null),
       quantity: qty,
@@ -469,9 +495,9 @@ export class TransactionsService {
       grossValue: t.amount?.toNumber() ?? (qty !== null && price !== null ? qty * price : null),
       portfolioId: t.portfolioId,
       note: t.note,
-      source: t.source,
+      source: t.source as TxSource,
       edited: revisionCount > 0,
-      createdAt: t.createdAt,
+      createdAt: t.createdAt.toISOString(),
     };
   }
 }

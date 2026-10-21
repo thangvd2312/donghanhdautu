@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { AnalystView, CompanyProfile, StatementRow } from '@dautu/contracts';
 import { MarketDataCache } from '../../cache/market-data-cache';
 import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import type { StatRow } from '../../fundamentals';
@@ -14,37 +15,38 @@ export class VietcapCompanyAdapter {
     private readonly cache: MarketDataCache,
   ) {}
 
-  async company(symbol: string) {
+  async company(symbol: string): Promise<CompanyProfile | null> {
     return this.cache.get(vietcapKey('company', symbol), VIETCAP_POLICIES.company, async () => {
       const res = await this.http.get<{ data: Record<string, unknown> | null }>('iq', `/company/${symbol}`);
       const d = res.data;
       if (!d) return null;
+      // Trường của Vietcap là unknown: ép kiểu ở đây là nơi duy nhất khẳng định hình dạng nguồn trả về
       return {
-        ticker: d.ticker,
-        name: d.viOrganName,
-        sector: d.sectorVn,
-        isBank: d.isBank,
+        ticker: d.ticker as string,
+        name: d.viOrganName as string,
+        sector: d.sectorVn as string,
+        isBank: d.isBank as boolean,
         /** NH ngân hàng, CK chứng khoán, BH bảo hiểm, CT doanh nghiệp thường */
         companyType: d.comTypeCode as string | undefined,
         marketCapBn: Math.round(Number(d.marketCap) / 1e9),
-        sharesOutstanding: d.numberOfSharesMktCap,
-        high52w: d.highestPrice1Year,
-        low52w: d.lowestPrice1Year,
+        sharesOutstanding: d.numberOfSharesMktCap as number | null,
+        high52w: d.highestPrice1Year as number,
+        low52w: d.lowestPrice1Year as number,
         avgMatchValue1mBn: Math.round(Number(d.averageMatchValue1Month) / 1e9),
         foreignOwnershipPct: pct(d.foreignerPercentage),
         foreignRoomMaxPct: pct(d.maximumForeignPercentage),
         stateOwnershipPct: pct(d.statePercentage),
         freeFloatPct: pct(d.freeFloatPercentage),
-        listingDate: d.listingDate,
+        listingDate: d.listingDate as string | null,
         analystView: d.rating
-          ? {
+          ? ({
               source: 'Vietcap Research',
               rating: d.rating,
               ratingAsOf: d.ratingAsOf,
               targetPrice: d.targetPrice,
               upsidePct: pct(d.upsideToTargetPercent),
               previous: d.prevInsight,
-            }
+            } as AnalystView)
           : null,
         profile: stripHtml(typeof d.profile === 'string' ? d.profile : '').slice(0, 1500),
       };
@@ -52,7 +54,7 @@ export class VietcapCompanyAdapter {
   }
 
   /** Chỉ số tài chính TTM theo quý, 8 quý gần nhất */
-  async ratios(symbol: string) {
+  async ratios(symbol: string): Promise<StatementRow[]> {
     return this.cache.get(vietcapKey('ratios', symbol), VIETCAP_POLICIES.ratios, async () => {
       // quarter = 5 là số liệu cả năm, trùng với quý 4 — bỏ đi
       const rows = (await this.statsRaw(symbol))

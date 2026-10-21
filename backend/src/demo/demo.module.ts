@@ -1,4 +1,5 @@
 import { Controller, Get, Injectable, Module } from '@nestjs/common';
+import type { DemoNews, DemoResponse } from '@dautu/contracts';
 import { mentionsCompany } from '../alerts/aliases';
 import { dayChange, reviewPoints } from '../home/today';
 import { MarketModule } from '../market/market.module';
@@ -27,7 +28,7 @@ const CACHE_MS = 30_000;
 
 @Injectable()
 export class DemoService {
-  private cache: { at: number; data: unknown } | null = null;
+  private cache: { at: number; data: DemoResponse } | null = null;
 
   constructor(
     private market: MarketService,
@@ -35,7 +36,7 @@ export class DemoService {
     private prisma: PrismaService,
   ) {}
 
-  async demo() {
+  async demo(): Promise<DemoResponse> {
     if (this.cache && Date.now() - this.cache.at < CACHE_MS) return this.cache.data;
     const data = await this.build();
     this.cache = { at: Date.now(), data };
@@ -49,7 +50,7 @@ export class DemoService {
     return type === 'crypto' ? v / this.market.usdtVnd.rate : v;
   }
 
-  private async build() {
+  private async build(): Promise<DemoResponse> {
     const holdings: HoldingInput[] = SAMPLE.flatMap((s, i) => {
       const price = this.nativePrice(s.assetType, s.symbol);
       // Thiếu giá thì bỏ khoản đó khỏi mẫu thay vì hiển thị số bịa
@@ -120,7 +121,7 @@ export class DemoService {
   }
 
   /** Tin 48 giờ qua về các mã trong danh mục mẫu (dùng nhãn AI đã lưu, không gọi AI) */
-  private async relatedNews(tickers: string[]) {
+  private async relatedNews(tickers: string[]): Promise<DemoNews[]> {
     const since = Date.now() - 48 * 3600_000;
     const items = (await this.news.all().catch((): NewsItem[] => [])).filter((n) => Date.parse(n.publishedAt) > since);
     const tags = new Map(
@@ -157,7 +158,7 @@ class DemoController {
   constructor(private demo: DemoService) {}
 
   @Get()
-  get() {
+  get(): Promise<DemoResponse> {
     return this.demo.demo();
   }
 }

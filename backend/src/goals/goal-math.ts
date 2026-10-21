@@ -1,7 +1,8 @@
 /** Tính toán thuần cho mục tiêu tài chính: tiến độ từ tài sản được gán, mô phỏng, kiểm tra phân bổ */
+import type { Goal, GoalAssetType } from '@dautu/contracts';
 
-export const ASSET_TYPES = ['stock', 'crypto', 'gold', 'cash'] as const;
-export type GoalAssetType = (typeof ASSET_TYPES)[number];
+export const ASSET_TYPES: readonly GoalAssetType[] = ['stock', 'crypto', 'gold', 'cash'];
+export type { GoalAssetType };
 
 export interface HoldingValue {
   assetType: string;
@@ -30,7 +31,7 @@ export function goalProgress(
   goal: { targetAmount: number; targetAllocation: Partial<Record<GoalAssetType, number>> | null },
   allocations: Allocation[],
   holdings: HoldingValue[],
-) {
+): Goal['progress'] {
   let current = 0;
   let isEstimate = false;
   const byType: Record<string, number> = {};

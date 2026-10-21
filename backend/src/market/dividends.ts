@@ -1,27 +1,18 @@
+import type { DividendItem, StockDividends } from '@dautu/contracts';
 import type { CorporateEvent } from './providers/vietcap/events.adapter';
 
 /** Mệnh giá cổ phiếu VN: tỷ lệ cổ tức tiền mặt công bố theo % mệnh giá */
 export const PAR_VALUE = 10_000;
 
-export interface DividendItem {
-  kind: 'cash' | 'stock';
-  title: string;
-  exDate: string;
-  recordDate: string | null;
-  payoutDate: string | null;
-  /** cash: VND / cổ phiếu, trước thuế */
-  valuePerShare: number | null;
-  /** cash: % mệnh giá; stock: số cổ phiếu nhận thêm trên 100 cổ phiếu đang giữ */
-  pct: number;
-  /** Ngày giao dịch không hưởng quyền còn ở phía trước */
-  upcoming: boolean;
-}
-
 /**
  * Lịch sử cổ tức của một mã, mới nhất trước. Tổng tiền mặt 12 tháng tính theo ngày không hưởng quyền trong 365 ngày
  * gần nhất (không tính sự kiện sắp tới); tỷ suất = tổng đó / giá hiện tại.
  */
-export function dividendHistory(events: CorporateEvent[], price: number | null, today: string) {
+export function dividendHistory(
+  events: CorporateEvent[],
+  price: number | null,
+  today: string,
+): Omit<StockDividends, 'source' | 'since'> {
   const items: DividendItem[] = events
     .map((e) => ({
       kind: e.kind,

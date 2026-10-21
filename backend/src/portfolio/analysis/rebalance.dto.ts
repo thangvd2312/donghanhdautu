@@ -13,6 +13,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import type { RebalanceRequest } from '@dautu/contracts';
 import { MAX_NEW_MONEY, MAX_TARGETS } from './rebalance';
 import type { LotMode, RebalanceGroup, RebalanceMode } from './rebalance';
 
@@ -51,7 +52,7 @@ class FeesDto {
 }
 
 /** Mô phỏng tái cân bằng: không ghi gì vào sổ */
-export class RebalanceDto {
+export class RebalanceDto implements RebalanceRequest {
   @IsOptional() @IsString() @MaxLength(40) portfolioId?: string | null;
   @IsArray({ message: 'Danh sách tỷ trọng mục tiêu không hợp lệ' })
   @ArrayMinSize(1, { message: 'Cần ít nhất một tỷ trọng mục tiêu' })

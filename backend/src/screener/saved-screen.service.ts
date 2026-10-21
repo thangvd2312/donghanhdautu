@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { SavedScreen as SavedScreenRow } from '@prisma/client';
+import type { OkResponse, SavedScreen, ScreenFilter, ScreenSort } from '@dautu/contracts';
 import { PrismaService } from '../prisma/prisma.module';
 import { Filter, ScreenerInputError, Sort, validateFilters, validateSort } from './screener.logic';
 
@@ -17,14 +19,15 @@ export interface SavedScreenInput {
 export class SavedScreenService {
   constructor(private prisma: PrismaService) {}
 
-  list(userId: string) {
-    return this.prisma.savedScreen.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' } });
+  async list(userId: string): Promise<SavedScreen[]> {
+    const rows = await this.prisma.savedScreen.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' } });
+    return rows.map(toSavedScreen);
   }
 
-  async create(userId: string, input: SavedScreenInput & { name: string }) {
+  async create(userId: string, input: SavedScreenInput & { name: string }): Promise<SavedScreen> {
     const name = cleanName(input.name);
     const { filters, sort } = parse(input.filters, input.sort);
-    return this.prisma.$transaction(async (db) => {
+    const created = await this.prisma.$transaction(async (db) => {
       await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`screen:${userId}`}))`;
       if ((await db.savedScreen.count({ where: { userId } })) >= MAX_SAVED_SCREENS) {
         throw new BadRequestException(
@@ -41,10 +44,11 @@ export class SavedScreenService {
         },
       });
     });
+    return toSavedScreen(created);
   }
 
-  async update(userId: string, id: string, input: SavedScreenInput) {
-    return this.prisma.$transaction(async (db) => {
+  async update(userId: string, id: string, input: SavedScreenInput): Promise<SavedScreen> {
+    const updated = await this.prisma.$transaction(async (db) => {
       await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`screen:${userId}`}))`;
       const current = await db.savedScreen.findFirst({ where: { id, userId } });
       if (!current) throw new NotFoundException(NOT_FOUND);
@@ -65,13 +69,28 @@ export class SavedScreenService {
       }
       return db.savedScreen.update({ where: { id }, data });
     });
+    return toSavedScreen(updated);
   }
 
-  async remove(userId: string, id: string) {
+  async remove(userId: string, id: string): Promise<OkResponse> {
     const { count } = await this.prisma.savedScreen.deleteMany({ where: { id, userId } });
     if (!count) throw new NotFoundException(NOT_FOUND);
     return { ok: true };
   }
+}
+
+/**
+ * Dòng Prisma → hợp đồng API: `filters` / `sort` đã được `parse` kiểm tra lúc ghi nên chỉ cần khẳng định kiểu;
+ * Date → chuỗi ISO đúng như JSON vẫn serialize. Các cột còn lại giữ nguyên để phản hồi không đổi.
+ */
+function toSavedScreen(row: SavedScreenRow): SavedScreen {
+  return {
+    ...row,
+    filters: row.filters as unknown as ScreenFilter[],
+    sort: row.sort as unknown as ScreenSort | null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 const duplicate = () => new BadRequestException('Bạn đã có bộ lọc trùng tên này, hãy chọn tên khác');

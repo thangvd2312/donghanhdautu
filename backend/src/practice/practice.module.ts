@@ -1,5 +1,13 @@
 import { Body, Controller, Get, Module, Post, Query, UseGuards } from '@nestjs/common';
 import { IsIn, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import type {
+  PracticeOrderRequest,
+  PracticeOrderResponse,
+  PracticeResponse,
+  PracticeStartRequest,
+  PracticeState,
+  PracticeTradesPage,
+} from '@dautu/contracts';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
@@ -9,11 +17,11 @@ import type { PracticeAssetType, PracticeSide } from './practice-logic';
 
 const CASH_MSG = 'Số tiền ban đầu không hợp lệ';
 
-class StartDto {
+class StartDto implements PracticeStartRequest {
   @IsIn(START_CASH_OPTIONS, { message: CASH_MSG }) startCash!: number;
 }
 
-class OrderDto {
+class OrderDto implements PracticeOrderRequest {
   @IsIn(['stock', 'crypto'], { message: 'Loại tài sản luyện tập chỉ gồm cổ phiếu và coin' })
   assetType!: PracticeAssetType;
   @IsString() @MaxLength(20) symbol!: string;
@@ -34,27 +42,27 @@ class PracticeController {
   constructor(private practice: PracticeService) {}
 
   @Get()
-  state(@CurrentUser() user: AuthUser) {
+  state(@CurrentUser() user: AuthUser): Promise<PracticeResponse> {
     return this.practice.state(user.id);
   }
 
   @Post('start')
-  start(@CurrentUser() user: AuthUser, @Body() dto: StartDto) {
+  start(@CurrentUser() user: AuthUser, @Body() dto: StartDto): Promise<PracticeState> {
     return this.practice.start(user.id, dto.startCash);
   }
 
   @Post('orders')
-  order(@CurrentUser() user: AuthUser, @Body() dto: OrderDto) {
+  order(@CurrentUser() user: AuthUser, @Body() dto: OrderDto): Promise<PracticeOrderResponse> {
     return this.practice.placeOrder(user.id, dto);
   }
 
   @Get('trades')
-  trades(@CurrentUser() user: AuthUser, @Query() q: TradesQuery) {
+  trades(@CurrentUser() user: AuthUser, @Query() q: TradesQuery): Promise<PracticeTradesPage> {
     return this.practice.trades(user.id, q.cursor);
   }
 
   @Post('reset')
-  reset(@CurrentUser() user: AuthUser, @Body() dto: StartDto) {
+  reset(@CurrentUser() user: AuthUser, @Body() dto: StartDto): Promise<PracticeState> {
     return this.practice.reset(user.id, dto.startCash);
   }
 }

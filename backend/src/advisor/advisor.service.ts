@@ -4,6 +4,14 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { compatMode, createAnthropicClient } from '../common/anthropic';
 import { Prisma } from '@prisma/client';
+import type {
+  AdvisorConversation,
+  AdvisorConversationSummary,
+  AdvisorFeedbackReason,
+  AdvisorMessage,
+  AdvisorStreamEvent,
+  OkResponse,
+} from '@dautu/contracts';
 import { VN_TZ } from '../market/types';
 import { AiQuotaError, AiUsageService } from '../ai/ai-usage.service';
 import { historyChars, MAX_HISTORY_CHARS, missingToolResults } from '../ai/history';
@@ -12,18 +20,10 @@ import { PrismaService } from '../prisma/prisma.module';
 import { stripEmoji } from '../common/text';
 import { ADVISOR_SYSTEM_PROMPT } from './prompt';
 import { AdvisorTools } from './tools';
-import { Evidence, Verification, VerifierService } from './verifier.service';
+import { Evidence, VerifierService } from './verifier.service';
+import type { Verification } from './verifier.service';
 
-export type AdvisorEvent =
-  | { type: 'conversation'; id: string; title: string }
-  | { type: 'thinking'; text: string }
-  | { type: 'text'; text: string }
-  | { type: 'tool'; label: string }
-  | { type: 'sources'; items: { title: string; url: string }[] }
-  | { type: 'verifying' }
-  | ({ type: 'verification' } & Verification)
-  | { type: 'done'; answerId: string | null }
-  | { type: 'error'; message: string };
+export type AdvisorEvent = AdvisorStreamEvent;
 
 const MAX_TURNS = 15;
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
@@ -51,22 +51,23 @@ export class AdvisorService {
     return !!this.client;
   }
 
-  listConversations(userId: string) {
-    return this.prisma.conversation.findMany({
+  async listConversations(userId: string): Promise<AdvisorConversationSummary[]> {
+    const rows = await this.prisma.conversation.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
       select: { id: true, title: true, updatedAt: true },
       take: 50,
     });
+    return rows.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() }));
   }
 
-  async deleteConversation(userId: string, id: string) {
+  async deleteConversation(userId: string, id: string): Promise<OkResponse> {
     await this.prisma.conversation.deleteMany({ where: { id, userId } });
     return { ok: true };
   }
 
   /** Gộp các message lưu trong DB thành dạng hiển thị: mỗi lượt user + một khối trả lời */
-  async getConversation(userId: string, id: string) {
+  async getConversation(userId: string, id: string): Promise<AdvisorConversation> {
     const conv = await this.prisma.conversation.findFirst({
       where: { id, userId },
       include: { messages: { orderBy: { seq: 'asc' } } },
@@ -81,15 +82,7 @@ export class AdvisorService {
           })
         : undefined,
     );
-    const out: {
-      id?: string;
-      role: 'user' | 'assistant';
-      text: string;
-      tools: string[];
-      sources: { title: string; url: string }[];
-      verification?: Verification;
-      feedback?: string;
-    }[] = [];
+    const out: AdvisorMessage[] = [];
     const toolNameById = new Map<string, string>();
     for (const m of conv.messages) {
       const blocks = m.content as unknown as Anthropic.Beta.BetaContentBlock[];
@@ -138,13 +131,19 @@ export class AdvisorService {
     });
     for (const f of feedback) {
       const m = out.find((x) => x.id === f.answerId);
-      if (m) m.feedback = f.reason;
+      if (m) m.feedback = f.reason as AdvisorFeedbackReason;
     }
     return { id: conv.id, title: conv.title, messages: out };
   }
 
   /** Người dùng báo một câu trả lời sai / chưa tốt. Lưu kèm câu hỏi + câu trả lời để đưa vào bộ chấm điểm. */
-  async submitFeedback(userId: string, conversationId: string, answerId: string, reason: string, note?: string) {
+  async submitFeedback(
+    userId: string,
+    conversationId: string,
+    answerId: string,
+    reason: AdvisorFeedbackReason,
+    note?: string,
+  ): Promise<OkResponse> {
     const conv = await this.prisma.conversation.findFirst({
       where: { id: conversationId, userId },
       include: { messages: { orderBy: { seq: 'asc' } } },

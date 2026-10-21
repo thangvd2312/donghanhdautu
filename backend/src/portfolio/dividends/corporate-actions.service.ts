@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import type { CorporateActionsResponse, IncomeResponse, OkResponse } from '@dautu/contracts';
 import { vnDateKey } from '../../market/types';
 import { VietcapEventsAdapter } from '../../market/providers/vietcap';
 import type { CorporateEvent } from '../../market/providers/vietcap';
@@ -18,7 +19,7 @@ export class CorporateActionsService {
     private transactions: TransactionsService,
   ) {}
 
-  async missing(userId: string) {
+  async missing(userId: string): Promise<CorporateActionsResponse> {
     const [txs, dismissed, portfolios] = await Promise.all([
       this.transactions.activeTransactions(userId),
       this.prisma.dismissedAction.findMany({ where: { userId }, select: { key: true } }),
@@ -59,7 +60,7 @@ export class CorporateActionsService {
    * Lịch thu nhập cổ tức: đã nhận (sổ) và dự kiến (sự kiện Vietcap). Một mã lỗi nguồn → `unavailable` và chỉ còn
    * phần đã nhận, kèm ghi chú mã nào lỗi; không ghi gì vào sổ.
    */
-  async income(userId: string, pastRaw?: unknown, today = vnDateKey()) {
+  async income(userId: string, pastRaw?: unknown, today = vnDateKey()): Promise<IncomeResponse> {
     const past = clampPast(pastRaw);
     const [txs, dismissed, portfolios] = await Promise.all([
       this.transactions.activeTransactions(userId),
@@ -96,7 +97,7 @@ export class CorporateActionsService {
   }
 
   /** Bỏ qua một gợi ý (vd đã tính vào số dư khai báo hoặc nhận ở nơi khác) */
-  async dismiss(userId: string, key: string) {
+  async dismiss(userId: string, key: string): Promise<OkResponse> {
     const { items } = await this.missing(userId);
     // Khoản đã chốt quyền nhưng chưa tới ngày trả không nằm trong gợi ý ghi sổ, song vẫn hiện trên lịch thu nhập
     const known = items.some((i) => i.key === key) || (await this.lockedIncomeKeys(userId)).has(key);

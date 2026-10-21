@@ -2,12 +2,13 @@ import { BadRequestException, HttpException, Injectable, Optional } from '@nestj
 import { Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { IsArray, IsIn, IsInt, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import type { ImportCommitResult, ImportPreview, ImportPreviewRow as PreviewRow } from '@dautu/contracts';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService } from '../market/market.service';
 import { autoMapping, dupKey, FIELD_LABEL, FIELDS, MAX_BYTES, MAX_ROWS, parseCsv, rowToDto } from './csv-import';
 import type { Field, Mapping } from './csv-import';
 import { computeLedger, LedgerError, LedgerResult, LedgerTx } from './ledger';
-import type { Currency, TxType } from './ledger';
+import type { Currency } from './ledger';
 import { PrismaService } from '../prisma/prisma.module';
 import { NormalizedTx, toLedgerTx, TransactionsService } from './transactions';
 
@@ -22,28 +23,7 @@ export class ImportDto {
   @IsOptional() @IsString() @MaxLength(40) portfolioId?: string;
 }
 
-type RowStatus = 'ok' | 'error' | 'duplicate';
-
-export interface PreviewRow {
-  line: number;
-  status: RowStatus;
-  errors: string[];
-  duplicateReason: string | null;
-  /** Dòng nghi trùng mà người dùng chọn vẫn nhập */
-  included: boolean;
-  tx: {
-    date: string;
-    type: TxType;
-    assetType: string | null;
-    symbol: string | null;
-    quantity: number | null;
-    price: number | null;
-    amount: number | null;
-    fee: number;
-    tax: number;
-    currency: string;
-  } | null;
-}
+export type { PreviewRow };
 
 const num = (d: Prisma.Decimal | null) => (d === null ? null : d.toNumber());
 const dateKey = (d: Date) => d.toISOString().slice(0, 10);
@@ -84,7 +64,7 @@ export function requestHash(userId: string, dto: ImportDto) {
     .digest('hex');
 }
 
-function alreadyDone(batch: { id: string; importedCount: number }) {
+function alreadyDone(batch: { id: string; importedCount: number }): ImportCommitResult {
   return {
     batchId: batch.id,
     alreadyImported: true,
@@ -104,7 +84,7 @@ export class ImportService {
     @Optional() private analytics?: AnalyticsService,
   ) {}
 
-  async preview(userId: string, dto: ImportDto) {
+  async preview(userId: string, dto: ImportDto): Promise<ImportPreview> {
     const r = await this.analyze(userId, dto);
     return {
       fileName: dto.fileName ?? null,
@@ -118,7 +98,7 @@ export class ImportService {
     };
   }
 
-  async commit(userId: string, dto: ImportDto) {
+  async commit(userId: string, dto: ImportDto): Promise<ImportCommitResult> {
     // Nhận diện lần nhập theo chính yêu cầu (file + lựa chọn của người dùng), tính trước khi so với sổ:
     // gửi lại sau khi đã nhập thì các dòng đã thành "trùng sổ", tập dòng sẽ nhập đổi theo, không dùng để nhận diện được
     const hash = requestHash(userId, dto);

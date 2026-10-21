@@ -29,7 +29,7 @@ import { changeColor, fmtDate, fmtNum, fmtVndShort } from '../lib/format'
 import { project, requiredMonthly } from '../lib/goalMath'
 import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum, todayVn } from '../lib/num'
-import type { Goal, GoalAsset, GoalAssetType } from '../lib/types'
+import type { Goal, GoalAsset, GoalAssetType, GoalsResponse } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
 
 const TYPE_LABEL: Record<GoalAssetType, string> = { stock: 'Cổ phiếu', crypto: 'Crypto', gold: 'Vàng', cash: 'Tiền mặt' }
@@ -43,7 +43,7 @@ export default function GoalsPage() {
 
   const load = useCallback(
     () =>
-      api<{ goals: Goal[]; assets: GoalAsset[] }>('/goals')
+      api<GoalsResponse>('/goals')
         .then(setData)
         .catch((e: Error) => setError(e.message)),
     [],

@@ -3,6 +3,8 @@
  * và khoá chống ghi trùng. Không có sự kiện nào mang token, nội dung chat, ghi chú, email hay giá trị danh mục:
  * thuộc tính ngoài danh sách `props` bị bỏ, giá trị chỉ là nhãn ngắn hoặc số đếm.
  */
+import type { ClientEvent } from '@dautu/contracts';
+
 export interface EventDef {
   source: 'server' | 'client';
   description: string;
@@ -122,6 +124,18 @@ export const EVENTS = {
 } satisfies Record<string, EventDef>;
 
 export type EventName = keyof typeof EVENTS;
+
+/** Tên các sự kiện có nguồn `client` trong từ điển */
+type ClientEventName = { [K in EventName]: (typeof EVENTS)[K]['source'] extends 'client' ? K : never }[EventName];
+
+/**
+ * Kiểm tra lúc biên dịch: `ClientEvent` trong hợp đồng (frontend gửi) phải khớp đúng với các sự kiện `client` của từ điển.
+ * Thêm / bớt sự kiện ở một phía mà quên phía kia sẽ làm dòng này không biên dịch được.
+ */
+export type ClientEventsMatchContract = MustBeTrue<
+  [ClientEventName] extends [ClientEvent] ? ([ClientEvent] extends [ClientEventName] ? true : false) : false
+>;
+type MustBeTrue<T extends true> = T;
 
 export const CLIENT_EVENTS = (Object.keys(EVENTS) as EventName[]).filter((k) => EVENTS[k].source === 'client');
 

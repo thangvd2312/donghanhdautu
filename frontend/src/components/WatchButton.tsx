@@ -4,7 +4,7 @@ import Button from '@mui/material/Button'
 import Tooltip from '@mui/material/Tooltip'
 import { useEffect, useState } from 'react'
 import { api, del, post } from '../lib/api'
-import type { WatchItem } from '../lib/types'
+import type { WatchEntry, WatchItem } from '../lib/types'
 import { QuickAction } from './ui'
 
 /** Nút theo dõi / bỏ theo dõi một tài sản (không cần sở hữu). `symbol` đã chuẩn hoá: FPT, BTCUSDT, SJL1L10 */
@@ -46,7 +46,7 @@ export default function WatchButton({
         await del(`/watchlist/${item.id}`)
         setItem(null)
       } else {
-        setItem(await post<{ id: string }>('/watchlist', { assetType, symbol }))
+        setItem(await post<WatchEntry>('/watchlist', { assetType, symbol }))
       }
     } catch (e) {
       setError((e as Error).message)

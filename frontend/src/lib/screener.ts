@@ -1,12 +1,19 @@
 import { fmtNum } from './format'
-import type { ScreenCriterion, ScreenFilter, ScreenGroup, ScreenSort } from './types'
+import type {
+  ScreenCriterion,
+  ScreenCriterionKey,
+  ScreenFilter,
+  ScreenGroup,
+  ScreenMultiFilter,
+  ScreenSort,
+} from './types'
 
 export const PAGE_SIZE = 20
 export const MAX_PICK = 4
 export const DEFAULT_SORT: ScreenSort = { key: 'marketCap', dir: 'desc' }
 export const GROUP_ORDER: ScreenGroup[] = ['Cơ bản', 'Định giá', 'Hiệu quả', 'Tăng trưởng', 'Cổ tức']
 
-export const isMulti = (f: ScreenFilter): f is { key: string; values: string[] } => 'values' in f
+export const isMulti = (f: ScreenFilter): f is ScreenMultiFilter => 'values' in f
 
 /** Tên ngắn dùng trên chip và dòng "Khớp vì" */
 const SHORT: Record<string, string> = {
@@ -26,7 +33,7 @@ const SHORT: Record<string, string> = {
 }
 export const shortLabel = (key: string, crit?: ScreenCriterion) => SHORT[key] ?? crit?.label ?? key
 
-export const SORT_OPTIONS: { key: string; dir: 'asc' | 'desc'; label: string }[] = [
+export const SORT_OPTIONS: { key: ScreenCriterionKey; dir: 'asc' | 'desc'; label: string }[] = [
   { key: 'marketCap', dir: 'desc', label: 'Vốn hoá: lớn đến nhỏ' },
   { key: 'adtv', dir: 'desc', label: 'Thanh khoản: cao đến thấp' },
   { key: 'pe', dir: 'asc', label: 'P/E: thấp đến cao' },
@@ -108,17 +115,20 @@ export function decodeState(raw: string | null): { filters: ScreenFilter[]; sort
     const filters: ScreenFilter[] = []
     for (const row of o.f.slice(0, 20)) {
       if (!Array.isArray(row) || typeof row[0] !== 'string' || filters.some((x) => x.key === row[0])) continue
+      // Khoá do người dùng chỉnh tay trên URL nên chưa chắc thuộc danh mục tiêu chí: máy chủ mới là nơi từ chối khoá lạ
+      const key = row[0] as ScreenCriterionKey
       if (Array.isArray(row[1])) {
         const values = row[1].filter((v): v is string => typeof v === 'string').slice(0, 100)
-        if (values.length) filters.push({ key: row[0], values })
+        if (values.length) filters.push({ key, values })
       } else {
         const min = num(row[1])
         const max = num(row[2])
-        if (min !== undefined || max !== undefined) filters.push({ key: row[0], ...(min !== undefined && { min }), ...(max !== undefined && { max }) })
+        if (min !== undefined || max !== undefined) filters.push({ key, ...(min !== undefined && { min }), ...(max !== undefined && { max }) })
       }
     }
     const [sk, sd] = typeof o.s === 'string' ? o.s.split(':') : []
-    const sort = SORT_OPTIONS.some((x) => x.key === sk && x.dir === sd) ? { key: sk, dir: sd as 'asc' | 'desc' } : DEFAULT_SORT
+    const picked = SORT_OPTIONS.find((x) => x.key === sk && x.dir === sd)
+    const sort: ScreenSort = picked ? { key: picked.key, dir: picked.dir } : DEFAULT_SORT
     return { filters, sort }
   } catch {
     return empty

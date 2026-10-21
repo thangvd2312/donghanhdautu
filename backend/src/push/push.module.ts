@@ -28,6 +28,13 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import type {
+  ChannelSettingsRequest,
+  PushStatus,
+  PushSubscribeRequest,
+  PushTestResponse,
+  PushUnsubscribeRequest,
+} from '@dautu/contracts';
 import webpush from 'web-push';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
@@ -40,16 +47,16 @@ class KeysDto {
   @IsString() @MaxLength(100) auth!: string;
 }
 
-class SubscribeDto {
+class SubscribeDto implements PushSubscribeRequest {
   @IsUrl({ protocols: ['https'], require_tld: false }) @MaxLength(1000) endpoint!: string;
   @ValidateNested() @Type(() => KeysDto) keys!: KeysDto;
 }
 
-class UnsubscribeDto {
+class UnsubscribeDto implements PushUnsubscribeRequest {
   @IsString() @MaxLength(1000) endpoint!: string;
 }
 
-class SettingsDto {
+class SettingsDto implements ChannelSettingsRequest {
   @IsOptional() @IsObject() kinds?: Record<string, boolean>;
   @IsOptional() @IsInt() @Min(0) @Max(1439) quietStart?: number | null;
   @IsOptional() @IsInt() @Min(0) @Max(1439) quietEnd?: number | null;
@@ -131,7 +138,7 @@ export class PushService implements OnApplicationBootstrap, OnModuleDestroy, Bef
     this.publicKey = pub;
   }
 
-  async status(userId: string) {
+  async status(userId: string): Promise<PushStatus> {
     const [settings, subs, recent] = await Promise.all([
       this.prisma.pushSettings.findUnique({ where: { userId } }),
       this.prisma.pushSubscription.findMany({
@@ -154,19 +161,19 @@ export class PushService implements OnApplicationBootstrap, OnModuleDestroy, Bef
         quietEnd: settings?.quietEnd ?? null,
         showDetails: settings?.showDetails ?? false,
       },
-      devices: subs,
+      devices: subs.map((s) => ({ ...s, createdAt: s.createdAt.toISOString() })),
       recent: recent.map((d) => ({
         id: d.id,
         title: d.notification.title,
         status: d.status,
         lastError: d.lastError,
-        sentAt: d.sentAt,
-        createdAt: d.createdAt,
+        sentAt: d.sentAt?.toISOString() ?? null,
+        createdAt: d.createdAt.toISOString(),
       })),
     };
   }
 
-  async subscribe(userId: string, dto: SubscribeDto, userAgent: string | undefined) {
+  async subscribe(userId: string, dto: SubscribeDto, userAgent: string | undefined): Promise<PushStatus> {
     if (!this.publicKey) throw new BadRequestException('Máy chủ chưa sẵn sàng gửi thông báo');
     await this.prisma.$transaction([
       // Thiết bị đổi tài khoản: endpoint thuộc về người đăng ký sau cùng
@@ -186,12 +193,12 @@ export class PushService implements OnApplicationBootstrap, OnModuleDestroy, Bef
     return this.status(userId);
   }
 
-  async unsubscribe(userId: string, endpoint: string) {
+  async unsubscribe(userId: string, endpoint: string): Promise<PushStatus> {
     await this.prisma.pushSubscription.deleteMany({ where: { userId, endpoint } });
     return this.status(userId);
   }
 
-  async updateSettings(userId: string, dto: SettingsDto) {
+  async updateSettings(userId: string, dto: SettingsDto): Promise<PushStatus> {
     const s = await this.prisma.pushSettings.findUnique({ where: { userId } });
     const kinds = { ...DEFAULT_KINDS, ...((s?.kinds as Record<string, boolean> | undefined) ?? {}) };
     for (const [k, v] of Object.entries(dto.kinds ?? {})) {
@@ -208,7 +215,7 @@ export class PushService implements OnApplicationBootstrap, OnModuleDestroy, Bef
   }
 
   /** Gửi tin thử tới mọi thiết bị của người dùng */
-  async sendTest(userId: string) {
+  async sendTest(userId: string): Promise<PushTestResponse> {
     const subs = await this.prisma.pushSubscription.findMany({ where: { userId } });
     if (!subs.length) throw new BadRequestException('Chưa có thiết bị nào bật thông báo');
     const r = await this.sendToAll(subs, {
@@ -337,27 +344,31 @@ class PushController {
   constructor(private push: PushService) {}
 
   @Get()
-  status(@CurrentUser() user: AuthUser) {
+  status(@CurrentUser() user: AuthUser): Promise<PushStatus> {
     return this.push.status(user.id);
   }
 
   @Post('subscribe')
-  subscribe(@CurrentUser() user: AuthUser, @Body() dto: SubscribeDto, @Headers('user-agent') ua?: string) {
+  subscribe(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: SubscribeDto,
+    @Headers('user-agent') ua?: string,
+  ): Promise<PushStatus> {
     return this.push.subscribe(user.id, dto, ua);
   }
 
   @Delete('subscribe')
-  unsubscribe(@CurrentUser() user: AuthUser, @Body() dto: UnsubscribeDto) {
+  unsubscribe(@CurrentUser() user: AuthUser, @Body() dto: UnsubscribeDto): Promise<PushStatus> {
     return this.push.unsubscribe(user.id, dto.endpoint);
   }
 
   @Patch('settings')
-  settings(@CurrentUser() user: AuthUser, @Body() dto: SettingsDto) {
+  settings(@CurrentUser() user: AuthUser, @Body() dto: SettingsDto): Promise<PushStatus> {
     return this.push.updateSettings(user.id, dto);
   }
 
   @Post('test')
-  test(@CurrentUser() user: AuthUser) {
+  test(@CurrentUser() user: AuthUser): Promise<PushTestResponse> {
     return this.push.sendTest(user.id);
   }
 }

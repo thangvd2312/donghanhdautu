@@ -4,6 +4,7 @@
   "description": "Đồng Hành Đầu Tư — NestJS API + React app",
   "scripts": {
     "install:all": "npm ci --prefix backend --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund",
+    "build:contracts": "npm run build:contracts --prefix backend",
     "build": "npm run build --prefix frontend && cd backend && npx prisma generate && npm run build",
     "test": "npm test --prefix backend -- --ci",
     "lint": "npm run lint --prefix frontend && npm run lint:check --prefix backend",

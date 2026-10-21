@@ -38,9 +38,10 @@ import ReactMarkdown from 'react-markdown'
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import remarkGfm from 'remark-gfm'
 import { api, del, post } from '../lib/api'
-import { type ChatMsg as Msg, type Verification } from '../lib/chat'
+import { type ChatMsg as Msg } from '../lib/chat'
 import { useChat } from '../lib/chat-context'
 import { timeAgo } from '../lib/format'
+import type { AdvisorConversation, AdvisorConversationSummary, AdvisorFeedbackReason, AdvisorStatus, Verification } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
 
 const SUGGESTIONS = [
@@ -59,7 +60,7 @@ export default function AdvisorPage() {
   const chat = useChat()
   const mobile = useIsMobile()
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [convs, setConvs] = useState<{ id: string; title: string; updatedAt: string }[]>([])
+  const [convs, setConvs] = useState<AdvisorConversationSummary[]>([])
   const [loaded, setLoaded] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [enabled, setEnabled] = useState(true)
@@ -75,11 +76,11 @@ export default function AdvisorPage() {
   const busyElsewhere = !!active?.busy && !showingActive
   const busyHere = !!active?.busy && showingActive
 
-  const loadConvs = useCallback(() => api<typeof convs>('/advisor/conversations').then(setConvs), [])
+  const loadConvs = useCallback(() => api<AdvisorConversationSummary[]>('/advisor/conversations').then(setConvs), [])
 
   useEffect(() => {
     void loadConvs()
-    api<{ enabled: boolean }>('/advisor/status').then((s) => setEnabled(s.enabled))
+    api<AdvisorStatus>('/advisor/status').then((s) => setEnabled(s.enabled))
   }, [loadConvs])
 
   // Nối callback của luồng chat chung với trang đang mở; gỡ ra khi rời trang
@@ -106,7 +107,7 @@ export default function AdvisorPage() {
       return
     }
     if (showingActive) return
-    api<{ messages: Msg[] }>(`/advisor/conversations/${id}`)
+    api<AdvisorConversation>(`/advisor/conversations/${id}`)
       .then((c) => setLoaded(c.messages))
       .catch(() => nav('/advisor'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,7 +145,7 @@ export default function AdvisorPage() {
   }, [id])
 
   const markFeedback = useCallback(
-    (answerId: string, reason: string) => {
+    (answerId: string, reason: AdvisorFeedbackReason) => {
       const f = (m: Msg) => (m.id === answerId ? { ...m, feedback: reason } : m)
       setLoaded((ms) => ms.map(f))
       chat.patchMessage(answerId, f)
@@ -420,7 +421,7 @@ function Message({
 }: {
   m: Msg
   conversationId?: string
-  onFeedback: (answerId: string, reason: string) => void
+  onFeedback: (answerId: string, reason: AdvisorFeedbackReason) => void
 }) {
   if (m.role === 'user') {
     return (
@@ -569,7 +570,7 @@ function Markdown({ text }: { text: string }) {
   )
 }
 
-const FEEDBACK_REASONS: [string, string][] = [
+const FEEDBACK_REASONS: [AdvisorFeedbackReason, string][] = [
   ['wrong_number', 'Số liệu sai'],
   ['wrong_source', 'Trích sai nguồn / nguồn không đáng tin'],
   ['outdated', 'Thông tin đã cũ'],
@@ -586,11 +587,11 @@ function FeedbackButton({
 }: {
   conversationId: string
   answerId: string
-  sent?: string
-  onSent: (reason: string) => void
+  sent?: AdvisorFeedbackReason
+  onSent: (reason: AdvisorFeedbackReason) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState('wrong_number')
+  const [reason, setReason] = useState<AdvisorFeedbackReason>('wrong_number')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -628,7 +629,7 @@ function FeedbackButton({
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>Câu trả lời này có vấn đề gì?</DialogTitle>
         <DialogContent>
-          <RadioGroup value={reason} onChange={(e) => setReason(e.target.value)}>
+          <RadioGroup value={reason} onChange={(e) => setReason(e.target.value as AdvisorFeedbackReason)}>
             {FEEDBACK_REASONS.map(([v, label]) => (
               <FormControlLabel key={v} value={v} control={<Radio size="small" />} label={label} />
             ))}

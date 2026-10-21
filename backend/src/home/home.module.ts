@@ -1,4 +1,5 @@
 import { Controller, Get, Injectable, Module, UseGuards } from '@nestjs/common';
+import type { HomeFeed, HomeToday, ReviewPoint } from '@dautu/contracts';
 import { mentionsCompany } from '../alerts/aliases';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
@@ -17,7 +18,7 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { toLedgerTx, TransactionsService } from '../portfolio/transactions';
 import { PrismaService } from '../prisma/prisma.module';
 import { planSignals } from '../plans/plan-rules';
-import { dayChange, dayIncomeOf, DayIncome, DayLedger, DayTrade, ReviewPoint, reviewPoints } from './today';
+import { dayChange, dayIncomeOf, DayIncome, DayLedger, DayTrade, reviewPoints } from './today';
 
 const NEWS_HOURS = 48;
 const MAX_NEWS = 8;
@@ -37,7 +38,7 @@ export class HomeService {
     private news: NewsService,
   ) {}
 
-  async today(userId: string) {
+  async today(userId: string): Promise<HomeToday> {
     const [v, txs] = await Promise.all([
       this.portfolio.valuation(userId),
       this.transactions.activeTransactions(userId).then((list) => list.map(toLedgerTx)),
@@ -106,7 +107,7 @@ export class HomeService {
     return { startQty, trades, income, openedToday, closed };
   }
 
-  async review(userId: string) {
+  async review(userId: string): Promise<ReviewPoint[]> {
     const [v, profile, alerts, plans, actions] = await Promise.all([
       this.portfolio.valuation(userId),
       this.prisma.investorProfile.findUnique({ where: { userId }, select: { riskType: true, maxDrawdownPct: true } }),
@@ -181,7 +182,7 @@ export class HomeService {
   }
 
   /** Bản tin mới nhất + tin về các mã đang nắm giữ / theo dõi + tin vĩ mô quan trọng */
-  async feed(userId: string) {
+  async feed(userId: string): Promise<HomeFeed> {
     const [brief, holdings, watch, items] = await Promise.all([
       this.prisma.notification.findFirst({
         where: { userId, kind: 'brief', createdAt: { gt: new Date(Date.now() - 36 * 3600_000) } },
@@ -236,7 +237,12 @@ export class HomeService {
         impact: tags.get(n.url)?.impact ?? null,
       }));
 
-    return { brief, related, macro, trackedTickers: tickers };
+    return {
+      brief: brief ? { ...brief, createdAt: brief.createdAt.toISOString() } : null,
+      related,
+      macro,
+      trackedTickers: tickers,
+    };
   }
 }
 
@@ -246,17 +252,17 @@ class HomeController {
   constructor(private home: HomeService) {}
 
   @Get('today')
-  today(@CurrentUser() user: AuthUser) {
+  today(@CurrentUser() user: AuthUser): Promise<HomeToday> {
     return this.home.today(user.id);
   }
 
   @Get('review')
-  review(@CurrentUser() user: AuthUser) {
+  review(@CurrentUser() user: AuthUser): Promise<ReviewPoint[]> {
     return this.home.review(user.id);
   }
 
   @Get('feed')
-  feed(@CurrentUser() user: AuthUser) {
+  feed(@CurrentUser() user: AuthUser): Promise<HomeFeed> {
     return this.home.feed(user.id);
   }
 }

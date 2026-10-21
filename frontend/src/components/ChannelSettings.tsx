@@ -5,15 +5,9 @@ import Stack from '@mui/material/Stack'
 import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import type { ChannelPrefs } from '../lib/types'
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h)
-
-export interface ChannelPrefs {
-  kinds: Record<string, boolean>
-  quietStart: number | null
-  quietEnd: number | null
-  showDetails: boolean
-}
 
 /** Cài đặt chung cho một kênh gửi ra ngoài app (Telegram, thông báo trình duyệt): loại tin, giờ yên lặng, chi tiết */
 export default function ChannelSettings({

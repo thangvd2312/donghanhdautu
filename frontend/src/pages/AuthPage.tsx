@@ -15,6 +15,7 @@ import { Logo } from '../components/ui'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
 import { safeNext } from '../lib/nav'
+import type { AuthConfig } from '../lib/types'
 
 export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { login, register, loginWithGoogle } = useAuth()
@@ -36,7 +37,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     let alive = true
     let timer: ReturnType<typeof setTimeout> | undefined
     const load = (attempt: number) =>
-      api<{ googleClientId: string | null }>('/auth/config')
+      api<AuthConfig>('/auth/config')
         .then((c) => alive && setGoogleClientId(c.googleClientId))
         .catch(() => {
           if (!alive) return

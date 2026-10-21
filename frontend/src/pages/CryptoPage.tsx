@@ -13,14 +13,7 @@ import { Panel } from '../components/ui'
 import { api } from '../lib/api'
 import { changeColor, fmtPct, fmtUsd, fmtVnd } from '../lib/format'
 import { useMarket } from '../lib/market-context'
-import type { Candle, CryptoQuote, Technicals } from '../lib/types'
-
-interface CryptoDetail {
-  quote: CryptoQuote | null
-  usdtVnd: number
-  usdtSource: string
-  technicals: Technicals
-}
+import type { Candle, CryptoDetail } from '../lib/types'
 
 export default function CryptoPage() {
   const { symbol = '' } = useParams()

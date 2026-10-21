@@ -1,16 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { Candle } from '@dautu/contracts';
 import { MarketDataCache } from '../../cache/market-data-cache';
 import { historyPolicy, vietcapKey } from '../../cache/vietcap-cache-policy';
 import { VietcapHttpClient } from './vietcap-http.client';
 
-export interface Candle {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
+export type { Candle };
 
 /** Nến ngày của cổ phiếu và chỉ số: Vietcap là nguồn chính, DNSE dự phòng */
 @Injectable()

@@ -29,6 +29,7 @@ import {
   type PracticeTrade,
 } from '../lib/practice'
 import { virtualColor } from '../lib/practiceStyle'
+import type { PracticeTradesPage } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
 
 const FALLBACK_RULES = [
@@ -264,7 +265,7 @@ function History() {
   const fetchPage = useCallback((cursor: string | null) => {
     setBusy(true)
     setError('')
-    api<{ items: PracticeTrade[]; nextCursor: string | null }>(`/practice/trades${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`)
+    api<PracticeTradesPage>(`/practice/trades${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`)
       .then((r) => {
         setItems((prev) => (cursor && prev ? [...prev, ...r.items] : r.items))
         setNext(r.nextCursor)

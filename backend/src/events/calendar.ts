@@ -1,43 +1,18 @@
+import type { CalendarEvent as PublicCalendarEvent, EventKind, EventRange, ReminderSettings } from '@dautu/contracts';
 import type { VcMarketEvent } from '../market/providers/vietcap';
 
 /** Hàm thuần của lịch sự kiện quyền: phân loại sự kiện Vietcap, lọc theo cửa sổ ngày, hợp nhất danh mục / watchlist, quyết định nhắc */
 
-export type EventKind = 'cash' | 'stock' | 'rights' | 'agm' | 'egm';
-export type EventRange = 'week' | 'month' | 'quarter';
+export type { EventKind, EventRange, ReminderSettings };
 
 export const RANGE_DAYS: Record<EventRange, number> = { week: 7, month: 30, quarter: 92 };
 /** Số ngày trong quá khứ vẫn hiển thị để người dùng thấy sự kiện vừa qua */
 export const PAST_DAYS = 7;
 
-export interface ReminderSettings {
-  enabled: boolean;
-  daysBefore: 1 | 3;
-  mutedSymbols: string[];
-}
-
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = { enabled: false, daysBefore: 1, mutedSymbols: [] };
 
-export interface CalendarEvent {
-  key: string;
-  symbol: string;
-  companyName: string | null;
-  kind: EventKind;
-  title: string;
-  date: string;
-  exDate: string | null;
-  recordDate: string | null;
-  payoutDate: string | null;
-  meetingDate: string | null;
-  valuePerShare: number | null;
-  ratioPct: number | null;
-  rightsPrice: number | null;
-  held: boolean;
-  watched: boolean;
-  heldQuantity: number | null;
-  estimatedCash: number | null;
-  upcoming: boolean;
-  remindAt: string | null;
-  publishedAt: string | null;
+/** Sự kiện trong lịch: các trường công khai (hợp đồng API) cộng id nguồn dùng nội bộ cho dedupeKey nhắc */
+export interface CalendarEvent extends PublicCalendarEvent {
   /** id sự kiện ở nguồn — dùng cho dedupeKey nhắc, không trả ra ngoài API */
   sourceId: string;
 }

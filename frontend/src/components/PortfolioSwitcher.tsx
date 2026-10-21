@@ -19,7 +19,7 @@ import { api, del, post } from '../lib/api'
 import { fmtVndShort } from '../lib/format'
 import { useIsMobile } from '../lib/useIsMobile'
 import { InfoTip } from './ui'
-import type { PortfolioAccount } from '../lib/types'
+import type { CreatedPortfolio, PortfolioAccount } from '../lib/types'
 
 /** Chọn xem gộp hoặc từng danh mục; thêm / đổi tên / xoá danh mục */
 export default function PortfolioSwitcher({
@@ -44,7 +44,7 @@ export default function PortfolioSwitcher({
   const create = async () => {
     setError('')
     try {
-      const p = await post<{ id: string }>('/portfolio/portfolios', { name })
+      const p = await post<CreatedPortfolio>('/portfolio/portfolios', { name })
       setAdding(false)
       setName('')
       onChanged()

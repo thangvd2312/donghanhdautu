@@ -16,7 +16,7 @@ import { api } from '../lib/api'
 import { changeColor, fmtPct, fmtStockPrice, fmtUsd } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import AssetAvatar from './AssetAvatar'
-import type { StockHit } from './StockSearch'
+import type { StockHit } from '../lib/types'
 import { ChangePill } from './ui'
 
 /** Một kết quả: cổ phiếu (tìm qua API) hoặc coin (lọc tại chỗ từ bảng giá realtime) */

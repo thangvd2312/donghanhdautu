@@ -36,6 +36,7 @@ import {
   type PracticeState,
   type PracticeTrade,
 } from '../lib/practice'
+import type { PracticeOrderResponse } from '../lib/types'
 import AssetAvatar from './AssetAvatar'
 import SearchDialog from './SearchDialog'
 import Sheet from './Sheet'
@@ -171,7 +172,7 @@ function OrderForm({
     setBusy(true)
     setApiError('')
     try {
-      const res = await post<{ trade: PracticeTrade; state: PracticeState }>('/practice/orders', {
+      const res = await post<PracticeOrderResponse>('/practice/orders', {
         assetType,
         symbol,
         side,

@@ -1,0 +1,25 @@
+/**
+ * Hợp đồng API giữa frontend và backend: chỉ có kiểu (interface / literal union), không có mã chạy.
+ * Backend là nguồn sự thật: kiểu ở đây khớp với những gì controller trả về thực sự.
+ */
+export * from './common'
+export * from './auth'
+export * from './market'
+export * from './portfolio'
+export * from './analysis'
+export * from './dividends'
+export * from './events'
+export * from './screener'
+export * from './compare'
+export * from './practice'
+export * from './notifications'
+export * from './watchlist'
+export * from './plans'
+export * from './goals'
+export * from './home'
+export * from './demo'
+export * from './channels'
+export * from './news'
+export * from './advisor'
+export * from './health'
+export * from './analytics'

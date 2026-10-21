@@ -25,12 +25,18 @@ import { useEffect, useState } from 'react'
 import { api, getToken, post } from '../lib/api'
 import { fmtDate, fmtNum, fmtVndShort } from '../lib/format'
 import { TX_LABEL } from '../lib/tx'
-import type { PortfolioAccount, TxType } from '../lib/types'
+import type {
+  ImportBatch as Batch,
+  ImportCommitResult,
+  ImportField,
+  ImportPreview as Preview,
+  PortfolioAccount,
+} from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
 import { DialogHeader } from './ui'
 
-const FIELDS = ['date', 'type', 'assetType', 'symbol', 'quantity', 'price', 'amount', 'fee', 'tax', 'currency', 'fxRate', 'note'] as const
-type Field = (typeof FIELDS)[number]
+const FIELDS: readonly ImportField[] = ['date', 'type', 'assetType', 'symbol', 'quantity', 'price', 'amount', 'fee', 'tax', 'currency', 'fxRate', 'note']
+type Field = ImportField
 const FIELD_LABEL: Record<Field, string> = {
   date: 'Ngày *',
   type: 'Loại giao dịch *',
@@ -44,49 +50,6 @@ const FIELD_LABEL: Record<Field, string> = {
   currency: 'Tiền tệ',
   fxRate: 'Tỷ giá',
   note: 'Ghi chú',
-}
-
-interface PreviewRow {
-  line: number
-  status: 'ok' | 'error' | 'duplicate'
-  errors: string[]
-  duplicateReason: string | null
-  included: boolean
-  tx: {
-    date: string
-    type: TxType
-    assetType: string | null
-    symbol: string | null
-    quantity: number | null
-    price: number | null
-    amount: number | null
-    fee: number
-    tax: number
-    currency: string
-  } | null
-}
-
-interface Preview {
-  headers: string[]
-  mapping: Partial<Record<Field, number>>
-  mappingErrors: string[]
-  rows: PreviewRow[]
-  counts: { total: number; errors: number; duplicates: number; duplicatesIncluded: number; toImport: number }
-  impact: {
-    positions: { name: string; before: number; after: number }[]
-    cash: Record<'VND' | 'USDT', { before: number; after: number }>
-    netContributions: { before: number; after: number }
-    implicitDeposits: { before: number; after: number }
-  } | null
-}
-
-interface Batch {
-  id: string
-  fileName: string | null
-  rowCount: number
-  importedCount: number
-  undoneAt: string | null
-  createdAt: string
 }
 
 /** Nhập giao dịch từ CSV: chọn file → xem trước (chưa ghi gì) → xác nhận. Có hoàn tác theo đợt. */
@@ -187,7 +150,7 @@ export default function ImportDialog({
     setBusy(true)
     setError('')
     try {
-      const r = await post<{ alreadyImported: boolean; imported: number; skippedErrors: number; skippedDuplicates: number }>(
+      const r = await post<ImportCommitResult>(
         '/portfolio/import/commit',
         { csv, fileName, decimal, mapping, includeDuplicates: include, portfolioId: portfolioId || undefined },
       )
