@@ -20,6 +20,7 @@ import { NewsModule } from './news/news.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
+import { PracticeModule } from './practice/practice.module';
 import { ScreenerModule } from './screener/screener.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 
@@ -56,6 +57,7 @@ class HealthController {
     AlertsModule,
     EventsModule,
     ScreenerModule,
+    PracticeModule,
   ],
   controllers: [HealthController],
 })

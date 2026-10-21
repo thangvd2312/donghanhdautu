@@ -36,6 +36,7 @@ model User {
   dismissedActions DismissedAction[]
   eventReminder EventReminderSetting?
   savedScreens  SavedScreen[]
+  paperAccount  PaperAccount?
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -695,4 +696,40 @@ model SavedScreen {
 
   @@unique([userId, name])
   @@index([userId, updatedAt])
+}
+
+/// Tài khoản luyện tập bằng tiền ảo (FREE-07): tách hẳn khỏi danh mục thật (Holding/Transaction). Mỗi người một tài khoản
+model PaperAccount {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startCash Decimal      @db.Decimal(30, 2)
+  cash      Decimal      @db.Decimal(30, 2)
+  startedAt DateTime     @default(now())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  trades    PaperTrade[]
+}
+
+/// Lệnh giả lập đã khớp. Vị thế được suy ra từ các lệnh này (bình quân giá vốn), không lưu riêng
+model PaperTrade {
+  id          String       @id @default(cuid())
+  accountId   String
+  account     PaperAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  /// 'stock' | 'crypto'
+  assetType   String
+  /// Mã cổ phiếu, hoặc cặp coin dạng BTCUSDT
+  symbol      String
+  /// 'buy' | 'sell'
+  side        String
+  quantity    Decimal      @db.Decimal(30, 10)
+  /// VND / đơn vị tại lúc khớp
+  price       Decimal      @db.Decimal(30, 10)
+  priceSource String
+  fee         Decimal      @db.Decimal(30, 2)
+  tax         Decimal      @db.Decimal(30, 2)
+  cashAfter   Decimal      @db.Decimal(30, 2)
+  executedAt  DateTime     @default(now())
+
+  @@index([accountId, executedAt])
 }

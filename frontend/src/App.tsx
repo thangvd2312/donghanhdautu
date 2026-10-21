@@ -23,8 +23,10 @@ const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
 const PlanDetailPage = lazy(() => import('./pages/PlanDetailPage'))
 const PlansPage = lazy(() => import('./pages/PlansPage'))
 const SimulatePage = lazy(() => import('./pages/SimulatePage'))
+const RebalancePage = lazy(() => import('./pages/RebalancePage'))
 const ScreenerPage = lazy(() => import('./pages/ScreenerPage'))
 const PortfolioPage = lazy(() => import('./pages/PortfolioPage'))
+const PracticePage = lazy(() => import('./pages/PracticePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const StockPage = lazy(() => import('./pages/StockPage'))
 
@@ -87,6 +89,7 @@ export default function App() {
             <Route path="/crypto/:symbol" element={page(<CryptoPage />)} />
             <Route path="/screener" element={page(<ScreenerPage />)} />
             <Route path="/simulate" element={page(<SimulatePage />)} />
+            <Route path="/rebalance" element={page(<RebalancePage />)} />
             <Route path="/compare" element={page(<ComparePage />)} />
             <Route path="/news" element={page(<NewsPage />)} />
             <Route path="/plans" element={page(<PlansPage />)} />
@@ -94,6 +97,7 @@ export default function App() {
             <Route path="/events" element={page(<EventsPage />)} />
             <Route path="/income" element={page(<IncomePage />)} />
             <Route path="/goals" element={page(<GoalsPage />)} />
+            <Route path="/practice" element={page(<PracticePage />)} />
             <Route path="/settings" element={page(<SettingsPage />)} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -940,3 +940,59 @@ export interface SimulateResponse {
   missing: { assetType: string; symbol: string; reason: string }[]
   asOf: string
 }
+
+// ---- Tái cân bằng (POST /portfolio/rebalance) ----
+export type RebalanceMode = 'buy_only' | 'allow_sell'
+export type RebalanceLots = 'board' | 'odd'
+export interface RebalanceFees {
+  stockBuyPct?: number
+  stockSellPct?: number
+  stockSellTaxPct?: number
+  cryptoPct?: number
+}
+export interface RebalanceTarget {
+  assetType: AssetType
+  symbol: string
+  pct: number
+}
+export interface RebalanceRequest {
+  portfolioId?: string | null
+  targets: RebalanceTarget[]
+  newMoney: number
+  mode: RebalanceMode
+  lots: RebalanceLots
+  fees?: RebalanceFees
+}
+export interface RebalanceRow {
+  assetType: string
+  symbol: string
+  label: string
+  value: number
+  weightPct: number
+  targetPct: number
+}
+export interface RebalanceAction {
+  assetType: string
+  symbol: string
+  label: string
+  side: 'buy' | 'sell'
+  quantity: number
+  unit: 'cp' | 'coin' | 'lượng'
+  price: number
+  gross: number
+  fee: number
+  tax: number
+  net: number
+  reason: string
+}
+export interface RebalanceResponse {
+  before: { total: number; rows: RebalanceRow[] }
+  investable: number
+  actions: RebalanceAction[]
+  after: { total: number; rows: RebalanceRow[] }
+  cash: { start: number; newMoney: number; fromSales: number; spent: number; fees: number; left: number }
+  maxDeviationPct: { before: number; after: number }
+  notes: string[]
+  warnings: string[]
+  asOf: string
+}

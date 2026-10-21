@@ -101,6 +101,28 @@ const scenarios: Scenario[] = [
       await p.waitForTimeout(800)
     },
   },
+  {
+    name: 'rebalance',
+    path: '/rebalance',
+    act: async (p) => {
+      // Backend thật: thêm tiền bổ sung để tính ngay từ tỷ trọng "giữ như hiện tại"; kết quả (hoặc thông báo lỗi) phải hiện ra
+      await p.getByTestId('rb-sum').waitFor({ timeout: 25_000 })
+      await click(p, '+5tr')
+      await p.getByTestId('rb-result').or(p.getByTestId('rb-error')).first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(800)
+    },
+  },
+  {
+    name: 'rebalance-allow-sell',
+    path: '/rebalance',
+    act: async (p) => {
+      await p.getByTestId('rb-sum').waitFor({ timeout: 25_000 })
+      await click(p, 'Cho phép bán')
+      await click(p, '+10tr')
+      await p.getByTestId('rb-result').or(p.getByTestId('rb-error')).first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(800)
+    },
+  },
   { name: 'screener', path: '/screener' },
   { name: 'screener-picker', path: '/screener', act: (p) => click(p, 'Tự chọn điều kiện') },
   {
@@ -147,6 +169,30 @@ const scenarios: Scenario[] = [
   { name: 'stock-plan', path: '/stock/HPG', act: async (p) => { const b = p.getByRole('button', { name: 'Lập kế hoạch' }); if (await b.count()) await click(p, 'Lập kế hoạch') } },
   { name: 'crypto', path: '/crypto/BTC' },
   { name: 'crypto-alert', path: '/crypto/BTC', act: (p) => click(p, 'Cảnh báo giá') },
+  {
+    name: 'practice',
+    path: '/practice',
+    act: async (p) => {
+      // Backend thật (DB test): lần đầu mở tài khoản ảo, các lần sau vào thẳng tổng quan
+      const start = p.getByRole('button', { name: 'Bắt đầu', exact: true })
+      await start.or(p.getByTestId('practice-summary')).first().waitFor({ timeout: 25_000 })
+      if (await start.count()) await start.click()
+      await p.getByTestId('practice-summary').waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(600)
+    },
+  },
+  {
+    name: 'practice-order',
+    path: '/practice',
+    act: async (p) => {
+      const start = p.getByRole('button', { name: 'Bắt đầu', exact: true })
+      await start.or(p.getByTestId('practice-summary')).first().waitFor({ timeout: 25_000 })
+      if (await start.count()) await start.click()
+      await p.getByRole('button', { name: 'Mua', exact: true }).click()
+      await p.getByTestId('practice-pick-symbol').waitFor()
+      await p.waitForTimeout(600)
+    },
+  },
   { name: 'onboarding', path: '/onboarding' },
 ]
 

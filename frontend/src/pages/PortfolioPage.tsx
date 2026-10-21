@@ -1,4 +1,5 @@
 import TuneOutlined from '@mui/icons-material/TuneOutlined'
+import BalanceOutlined from '@mui/icons-material/BalanceOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowForward from '@mui/icons-material/ArrowForward'
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
@@ -166,15 +167,26 @@ export default function PortfolioPage() {
             </InfoTip>
           </Stack>
           {p && p.holdings.length > 0 && (
-            <Button
-              variant="outlined"
-              startIcon={<TuneOutlined />}
-              component={RouterLink}
-              to={pf ? `/simulate?p=${encodeURIComponent(pf)}` : '/simulate'}
-              sx={{ mt: 1.25, borderRadius: 99, width: { xs: '100%', sm: 'auto' } }}
-            >
-              Thử kịch bản
-            </Button>
+            <Stack direction="row" useFlexGap sx={{ mt: 1.25, gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<TuneOutlined />}
+                component={RouterLink}
+                to={pf ? `/simulate?p=${encodeURIComponent(pf)}` : '/simulate'}
+                sx={{ borderRadius: 99, flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+              >
+                Thử kịch bản
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<BalanceOutlined />}
+                component={RouterLink}
+                to={pf ? `/rebalance?p=${encodeURIComponent(pf)}` : '/rebalance'}
+                sx={{ borderRadius: 99, flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
+              >
+                Tái cân bằng
+              </Button>
+            </Stack>
           )}
         </Box>
       </Paper>
@@ -404,6 +416,9 @@ export default function PortfolioPage() {
         {p && !p.holdings.length && (
           <Typography color="text.secondary" sx={{ p: 4, textAlign: 'center' }}>
             Chưa có tài sản nào.
+            <Link component={RouterLink} to="/practice" sx={{ display: 'block', mt: 1, fontWeight: 600 }}>
+              Muốn tập trước? Thử mua bán bằng tiền ảo
+            </Link>
           </Typography>
         )}
         {!mobile && (

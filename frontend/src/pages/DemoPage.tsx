@@ -201,6 +201,9 @@ export default function DemoPage() {
                   >
                     Tôi đã có tài khoản
                   </Button>
+                  <Button component={RouterLink} to="/register?next=%2Fpractice" onClick={() => track('demo_signup_clicked', { target: 'register' })}>
+                    Tự luyện tập với tiền ảo
+                  </Button>
                 </Stack>
               </Paper>
               <Typography variant="caption" color="text.secondary">
