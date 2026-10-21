@@ -2,9 +2,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { AppModule } from './app.module';
+import { pagePreview, withPreview } from './common/link-preview';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -31,6 +32,9 @@ const CONTENT_TYPES: Record<string, string> = {
 function serveFrontend(app: NestExpressApplication, webDist: string) {
   const indexHtml = join(webDist, 'index.html');
   if (!existsSync(indexHtml)) return;
+  // Bản build cố định trong suốt vòng đời process (deploy là restart), nên đọc một lần
+  const indexTemplate = readFileSync(indexHtml, 'utf8');
+  const origin = (process.env.FRONTEND_ORIGIN ?? 'https://dautu.thangvu.io.vn').split(',')[0].trim();
 
   // Bản nén sẵn lúc build (.br / .gz): trả thẳng nếu trình duyệt nhận, không nén lại mỗi request.
   // Chỉ áp cho /assets nên luồng SSE của cố vấn không bị ảnh hưởng.
@@ -61,7 +65,8 @@ function serveFrontend(app: NestExpressApplication, webDist: string) {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
     res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(indexHtml);
+    // Thẻ xem trước khi chia sẻ link: điền tiêu đề / mô tả theo trang vì ứng dụng chat không chạy JavaScript
+    res.type('html').send(withPreview(indexTemplate, pagePreview(req.path, req.query), origin));
   });
 }
 
