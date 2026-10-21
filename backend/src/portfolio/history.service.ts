@@ -305,6 +305,9 @@ export class HistoryService implements OnApplicationBootstrap {
   /**
    * 23:50 mỗi ngày: lưu giá vàng (giá mua vào) và tỷ giá USDT/VND — hai thứ không có nguồn lịch sử.
    * Cổ phiếu và coin lấy lịch sử trực tiếp từ nguồn nên không cần lưu.
+   * Chỉ lưu giá còn mới theo nguồn: bộ nhớ đệm cũ (nguồn mất nhiều ngày) hay tỷ giá dự phòng không được ghi thành giá
+   * chốt của hôm nay, vì khi đọc lại ngày bản ghi được coi là ngày của giá. Ngày không có bản ghi sẽ dùng giá gần nhất
+   * trước đó và tự đánh dấu ước tính khi quá xa (MAX_GAP). Cron và lần chạy sau khi khởi động cùng quy tắc này.
    */
   @Cron('50 23 * * *', { timeZone: VN_TZ })
   async recordDaily() {
@@ -312,11 +315,11 @@ export class HistoryService implements OnApplicationBootstrap {
     const rows = [
       ...this.market
         .goldQuotes()
-        .filter((g) => g.currency === 'VND' && g.buy > 0)
+        .filter((g) => g.currency === 'VND' && g.buy > 0 && this.market.priceInfo('gold', g.code).status === 'fresh')
         .map((g) => ({ assetType: 'gold', symbol: g.code, close: g.buy, source: g.source })),
     ];
     const usdt = this.market.usdtVnd;
-    if (usdt.status !== 'fallback')
+    if (usdt.status === 'fresh')
       rows.push({ assetType: 'fx', symbol: 'USDTVND', close: usdt.rate, source: usdt.source });
     for (const r of rows) {
       await this.prisma.priceDaily.upsert({
@@ -325,7 +328,7 @@ export class HistoryService implements OnApplicationBootstrap {
         update: { close: r.close, source: r.source },
       });
     }
-    this.log.log(`Đã lưu ${rows.length} giá cuối ngày`);
+    this.log.log(`Đã lưu ${rows.length} giá cuối ngày (bỏ qua giá cũ / dự phòng)`);
   }
 }
 
