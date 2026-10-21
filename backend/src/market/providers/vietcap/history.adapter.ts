@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MarketDataCache } from '../../cache/market-data-cache';
+import { historyPolicy, vietcapKey } from '../../cache/vietcap-cache-policy';
 import { VietcapHttpClient } from './vietcap-http.client';
 
 export interface Candle {
@@ -15,11 +17,14 @@ export interface Candle {
 export class VietcapHistoryAdapter {
   private log = new Logger(VietcapHistoryAdapter.name);
 
-  constructor(private readonly http: VietcapHttpClient) {}
+  constructor(
+    private readonly http: VietcapHttpClient,
+    private readonly cache: MarketDataCache,
+  ) {}
 
   /** Nến ngày, mới nhất ở cuối. Dùng được cho cả mã cổ phiếu lẫn VNINDEX */
   async history(symbol: string, days: number): Promise<Candle[]> {
-    return this.http.cached(`hist:${symbol}:${days}`, 10 * 60_000, async () => {
+    return this.cache.get(vietcapKey('history', symbol, days), historyPolicy(), async () => {
       try {
         return await this.fromVietcap(symbol, days);
       } catch (e) {

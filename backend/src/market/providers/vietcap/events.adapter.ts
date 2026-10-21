@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { MarketDataCache } from '../../cache/market-data-cache';
+import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import { VietcapHttpClient } from './vietcap-http.client';
 
 export interface CorporateEvent {
@@ -61,7 +63,10 @@ interface VcEvent {
 /** Sự kiện quyền (cổ tức, phát hành, họp cổ đông) của một mã hoặc của toàn thị trường */
 @Injectable()
 export class VietcapEventsAdapter {
-  constructor(private readonly http: VietcapHttpClient) {}
+  constructor(
+    private readonly http: VietcapHttpClient,
+    private readonly cache: MarketDataCache,
+  ) {}
 
   /**
    * Sự kiện quyền làm thay đổi số cổ phiếu / tiền của cổ đông hiện hữu: cổ phiếu thưởng, cổ tức bằng cổ phiếu,
@@ -69,7 +74,7 @@ export class VietcapEventsAdapter {
    * (kind = cash, VND / cổ phiếu). Bỏ ESOP, phát hành riêng lẻ, chuyển đổi trái phiếu, quyền mua (phải tự mua).
    */
   async corporateEvents(symbol: string): Promise<CorporateEvent[]> {
-    return this.http.cached(`events:${symbol}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('events', symbol), VIETCAP_POLICIES.corporateEvents, async () => {
       const ymd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
       const res = await this.http.get<{ data: { content?: VcEvent[] } | VcEvent[] | null }>(
         'iq',
@@ -104,10 +109,10 @@ export class VietcapEventsAdapter {
 
   /**
    * Sự kiện quyền (DIV, ISS, AGME, EGME) của TOÀN thị trường trong khoảng ngày, một lần gọi (phân trang nếu cần),
-   * cache 1 giờ theo khoảng ngày. Lỗi nguồn thì ném lỗi — nơi gọi quyết định hiển thị "chưa lấy được".
+   * cache 1 giờ theo khoảng ngày (bền qua khởi động lại, dùng tạm bản cũ tối đa 3 ngày khi nguồn lỗi). Lỗi nguồn thì ném lỗi — nơi gọi quyết định hiển thị "chưa lấy được".
    */
   async marketEvents(fromDate: string, toDate: string): Promise<MarketEvents> {
-    return this.http.cached(`market-events:${fromDate}:${toDate}`, 3600_000, async () => {
+    return this.cache.get(vietcapKey('marketEvents', fromDate, toDate), VIETCAP_POLICIES.marketEvents, async () => {
       const ymd = (d: string) => d.replace(/-/g, '');
       const events: VcMarketEvent[] = [];
       for (let page = 0; page < 10; page++) {

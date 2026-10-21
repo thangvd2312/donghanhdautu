@@ -1,3 +1,5 @@
+import type { BreakerOptions } from './circuit-breaker';
+
 /** Các máy chủ dữ liệu mà bộ adapter Vietcap gọi tới; mỗi máy chủ có bộ giới hạn tốc độ riêng */
 export type VietcapHost = 'trading' | 'iq' | 'dnse';
 
@@ -15,6 +17,8 @@ export interface VietcapHttpOptions {
   /** Chờ trước lần thử lại đầu tiên; mỗi lần sau nhân đôi */
   retryBaseDelayMs: number;
   timeoutMs: number;
+  /** Ngắt mạch theo máy chủ khi lỗi liên tiếp */
+  breaker: BreakerOptions;
 }
 
 export const VIETCAP_HTTP_OPTIONS = Symbol('VIETCAP_HTTP_OPTIONS');
@@ -30,6 +34,8 @@ export const DEFAULT_HTTP_OPTIONS: VietcapHttpOptions = {
   maxAttempts: 3,
   retryBaseDelayMs: 500,
   timeoutMs: 15_000,
+  // 5 lần lỗi liên tiếp thì ngắt 30s, rồi 1 phút, 2 phút, … tối đa 5 phút giữa các lần thăm dò
+  breaker: { failureThreshold: 5, baseCooldownMs: 30_000, maxCooldownMs: 300_000 },
 };
 
 function positive(raw: string | undefined, fallback: number): number {

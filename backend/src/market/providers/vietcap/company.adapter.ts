@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { MarketDataCache } from '../../cache/market-data-cache';
+import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import type { StatRow } from '../../fundamentals';
 import { stripHtml } from './html';
 import { pct, round } from './numbers';
@@ -7,10 +9,13 @@ import { VietcapHttpClient } from './vietcap-http.client';
 /** Hồ sơ doanh nghiệp và chỉ số tài chính TTM theo quý */
 @Injectable()
 export class VietcapCompanyAdapter {
-  constructor(private readonly http: VietcapHttpClient) {}
+  constructor(
+    private readonly http: VietcapHttpClient,
+    private readonly cache: MarketDataCache,
+  ) {}
 
   async company(symbol: string) {
-    return this.http.cached(`company:${symbol}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('company', symbol), VIETCAP_POLICIES.company, async () => {
       const res = await this.http.get<{ data: Record<string, unknown> | null }>('iq', `/company/${symbol}`);
       const d = res.data;
       if (!d) return null;
@@ -48,7 +53,7 @@ export class VietcapCompanyAdapter {
 
   /** Chỉ số tài chính TTM theo quý, 8 quý gần nhất */
   async ratios(symbol: string) {
-    return this.http.cached(`ratios:${symbol}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('ratios', symbol), VIETCAP_POLICIES.ratios, async () => {
       // quarter = 5 là số liệu cả năm, trùng với quý 4 — bỏ đi
       const rows = (await this.statsRaw(symbol))
         .filter((r) => Number(r.quarter) >= 1 && Number(r.quarter) <= 4)
@@ -95,7 +100,7 @@ export class VietcapCompanyAdapter {
 
   /** Bảng P/E, P/B… TTM theo từng quý (từ 2018) — dùng chung cho ratios() và dải định giá lịch sử */
   async statsRaw(symbol: string): Promise<(StatRow & Record<string, number | string | null>)[]> {
-    return this.http.cached(`stats:${symbol}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('stats', symbol), VIETCAP_POLICIES.stats, async () => {
       const res = await this.http.get<{ data: (StatRow & Record<string, number | string | null>)[] | null }>(
         'iq',
         `/company/${symbol}/statistics-financial`,

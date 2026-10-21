@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { MarketDataCache } from '../../cache/market-data-cache';
+import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import type { CompanyKind } from '../../compare';
 import { cashQuality, netDebt } from '../../fundamentals';
 import type { StatementRow } from '../../fundamentals';
@@ -13,12 +15,13 @@ import { VietcapHttpClient } from './vietcap-http.client';
 export class VietcapStatementsAdapter {
   constructor(
     private readonly http: VietcapHttpClient,
+    private readonly cache: MarketDataCache,
     private readonly companies: VietcapCompanyAdapter,
   ) {}
 
   /** Báo cáo KQKD: các dòng cấp 1, 5 năm + 6 quý gần nhất, đơn vị tỷ VND */
   async incomeStatement(symbol: string) {
-    return this.http.cached(`is:${symbol}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('statements', 'is', symbol), VIETCAP_POLICIES.statements, async () => {
       const [meta, data] = await Promise.all([this.metrics(symbol), this.statementRows(symbol, 'INCOME_STATEMENT')]);
       const lines = meta.INCOME_STATEMENT.filter(
         (m): m is VcMetric & { field: string } =>
@@ -48,7 +51,7 @@ export class VietcapStatementsAdapter {
   }
 
   private metrics(symbol: string) {
-    return this.http.cached(`metrics:${symbol}`, 24 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('metrics', symbol), VIETCAP_POLICIES.metrics, async () => {
       const res = await this.http.get<{ data: Record<string, VcMetric[]> }>(
         'iq',
         `/company/${symbol}/financial-statement/metrics`,
@@ -59,7 +62,7 @@ export class VietcapStatementsAdapter {
 
   /** Số liệu một báo cáo tài chính: năm tăng dần, quý (riêng từng quý, không cộng dồn) tăng dần */
   private statementRows(symbol: string, section: string) {
-    return this.http.cached(`fs:${section}:${symbol}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('statements', 'fs', section, symbol), VIETCAP_POLICIES.statements, async () => {
       const res = await this.http.get<{
         data: { years: Record<string, number>[]; quarters: Record<string, number>[] };
       }>('iq', `/company/${symbol}/financial-statement?section=${section}`);
@@ -111,11 +114,28 @@ export class VietcapStatementsAdapter {
     });
   }
 
-  /** Loại doanh nghiệp quyết định cách đọc báo cáo tài chính */
+  /** Loại doanh nghiệp quyết định cách đọc báo cáo tài chính; hồ sơ doanh nghiệp lỗi thì coi như doanh nghiệp thường */
   async kind(symbol: string): Promise<CompanyKind> {
+    return this.classify(symbol, (load) => safe('company', load, null));
+  }
+
+  /**
+   * Như kind() nhưng để lỗi nguồn nổi lên: dùng bên trong các hàm có kết quả được lưu cache, để một lần nguồn lỗi
+   * không bị lưu thành báo cáo sai hình dạng (doanh nghiệp thường thay vì ngân hàng) trong nhiều giờ.
+   */
+  private kindStrict(symbol: string): Promise<CompanyKind> {
+    return this.classify(symbol, (load) => load());
+  }
+
+  private async classify(
+    symbol: string,
+    loadCompany: (
+      load: () => ReturnType<VietcapCompanyAdapter['company']>,
+    ) => ReturnType<VietcapCompanyAdapter['company']>,
+  ): Promise<CompanyKind> {
     const [meta, company] = await Promise.all([
       this.metrics(symbol),
-      safe('company', () => this.companies.company(symbol), null),
+      loadCompany(() => this.companies.company(symbol)),
     ]);
     if (company?.isBank || (meta.BALANCE_SHEET ?? []).some((m) => m.field === 'bsb103')) return 'bank';
     if (company?.companyType === 'CK') return 'securities';
@@ -125,8 +145,8 @@ export class VietcapStatementsAdapter {
 
   /** Bảng cân đối kế toán: 5 năm + 4 quý gần nhất (số dư cuối kỳ), tỷ VND, kèm nợ vay ròng */
   async balanceSheet(symbol: string) {
-    return this.http.cached(`bs:${symbol}`, 6 * 3600_000, async () => {
-      const kind = await this.kind(symbol);
+    return this.cache.get(vietcapKey('statements', 'bs', symbol), VIETCAP_POLICIES.statements, async () => {
+      const kind = await this.kindStrict(symbol);
       // Chứng khoán / bảo hiểm có mẫu báo cáo riêng: lấy các dòng cấp 1, không tính chỉ tiêu nợ vay ròng
       const k = await this.keyLines(
         symbol,
@@ -156,8 +176,8 @@ export class VietcapStatementsAdapter {
 
   /** Lưu chuyển tiền tệ: 5 năm + 4 quý gần nhất + tổng 4 quý (TTM), tỷ VND, kèm dòng tiền tự do */
   async cashFlow(symbol: string) {
-    return this.http.cached(`cf:${symbol}`, 6 * 3600_000, async () => {
-      const kind = await this.kind(symbol);
+    return this.cache.get(vietcapKey('statements', 'cf', symbol), VIETCAP_POLICIES.statements, async () => {
+      const kind = await this.kindStrict(symbol);
       if (kind !== 'corporate') return { type: KIND_LABEL[kind], note: KIND_NOTE[kind] };
       const k = await this.keyLines(symbol, 'CASH_FLOW', CORP_CF);
       const derive = (r: StatementRow): StatementRow => {

@@ -1,4 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { createHash } from 'crypto';
+import { MarketDataCache } from '../../cache/market-data-cache';
+import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import { VietcapHttpClient } from './vietcap-http.client';
 
 /** Tiêu chí lọc của Vietcap (rút gọn phần dùng tới) */
@@ -51,14 +54,22 @@ export interface VcScreenPage {
   totalPages: number;
 }
 
+/** Khoá cache theo nội dung yêu cầu: băm để khoá ngắn và không chứa ký tự lạ */
+function requestHash(body: VcScreenRequest): string {
+  return createHash('sha1').update(JSON.stringify(body)).digest('hex');
+}
+
 /** Bộ lọc cổ phiếu của Vietcap iq */
 @Injectable()
 export class VietcapScreeningAdapter {
-  constructor(private readonly http: VietcapHttpClient) {}
+  constructor(
+    private readonly http: VietcapHttpClient,
+    private readonly cache: MarketDataCache,
+  ) {}
 
   /** Tiêu chí lọc của Vietcap (nhãn ngành tiếng Việt, kỳ số liệu của các chỉ tiêu tăng trưởng); đổi rất ít nên cache 1 ngày */
   async screeningCriteria(): Promise<VcScreenCriterion[]> {
-    return this.http.cached('screening:criteria', 24 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('screening', 'criteria'), VIETCAP_POLICIES.screeningCriteria, async () => {
       const res = await this.http.get<{ data: VcScreenCriterion[] | null }>('iq', '/screening/criteria');
       if (!Array.isArray(res.data)) throw new Error('Vietcap screening criteria: dữ liệu rỗng');
       return res.data;
@@ -67,20 +78,24 @@ export class VietcapScreeningAdapter {
 
   /**
    * Một trang kết quả lọc (v1 /screening/paging). Nguồn hay trả rỗng/lỗi thoáng qua, nên thử lại một lần.
-   * Cache 10 phút theo nội dung yêu cầu.
+   * Cache 10 phút theo nội dung yêu cầu (băm SHA-1 của JSON yêu cầu làm khoá); lỗi nguồn thì dùng tạm bản cũ tối đa 1 giờ.
    */
   async screeningPage(body: VcScreenRequest): Promise<VcScreenPage> {
-    return this.http.cached(`screening:${JSON.stringify(body)}`, 10 * 60_000, async () => {
-      const call = () =>
-        this.http.post<{ status: number; exception: string | null; data: VcScreenPage | null }>(
-          'iq',
-          '/screening/paging',
-          body,
-        );
-      let res = await call().catch(() => null);
-      if (res?.status !== 200 || !res.data) res = await call();
-      if (res.status !== 200 || !res.data) throw new Error(`Vietcap screening ${res.status} ${res.exception ?? ''}`);
-      return res.data;
-    });
+    return this.cache.get(
+      vietcapKey('screening', 'page', requestHash(body)),
+      VIETCAP_POLICIES.screeningPage,
+      async () => {
+        const call = () =>
+          this.http.post<{ status: number; exception: string | null; data: VcScreenPage | null }>(
+            'iq',
+            '/screening/paging',
+            body,
+          );
+        let res = await call().catch(() => null);
+        if (res?.status !== 200 || !res.data) res = await call();
+        if (res.status !== 200 || !res.data) throw new Error(`Vietcap screening ${res.status} ${res.exception ?? ''}`);
+        return res.data;
+      },
+    );
   }
 }

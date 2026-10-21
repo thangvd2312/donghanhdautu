@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { mkdir, readFile, writeFile } from 'fs/promises';
-import { dirname, join } from 'path';
+import { MarketDataCache } from '../../cache/market-data-cache';
+import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import { VietcapQuotesAdapter } from './quotes.adapter';
 import { VietcapHttpClient } from './vietcap-http.client';
 
-const SYMBOLS_FILE = join(process.cwd(), 'data', 'symbols.json');
+/** Bản Map dựng từ danh sách giữ trong tiến trình tối đa chừng này rồi hỏi lại cache (rẻ: thường trúng L1/L2) */
+const MAP_TTL_MS = 3600_000;
 
 export interface SymbolInfo {
   symbol: string;
@@ -17,39 +18,34 @@ export interface SymbolInfo {
 @Injectable()
 export class VietcapSymbolsAdapter {
   private log = new Logger(VietcapSymbolsAdapter.name);
-  private symbols: Map<string, SymbolInfo> | null = null;
+  private symbols: { map: Map<string, SymbolInfo>; builtAt: number } | null = null;
 
   constructor(
     private readonly http: VietcapHttpClient,
+    private readonly cache: MarketDataCache,
     private readonly quotes: VietcapQuotesAdapter,
   ) {}
 
   /**
-   * Danh sách toàn bộ mã niêm yết. Lưu xuống đĩa mỗi lần tải được, để khi API lỗi
-   * (đã gặp: endpoint GET của Vietcap trả 500 cả buổi) vẫn tìm kiếm được.
+   * Danh sách toàn bộ mã niêm yết, lưu bền trong PostgreSQL (mới 1 ngày, dùng tạm tới 14 ngày khi API lỗi — đã gặp:
+   * endpoint GET của Vietcap trả 500 cả buổi) nên khởi động lại không phải gọi lại và vẫn tìm kiếm được.
    */
   async allSymbols(): Promise<Map<string, SymbolInfo>> {
-    if (this.symbols) return this.symbols;
-    try {
+    if (this.symbols && Date.now() - this.symbols.builtAt < MAP_TTL_MS) return this.symbols.map;
+    const list = await this.cache.get(vietcapKey('symbols', 'all'), VIETCAP_POLICIES.symbols, async () => {
       const rows = await this.http.get<{ symbol: string; organName: string; board: string; type: string }[]>(
         'trading',
         '/price/symbols/getAll',
       );
-      const list = rows
+      const fetched: SymbolInfo[] = rows
         .filter((r) => ['HSX', 'HNX', 'UPCOM'].includes(r.board))
         .map((r) => ({ symbol: r.symbol, name: r.organName, board: r.board, type: r.type }));
-      await mkdir(dirname(SYMBOLS_FILE), { recursive: true });
-      await writeFile(SYMBOLS_FILE, JSON.stringify(list));
-      this.symbols = new Map(list.map((s) => [s.symbol, s]));
-      this.log.log(`Đã tải ${this.symbols.size} mã chứng khoán`);
-    } catch (e) {
-      const disk = await readFile(SYMBOLS_FILE, 'utf8').catch(() => null);
-      if (!disk) throw e;
-      const list = JSON.parse(disk) as SymbolInfo[];
-      this.symbols = new Map(list.map((s) => [s.symbol, s]));
-      this.log.warn(`API danh sách mã lỗi, dùng bản lưu trên đĩa (${list.length} mã)`);
-    }
-    return this.symbols;
+      this.log.log(`Đã tải ${fetched.length} mã chứng khoán`);
+      return fetched;
+    });
+    const map = new Map(list.map((s) => [s.symbol, s]));
+    this.symbols = { map, builtAt: Date.now() };
+    return map;
   }
 
   /** Kiểm tra một mã có tồn tại không mà không cần danh sách đầy đủ (dùng API bảng giá) */
@@ -61,7 +57,7 @@ export class VietcapSymbolsAdapter {
   }
 
   async group(group: string): Promise<string[]> {
-    return this.http.cached(`group:${group}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('group', group), VIETCAP_POLICIES.group, async () => {
       const rows = await this.http.get<{ symbol: string }[]>('trading', `/price/symbols/getByGroup?group=${group}`);
       return rows.map((r) => r.symbol);
     });

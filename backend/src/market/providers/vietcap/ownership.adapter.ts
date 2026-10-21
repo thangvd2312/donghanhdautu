@@ -1,15 +1,20 @@
 import { Injectable } from '@nestjs/common';
+import { MarketDataCache } from '../../cache/market-data-cache';
+import { VIETCAP_POLICIES, vietcapKey } from '../../cache/vietcap-cache-policy';
 import { round } from './numbers';
 import { VietcapHttpClient } from './vietcap-http.client';
 
 /** Cổ đông lớn và giao dịch của người nội bộ */
 @Injectable()
 export class VietcapOwnershipAdapter {
-  constructor(private readonly http: VietcapHttpClient) {}
+  constructor(
+    private readonly http: VietcapHttpClient,
+    private readonly cache: MarketDataCache,
+  ) {}
 
   /** Cổ đông lớn còn cập nhật (bỏ các bản ghi cũ hơn 18 tháng so với kỳ công bố mới nhất) */
   async shareholders(symbol: string) {
-    return this.http.cached(`sh:${symbol}`, 12 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('ownership', 'sh', symbol), VIETCAP_POLICIES.shareholders, async () => {
       const res = await this.http.get<{ data: VcShareholder[] | null }>('iq', `/company/${symbol}/shareholder`);
       const rows = (res.data ?? []).filter((r) => r.publicDate && r.percentage);
       if (!rows.length) return null;
@@ -42,7 +47,7 @@ export class VietcapOwnershipAdapter {
 
   /** Giao dịch của người nội bộ và người liên quan đã hoàn tất trong 12 tháng (không tính cổ phiếu thưởng/ESOP) */
   async insiderTrades(symbol: string) {
-    return this.http.cached(`insider:${symbol}`, 6 * 3600_000, async () => {
+    return this.cache.get(vietcapKey('ownership', 'insider', symbol), VIETCAP_POLICIES.insiderTrades, async () => {
       const res = await this.http.get<{ data: { content: VcInsider[] } | null }>(
         'iq',
         `/company/${symbol}/insider-transaction?page=0&size=200`,

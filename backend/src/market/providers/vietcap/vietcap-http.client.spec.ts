@@ -1,6 +1,6 @@
 import { DEFAULT_HTTP_OPTIONS } from './vietcap.config';
 import type { VietcapHttpOptions } from './vietcap.config';
-import { VietcapHttpClient } from './vietcap-http.client';
+import { CircuitOpenError, VietcapHttpClient } from './vietcap-http.client';
 
 const reply = (status: number, body: unknown = {}) =>
   Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) } as Response);
@@ -109,15 +109,59 @@ describe('VietcapHttpClient', () => {
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
-  it('cached: trong TTL dùng lại kết quả, hết TTL thì tải lại', async () => {
-    jest.useFakeTimers();
-    const client = new VietcapHttpClient(options);
-    const load = jest.fn().mockResolvedValueOnce('một').mockResolvedValueOnce('hai');
+  describe('ngắt mạch theo máy chủ', () => {
+    const breakerOptions: VietcapHttpOptions = {
+      ...options,
+      maxAttempts: 1,
+      breaker: { failureThreshold: 3, baseCooldownMs: 1000, maxCooldownMs: 4000 },
+    };
 
-    await expect(client.cached('k', 1000, load)).resolves.toBe('một');
-    await expect(client.cached('k', 1000, load)).resolves.toBe('một');
-    jest.setSystemTime(Date.now() + 1001);
-    await expect(client.cached('k', 1000, load)).resolves.toBe('hai');
-    expect(load).toHaveBeenCalledTimes(2);
+    it('lỗi liên tiếp thì mở mạch: các request sau không gọi nguồn mà ném CircuitOpenError', async () => {
+      jest.useFakeTimers();
+      const fetch = jest.spyOn(global, 'fetch').mockImplementation(() => reply(503));
+      const client = new VietcapHttpClient(breakerOptions);
+
+      for (let i = 0; i < 3; i++) await expect(client.get('iq', '/x')).rejects.toThrow('Vietcap 503');
+      await expect(client.get('iq', '/x')).rejects.toBeInstanceOf(CircuitOpenError);
+      expect(fetch).toHaveBeenCalledTimes(3);
+      // máy chủ khác không bị ảnh hưởng
+      await expect(client.get('trading', '/x')).rejects.toThrow('Vietcap 503');
+      expect(fetch).toHaveBeenCalledTimes(4);
+    });
+
+    it('404 là nguồn vẫn trả lời: không tính vào chuỗi lỗi', async () => {
+      const fetch = jest.spyOn(global, 'fetch').mockImplementation(() => reply(404));
+      const client = new VietcapHttpClient(breakerOptions);
+      for (let i = 0; i < 6; i++) await expect(client.get('iq', '/x')).rejects.toThrow('Vietcap 404');
+      expect(fetch).toHaveBeenCalledTimes(6);
+    });
+
+    it('hết thời gian chờ thì thăm dò đúng một request; thành công thì đóng mạch', async () => {
+      jest.useFakeTimers();
+      const fetch = jest.spyOn(global, 'fetch').mockImplementation(() => reply(503));
+      const client = new VietcapHttpClient(breakerOptions);
+      for (let i = 0; i < 3; i++) await client.get('iq', '/x').catch(() => undefined);
+
+      await jest.advanceTimersByTimeAsync(1000);
+      fetch.mockImplementation(() => reply(200, { ok: true }));
+      await expect(client.get('iq', '/x')).resolves.toEqual({ ok: true });
+      await expect(client.get('iq', '/x')).resolves.toEqual({ ok: true });
+      expect(fetch).toHaveBeenCalledTimes(5);
+    });
+
+    it('thăm dò hỏng thì mở lại với thời gian chờ gấp đôi', async () => {
+      jest.useFakeTimers();
+      const fetch = jest.spyOn(global, 'fetch').mockImplementation(() => reply(503));
+      const client = new VietcapHttpClient(breakerOptions);
+      for (let i = 0; i < 3; i++) await client.get('iq', '/x').catch(() => undefined);
+
+      await jest.advanceTimersByTimeAsync(1000);
+      await expect(client.get('iq', '/x')).rejects.toThrow('Vietcap 503'); // thăm dò hỏng
+      await jest.advanceTimersByTimeAsync(1999);
+      await expect(client.get('iq', '/x')).rejects.toBeInstanceOf(CircuitOpenError);
+      await jest.advanceTimersByTimeAsync(1);
+      await expect(client.get('iq', '/x')).rejects.toThrow('Vietcap 503'); // thăm dò lần hai
+      expect(fetch).toHaveBeenCalledTimes(5);
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { passthroughCache } from '../../test-utils/market-cache';
 import { DEFAULT_HTTP_OPTIONS, VietcapEventsAdapter } from './vietcap';
 import { VietcapHttpClient } from './vietcap/vietcap-http.client';
 import { VndirectProvider } from './vndirect.provider';
@@ -64,7 +65,10 @@ describe('VietcapEventsAdapter.corporateEvents', () => {
         },
       }),
     );
-    const events = await new VietcapEventsAdapter(new VietcapHttpClient(DEFAULT_HTTP_OPTIONS)).corporateEvents('FPT');
+    const events = await new VietcapEventsAdapter(
+      new VietcapHttpClient(DEFAULT_HTTP_OPTIONS),
+      passthroughCache(),
+    ).corporateEvents('FPT');
     expect(events.map((e) => [e.kind, e.exDate, e.ratio, e.valuePerShare, e.payoutDate])).toEqual([
       ['cash', '2026-05-28', null, 1000, '2026-06-10'],
       ['stock', '2026-09-21', 0.1, null, null],

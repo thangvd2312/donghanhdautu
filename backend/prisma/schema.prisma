@@ -733,3 +733,20 @@ model PaperTrade {
 
   @@index([accountId, executedAt])
 }
+
+/// Bộ nhớ đệm dữ liệu thị trường (không phải thời gian thực), bền qua lần khởi động lại. Khoá có không gian tên và phiên bản,
+/// vd. `vietcap:v1:ratios:FPT`; đổi cách ánh xạ dữ liệu thì tăng phiên bản để bỏ qua bản cũ.
+model MarketCache {
+  key        String   @id
+  /// Giá trị đã chuẩn hoá thành JSON (giới hạn kích thước ở tầng service)
+  value      Json
+  /// Nguồn dữ liệu, vd. 'vietcap'
+  source     String
+  fetchedAt  DateTime
+  /// Hết hạn "còn mới": sau mốc này phải tải lại
+  expiresAt  DateTime
+  /// Hết hạn "dùng tạm khi nguồn lỗi": sau mốc này dòng bị dọn
+  staleUntil DateTime
+
+  @@index([staleUntil])
+}
