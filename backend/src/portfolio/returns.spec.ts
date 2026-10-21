@@ -64,7 +64,7 @@ describe('so với VN-Index', () => {
     ['2026-07-31', 1260],
   ]);
   const b = { name: 'VN-Index', closes, current: null, today: '2026-10-20' };
-  const period = { start: '2026-07-02', end: '2026-07-31', twrPct: 8, isEstimate: false, days: 30 };
+  const period = { start: '2026-07-02', end: '2026-07-31', twrPct: 8, isEstimate: false, days: 30, dividends: 0 };
 
   it('cùng kỳ, cùng ngày mốc: tính chênh lệch điểm % và được kết luận', () => {
     const r = compareBenchmark(period, '2026-07-01', b, 0.9);
@@ -72,6 +72,24 @@ describe('so với VN-Index', () => {
     expect(r.excessPts).toBeCloseTo(3);
     expect(r.conclusive).toBe(true);
     expect(r.notes.join(' ')).toContain('không gồm cổ tức');
+  });
+
+  it('kỳ có cổ tức: TWR gồm cổ tức còn VN-Index là chỉ số giá nên chỉ tham khảo, không kết luận hơn / kém', () => {
+    // VN-Index đi ngang, TWR +5% nhờ cổ tức: không được nói "hơn 5 điểm"
+    const flat = new Map([
+      ['2026-07-01', 1200],
+      ['2026-07-31', 1200],
+    ]);
+    const r = compareBenchmark(
+      { ...period, twrPct: 5, dividends: 2_000_000 },
+      '2026-07-01',
+      { ...b, closes: flat },
+      0.9,
+    );
+    expect(r.excessPts).toBeCloseTo(5);
+    expect(r.conclusive).toBe(false);
+    expect(r.notes.join(' ')).toContain('cổ tức');
+    expect(r.notes.join(' ')).toContain('không kết luận');
   });
 
   it('kết quả ước tính, kỳ quá ngắn hoặc ít cổ phiếu VN thì không kết luận', () => {

@@ -43,6 +43,8 @@ export interface HistoryPoint {
    * ước tính): chưa tách được phần lãi/lỗ có từ trước khi theo dõi, nên mọi kỳ chứa ngày khai báo chỉ là ước tính.
    */
   uncertainOpenings: string[];
+  /** Cổ tức nhận được luỹ kế (VND, sau thuế / phí); lợi suất danh mục gồm phần này, chỉ số giá thì không */
+  dividends: number;
   status: DayStatus;
   /** Tài sản thiếu giá trong ngày */
   missing: string[];
@@ -121,6 +123,7 @@ export function buildHistory(input: HistoryInput): HistoryPoint[] {
       profit: value - netContributions,
       preTrackingGain,
       uncertainOpenings: [...uncertainOpenings],
+      dividends: ledger.dividends.toNumber(),
       status: missing.length ? 'partial' : estimated ? 'estimated' : 'complete',
       missing,
     });
@@ -149,6 +152,8 @@ export interface PeriodResult {
    * Chỉ tính khi kỳ từ MIN_XIRR_DAYS ngày (quy năm từ kỳ ngắn dễ phóng đại).
    */
   xirrPct: number | null;
+  /** Cổ tức nhận được trong kỳ (VND): có trong lợi suất danh mục nhưng không có trong chỉ số giá */
+  dividends: number;
   /** Số ngày của kỳ */
   days: number;
   /** Ngày của mốc đầu kỳ (giá trị chốt cuối ngày này); so với chỉ số thị trường từ đúng mốc này */
@@ -173,6 +178,7 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
         value: 0,
         netContributions: 0,
         preTrackingGain: 0,
+        dividends: 0,
         uncertainOpenings: [] as string[],
         status: 'complete' as DayStatus,
       }
@@ -191,8 +197,9 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
     prevContrib = flowBase(p);
     if (!flow) continue;
     netFlows += flow;
-    // Dòng tiền coi như vào đầu ngày p (giá trị chốt cuối ngày): có mặt từ ngày p tới cuối kỳ
-    weighted += T > 0 ? (flow * (daysBetween(p.date, end.date) + 1)) / T : 0;
+    // Cùng giả định với TWR: nạp vào đầu ngày p (có mặt từ ngày p tới cuối kỳ), rút cuối ngày p (sau khi bán xong)
+    const daysPresent = daysBetween(p.date, end.date) + (flow > 0 ? 1 : 0);
+    weighted += T > 0 ? (flow * daysPresent) / T : 0;
   }
   const profit = end.value - base.value - netFlows;
   const denominator = base.value + weighted;
@@ -223,10 +230,15 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
   if (someDayUncertain && !edgesUncertain) {
     notes.push('Có ngày trong kỳ dùng giá ước tính / thiếu giá nên TWR chỉ là ước tính.');
   }
-  const isEstimate = edgesUncertain || newUncertain.length > 0 || someDayUncertain;
   const twr = timeWeightedReturn(base, body);
+  const isEstimate = edgesUncertain || newUncertain.length > 0 || someDayUncertain || twr.unresolvedDays > 0;
+  if (twr.unresolvedDays > 0) {
+    notes.push(
+      'Có ngày bán hết / rút hết tiền mà dữ liệu theo ngày không đủ chi tiết để tách lợi nhuận trước khi rút, nên chưa tính được TWR cho kỳ này.',
+    );
+  }
 
-  // XIRR: vốn đầu kỳ và dòng tiền (vào đầu ngày = cuối ngày trước) âm, giá trị cuối kỳ dương
+  // XIRR: vốn đầu kỳ và dòng tiền âm, giá trị cuối kỳ dương. Nạp vào đầu ngày (= cuối ngày trước), rút cuối ngày.
   let xirrPct: number | null = null;
   if (T >= MIN_XIRR_DAYS) {
     const flows = [{ t: 0, amount: -base.value }];
@@ -234,7 +246,7 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
     for (const p of body) {
       const flow = flowBase(p) - prev;
       prev = flowBase(p);
-      if (flow) flows.push({ t: Math.max(0, daysBetween(base.date, p.date) - 1), amount: -flow });
+      if (flow) flows.push({ t: Math.max(0, daysBetween(base.date, p.date) - (flow > 0 ? 1 : 0)), amount: -flow });
     }
     flows.push({ t: T, amount: end.value });
     xirrPct = xirr(flows);
@@ -252,6 +264,7 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
     returnPct,
     twrPct: twr.pct,
     xirrPct,
+    dividends: end.dividends - base.dividends,
     days: T,
     baseDate: base.date,
     method:
@@ -267,23 +280,34 @@ export const MIN_XIRR_DAYS = 90;
 type FlowPoint = { date: string; value: number; netContributions: number; preTrackingGain: number };
 
 /**
- * TWR: lợi suất ngày d = giá trị cuối ngày d / (giá trị cuối ngày trước + dòng tiền ngày d) − 1 (dòng tiền coi như vào
- * đầu ngày, cùng giả định với Modified Dietz). Ngày chưa có vốn (mẫu số ≤ 0) bỏ qua.
+ * TWR: nối lợi suất từng ngày. Dòng tiền ròng của ngày d (f):
+ * - f ≥ 0 (nạp): coi như vào đầu ngày, lợi suất = giá trị cuối ngày / (giá trị cuối ngày trước + f) − 1;
+ * - f < 0 (rút): coi như rút cuối ngày, sau khi bán xong, lợi suất = (giá trị cuối ngày + |f|) / giá trị cuối ngày
+ *   trước − 1. Nhờ vậy ngày bán rồi rút hết vẫn tính đủ lợi nhuận của ngày đó.
+ * Modified Dietz và XIRR dùng cùng giả định thời điểm nạp / rút.
+ * Ngày chưa có vốn và không có gì xảy ra (vốn đầu ngày = 0, không dòng tiền, giá trị cuối = 0) bỏ qua. Ngày có vốn hoặc
+ * dòng tiền mà không có mẫu số hợp lệ (vd rút nhiều hơn giá trị đầu ngày: dữ liệu theo ngày không cho biết thứ tự
+ * trong ngày) đếm vào `unresolvedDays` và `pct` là null — không bỏ ngày âm thầm.
  */
 export function timeWeightedReturn(base: FlowPoint, body: FlowPoint[]) {
   const flowBase = (p: FlowPoint) => p.netContributions + p.preTrackingGain;
   let growth = 1;
   let days = 0;
+  let unresolvedDays = 0;
   let prev = base;
   for (const p of body) {
-    const invested = prev.value + (flowBase(p) - flowBase(prev));
-    if (invested > 0) {
-      growth *= p.value / invested;
+    const flow = flowBase(p) - flowBase(prev);
+    const denominator = flow < 0 ? prev.value : prev.value + flow;
+    const endValue = flow < 0 ? p.value - flow : p.value;
+    if (denominator > 0) {
+      growth *= endValue / denominator;
       days++;
+    } else if (flow !== 0 || p.value !== 0 || prev.value !== 0) {
+      unresolvedDays++;
     }
     prev = p;
   }
-  return { pct: days ? (growth - 1) * 100 : null, days };
+  return { pct: days && !unresolvedDays ? (growth - 1) * 100 : null, days, unresolvedDays };
 }
 
 /**
@@ -323,10 +347,11 @@ export interface BenchmarkInput {
 
 /**
  * So TWR của danh mục với chỉ số cùng kỳ (cùng ngày đầu / cuối, cùng đồng tiền VND). Chỉ kết luận vượt / thua thị
- * trường khi kết quả danh mục không phải ước tính, kỳ từ 30 ngày và có giá chỉ số sát hai đầu kỳ.
+ * trường khi kết quả danh mục không phải ước tính, kỳ từ 30 ngày, có giá chỉ số sát hai đầu kỳ và hai bên cùng cơ sở
+ * lợi suất: VN-Index là chỉ số giá nên kỳ có cổ tức thì chỉ để tham khảo (không có nguồn chỉ số tổng lợi suất).
  */
 export function compareBenchmark(
-  period: Pick<PeriodResult, 'start' | 'end' | 'twrPct' | 'isEstimate' | 'days'>,
+  period: Pick<PeriodResult, 'start' | 'end' | 'twrPct' | 'isEstimate' | 'days' | 'dividends'>,
   /** Ngày mốc đầu kỳ (cuối ngày trước ngày đầu tiên của kỳ) */
   baseDate: string,
   b: BenchmarkInput,
@@ -362,6 +387,12 @@ export function compareBenchmark(
   let conclusive = excessPts !== null && !period.isEstimate && period.days >= 30;
   if (period.isEstimate) notes.push('Kết quả danh mục là ước tính nên chưa kết luận hơn / kém thị trường.');
   if (period.days < 30) notes.push('Kỳ dưới 30 ngày quá ngắn để kết luận hơn / kém thị trường.');
+  if (period.dividends > 0) {
+    conclusive = false;
+    notes.push(
+      `Kỳ này danh mục nhận cổ tức nên lợi suất danh mục cao hơn phần giá của ${b.name} (chỉ số giá, không gồm cổ tức): hai con số khác cơ sở, chỉ để tham khảo, không kết luận hơn / kém thị trường.`,
+    );
+  }
   if (stockShare < 0.5) {
     conclusive = false;
     notes.push(

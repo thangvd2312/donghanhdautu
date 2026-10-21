@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { buildHistory, DayPrice, periodPerformance } from './history';
+import { buildHistory, compareBenchmark, DayPrice, periodPerformance } from './history';
 import type { LedgerTx } from './ledger';
 
 const D = (v: number) => new Prisma.Decimal(v);
@@ -135,6 +135,7 @@ describe('periodPerformance', () => {
           netContributions: 0,
           profit: 0,
           preTrackingGain: 0,
+          dividends: 0,
           uncertainOpenings: [],
           status: 'complete',
           missing: [],
@@ -233,5 +234,112 @@ describe('periodPerformance', () => {
     const short = periodPerformance(pts.slice(-30), '2026-06-02', '2026-01-01')!;
     expect(short.xirrPct).toBeNull();
     expect(short.notes.join(' ')).toContain('XIRR');
+  });
+});
+
+describe('TWR khi bán / rút tiền (đầu ra của buildHistory → periodPerformance)', () => {
+  const buyOn = tx({ type: 'deposit', amt: 100, date: '2026-07-01' });
+  const buy = tx({ type: 'buy', assetType: 'stock', symbol: 'FPT', q: 1, px: 100, date: '2026-07-01' });
+  const table = { '2026-07-01': 100, '2026-07-30': 110, '2026-07-31': 121 };
+
+  it('bán 121 rồi rút hết 121: TWR 21% khớp lãi tiền, không bỏ ngày bán', () => {
+    const txs = [
+      buyOn,
+      buy,
+      tx({ type: 'sell', assetType: 'stock', symbol: 'FPT', q: 1, px: 121, date: '2026-07-31' }),
+      tx({ type: 'withdraw', amt: 121, date: '2026-07-31' }),
+    ];
+    const pts = run(txs, '2026-07-01', '2026-07-31', table);
+    const p = periodPerformance(pts, '2026-06-01', '2026-07-01')!;
+    expect(p.profit).toBeCloseTo(21);
+    expect(p.twrPct).toBeCloseTo(21);
+    // Modified Dietz cùng giả định rút cuối ngày: khoản rút ngày cuối kỳ không làm giảm vốn bình quân
+    expect(p.returnPct).toBeCloseTo(21);
+    expect(p.isEstimate).toBe(false);
+  });
+
+  it('XIRR cùng giả định rút cuối ngày: nạp 100 rồi bán + rút hết 121 sau 122 ngày', () => {
+    const txs = [
+      tx({ type: 'deposit', amt: 100, date: '2026-04-01' }),
+      tx({ type: 'buy', assetType: 'stock', symbol: 'FPT', q: 1, px: 100, date: '2026-04-01' }),
+      tx({ type: 'sell', assetType: 'stock', symbol: 'FPT', q: 1, px: 121, date: '2026-07-31' }),
+      tx({ type: 'withdraw', amt: 121, date: '2026-07-31' }),
+    ];
+    const pts = run(txs, '2026-04-01', '2026-07-31', { '2026-04-01': 100, '2026-07-31': 121 });
+    const p = periodPerformance(pts, '2026-03-01', '2026-04-01')!;
+    expect(p.days).toBe(122);
+    expect(p.xirrPct).toBeCloseTo((1.21 ** (365 / 122) - 1) * 100, 4);
+  });
+
+  it('rút một phần: lợi suất ngày rút tính trước khi rút', () => {
+    const txs = [
+      buyOn,
+      buy,
+      tx({ type: 'sell', assetType: 'stock', symbol: 'FPT', q: 1, px: 121, date: '2026-07-31' }),
+      tx({ type: 'withdraw', amt: 50, date: '2026-07-31' }),
+    ];
+    const pts = run(txs, '2026-07-01', '2026-07-31', table);
+    expect(pts[pts.length - 1].value).toBeCloseTo(71);
+    expect(periodPerformance(pts, '2026-06-01', '2026-07-01')!.twrPct).toBeCloseTo(21);
+  });
+
+  it('đóng hết rồi nạp lại sau đó: ngày không có vốn bỏ qua, kỳ sau nối tiếp bình thường', () => {
+    const txs = [
+      buyOn,
+      buy,
+      tx({ type: 'sell', assetType: 'stock', symbol: 'FPT', q: 1, px: 121, date: '2026-07-31' }),
+      tx({ type: 'withdraw', amt: 121, date: '2026-07-31' }),
+      tx({ type: 'deposit', amt: 200, date: '2026-08-03' }),
+    ];
+    const pts = run(txs, '2026-07-01', '2026-08-04', table);
+    const p = periodPerformance(pts, '2026-06-01', '2026-07-01')!;
+    expect(p.twrPct).toBeCloseTo(21);
+    expect(p.isEstimate).toBe(false);
+  });
+
+  it('có giá trị mới mà đầu ngày không còn vốn (vd cổ tức về sau khi đã rút hết): TWR null, ước tính, có lý do', () => {
+    const pts = [
+      { date: '2026-07-01', value: 0, netContributions: 0, preTrackingGain: 0 },
+      { date: '2026-07-02', value: 5, netContributions: 0, preTrackingGain: 0 },
+    ].map((p) => ({
+      ...p,
+      profit: p.value - p.netContributions,
+      dividends: 0,
+      uncertainOpenings: [],
+      status: 'complete' as const,
+      missing: [],
+    }));
+    const p = periodPerformance(pts, '2026-06-01', '2026-06-15')!;
+    expect(p.twrPct).toBeNull();
+    expect(p.isEstimate).toBe(true);
+    expect(p.notes.join(' ')).toContain('TWR');
+  });
+
+  it('kỳ chưa tính đủ TWR thì benchmark không kết luận', () => {
+    const closes = new Map([
+      ['2026-06-30', 1200],
+      ['2026-07-31', 1200],
+    ]);
+    const r = compareBenchmark(
+      { start: '2026-07-01', end: '2026-07-31', twrPct: null, isEstimate: true, days: 31, dividends: 0 },
+      '2026-06-30',
+      { name: 'VN-Index', closes, current: null, today: '2026-10-20' },
+      0.9,
+    );
+    expect(r.excessPts).toBeNull();
+    expect(r.conclusive).toBe(false);
+  });
+});
+
+describe('cổ tức trong kỳ', () => {
+  it('periodPerformance báo cổ tức nhận được trong kỳ', () => {
+    const txs = [
+      tx({ type: 'deposit', amt: 1000, date: '2026-07-01' }),
+      tx({ type: 'buy', assetType: 'stock', symbol: 'FPT', q: 10, px: 100, date: '2026-07-01' }),
+      tx({ type: 'dividend', assetType: 'stock', symbol: 'FPT', amt: 50, date: '2026-07-15' }),
+    ];
+    const pts = run(txs, '2026-07-01', '2026-07-31', { '2026-07-01': 100 });
+    expect(periodPerformance(pts, '2026-06-01', '2026-07-01')!.dividends).toBe(50);
+    expect(periodPerformance(pts.slice(-5), '2026-07-27', '2026-07-01')!.dividends).toBe(0);
   });
 });

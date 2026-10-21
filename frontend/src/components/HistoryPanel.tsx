@@ -220,7 +220,9 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
                   {[
                     p.twrPct !== null ? `TWR ${fmtPct(p.twrPct)}` : null,
                     p.xirrPct !== null ? `XIRR ${fmtPct(p.xirrPct)}/năm` : null,
-                    data.benchmark?.returnPct != null ? `${data.benchmark.name} cùng kỳ ${fmtPct(data.benchmark.returnPct)}` : null,
+                    data.benchmark?.returnPct != null
+                      ? `${data.benchmark.name} cùng kỳ ${fmtPct(data.benchmark.returnPct)}${data.benchmark.conclusive ? '' : ' (chỉ để tham khảo, chưa so được hơn / kém)'}`
+                      : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}

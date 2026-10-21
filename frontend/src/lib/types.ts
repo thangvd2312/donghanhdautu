@@ -566,6 +566,8 @@ export interface HistoryPoint {
   netContributions: number
   profit: number
   preTrackingGain: number
+  /** Cổ tức nhận được luỹ kế (VND) */
+  dividends: number
   status: 'complete' | 'estimated' | 'partial'
   missing: string[]
 }
@@ -582,6 +584,8 @@ export interface PeriodResult {
   twrPct: number | null
   /** Lợi suất dòng tiền quy năm (%/năm); null khi kỳ < 90 ngày */
   xirrPct: number | null
+  /** Cổ tức nhận được trong kỳ (VND) */
+  dividends: number
   days: number
   baseDate: string
   method: string
