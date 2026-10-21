@@ -1,5 +1,7 @@
 import { Controller, Get, Module, Param, ParseIntPipe, DefaultValuePipe, Query, UseGuards } from '@nestjs/common';
-import { AuthModule, JwtAuthGuard } from '../auth/auth.module';
+import { AuthModule, CurrentUser, JwtAuthGuard } from '../auth/auth.module';
+import type { AuthUser } from '../auth/auth.module';
+import { CompareService } from './compare.service';
 import { MarketGateway } from './market.gateway';
 import { MarketService } from './market.service';
 import { BinanceProvider } from './providers/binance.provider';
@@ -10,7 +12,10 @@ import { VndirectProvider } from './providers/vndirect.provider';
 @UseGuards(JwtAuthGuard)
 @Controller('market')
 class MarketController {
-  constructor(private market: MarketService) {}
+  constructor(
+    private market: MarketService,
+    private compareService: CompareService,
+  ) {}
 
   @Get('snapshot')
   snapshot() {
@@ -20,6 +25,11 @@ class MarketController {
   @Get('search')
   search(@Query('q') q = '') {
     return this.market.searchStocks(q);
+  }
+
+  @Get('compare')
+  compare(@CurrentUser() user: AuthUser, @Query('symbols') symbols?: string, @Query('range') range?: string) {
+    return this.compareService.compare(user.id, symbols, range);
   }
 
   @Get('stocks/:symbol')
@@ -56,7 +66,15 @@ class MarketController {
 @Module({
   imports: [AuthModule],
   controllers: [MarketController],
-  providers: [MarketService, MarketGateway, VietcapProvider, VndirectProvider, BinanceProvider, GoldFxProvider],
+  providers: [
+    MarketService,
+    CompareService,
+    MarketGateway,
+    VietcapProvider,
+    VndirectProvider,
+    BinanceProvider,
+    GoldFxProvider,
+  ],
   exports: [MarketService, MarketGateway, VietcapProvider, VndirectProvider],
 })
 export class MarketModule {}

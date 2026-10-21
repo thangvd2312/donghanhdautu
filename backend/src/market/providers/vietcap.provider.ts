@@ -397,6 +397,11 @@ export class VietcapProvider {
     });
   }
 
+  /** Báo cáo KQKD theo năm (tăng dần), nguyên mã trường và đơn vị VND — cho phép tính so sánh ở nơi khác */
+  async incomeYears(symbol: string): Promise<Record<string, number>[]> {
+    return (await this.statementRows(symbol, 'INCOME_STATEMENT')).years;
+  }
+
   /** Bảng P/E, P/B… TTM theo từng quý (từ 2018) — dùng chung cho ratios() và dải định giá lịch sử */
   async statsRaw(symbol: string): Promise<(StatRow & Record<string, number | string | null>)[]> {
     return this.cached(`stats:${symbol}`, 6 * 3600_000, async () => {
@@ -471,7 +476,7 @@ export class VietcapProvider {
   }
 
   /** Loại doanh nghiệp quyết định cách đọc báo cáo tài chính */
-  private async kind(symbol: string): Promise<'bank' | 'securities' | 'insurance' | 'corporate'> {
+  async kind(symbol: string): Promise<'bank' | 'securities' | 'insurance' | 'corporate'> {
     const [meta, company] = await Promise.all([
       this.metrics(symbol),
       this.safe('company', () => this.company(symbol), null),

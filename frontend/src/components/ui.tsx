@@ -158,6 +158,7 @@ export function QuickAction({
   label,
   onClick,
   to,
+  state,
   active,
   disabled,
 }: {
@@ -165,10 +166,12 @@ export function QuickAction({
   label: ReactNode
   onClick?: () => void
   to?: string
+  /** Trạng thái điều hướng kèm theo `to` (không hiện trên URL) */
+  state?: unknown
   active?: boolean
   disabled?: boolean
 }) {
-  const link = to ? { component: RouterLink, to } : {}
+  const link = to ? { component: RouterLink, to, state } : {}
   return (
     <ButtonBase
       {...link}

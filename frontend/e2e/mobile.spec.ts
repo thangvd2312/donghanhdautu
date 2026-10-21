@@ -71,6 +71,20 @@ const scenarios: Scenario[] = [
     },
   },
   { name: 'events-reminders', path: '/events', act: (p) => click(p, /Cài đặt nhắc sự kiện/) },
+  { name: 'compare-prompt', path: '/compare?symbols=FPT' },
+  { name: 'compare-picker', path: '/compare?symbols=FPT', act: (p) => click(p, 'Thêm mã để so sánh') },
+  { name: 'compare', path: '/compare?symbols=FPT,VCB' },
+  {
+    name: 'compare-metrics',
+    path: '/compare?symbols=FPT,VCB',
+    act: async (p) => {
+      // Ngân hàng + doanh nghiệp thường: có ghi chú so sánh và lý do thiếu số liệu; mở thử một giải thích ⓘ
+      await p.getByText('Chỉ tiêu cơ bản').first().scrollIntoViewIfNeeded()
+      await p.getByRole('button', { name: 'Giải thích P/E' }).first().click()
+      await p.waitForTimeout(500)
+    },
+  },
+  { name: 'compare-bad-symbol', path: '/compare?symbols=FPT,ZZZZ9' },
   { name: 'advisor', path: '/advisor' },
   { name: 'advisor-history', path: '/advisor', act: (p) => click(p, 'Lịch sử') },
   { name: 'advisor-composer-focus', path: '/advisor', act: async (p) => { await p.getByPlaceholder(/Có nên mua thêm/).click(); await p.waitForTimeout(600) } },

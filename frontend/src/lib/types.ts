@@ -731,3 +731,58 @@ export interface EventsResponse {
   /** Nguồn lỗi lần này: danh sách rỗng có thể do lỗi chứ không phải do không có sự kiện */
   unavailable: boolean
 }
+
+/** So sánh 2–4 cổ phiếu (GET /api/market/compare) */
+export type CompareRange = '3m' | '6m' | '1y' | '3y'
+export type CompareMetricKey =
+  | 'pe'
+  | 'pb'
+  | 'roe'
+  | 'netMargin'
+  | 'revenueGrowth'
+  | 'profitGrowth'
+  | 'dividendYield'
+  | 'debtToEquity'
+  | 'eps'
+
+export interface CompareStock {
+  symbol: string
+  name: string | null
+  sector: string | null
+  kind: 'bank' | 'securities' | 'insurance' | 'corporate' | null
+  price: number | null
+  changePct: number | null
+  marketCapBn: number | null
+  returns: { '1m': number | null; '3m': number | null; '6m': number | null; '1y': number | null; ytd: number | null }
+  held: boolean
+  watched: boolean
+  unavailable: string[]
+}
+
+export interface CompareMetricValue {
+  value: number | null
+  period: string | null
+  reason: string | null
+}
+
+export interface CompareMetricRow {
+  key: CompareMetricKey
+  label: string
+  unit: 'x' | '%' | '₫'
+  hint: string
+  values: Record<string, CompareMetricValue>
+  periodsDiffer: boolean
+}
+
+export interface CompareResponse {
+  stocks: CompareStock[]
+  chart: {
+    start: string
+    points: { date: string; values: Record<string, number | null> }[]
+    note: string | null
+  }
+  metrics: CompareMetricRow[]
+  notes: string[]
+  source: 'Vietcap'
+  asOf: string
+}

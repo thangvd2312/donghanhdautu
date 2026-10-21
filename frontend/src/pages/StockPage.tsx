@@ -84,6 +84,7 @@ export default function StockPage() {
         assetType="stock"
         symbol={q.symbol}
         watchSymbol={q.symbol}
+        compareSymbol={q.symbol}
         tags={[q.board, c?.sector].filter((t): t is string => !!t)}
         name={c?.name ?? q.name}
         price={fmtStockPrice(q.price)}

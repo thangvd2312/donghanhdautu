@@ -57,6 +57,20 @@ function position(b: Band, current: number) {
 }
 
 /**
+ * P/E, P/B của quý gần nhất quy theo giá hiện tại (cùng lợi nhuận TTM / giá trị sổ sách). null khi không có ý nghĩa
+ * (âm, hoặc P/E >= 100, P/B >= 50). Dùng chung cho dải định giá và màn so sánh cổ phiếu.
+ */
+export function currentMultiples(last: StatRow, currentPrice: number | null) {
+  // Giá ngầm định trong số liệu quý gần nhất = vốn hoá / số cổ phiếu
+  const impliedPrice = last.marketCap && last.numberOfSharesMktCap ? last.marketCap / last.numberOfSharesMktCap : null;
+  const scale = currentPrice && impliedPrice ? currentPrice / impliedPrice : 1;
+  return {
+    pe: last.pe && PE_VALID(last.pe) ? r2(last.pe * scale) : null,
+    pb: last.pb && PB_VALID(last.pb) ? r2(last.pb * scale) : null,
+  };
+}
+
+/**
  * Dải định giá P/E, P/B theo quý (TTM) trong tối đa `maxQuarters` quý, so với định giá hiện tại.
  * Định giá hiện tại = định giá quý gần nhất quy theo giá hiện tại (cùng lợi nhuận TTM / giá trị sổ sách).
  */
@@ -73,11 +87,7 @@ export function valuationBand(rows: StatRow[], currentPrice: number | null, maxQ
   const pbBand = band(pbs);
   if (!peBand && !pbBand) return null;
 
-  // Giá ngầm định trong số liệu quý gần nhất = vốn hoá / số cổ phiếu
-  const impliedPrice = last.marketCap && last.numberOfSharesMktCap ? last.marketCap / last.numberOfSharesMktCap : null;
-  const scale = currentPrice && impliedPrice ? currentPrice / impliedPrice : 1;
-  const curPe = last.pe && PE_VALID(last.pe) ? r2(last.pe * scale) : null;
-  const curPb = last.pb && PB_VALID(last.pb) ? r2(last.pb * scale) : null;
+  const { pe: curPe, pb: curPb } = currentMultiples(last, currentPrice);
 
   return {
     period: `Q${q[0].quarter}/${q[0].yearReport} – Q${last.quarter}/${last.yearReport}`,

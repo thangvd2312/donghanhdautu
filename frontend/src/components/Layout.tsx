@@ -3,6 +3,7 @@ import LightModeOutlined from '@mui/icons-material/LightModeOutlined'
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined'
 import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined'
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined'
+import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined'
 import EventOutlined from '@mui/icons-material/EventOutlined'
 import FlagOutlined from '@mui/icons-material/FlagOutlined'
 import ForumOutlined from '@mui/icons-material/ForumOutlined'
@@ -87,6 +88,7 @@ const MORE = [
   { to: '/market', label: 'Bảng giá', icon: <ShowChartOutlined /> },
   { to: '/goals', label: 'Mục tiêu tài chính', icon: <SavingsOutlined /> },
   { to: '/events', label: 'Lịch sự kiện', icon: <EventOutlined /> },
+  { to: '/compare', label: 'So sánh cổ phiếu', icon: <CompareArrowsOutlined /> },
   { to: '/news', label: 'Tin tức', icon: <NewspaperOutlined /> },
   { to: '/settings', label: 'Cài đặt & thông báo', icon: <SettingsOutlined /> },
 ]
@@ -408,6 +410,17 @@ function UserMenu() {
             <EventOutlined fontSize="small" />
           </ListItemIcon>
           Lịch sự kiện
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchor(null)
+            nav('/compare')
+          }}
+        >
+          <ListItemIcon>
+            <CompareArrowsOutlined fontSize="small" />
+          </ListItemIcon>
+          So sánh cổ phiếu
         </MenuItem>
         <MenuItem
           onClick={() => {

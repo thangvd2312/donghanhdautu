@@ -1,5 +1,6 @@
 import AddIcon from '@mui/icons-material/Add'
 import Close from '@mui/icons-material/Close'
+import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined'
 import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -60,6 +61,7 @@ export default function WatchlistPanel() {
   }
 
   if (!items) return null
+  const stockSymbols = items.filter((w) => w.assetType === 'stock').map((w) => w.symbol)
 
   return (
     <Panel
@@ -68,9 +70,21 @@ export default function WatchlistPanel() {
       noPadding
       action={
         !adding && (
-          <Button size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
-            Thêm
-          </Button>
+          <Stack direction="row" spacing={0.5}>
+            {stockSymbols.length >= 2 && (
+              <Button
+                size="small"
+                component={RouterLink}
+                to={`/compare?symbols=${stockSymbols.slice(0, 4).join(',')}`}
+                startIcon={<CompareArrowsOutlined />}
+              >
+                So sánh
+              </Button>
+            )}
+            <Button size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
+              Thêm
+            </Button>
+          </Stack>
         )
       }
     >

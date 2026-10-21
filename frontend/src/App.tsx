@@ -11,6 +11,7 @@ import HomePage from './pages/HomePage'
 
 // Mỗi trang một chunk, tải khi mở: trang đăng nhập / trang chủ không phải tải biểu đồ, markdown… của trang khác
 const AdvisorPage = lazy(() => import('./pages/AdvisorPage'))
+const ComparePage = lazy(() => import('./pages/ComparePage'))
 const CryptoPage = lazy(() => import('./pages/CryptoPage'))
 const DemoPage = lazy(() => import('./pages/DemoPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
@@ -81,6 +82,7 @@ export default function App() {
             <Route path="/advisor/:id" element={page(<AdvisorPage />)} />
             <Route path="/stock/:symbol" element={page(<StockPage />)} />
             <Route path="/crypto/:symbol" element={page(<CryptoPage />)} />
+            <Route path="/compare" element={page(<ComparePage />)} />
             <Route path="/news" element={page(<NewsPage />)} />
             <Route path="/plans" element={page(<PlansPage />)} />
             <Route path="/plans/:id" element={page(<PlanDetailPage />)} />

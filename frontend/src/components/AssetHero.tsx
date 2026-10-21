@@ -1,4 +1,5 @@
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
+import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined'
 import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -34,6 +35,7 @@ export default function AssetHero({
   askText,
   suggestions,
   onAlert,
+  compareSymbol,
 }: {
   assetType: Plan['assetType']
   /** Mã hiển thị: FPT, BTC */
@@ -49,6 +51,8 @@ export default function AssetHero({
   askText: string
   suggestions: { label: string; text: string }[]
   onAlert: () => void
+  /** Cổ phiếu: thêm ô "So sánh" mở màn hình so sánh với mã này */
+  compareSymbol?: string
 }) {
   return (
     <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
@@ -81,6 +85,14 @@ export default function AssetHero({
           <Stack direction="row" spacing={0.5}>
             <QuickAction icon={<NotificationsActiveOutlined />} label="Cảnh báo giá" onClick={onAlert} />
             <WatchButton tile assetType={assetType} symbol={watchSymbol} />
+            {compareSymbol && (
+              <QuickAction
+                icon={<CompareArrowsOutlined />}
+                label="So sánh"
+                to={`/compare?symbols=${encodeURIComponent(compareSymbol)}`}
+                state={{ pick: true }}
+              />
+            )}
             <PlanButton tile assetType={assetType} symbol={watchSymbol} label={symbol} />
           </Stack>
           <Button

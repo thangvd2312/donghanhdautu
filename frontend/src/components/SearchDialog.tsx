@@ -53,7 +53,23 @@ function saveRecent(h: Hit) {
  * Tìm mã toàn app: thanh tìm dạng viên, kết quả kèm logo + giá realtime,
  * khi chưa gõ thì gợi ý tìm gần đây và các mã phổ biến. Điện thoại: phủ toàn màn hình.
  */
-export default function SearchDialog({ open, onClose, fullScreen }: { open: boolean; onClose: () => void; fullScreen: boolean }) {
+export default function SearchDialog({
+  open,
+  onClose,
+  fullScreen,
+  onPickStock,
+  exclude,
+  pickHint,
+}: {
+  open: boolean
+  onClose: () => void
+  fullScreen: boolean
+  /** Chế độ chọn mã: chỉ cổ phiếu, chọn xong gọi hàm này thay vì mở trang mã (dùng cho màn hình so sánh) */
+  onPickStock?: (symbol: string) => void
+  /** Mã đã chọn, không hiện lại trong kết quả */
+  exclude?: string[]
+  pickHint?: string
+}) {
   const nav = useNavigate()
   const { snapshot } = useMarket()
   const [q, setQ] = useState('')
@@ -90,29 +106,36 @@ export default function SearchDialog({ open, onClose, fullScreen }: { open: bool
   const hits = useMemo<Hit[]>(() => {
     const term = q.trim().toUpperCase()
     if (!term) return []
-    const coins = (snapshot?.crypto ?? [])
+    const coins = (onPickStock ? [] : snapshot?.crypto ?? [])
       .filter((c) => c.base.startsWith(term))
       .slice(0, 3)
       .map<Hit>((c) => ({ kind: 'crypto', symbol: c.base, name: `${c.base}/USDT`, tag: 'Crypto', to: `/crypto/${c.base}` }))
-    const st = stocks.map<Hit>((s) => ({ kind: 'stock', symbol: s.symbol, name: s.name, tag: s.board, to: `/stock/${s.symbol}` }))
+    const st = stocks
+      .filter((s) => !exclude?.includes(s.symbol))
+      .map<Hit>((s) => ({ kind: 'stock', symbol: s.symbol, name: s.name, tag: s.board, to: `/stock/${s.symbol}` }))
     // Mã khớp chính xác lên đầu (gõ "BTC" thì BTC trước, gõ "FPT" thì FPT trước FTS)
     return [...st, ...coins].sort((a, b) => Number(b.symbol === term) - Number(a.symbol === term))
-  }, [q, stocks, snapshot])
+  }, [q, stocks, snapshot, onPickStock, exclude])
 
   const popular = useMemo<Hit[]>(() => {
     const st = [...(snapshot?.stocks ?? [])]
+      .filter((s) => !exclude?.includes(s.symbol))
       .sort((a, b) => b.valueBn - a.valueBn)
       .slice(0, 6)
       .map<Hit>((s) => ({ kind: 'stock', symbol: s.symbol, name: s.name, tag: 'HSX', to: `/stock/${s.symbol}` }))
-    const coins = (snapshot?.crypto ?? [])
+    const coins = (onPickStock ? [] : snapshot?.crypto ?? [])
       .slice(0, 3)
       .map<Hit>((c) => ({ kind: 'crypto', symbol: c.base, name: `${c.base}/USDT`, tag: 'Crypto', to: `/crypto/${c.base}` }))
     return [...st, ...coins]
-  }, [snapshot])
+  }, [snapshot, onPickStock, exclude])
 
   const pick = (h: Hit) => {
-    saveRecent(h)
     onClose()
+    if (onPickStock) {
+      onPickStock(h.symbol)
+      return
+    }
+    saveRecent(h)
     nav(h.to)
   }
 
@@ -230,7 +253,7 @@ export default function SearchDialog({ open, onClose, fullScreen }: { open: bool
               sx={{ flex: 1, fontSize: 16 }}
             />
             {q && (
-              <IconButton aria-label="Xoá" size="small" onClick={() => setQ('')} sx={{ mr: -1 }}>
+              <IconButton aria-label="Xoá" size="small" onClick={() => setQ('')} sx={{ mr: -1, width: 32, height: 32 }}>
                 <CloseRounded fontSize="small" />
               </IconButton>
             )}
@@ -256,7 +279,12 @@ export default function SearchDialog({ open, onClose, fullScreen }: { open: bool
           )
         ) : (
           <>
-            {recent.length > 0 &&
+            {pickHint && (
+              <Typography variant="body2" color="text.secondary" sx={{ px: 2, pt: 1.5 }}>
+                {pickHint}
+              </Typography>
+            )}
+            {!onPickStock && recent.length > 0 &&
               section(
                 'Tìm gần đây',
                 recent.map((h, i) =>
@@ -269,7 +297,7 @@ export default function SearchDialog({ open, onClose, fullScreen }: { open: bool
                   ),
                 ),
               )}
-            {popular.length > 0 && section('Giao dịch nhiều', popular.map((h, i) => row(h, i)))}
+            {popular.length > 0 && section(onPickStock ? 'Gợi ý: mã giao dịch nhiều' : 'Giao dịch nhiều', popular.map((h, i) => row(h, i)))}
           </>
         )}
       </Box>
