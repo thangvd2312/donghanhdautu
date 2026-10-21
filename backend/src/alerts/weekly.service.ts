@@ -148,7 +148,7 @@ export class WeeklyBriefService {
     const body = [
       table,
       narrative
-        ? `\n\n---\n\n**Nhận định của cố vấn** (AI, tham khảo — các con số đã được đối chiếu với bảng trên)\n\n${narrative}`
+        ? `\n\n---\n\n**Nhận định của cố vấn** (AI, tham khảo — giá trị, dấu, đơn vị và tài sản của các con số đã được đối chiếu với bảng trên; ý nghĩa lời văn chưa được kiểm tự động)\n\n${narrative}`
         : droppedNote,
       related.length
         ? `\n\n**Tin liên quan trong tuần**\n${related.map((n) => `- [${n.title}](${n.url}) — ${n.source}`).join('\n')}`
