@@ -43,6 +43,8 @@ import { ImportDto, ImportService } from './import.service';
 import { computeLedger, performance } from './ledger';
 import type { LedgerResult } from './ledger';
 import { toLedgerTx, TransactionDto, TransactionsService } from './transactions';
+import { newStockSymbols, rebalance } from './rebalance';
+import { RebalanceDto } from './rebalance.dto';
 import { SHOCK_MAX_PCT, SHOCK_MIN_PCT, simulate } from './simulate';
 import { HoldingInput, valuePortfolio } from './valuation';
 
@@ -113,6 +115,35 @@ export class PortfolioService {
     if (portfolioId) await this.transactions.resolvePortfolio(this.prisma, userId, portfolioId);
     const v = await this.valuation(userId, portfolioId);
     return { ...simulate(v.holdings, dto.shocks), asOf: v.generatedAt };
+  }
+
+  /**
+   * Mô phỏng tái cân bằng về tỷ trọng mục tiêu. "Trước" lấy từ đúng valuation() mà màn Danh mục dùng;
+   * mã cổ phiếu mới được kiểm tra tồn tại; không ghi gì vào DB.
+   */
+  async rebalance(userId: string, dto: RebalanceDto) {
+    const portfolioId = dto.portfolioId || undefined;
+    if (portfolioId) await this.transactions.resolvePortfolio(this.prisma, userId, portfolioId);
+    const v = await this.valuation(userId, portfolioId);
+    const newStocks = await Promise.all(
+      newStockSymbols(v.holdings, dto.targets).map(async (symbol) => {
+        try {
+          await this.market.assertStock(symbol);
+        } catch (e) {
+          if (e instanceof NotFoundException) throw new BadRequestException(`Mã cổ phiếu ${symbol} không tồn tại`);
+          throw e;
+        }
+        await this.market.stockQuote(symbol).catch(() => null);
+        return { symbol, price: this.market.priceInfo('stock', symbol).value };
+      }),
+    );
+    const goldBuyPrices = Object.fromEntries(
+      this.market
+        .goldQuotes()
+        .filter((g) => g.currency === 'VND')
+        .map((g) => [g.code, g.sell]),
+    );
+    return rebalance(dto, { holdings: v.holdings, newStocks, goldBuyPrices, asOf: v.generatedAt });
   }
 
   /**
@@ -351,6 +382,12 @@ class PortfolioController {
   @Post('simulate')
   simulate(@CurrentUser() user: AuthUser, @Body() dto: SimulateDto) {
     return this.portfolio.simulate(user.id, dto);
+  }
+
+  /** Mô phỏng tái cân bằng (chỉ dùng tiền mới hoặc cho phép bán); không ghi vào sổ */
+  @Post('rebalance')
+  rebalance(@CurrentUser() user: AuthUser, @Body() dto: RebalanceDto) {
+    return this.portfolio.rebalance(user.id, dto);
   }
 
   /** Tổng tài sản và vốn đưa vào theo ngày + hiệu quả trong kỳ. range: 1m | 3m | 6m | 1y | all */

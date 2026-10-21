@@ -7,6 +7,7 @@ import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
 import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
@@ -225,7 +226,10 @@ export default function SimulatePage() {
         </Typography>
       </Box>
       <Typography variant="body2" color="text.secondary">
-        Xem tài sản đang giữ thay đổi thế nào nếu giá biến động theo giả định bạn chọn. Đây là công cụ để hiểu mức rủi ro, không phải dự báo.
+        Xem tài sản đang giữ thay đổi thế nào nếu giá biến động theo giả định bạn chọn. Đây là công cụ để hiểu mức rủi ro, không phải dự báo.{' '}
+        <Link component={RouterLink} to={pf ? `/rebalance?p=${encodeURIComponent(pf)}` : '/rebalance'}>
+          Muốn thử đổi tỷ trọng? Tái cân bằng
+        </Link>
       </Typography>
 
       {accounts.length > 1 && (
