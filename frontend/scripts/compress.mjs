@@ -3,7 +3,8 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 
-const dir = new URL('../dist/assets/', import.meta.url).pathname
+// Mặc định nén ../dist/assets; truyền thư mục build khác làm đối số đầu tiên (vd node scripts/compress.mjs /tmp/out)
+const dir = process.argv[2] ? join(process.argv[2], 'assets') : new URL('../dist/assets/', import.meta.url).pathname
 let before = 0
 let after = 0
 for (const f of readdirSync(dir)) {

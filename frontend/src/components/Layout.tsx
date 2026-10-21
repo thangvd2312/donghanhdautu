@@ -49,7 +49,7 @@ import Tabs from '@mui/material/Tabs'
 import Toolbar from '@mui/material/Toolbar'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth-context'
 import { useChat } from '../lib/chat-context'
@@ -57,7 +57,6 @@ import { timeAgo } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import { useIsMobile } from '../lib/useIsMobile'
 import type { Notification } from '../lib/types'
-import SearchDialog from './SearchDialog'
 import { Logo } from './ui'
 
 const NAV = [
@@ -130,6 +129,8 @@ const DISCLAIMER =
 
 const matches = (pathname: string, to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to))
 
+const SearchDialog = lazy(() => import('./SearchDialog'))
+
 export default function Layout() {
   const loc = useLocation()
   const nav = useNavigate()
@@ -139,12 +140,19 @@ export default function Layout() {
     .reverse()
     .find((n) => matches(loc.pathname, n.to))?.to
   const [searchOpen, setSearchOpen] = useState(false)
+  // Hộp tìm kiếm tải khi mở lần đầu; sau đó giữ gắn để hiệu ứng đóng vẫn chạy
+  const [searchLoaded, setSearchLoaded] = useState(false)
+  const openSearch = () => {
+    setSearchLoaded(true)
+    setSearchOpen(true)
+  }
   const [moreOpen, setMoreOpen] = useState(false)
   const typing = useTyping()
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
+        setSearchLoaded(true)
         setSearchOpen(true)
       }
     }
@@ -201,7 +209,7 @@ export default function Layout() {
             <Box sx={{ flex: 1 }} />
             {/* Desktop: nút dạng thanh tìm kiếm mở hộp tìm (⌘K / Ctrl+K) */}
             <ButtonBase
-              onClick={() => setSearchOpen(true)}
+              onClick={() => openSearch()}
               sx={{
                 display: { xs: 'none', lg: 'flex' },
                 width: 260,
@@ -224,7 +232,7 @@ export default function Layout() {
               </Box>
             </ButtonBase>
             <Tooltip title="Tìm mã">
-              <IconButton aria-label="Tìm mã" onClick={() => setSearchOpen(true)} sx={{ display: { lg: 'none' } }}>
+              <IconButton aria-label="Tìm mã" onClick={() => openSearch()} sx={{ display: { lg: 'none' } }}>
                 <SearchOutlined />
               </IconButton>
             </Tooltip>
@@ -303,7 +311,11 @@ export default function Layout() {
         <MoreSheet onClose={() => setMoreOpen(false)} />
       </Drawer>
 
-      <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} fullScreen={mobile} />
+      {searchLoaded && (
+        <Suspense fallback={null}>
+          <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} fullScreen={mobile} />
+        </Suspense>
+      )}
       <Toast />
     </Box>
   )

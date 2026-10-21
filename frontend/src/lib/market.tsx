@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Ctx } from './market-context'
-import { io, type Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import { api, getToken } from './api'
 import type { CryptoQuote, FxRate, GoldQuote, IndexQuote, MarketSnapshot, Notification, StockQuote, UsdtRate } from './types'
 
@@ -26,37 +26,44 @@ export function MarketProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {})
 
-    const s = io({ auth: { token: getToken() }, transports: ['websocket'] })
-    socketRef.current = s
-    s.on('connect', () => setConnected(true))
-    s.on('disconnect', () => setConnected(false))
-    s.on('snapshot', (snap: MarketSnapshot) => setSnapshot(snap))
-    s.on('stocks', (rows: StockQuote[]) =>
-      setSnapshot((p) => {
-        if (!p) return p
-        // Server chỉ đẩy giá sau khi lấy thành công từ nguồn
-        const stocksSource = p.sources.stocks && { ...p.sources.stocks, lastSuccessAt: new Date().toISOString() }
-        return {
-          ...p,
-          stocks: mergeBy(p.stocks, rows, (r) => r.symbol),
-          sources: stocksSource ? { ...p.sources, stocks: stocksSource } : p.sources,
-        }
-      }),
-    )
-    s.on('indices', (rows: IndexQuote[]) => setSnapshot((p) => (p && rows.length ? { ...p, indices: rows } : p)))
-    s.on('crypto', (rows: CryptoQuote[]) =>
-      setSnapshot((p) => (p ? { ...p, crypto: mergeBy(p.crypto, rows, (r) => r.symbol) } : p)),
-    )
-    s.on('gold', (rows: GoldQuote[]) => setSnapshot((p) => (p && rows.length ? { ...p, gold: rows } : p)))
-    s.on('fx', (rows: FxRate[]) => setSnapshot((p) => (p && rows.length ? { ...p, fx: rows } : p)))
-    s.on('usdt', (usdt: UsdtRate) => setSnapshot((p) => (p ? { ...p, usdt } : p)))
-    s.on('notification', (n: Notification) => {
-      setNotifications((list) => [n, ...list].slice(0, 50))
-      setUnread((u) => u + 1)
-      setLatest(n)
+    // socket.io-client (~12 kB nén) tải sau, song song với lần render đầu thay vì chặn nó; huỷ an toàn nếu unmount trước khi tải xong
+    let cancelled = false
+    void import('socket.io-client').then(({ io }) => {
+      if (cancelled) return
+      const s = io({ auth: { token: getToken() }, transports: ['websocket'] })
+      socketRef.current = s
+      s.on('connect', () => setConnected(true))
+      s.on('disconnect', () => setConnected(false))
+      s.on('snapshot', (snap: MarketSnapshot) => setSnapshot(snap))
+      s.on('stocks', (rows: StockQuote[]) =>
+        setSnapshot((p) => {
+          if (!p) return p
+          // Server chỉ đẩy giá sau khi lấy thành công từ nguồn
+          const stocksSource = p.sources.stocks && { ...p.sources.stocks, lastSuccessAt: new Date().toISOString() }
+          return {
+            ...p,
+            stocks: mergeBy(p.stocks, rows, (r) => r.symbol),
+            sources: stocksSource ? { ...p.sources, stocks: stocksSource } : p.sources,
+          }
+        }),
+      )
+      s.on('indices', (rows: IndexQuote[]) => setSnapshot((p) => (p && rows.length ? { ...p, indices: rows } : p)))
+      s.on('crypto', (rows: CryptoQuote[]) =>
+        setSnapshot((p) => (p ? { ...p, crypto: mergeBy(p.crypto, rows, (r) => r.symbol) } : p)),
+      )
+      s.on('gold', (rows: GoldQuote[]) => setSnapshot((p) => (p && rows.length ? { ...p, gold: rows } : p)))
+      s.on('fx', (rows: FxRate[]) => setSnapshot((p) => (p && rows.length ? { ...p, fx: rows } : p)))
+      s.on('usdt', (usdt: UsdtRate) => setSnapshot((p) => (p ? { ...p, usdt } : p)))
+      s.on('notification', (n: Notification) => {
+        setNotifications((list) => [n, ...list].slice(0, 50))
+        setUnread((u) => u + 1)
+        setLatest(n)
+      })
     })
     return () => {
-      s.disconnect()
+      cancelled = true
+      socketRef.current?.disconnect()
+      socketRef.current = null
     }
   }, [])
 

@@ -1,39 +1,20 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import Layout from './components/Layout'
 import { useAuth } from './lib/auth-context'
-import { ChatProvider } from './lib/chat'
-import { MarketProvider } from './lib/market'
 import { onboardingSkipped, safeNext } from './lib/nav'
 import { track } from './lib/track'
 import AuthPage from './pages/AuthPage'
-import HomePage from './pages/HomePage'
 
-// Mỗi trang một chunk, tải khi mở: trang đăng nhập / trang chủ không phải tải biểu đồ, markdown… của trang khác
-const AdvisorPage = lazy(() => import('./pages/AdvisorPage'))
-const ComparePage = lazy(() => import('./pages/ComparePage'))
-const CryptoPage = lazy(() => import('./pages/CryptoPage'))
 const DemoPage = lazy(() => import('./pages/DemoPage'))
-const EventsPage = lazy(() => import('./pages/EventsPage'))
-const IncomePage = lazy(() => import('./pages/IncomePage'))
-const GoalsPage = lazy(() => import('./pages/GoalsPage'))
-const MarketPage = lazy(() => import('./pages/MarketPage'))
-const NewsPage = lazy(() => import('./pages/NewsPage'))
-const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
-const PlanDetailPage = lazy(() => import('./pages/PlanDetailPage'))
-const PlansPage = lazy(() => import('./pages/PlansPage'))
-const SimulatePage = lazy(() => import('./pages/SimulatePage'))
-const RebalancePage = lazy(() => import('./pages/RebalancePage'))
-const ScreenerPage = lazy(() => import('./pages/ScreenerPage'))
-const PortfolioPage = lazy(() => import('./pages/PortfolioPage'))
-const PracticePage = lazy(() => import('./pages/PracticePage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const StockPage = lazy(() => import('./pages/StockPage'))
+// Toàn bộ nhánh đã đăng nhập tải theo chunk riêng (main.tsx nạp trước song song với /auth/me nếu có token)
+const AuthedRoutes = lazy(() => import('./AuthedRoutes'))
 
-/** Chỗ giữ trong lúc tải chunk của trang (thanh điều hướng vẫn giữ nguyên) */
+/** Chỗ giữ trong lúc tải chunk của trang */
 const page = (el: ReactNode) => (
   <Suspense fallback={<div className="grid min-h-[40vh] place-items-center text-muted">Đang tải…</div>}>{el}</Suspense>
 )
+
+const loadingScreen = <div className="grid h-screen place-items-center text-muted">Đang tải…</div>
 
 export default function App() {
   const { me, loading } = useAuth()
@@ -45,7 +26,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me?.id])
 
-  if (loading) return <div className="grid h-screen place-items-center text-muted">Đang tải…</div>
+  if (loading) return loadingScreen
 
   if (!me) {
     return (
@@ -75,34 +56,8 @@ export default function App() {
   if (authDest) return <Navigate to={authDest} replace />
 
   return (
-    <MarketProvider>
-      <ChatProvider>
-        <Routes>
-          <Route path="/onboarding" element={page(<OnboardingPage />)} />
-          <Route element={<Layout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/market" element={page(<MarketPage />)} />
-            <Route path="/portfolio" element={page(<PortfolioPage />)} />
-            <Route path="/advisor" element={page(<AdvisorPage />)} />
-            <Route path="/advisor/:id" element={page(<AdvisorPage />)} />
-            <Route path="/stock/:symbol" element={page(<StockPage />)} />
-            <Route path="/crypto/:symbol" element={page(<CryptoPage />)} />
-            <Route path="/screener" element={page(<ScreenerPage />)} />
-            <Route path="/simulate" element={page(<SimulatePage />)} />
-            <Route path="/rebalance" element={page(<RebalancePage />)} />
-            <Route path="/compare" element={page(<ComparePage />)} />
-            <Route path="/news" element={page(<NewsPage />)} />
-            <Route path="/plans" element={page(<PlansPage />)} />
-            <Route path="/plans/:id" element={page(<PlanDetailPage />)} />
-            <Route path="/events" element={page(<EventsPage />)} />
-            <Route path="/income" element={page(<IncomePage />)} />
-            <Route path="/goals" element={page(<GoalsPage />)} />
-            <Route path="/practice" element={page(<PracticePage />)} />
-            <Route path="/settings" element={page(<SettingsPage />)} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </ChatProvider>
-    </MarketProvider>
+    <Suspense fallback={loadingScreen}>
+      <AuthedRoutes />
+    </Suspense>
   )
 }
