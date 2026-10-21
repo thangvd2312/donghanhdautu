@@ -38,12 +38,14 @@ import {
   ASSET_TYPES,
   goalProgress,
   monthsUntil,
+  normalizeAllocations,
+  normalizeSymbol,
   project,
   requiredMonthly,
   validateAllocations,
   validateTargetAllocation,
 } from './goal-math';
-import type { GoalAssetType } from './goal-math';
+import type { Allocation, GoalAssetType } from './goal-math';
 
 class AllocationDto {
   @IsIn(ASSET_TYPES) assetType!: GoalAssetType;
@@ -87,7 +89,10 @@ export class GoalsService {
     const used = new Map<string, number>();
     for (const g of goals)
       for (const a of g.allocations)
-        used.set(`${a.assetType}:${a.symbol}`, (used.get(`${a.assetType}:${a.symbol}`) ?? 0) + a.pct);
+        used.set(
+          `${a.assetType}:${normalizeSymbol(a.symbol)}`,
+          (used.get(`${a.assetType}:${normalizeSymbol(a.symbol)}`) ?? 0) + a.pct,
+        );
     return {
       goals: goals.map((g) => {
         const target = (g.targetAllocation as Partial<Record<GoalAssetType, number>> | null) ?? null;
@@ -109,7 +114,11 @@ export class GoalsService {
           targetAllocation: target,
           status: g.status,
           note: g.note,
-          allocations: g.allocations.map((a) => ({ assetType: a.assetType, symbol: a.symbol, pct: a.pct })),
+          allocations: g.allocations.map((a) => ({
+            assetType: a.assetType,
+            symbol: normalizeSymbol(a.symbol),
+            pct: a.pct,
+          })),
           progress,
           monthsLeft: months,
           /** Mô phỏng theo giả định của người dùng — không phải kết quả được đảm bảo */
@@ -134,9 +143,10 @@ export class GoalsService {
 
   async create(userId: string, dto: GoalDto) {
     return this.locked(userId, async (db) => {
-      await this.validate(db, userId, dto, null);
+      const allocations = this.normalized(dto);
+      await this.validate(db, userId, dto, allocations, null);
       const g = await db.goal.create({
-        data: { userId, ...this.fields(dto), allocations: { create: dto.allocations.filter((a) => a.pct > 0) } },
+        data: { userId, ...this.fields(dto), allocations: { create: allocations } },
       });
       return { id: g.id };
     });
@@ -146,11 +156,12 @@ export class GoalsService {
   async update(userId: string, id: string, dto: GoalDto) {
     return this.locked(userId, async (db) => {
       await this.own(userId, id, db);
-      await this.validate(db, userId, dto, id);
+      const allocations = this.normalized(dto);
+      await this.validate(db, userId, dto, allocations, id);
       await db.goalAllocation.deleteMany({ where: { goalId: id } });
       await db.goal.update({
         where: { id },
-        data: { ...this.fields(dto), allocations: { create: dto.allocations.filter((a) => a.pct > 0) } },
+        data: { ...this.fields(dto), allocations: { create: allocations } },
       });
       return { id };
     });
@@ -192,7 +203,18 @@ export class GoalsService {
     };
   }
 
-  private async validate(db: Prisma.TransactionClient, userId: string, dto: GoalDto, goalId: string | null) {
+  /** Phần gán có % > 0 với mã đã chuẩn hóa: đúng dữ liệu được kiểm tra và lưu */
+  private normalized(dto: GoalDto) {
+    return normalizeAllocations(dto.allocations.filter((a) => a.pct > 0));
+  }
+
+  private async validate(
+    db: Prisma.TransactionClient,
+    userId: string,
+    dto: GoalDto,
+    next: Allocation[],
+    goalId: string | null,
+  ) {
     const errors: string[] = [];
     if (dto.targetDate <= vnDateKey()) errors.push('Ngày đích phải ở tương lai');
     const allocErr = validateTargetAllocation(dto.targetAllocation);
@@ -204,9 +226,8 @@ export class GoalsService {
       where: { userId },
       select: { assetType: true, symbol: true },
     });
-    const next = dto.allocations.filter((a) => a.pct > 0).map((a) => ({ ...a, symbol: a.symbol.toUpperCase() }));
     for (const a of next) {
-      if (!holdings.some((h) => h.assetType === a.assetType && h.symbol === a.symbol)) {
+      if (!holdings.some((h) => h.assetType === a.assetType && normalizeSymbol(h.symbol) === a.symbol)) {
         errors.push(`${a.symbol} không có trong danh mục của bạn`);
       }
     }

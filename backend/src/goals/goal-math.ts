@@ -18,6 +18,13 @@ export interface Allocation {
   pct: number;
 }
 
+/** Mã tài sản chuẩn: cắt khoảng trắng và viết hoa, cùng quy tắc với mã lưu ở danh mục */
+export const normalizeSymbol = (symbol: string) => symbol.trim().toUpperCase();
+
+/** Chuẩn hóa mã một lần để dùng chung cho kiểm tra, lưu và đọc */
+export const normalizeAllocations = <T extends Allocation>(items: T[]): T[] =>
+  items.map((a) => ({ ...a, symbol: normalizeSymbol(a.symbol) }));
+
 /** Tiến độ: tổng giá trị phần tài sản được gán; thiếu giá thì tạm tính theo giá vốn và đánh dấu */
 export function goalProgress(
   goal: { targetAmount: number; targetAllocation: Partial<Record<GoalAssetType, number>> | null },
@@ -28,7 +35,7 @@ export function goalProgress(
   let isEstimate = false;
   const byType: Record<string, number> = {};
   const assets = allocations.map((a) => {
-    const h = holdings.find((x) => x.assetType === a.assetType && x.symbol === a.symbol);
+    const h = holdings.find((x) => x.assetType === a.assetType && x.symbol === normalizeSymbol(a.symbol));
     const base = h ? (h.marketValue ?? h.costValue) : 0;
     if (h && h.marketValue === null) isEstimate = true;
     const value = (base * a.pct) / 100;
@@ -94,7 +101,7 @@ export function validateAllocations(next: Allocation[], others: Allocation[], na
   const errors: string[] = [];
   const seen = new Set<string>();
   for (const a of next) {
-    const key = `${a.assetType}:${a.symbol}`;
+    const key = `${a.assetType}:${normalizeSymbol(a.symbol)}`;
     if (seen.has(key)) errors.push(`${nameOf(a)} được gán hai lần`);
     seen.add(key);
     if (!(a.pct > 0 && a.pct <= 100)) {
@@ -102,7 +109,7 @@ export function validateAllocations(next: Allocation[], others: Allocation[], na
       continue;
     }
     const used = others
-      .filter((o) => o.assetType === a.assetType && o.symbol === a.symbol)
+      .filter((o) => o.assetType === a.assetType && normalizeSymbol(o.symbol) === normalizeSymbol(a.symbol))
       .reduce((s, o) => s + o.pct, 0);
     if (used + a.pct > 100 + 1e-9) {
       errors.push(`${nameOf(a)} đã gán ${round(used)}% cho mục tiêu khác, chỉ còn ${round(100 - used)}%`);

@@ -96,3 +96,24 @@ describe('kiểm tra phân bổ', () => {
     expect(validateTargetAllocation(null)).toBeNull();
   });
 });
+
+describe('mã tài sản cũ chưa chuẩn hóa', () => {
+  it('tiến độ vẫn khớp holding khi mã đã lưu là chữ thường', () => {
+    const p = goalProgress(
+      { targetAmount: 1e9, targetAllocation: null },
+      [{ assetType: 'stock', symbol: ' fpt ', pct: 50 }],
+      holdings,
+    );
+    expect(p.current).toBe(50_000_000);
+    expect(p.assets[0].held).toBe(true);
+  });
+
+  it('tính phần đã gán cho mục tiêu khác không phân biệt hoa thường', () => {
+    const errs = validateAllocations(
+      [{ assetType: 'stock', symbol: 'FPT', pct: 60 }],
+      [{ assetType: 'stock', symbol: 'fpt', pct: 60 }],
+      (a) => a.symbol,
+    );
+    expect(errs[0]).toContain('chỉ còn 40%');
+  });
+});

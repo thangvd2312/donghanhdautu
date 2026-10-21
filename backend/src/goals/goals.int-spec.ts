@@ -15,11 +15,11 @@ async function userWithFpt(tag: string) {
   return u;
 }
 
-const goal = (name: string, pct: number) => ({
+const goal = (name: string, pct: number, symbol = 'FPT') => ({
   name,
   targetAmount: 100_000_000,
   targetDate: '2030-01-01',
-  allocations: [{ assetType: 'stock' as const, symbol: 'FPT', pct }],
+  allocations: [{ assetType: 'stock' as const, symbol, pct }],
 });
 
 const totalPct = async (userId: string) =>
@@ -48,5 +48,36 @@ describe('phân bổ tài sản cho mục tiêu (PostgreSQL)', () => {
     const other = await userWithFpt('goal-other');
     const { id } = await goals.create(owner.id, goal('A', 30));
     await expect(goals.update(other.id, id, goal('A', 10))).rejects.toThrow('Không tìm thấy mục tiêu');
+  });
+
+  it('mã nhập chữ thường được lưu chuẩn hóa và bị tính vào tổng 100%', async () => {
+    const u = await userWithFpt('goal-case');
+    await goals.create(u.id, goal('A', 60, 'fpt'));
+    await expect(goals.create(u.id, goal('B', 60, 'FPT'))).rejects.toThrow('chỉ còn 40%');
+    const rows = await prisma.goalAllocation.findMany({ where: { goal: { userId: u.id } } });
+    expect(rows.map((r) => r.symbol)).toEqual(['FPT']);
+  });
+
+  it('sửa bằng mã chữ thường vẫn lưu mã chuẩn và chặn vượt 100%', async () => {
+    const u = await userWithFpt('goal-case-update');
+    const a = await goals.create(u.id, goal('A', 30, 'FPT'));
+    await goals.create(u.id, goal('B', 60, 'FPT'));
+    await expect(goals.update(u.id, a.id, goal('A', 50, 'fpt'))).rejects.toThrow('chỉ còn 40%');
+    await goals.update(u.id, a.id, goal('A', 40, 'fpt'));
+    const rows = await prisma.goalAllocation.findMany({ where: { goal: { userId: u.id } } });
+    expect(rows.map((r) => r.symbol)).toEqual(['FPT', 'FPT']);
+    expect(await totalPct(u.id)).toBe(100);
+  });
+
+  it('hai mục tiêu cùng lúc với mã khác kiểu chữ không vượt 100%', async () => {
+    for (let i = 0; i < 5; i++) {
+      const u = await userWithFpt('goal-case-race');
+      const res = await Promise.allSettled([
+        goals.create(u.id, goal('A', 60, 'fpt')),
+        goals.create(u.id, goal('B', 60, 'FPT')),
+      ]);
+      expect(res.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+      expect(await totalPct(u.id)).toBe(60);
+    }
   });
 });
