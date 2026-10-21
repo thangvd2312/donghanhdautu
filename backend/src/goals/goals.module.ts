@@ -32,7 +32,8 @@ import { IsDateKey } from '../common/dates';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { vnDateKey } from '../market/types';
-import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
+import { PortfolioModule } from '../portfolio/portfolio.module';
+import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.module';
 import {
   ASSET_TYPES,

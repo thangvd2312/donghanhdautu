@@ -1,5 +1,5 @@
 import { ValidationPipe } from '@nestjs/common';
-import { SimulateDto } from './portfolio.module';
+import { SimulateDto } from './simulate.dto';
 
 const pipe = new ValidationPipe({ whitelist: true, transform: true });
 const run = (body: unknown) => pipe.transform(body, { type: 'body', metatype: SimulateDto });

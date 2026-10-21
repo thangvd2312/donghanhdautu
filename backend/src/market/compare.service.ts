@@ -18,7 +18,15 @@ import {
 } from './compare';
 import { dividendHistory } from './dividends';
 import { MarketService } from './market.service';
-import { Candle, VietcapProvider } from './providers/vietcap.provider';
+import {
+  safe,
+  VietcapCompanyAdapter,
+  VietcapEventsAdapter,
+  VietcapHistoryAdapter,
+  VietcapStatementsAdapter,
+  VietcapSymbolsAdapter,
+} from './providers/vietcap';
+import type { Candle } from './providers/vietcap';
 import { vnDateKey } from './types';
 
 export interface CompareStock {
@@ -44,7 +52,11 @@ const HISTORY_SESSIONS_3Y = 1110;
 export class CompareService {
   constructor(
     private market: MarketService,
-    private vietcap: VietcapProvider,
+    private symbols: VietcapSymbolsAdapter,
+    private companies: VietcapCompanyAdapter,
+    private statements: VietcapStatementsAdapter,
+    private priceHistory: VietcapHistoryAdapter,
+    private corporateEvents: VietcapEventsAdapter,
     private prisma: PrismaService,
   ) {}
 
@@ -105,7 +117,7 @@ export class CompareService {
 
   /** Mã phải tồn tại và là cổ phiếu; liệt kê đủ mã sai trong một thông báo */
   private async validateSymbols(symbols: string[]) {
-    const infos = await Promise.all(symbols.map((s) => this.vietcap.lookup(s)));
+    const infos = await Promise.all(symbols.map((s) => this.symbols.lookup(s)));
     const invalid = symbols.filter((_, i) => !infos[i] || infos[i].type !== 'STOCK');
     if (invalid.length) throw new BadRequestException(`Không tìm thấy mã cổ phiếu: ${invalid.join(', ')}`);
     return infos as NonNullable<(typeof infos)[number]>[];
@@ -115,18 +127,18 @@ export class CompareService {
   private async load(symbol: string, sessions: number) {
     const unavailable: string[] = [];
     const guard = async <T>(name: string, fn: () => Promise<T | null>): Promise<T | null> => {
-      const v = await this.vietcap.safe<T | null>(`compare ${symbol} ${name}`, fn, null);
+      const v = await safe<T | null>(`compare ${symbol} ${name}`, fn, null);
       if (v === null) unavailable.push(name);
       return v;
     };
     const [quote, company, kind, stats, incomeYears, candles, events] = await Promise.all([
       guard('price', () => this.market.stockQuote(symbol)),
-      guard('company', () => this.vietcap.company(symbol)),
-      guard('kind', () => this.vietcap.kind(symbol)),
-      guard('ratios', () => this.vietcap.statsRaw(symbol) as Promise<StatsRow[]>),
-      guard('income', () => this.vietcap.incomeYears(symbol)),
-      guard<Candle[]>('history', () => this.vietcap.history(symbol, sessions)),
-      guard('dividends', () => this.vietcap.corporateEvents(symbol)),
+      guard('company', () => this.companies.company(symbol)),
+      guard('kind', () => this.statements.kind(symbol)),
+      guard('ratios', () => this.companies.statsRaw(symbol) as Promise<StatsRow[]>),
+      guard('income', () => this.statements.incomeYears(symbol)),
+      guard<Candle[]>('history', () => this.priceHistory.history(symbol, sessions)),
+      guard('dividends', () => this.corporateEvents.corporateEvents(symbol)),
     ]);
     return { symbol, quote, company, kind, stats, incomeYears, candles, events, unavailable };
   }

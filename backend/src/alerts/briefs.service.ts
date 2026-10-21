@@ -5,7 +5,7 @@ import { MacroService } from '../macro/macro.module';
 import { MarketService } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
 import { NewsService } from '../news/news.module';
-import { PortfolioService } from '../portfolio/portfolio.module';
+import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { LlmService } from './llm.service';

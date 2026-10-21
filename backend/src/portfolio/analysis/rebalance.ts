@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { PriceStatus } from '../market/freshness';
+import type { PriceStatus } from '../../market/freshness';
 
 const D = Prisma.Decimal;
 const Decimal = Prisma.Decimal;

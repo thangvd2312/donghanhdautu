@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { NotifierService } from '../alerts/notifier.service';
 import { VN_TZ, vnDateKey } from '../market/types';
-import { VietcapProvider } from '../market/providers/vietcap.provider';
-import type { MarketEvents } from '../market/providers/vietcap.provider';
+import { VietcapEventsAdapter } from '../market/providers/vietcap';
+import type { MarketEvents } from '../market/providers/vietcap';
 import { PrismaService } from '../prisma/prisma.module';
 import {
   buildCalendar,
@@ -49,7 +49,7 @@ export class EventsService {
 
   constructor(
     private prisma: PrismaService,
-    private vietcap: VietcapProvider,
+    private vietcap: VietcapEventsAdapter,
     private notifier: NotifierService,
   ) {}
 

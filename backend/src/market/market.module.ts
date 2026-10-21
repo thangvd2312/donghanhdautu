@@ -4,9 +4,10 @@ import type { AuthUser } from '../auth/auth.module';
 import { CompareService } from './compare.service';
 import { MarketGateway } from './market.gateway';
 import { MarketService } from './market.service';
+import { StockResearchService } from './stock-research.service';
 import { BinanceProvider } from './providers/binance.provider';
 import { GoldFxProvider } from './providers/gold-fx.provider';
-import { VietcapProvider } from './providers/vietcap.provider';
+import { VietcapModule } from './providers/vietcap';
 import { VndirectProvider } from './providers/vndirect.provider';
 
 @UseGuards(JwtAuthGuard)
@@ -14,6 +15,7 @@ import { VndirectProvider } from './providers/vndirect.provider';
 class MarketController {
   constructor(
     private market: MarketService,
+    private research: StockResearchService,
     private compareService: CompareService,
   ) {}
 
@@ -34,17 +36,17 @@ class MarketController {
 
   @Get('stocks/:symbol')
   stock(@Param('symbol') symbol: string) {
-    return this.market.stockDetail(symbol);
+    return this.research.stockDetail(symbol);
   }
 
   @Get('stocks/:symbol/fundamentals')
   stockFundamentals(@Param('symbol') symbol: string) {
-    return this.market.stockFundamentals(symbol);
+    return this.research.stockFundamentals(symbol);
   }
 
   @Get('stocks/:symbol/dividends')
   stockDividends(@Param('symbol') symbol: string) {
-    return this.market.stockDividends(symbol);
+    return this.research.stockDividends(symbol);
   }
 
   @Get('stocks/:symbol/history')
@@ -64,17 +66,17 @@ class MarketController {
 }
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, VietcapModule],
   controllers: [MarketController],
   providers: [
     MarketService,
+    StockResearchService,
     CompareService,
     MarketGateway,
-    VietcapProvider,
     VndirectProvider,
     BinanceProvider,
     GoldFxProvider,
   ],
-  exports: [MarketService, MarketGateway, VietcapProvider, VndirectProvider],
+  exports: [MarketService, StockResearchService, MarketGateway, VietcapModule, VndirectProvider],
 })
 export class MarketModule {}

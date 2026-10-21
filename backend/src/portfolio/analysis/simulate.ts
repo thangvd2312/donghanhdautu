@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { PriceStatus } from '../market/freshness';
-import { TYPE_LABEL } from './valuation';
+import type { PriceStatus } from '../../market/freshness';
+import { TYPE_LABEL } from '../valuation';
 
 const D = Prisma.Decimal;
 type Dec = Prisma.Decimal;

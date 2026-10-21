@@ -3,8 +3,8 @@
  * Thuần: sổ, sự kiện và ngày hôm nay truyền vào. Không tự ghi sổ; khoản đã ghi (theo đúng logic của gợi ý ghi sổ)
  * không còn là dự kiến nên không bao giờ tính hai lần.
  */
-import type { CorporateEvent } from '../market/providers/vietcap.provider';
-import { addDays } from '../plans/plan-rules';
+import type { CorporateEvent } from '../../market/providers/vietcap';
+import { addDays } from '../../plans/plan-rules';
 import {
   actionKey,
   cashDividendRecorded,
@@ -13,8 +13,8 @@ import {
   heldBefore,
   LOOKBACK_DAYS,
 } from './corporate-actions';
-import { computeLedger } from './ledger';
-import type { LedgerTx } from './ledger';
+import { computeLedger } from '../ledger';
+import type { LedgerTx } from '../ledger';
 
 export const DEFAULT_PAST_MONTHS = 12;
 export const MAX_PAST_MONTHS = 36;

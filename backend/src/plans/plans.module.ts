@@ -25,8 +25,10 @@ import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
 import { MarketService, normalizeCrypto } from '../market/market.service';
+import { StockResearchService } from '../market/stock-research.service';
 import { VN_TZ, vnDateKey } from '../market/types';
-import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
+import { PortfolioModule } from '../portfolio/portfolio.module';
+import { PortfolioService } from '../portfolio/portfolio.service';
 import { AiUsageService } from '../ai/ai-usage.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
@@ -109,6 +111,7 @@ export class PlansService {
   constructor(
     private prisma: PrismaService,
     private market: MarketService,
+    private research: StockResearchService,
     private portfolio: PortfolioService,
     private llm: LlmService,
     private notifier: NotifierService,
@@ -313,7 +316,7 @@ export class PlansService {
     const price = this.priceNative(dto.assetType, symbol);
     let market: unknown = { price };
     if (dto.assetType === 'stock') {
-      const d = await this.market.stockDetail(symbol).catch(() => null);
+      const d = await this.research.stockDetail(symbol).catch(() => null);
       if (d) {
         market = {
           price,

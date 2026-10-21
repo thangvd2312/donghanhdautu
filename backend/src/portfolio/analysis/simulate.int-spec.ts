@@ -1,14 +1,16 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { MarketService } from '../market/market.service';
-import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
-import { PortfolioService } from './portfolio.module';
-import { TransactionsService } from './transactions';
+import type { MarketService } from '../../market/market.service';
+import { fakeMarket, testPrisma, testUser } from '../../test-utils/test-db';
+import { PortfolioService } from '../portfolio.service';
+import { TransactionsService } from '../transactions';
+import { AnalysisService } from './analysis.service';
 
 const prisma = testPrisma();
 // Giá giả: mọi tài sản 100.000 ₫/đơn vị, tỷ giá 26.000 (không gọi nguồn giá thật)
 const market = fakeMarket() as unknown as MarketService;
 const transactions = new TransactionsService(prisma, market);
 const portfolio = new PortfolioService(prisma, market, transactions);
+const analysis = new AnalysisService(prisma, market, transactions, portfolio);
 
 afterAll(() => prisma.$disconnect());
 
@@ -41,7 +43,7 @@ describe('mô phỏng danh mục (PostgreSQL)', () => {
     const screen = await portfolio.valuation(u.id);
     const countsBefore = await counts(u.id);
 
-    const r = await portfolio.simulate(u.id, { shocks: { stock: -10, crypto: 20, fx: 2, symbols: { FPT: -25 } } });
+    const r = await analysis.simulate(u.id, { shocks: { stock: -10, crypto: 20, fx: 2, symbols: { FPT: -25 } } });
 
     expect(r.before.total).toBe(Math.round(screen.totalValue));
     expect(r.asOf).toBeTruthy();
@@ -65,21 +67,21 @@ describe('mô phỏng danh mục (PostgreSQL)', () => {
       portfolioId: mine.id,
     });
     const screen = await portfolio.valuation(u.id, mine.id);
-    const r = await portfolio.simulate(u.id, { portfolioId: mine.id, shocks: { stock: 10 } });
+    const r = await analysis.simulate(u.id, { portfolioId: mine.id, shocks: { stock: 10 } });
     expect(r.before.total).toBe(Math.round(screen.totalValue));
     expect(r.holdings.map((h) => h.symbol)).toEqual(['VNM']);
 
-    await expect(portfolio.simulate(other.id, { portfolioId: mine.id, shocks: {} })).rejects.toBeInstanceOf(
+    await expect(analysis.simulate(other.id, { portfolioId: mine.id, shocks: {} })).rejects.toBeInstanceOf(
       NotFoundException,
     );
-    await expect(portfolio.simulate(u.id, { shocks: { symbols: { FPT: 1, ZZZ: 1 } } })).rejects.toBeInstanceOf(
+    await expect(analysis.simulate(u.id, { shocks: { symbols: { FPT: 1, ZZZ: 1 } } })).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });
 
   it('người dùng chưa có tài sản: kết quả rỗng, không lỗi', async () => {
     const u = await testUser(prisma, 'sim-empty');
-    const r = await portfolio.simulate(u.id, { shocks: { stock: -50 } });
+    const r = await analysis.simulate(u.id, { shocks: { stock: -50 } });
     expect(r.before.total).toBe(0);
     expect(r.delta.pct).toBeNull();
   });

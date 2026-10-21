@@ -10,8 +10,10 @@ import { NewsModule, NewsService } from '../news/news.module';
 import type { NewsItem } from '../news/news.module';
 import { ledgerOfAll } from '../portfolio/ledger';
 import type { LedgerTx } from '../portfolio/ledger';
-import { PortfolioModule, PortfolioService } from '../portfolio/portfolio.module';
-import { CorporateActionsService } from '../portfolio/corporate-actions.service';
+import { CorporateActionsService } from '../portfolio/dividends/corporate-actions.service';
+import { DividendsModule } from '../portfolio/dividends/dividends.module';
+import { PortfolioModule } from '../portfolio/portfolio.module';
+import { PortfolioService } from '../portfolio/portfolio.service';
 import { toLedgerTx, TransactionsService } from '../portfolio/transactions';
 import { PrismaService } from '../prisma/prisma.module';
 import { planSignals } from '../plans/plan-rules';
@@ -260,7 +262,7 @@ class HomeController {
 }
 
 @Module({
-  imports: [MarketModule, NewsModule, PortfolioModule],
+  imports: [MarketModule, NewsModule, PortfolioModule, DividendsModule],
   controllers: [HomeController],
   providers: [HomeService],
 })

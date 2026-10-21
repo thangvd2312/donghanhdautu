@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import WebSocket from 'ws';
 import { CryptoQuote } from '../types';
-import type { Candle } from './vietcap.provider';
+import type { Candle } from './vietcap/history.adapter';
 
 const WS_URL = 'wss://stream.binance.com:9443/ws/!miniTicker@arr';
 const REST = 'https://api.binance.com/api/v3';

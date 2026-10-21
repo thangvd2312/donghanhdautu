@@ -1,12 +1,7 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { dividendHistory } from '../market/dividends';
-import {
-  CorporateEvent,
-  VcScreenCriterion,
-  VcScreenPage,
-  VcScreenRow,
-  VietcapProvider,
-} from '../market/providers/vietcap.provider';
+import { VietcapEventsAdapter, VietcapScreeningAdapter } from '../market/providers/vietcap';
+import type { CorporateEvent, VcScreenCriterion, VcScreenPage, VcScreenRow } from '../market/providers/vietcap';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
 import { CRITERIA, Criterion, EXCHANGES, FALLBACK_SECTORS, Option } from './screener.catalog';
@@ -56,12 +51,13 @@ export class ScreenerService {
 
   constructor(
     private prisma: PrismaService,
-    private vietcap: VietcapProvider,
+    private screening: VietcapScreeningAdapter,
+    private events: VietcapEventsAdapter,
   ) {}
 
   /** Danh mục tiêu chí; nhãn ngành và kỳ tăng trưởng lấy từ nguồn, lỗi thì dùng bản dự phòng */
   async criteria(): Promise<Criterion[]> {
-    const live = await this.vietcap.screeningCriteria().catch(() => null);
+    const live = await this.screening.screeningCriteria().catch(() => null);
     const sectors = sectorOptions(live);
     const quarter = live?.find((c) => c.name === 'npatmiGrowth')?.conditionExtra2?.find((o) => o.isDefault)?.viName;
     return CRITERIA.map((c) => {
@@ -72,7 +68,7 @@ export class ScreenerService {
   }
 
   async run(userId: string, req: RunRequest): Promise<ScreenResult> {
-    const live = await this.vietcap.screeningCriteria().catch(() => null);
+    const live = await this.screening.screeningCriteria().catch(() => null);
     let filters: Filter[];
     let sort: Sort;
     try {
@@ -113,11 +109,11 @@ export class ScreenerService {
   private async universe(filters: Filter[]): Promise<number> {
     const exchange = filters.filter((f) => f.key === 'exchange');
     const body = toVietcapRequest(exchange, { key: 'marketCap', dir: 'desc' }, 0, 1);
-    return (await this.vietcap.screeningPage(body)).totalElements;
+    return (await this.screening.screeningPage(body)).totalElements;
   }
 
   private async runAtSource(filters: Filter[], sort: Sort, page: number, pageSize: number) {
-    const data = await this.vietcap.screeningPage(toVietcapRequest(filters, sort, page - 1, pageSize));
+    const data = await this.screening.screeningPage(toVietcapRequest(filters, sort, page - 1, pageSize));
     return {
       rows: data.content.map((r) => mapRow(r, filters, sort)),
       total: data.totalElements,
@@ -166,7 +162,7 @@ export class ScreenerService {
   private async candidates(filters: Filter[], sort: Sort): Promise<{ rows: VcScreenRow[] }> {
     const rows: VcScreenRow[] = [];
     for (let page = 0; rows.length < DIVIDEND_SCAN_CAP; page++) {
-      const data: VcScreenPage = await this.vietcap.screeningPage(
+      const data: VcScreenPage = await this.screening.screeningPage(
         toVietcapRequest(filters, sort, page, SOURCE_PAGE_SIZE),
       );
       rows.push(...data.content);
@@ -182,7 +178,7 @@ export class ScreenerService {
   private async cashEventsByTicker(): Promise<Map<string, CorporateEvent[]>> {
     const today = vnDateKey();
     const from = `${Number(today.slice(0, 4)) - 1}${today.slice(4)}`;
-    const { events } = await this.vietcap.marketEvents(from, today);
+    const { events } = await this.events.marketEvents(from, today);
     const out = new Map<string, CorporateEvent[]>();
     for (const e of events) {
       const exDate = e.exrightDate?.slice(0, 10);

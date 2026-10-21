@@ -6,7 +6,7 @@ import type { NewsItem } from '../news/news.module';
 import { addDays } from '../plans/plan-rules';
 import { reviewPoints } from '../home/today';
 import { HistoryService } from '../portfolio/history.service';
-import { PortfolioService } from '../portfolio/portfolio.module';
+import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { mentionsCompany } from './aliases';

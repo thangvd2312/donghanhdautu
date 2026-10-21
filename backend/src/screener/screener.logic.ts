@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { VcScreenFilter, VcScreenRequest, VcScreenRow } from '../market/providers/vietcap.provider';
+import type { VcScreenFilter, VcScreenRequest, VcScreenRow } from '../market/providers/vietcap';
 import { CRITERIA_BY_KEY, CriterionKey, Option, SORT_FIELDS, VIETCAP_SOURCES } from './screener.catalog';
 
 export interface RangeFilter {

@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { vnDateKey } from '../market/types';
-import { VietcapProvider } from '../market/providers/vietcap.provider';
-import type { CorporateEvent } from '../market/providers/vietcap.provider';
-import { PrismaService } from '../prisma/prisma.module';
+import { vnDateKey } from '../../market/types';
+import { VietcapEventsAdapter } from '../../market/providers/vietcap';
+import type { CorporateEvent } from '../../market/providers/vietcap';
+import { PrismaService } from '../../prisma/prisma.module';
 import { missingActions } from './corporate-actions';
 import { buildIncome, clampPast } from './income';
-import { toLedgerTx, TransactionsService } from './transactions';
+import { toLedgerTx, TransactionsService } from '../transactions';
 
 /** Gợi ý ghi sự kiện quyền còn thiếu vào sổ, theo dữ liệu sự kiện của Vietcap */
 @Injectable()
@@ -14,7 +14,7 @@ export class CorporateActionsService {
 
   constructor(
     private prisma: PrismaService,
-    private vietcap: VietcapProvider,
+    private vietcap: VietcapEventsAdapter,
     private transactions: TransactionsService,
   ) {}
 

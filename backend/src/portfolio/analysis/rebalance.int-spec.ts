@@ -1,8 +1,9 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { MarketService } from '../market/market.service';
-import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
-import { PortfolioService } from './portfolio.module';
-import { TransactionsService } from './transactions';
+import type { MarketService } from '../../market/market.service';
+import { fakeMarket, testPrisma, testUser } from '../../test-utils/test-db';
+import { PortfolioService } from '../portfolio.service';
+import { TransactionsService } from '../transactions';
+import { AnalysisService } from './analysis.service';
 
 const prisma = testPrisma();
 // Giá giả: mọi tài sản 100.000 ₫/đơn vị, tỷ giá 26.000; mã "ZZZ" không tồn tại; vàng SJC bán ra 110.000
@@ -13,6 +14,7 @@ const market = {
 } as unknown as MarketService;
 const transactions = new TransactionsService(prisma, market);
 const portfolio = new PortfolioService(prisma, market, transactions);
+const analysis = new AnalysisService(prisma, market, transactions, portfolio);
 
 afterAll(() => prisma.$disconnect());
 
@@ -50,7 +52,7 @@ describe('mô phỏng tái cân bằng (PostgreSQL)', () => {
     const screen = await portfolio.valuation(u.id);
     const before = await counts(u.id);
 
-    const r = await portfolio.rebalance(u.id, { ...body, fees: { stockBuyPct: 0 } });
+    const r = await analysis.rebalance(u.id, { ...body, fees: { stockBuyPct: 0 } });
 
     expect(r.before.total).toBe(Math.round(screen.totalValue));
     expect(r.investable).toBe(Math.round(screen.totalValue) + 1_000_000);
@@ -76,7 +78,7 @@ describe('mô phỏng tái cân bằng (PostgreSQL)', () => {
       portfolioId: mine.id,
     });
     const screen = await portfolio.valuation(u.id, mine.id);
-    const r = await portfolio.rebalance(u.id, {
+    const r = await analysis.rebalance(u.id, {
       portfolioId: mine.id,
       targets: [{ assetType: 'stock', symbol: 'VNM', pct: 100 }],
       newMoney: 0,
@@ -86,11 +88,11 @@ describe('mô phỏng tái cân bằng (PostgreSQL)', () => {
     expect(r.before.total).toBe(Math.round(screen.totalValue));
     expect(r.before.rows.map((x) => x.symbol)).toEqual(['VNM']);
 
-    await expect(portfolio.rebalance(other.id, { ...body, portfolioId: mine.id })).rejects.toBeInstanceOf(
+    await expect(analysis.rebalance(other.id, { ...body, portfolioId: mine.id })).rejects.toBeInstanceOf(
       NotFoundException,
     );
     await expect(
-      portfolio.rebalance(u.id, {
+      analysis.rebalance(u.id, {
         ...body,
         targets: [
           { assetType: 'stock', symbol: 'FPT', pct: 50 },
@@ -98,14 +100,14 @@ describe('mô phỏng tái cân bằng (PostgreSQL)', () => {
         ],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    await expect(portfolio.rebalance(u.id, { ...body, targets: [targets[1], targets[2]] })).rejects.toBeInstanceOf(
+    await expect(analysis.rebalance(u.id, { ...body, targets: [targets[1], targets[2]] })).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });
 
   it('người dùng chưa có tài sản: chỉ tiền mới, mua cổ phiếu mới', async () => {
     const u = await testUser(prisma, 'rb-empty');
-    const r = await portfolio.rebalance(u.id, {
+    const r = await analysis.rebalance(u.id, {
       targets: [{ assetType: 'stock', symbol: 'VNM', pct: 100 }],
       newMoney: 25_000_000,
       mode: 'buy_only',

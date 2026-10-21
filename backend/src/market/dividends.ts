@@ -1,4 +1,4 @@
-import type { CorporateEvent } from './providers/vietcap.provider';
+import type { CorporateEvent } from './providers/vietcap/events.adapter';
 
 /** Mệnh giá cổ phiếu VN: tỷ lệ cổ tức tiền mặt công bố theo % mệnh giá */
 export const PAR_VALUE = 10_000;

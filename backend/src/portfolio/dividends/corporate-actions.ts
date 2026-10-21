@@ -3,10 +3,10 @@
  * chưa ghi vào sổ. Thuần: sự kiện thị trường và sổ giao dịch truyền vào. Không tự ghi gì — chỉ gợi ý để người dùng
  * xác nhận (số cổ phiếu / tiền thực nhận có thể khác do làm tròn, thuế, phí).
  */
-import type { CorporateEvent } from '../market/providers/vietcap.provider';
-import { addDays } from '../plans/plan-rules';
-import { computeLedger, sortTxs } from './ledger';
-import type { LedgerTx } from './ledger';
+import type { CorporateEvent } from '../../market/providers/vietcap';
+import { addDays } from '../../plans/plan-rules';
+import { computeLedger, sortTxs } from '../ledger';
+import type { LedgerTx } from '../ledger';
 
 /** Thuế thu nhập cá nhân 5% trên cổ tức tiền mặt, công ty chứng khoán khấu trừ trước khi trả */
 export const DIVIDEND_TAX_RATE = 0.05;

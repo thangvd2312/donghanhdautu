@@ -1,6 +1,6 @@
 import { NotifierService } from '../alerts/notifier.service';
 import type { MarketGateway } from '../market/market.gateway';
-import type { VcMarketEvent, VietcapProvider } from '../market/providers/vietcap.provider';
+import type { VcMarketEvent, VietcapEventsAdapter } from '../market/providers/vietcap';
 import { testPrisma, testUser } from '../test-utils/test-db';
 import { EventsService } from './events.service';
 
@@ -15,7 +15,7 @@ const vietcap = {
     failing
       ? Promise.reject(new Error('Vietcap 500'))
       : Promise.resolve({ events, fetchedAt: '2026-10-21T01:00:00.000Z' }),
-} as unknown as VietcapProvider;
+} as unknown as VietcapEventsAdapter;
 const service = new EventsService(prisma, vietcap, notifier);
 
 const fpt = (o: Partial<VcMarketEvent> = {}): VcMarketEvent => ({

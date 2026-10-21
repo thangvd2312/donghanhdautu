@@ -1,4 +1,5 @@
-import { VietcapProvider } from './vietcap.provider';
+import { DEFAULT_HTTP_OPTIONS, VietcapEventsAdapter } from './vietcap';
+import { VietcapHttpClient } from './vietcap/vietcap-http.client';
 import { VndirectProvider } from './vndirect.provider';
 
 const json = (body: unknown) =>
@@ -30,7 +31,7 @@ describe('VndirectProvider.rawCloses', () => {
   });
 });
 
-describe('VietcapProvider.corporateEvents', () => {
+describe('VietcapEventsAdapter.corporateEvents', () => {
   it('chỉ giữ cổ phiếu thưởng / cổ tức cổ phiếu / chia tách và cổ tức tiền mặt', async () => {
     const base = { exrightDate: '2026-09-21T00:00:00', recordDate: '2026-09-22T00:00:00' };
     jest.spyOn(global, 'fetch').mockImplementation(() =>
@@ -63,7 +64,7 @@ describe('VietcapProvider.corporateEvents', () => {
         },
       }),
     );
-    const events = await new VietcapProvider().corporateEvents('FPT');
+    const events = await new VietcapEventsAdapter(new VietcapHttpClient(DEFAULT_HTTP_OPTIONS)).corporateEvents('FPT');
     expect(events.map((e) => [e.kind, e.exDate, e.ratio, e.valuePerShare, e.payoutDate])).toEqual([
       ['cash', '2026-05-28', null, 1000, '2026-06-10'],
       ['stock', '2026-09-21', 0.1, null, null],

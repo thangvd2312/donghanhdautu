@@ -1,4 +1,4 @@
-import type { Candle } from './providers/vietcap.provider';
+import type { Candle } from './providers/vietcap/history.adapter';
 
 /**
  * Tính sẵn chỉ báo kỹ thuật trên server để AI không phải tự nhẩm (dễ sai).

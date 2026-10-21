@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client';
-import type { CorporateEvent } from '../market/providers/vietcap.provider';
+import type { CorporateEvent } from '../../market/providers/vietcap';
 import { actionKey, missingActions } from './corporate-actions';
-import { computeLedger, LedgerError } from './ledger';
-import type { LedgerTx } from './ledger';
+import { computeLedger, LedgerError } from '../ledger';
+import type { LedgerTx } from '../ledger';
 
 const D = (v: number) => new Prisma.Decimal(v);
 let n = 0;

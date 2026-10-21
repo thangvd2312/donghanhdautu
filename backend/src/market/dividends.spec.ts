@@ -1,5 +1,5 @@
 import { dividendHistory } from './dividends';
-import type { CorporateEvent } from './providers/vietcap.provider';
+import type { CorporateEvent } from './providers/vietcap';
 
 const ev = (e: Partial<CorporateEvent> & Pick<CorporateEvent, 'kind' | 'exDate'>): CorporateEvent => ({
   symbol: 'FPT',

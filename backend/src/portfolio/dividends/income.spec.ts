@@ -1,9 +1,9 @@
 import { Prisma } from '@prisma/client';
-import type { CorporateEvent } from '../market/providers/vietcap.provider';
+import type { CorporateEvent } from '../../market/providers/vietcap';
 import { actionKey } from './corporate-actions';
 import { addMonths, buildIncome, clampPast } from './income';
 import type { ExpectedItem, IncomeInput, ReceivedItem } from './income';
-import type { LedgerTx } from './ledger';
+import type { LedgerTx } from '../ledger';
 
 const D = (v: number) => new Prisma.Decimal(v);
 const TODAY = '2026-10-21';

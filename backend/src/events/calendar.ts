@@ -1,4 +1,4 @@
-import type { VcMarketEvent } from '../market/providers/vietcap.provider';
+import type { VcMarketEvent } from '../market/providers/vietcap';
 
 /** Hàm thuần của lịch sự kiện quyền: phân loại sự kiện Vietcap, lọc theo cửa sổ ngày, hợp nhất danh mục / watchlist, quyết định nhắc */
 

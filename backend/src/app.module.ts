@@ -17,6 +17,8 @@ import { LogosModule } from './logos/logos.module';
 import { MacroModule } from './macro/macro.module';
 import { MarketModule } from './market/market.module';
 import { NewsModule } from './news/news.module';
+import { AnalysisModule } from './portfolio/analysis/analysis.module';
+import { DividendsModule } from './portfolio/dividends/dividends.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
@@ -45,6 +47,8 @@ class HealthController {
     NewsModule,
     ProfileModule,
     PortfolioModule,
+    AnalysisModule,
+    DividendsModule,
     WatchlistModule,
     HomeModule,
     PlansModule,

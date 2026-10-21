@@ -1,10 +1,10 @@
-import type { MarketService } from '../market/market.service';
-import type { CorporateEvent, VietcapProvider } from '../market/providers/vietcap.provider';
-import { vnDateKey } from '../market/types';
-import { addDays } from '../plans/plan-rules';
-import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
+import type { MarketService } from '../../market/market.service';
+import type { CorporateEvent, VietcapEventsAdapter } from '../../market/providers/vietcap';
+import { vnDateKey } from '../../market/types';
+import { addDays } from '../../plans/plan-rules';
+import { fakeMarket, testPrisma, testUser } from '../../test-utils/test-db';
 import { CorporateActionsService } from './corporate-actions.service';
-import { TransactionsService } from './transactions';
+import { TransactionsService } from '../transactions';
 import type { ExpectedItem, ReceivedItem } from './income';
 
 const prisma = testPrisma();
@@ -19,7 +19,7 @@ let events: CorporateEvent[] = [];
 let failing = false;
 const vietcap = {
   corporateEvents: () => (failing ? Promise.reject(new Error('Vietcap timeout')) : Promise.resolve(events)),
-} as unknown as VietcapProvider;
+} as unknown as VietcapEventsAdapter;
 const service = new CorporateActionsService(prisma, vietcap, transactions);
 
 const fptDividend = (): CorporateEvent => ({

@@ -3,9 +3,7 @@ import { Subject } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.module';
 import { BinanceProvider, FEATURED_COINS } from './providers/binance.provider';
 import { GoldFxProvider, OZ_PER_LUONG } from './providers/gold-fx.provider';
-import { VietcapProvider } from './providers/vietcap.provider';
-import { dividendHistory } from './dividends';
-import { valuationBand } from './fundamentals';
+import { safe, VietcapHistoryAdapter, VietcapQuotesAdapter, VietcapSymbolsAdapter } from './providers/vietcap';
 import { ageStatus, PriceInfo, SourceStatus, STALE_AFTER_MS, stockStatus, worst } from './freshness';
 import { technicals } from './technicals';
 import {
@@ -17,7 +15,6 @@ import {
   MarketSnapshot,
   StockQuote,
   UsdtRate,
-  vnDateKey,
 } from './types';
 
 export type MarketEvent =
@@ -92,7 +89,9 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   private pendingCrypto = new Map<string, CryptoQuote>();
 
   constructor(
-    private vietcap: VietcapProvider,
+    private symbols: VietcapSymbolsAdapter,
+    private quotes: VietcapQuotesAdapter,
+    private priceHistory: VietcapHistoryAdapter,
     readonly binance: BinanceProvider,
     private goldFx: GoldFxProvider,
     private prisma: PrismaService,
@@ -152,9 +151,9 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
 
   /** Theo dõi VN30 + mọi mã cổ phiếu người dùng đang nắm giữ, quan tâm hoặc đặt cảnh báo giá */
   async refreshTracked() {
-    this.vn30 = await this.vietcap.safe('VN30', () => this.vietcap.group('VN30'), this.vn30);
+    this.vn30 = await safe('VN30', () => this.symbols.group('VN30'), this.vn30);
     // Thử tải lại danh sách mã nếu lần trước lỗi (đã tải được thì là no-op)
-    await this.vietcap.allSymbols().catch(() => null);
+    await this.symbols.allSymbols().catch(() => null);
     const [h, w, a] = await Promise.all([
       this.prisma.holding.findMany({ where: { assetType: 'stock' }, select: { symbol: true }, distinct: ['symbol'] }),
       this.prisma.watchItem.findMany({ where: { assetType: 'stock' }, select: { symbol: true }, distinct: ['symbol'] }),
@@ -185,8 +184,8 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
 
   private async pollStocks() {
     const [quotes, indices] = await Promise.all([
-      this.fetchSource('stocks', () => this.vietcap.board([...this.tracked]), []),
-      this.fetchSource('indices', () => this.vietcap.indices(), this.indices),
+      this.fetchSource('stocks', () => this.quotes.board([...this.tracked]), []),
+      this.fetchSource('indices', () => this.quotes.indices(), this.indices),
     ]);
     const now = new Date();
     for (const q of quotes) {
@@ -308,7 +307,7 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     const cached = this.stocks.get(symbol);
     if (cached) return cached;
     await this.assertStock(symbol);
-    const [q] = await this.vietcap.board([symbol]);
+    const [q] = await this.quotes.board([symbol]);
     if (!q) throw new NotFoundException(`Không có dữ liệu giá cho ${symbol}`);
     this.stocks.set(symbol, q);
     this.stockFetchedAt.set(symbol, new Date());
@@ -317,7 +316,7 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   }
 
   async assertStock(symbol: string) {
-    const info = await this.vietcap.lookup(symbol.toUpperCase());
+    const info = await this.symbols.lookup(symbol.toUpperCase());
     if (!info) throw new NotFoundException(`Không tìm thấy mã chứng khoán ${symbol}`);
     return info;
   }
@@ -325,9 +324,9 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   async searchStocks(q: string) {
     const s = q.trim().toUpperCase();
     if (!s) return [];
-    const all = await this.vietcap.allSymbols().catch(() => null);
+    const all = await this.symbols.allSymbols().catch(() => null);
     if (!all) {
-      const one = await this.vietcap.lookup(s);
+      const one = await this.symbols.lookup(s);
       return one ? [one] : [];
     }
     const exact = all.get(s);
@@ -337,54 +336,8 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     return [...(exact ? [exact] : []), ...rest].slice(0, 15);
   }
 
-  async stockDetail(symbol: string) {
-    symbol = symbol.toUpperCase();
-    const [quote, company, ratios, income, candles] = await Promise.all([
-      this.stockQuote(symbol),
-      this.vietcap.safe('company', () => this.vietcap.company(symbol), null),
-      this.vietcap.safe('ratios', () => this.vietcap.ratios(symbol), []),
-      this.vietcap.safe('income', () => this.vietcap.incomeStatement(symbol), null),
-      this.vietcap.safe('history', () => this.vietcap.history(symbol, 400), []),
-    ]);
-    return { quote, company, ratios, income, technicals: technicals(candles) };
-  }
-
-  /** Dải P/E, P/B ~8 năm của chính doanh nghiệp so với định giá theo giá hiện tại */
-  async valuationHistory(symbol: string, price?: number | null) {
-    symbol = symbol.toUpperCase();
-    const rows = await this.vietcap.statsRaw(symbol);
-    return valuationBand(rows, price ?? this.stocks.get(symbol)?.price ?? null);
-  }
-
-  /** Dữ liệu cơ bản sâu: định giá lịch sử, cân đối kế toán, dòng tiền, cổ đông lớn, giao dịch nội bộ */
-  async stockFundamentals(symbol: string, price?: number | null) {
-    symbol = symbol.toUpperCase();
-    const v = this.vietcap;
-    // Mã ngoài bảng giá đang theo dõi: lấy giá hiện tại để định giá theo giá mới nhất
-    price ??= this.stocks.get(symbol)?.price ?? (await this.stockQuote(symbol).catch(() => null))?.price ?? null;
-    const [valuationHistory, balanceSheet, cashFlow, majorShareholders, insiderTrades] = await Promise.all([
-      v.safe('valuation', () => this.valuationHistory(symbol, price), null),
-      v.safe('balance', () => v.balanceSheet(symbol), null),
-      v.safe('cashflow', () => v.cashFlow(symbol), null),
-      v.safe('shareholders', () => v.shareholders(symbol), null),
-      v.safe('insider', () => v.insiderTrades(symbol), null),
-    ]);
-    return { valuationHistory, balanceSheet, cashFlow, majorShareholders, insiderTrades };
-  }
-
-  /** Lịch sử cổ tức tiền mặt / cổ phiếu (sự kiện quyền Vietcap từ 2018) và tỷ suất cổ tức 12 tháng theo giá hiện tại */
-  async stockDividends(symbol: string) {
-    symbol = symbol.toUpperCase();
-    await this.assertStock(symbol);
-    const [events, quote] = await Promise.all([
-      this.vietcap.corporateEvents(symbol),
-      this.stockQuote(symbol).catch(() => null),
-    ]);
-    return { ...dividendHistory(events, quote?.price ?? null, vnDateKey()), source: 'Vietcap', since: '2018' };
-  }
-
   stockHistory(symbol: string, days: number) {
-    return this.vietcap.history(symbol.toUpperCase(), days);
+    return this.priceHistory.history(symbol.toUpperCase(), days);
   }
 
   async cryptoDetail(symbol: string) {

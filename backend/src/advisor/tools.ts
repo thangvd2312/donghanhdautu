@@ -3,8 +3,9 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { MacroService } from '../macro/macro.module';
 import { MarketService } from '../market/market.service';
+import { StockResearchService } from '../market/stock-research.service';
 import { NewsService } from '../news/news.module';
-import { PortfolioService } from '../portfolio/portfolio.module';
+import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { REFERENCE_ALLOCATION, RISK_TYPE_LABEL } from '../profile/quiz';
 import { classifySource } from './source-tiers';
@@ -31,6 +32,7 @@ export class AdvisorTools {
 
   constructor(
     private market: MarketService,
+    private research: StockResearchService,
     private portfolio: PortfolioService,
     private news: NewsService,
     private prisma: PrismaService,
@@ -382,8 +384,8 @@ export class AdvisorTools {
   }
 
   private async stock(symbol: string) {
-    const d = await this.market.stockDetail(symbol);
-    const f = await this.market.stockFundamentals(symbol, d.quote.price);
+    const d = await this.research.stockDetail(symbol);
+    const f = await this.research.stockFundamentals(symbol, d.quote.price);
     // Chuỗi từng quý chỉ để vẽ biểu đồ — cố vấn dùng thống kê đã tính sẵn
     const valuationHistory = f.valuationHistory ? { ...f.valuationHistory, series: undefined } : null;
     return {
@@ -398,8 +400,8 @@ export class AdvisorTools {
     const rows = await Promise.all(
       symbols.map(async (s) => {
         try {
-          const d = await this.market.stockDetail(s);
-          const vh = await this.market.valuationHistory(s, d.quote.price).catch(() => null);
+          const d = await this.research.stockDetail(s);
+          const vh = await this.research.valuationHistory(s, d.quote.price).catch(() => null);
           const lastRatio = d.ratios.at(-1) ?? {};
           const years = d.income?.years ?? [];
           const profitKey = (row?: Record<string, unknown>) =>

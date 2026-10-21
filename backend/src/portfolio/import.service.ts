@@ -24,7 +24,7 @@ export class ImportDto {
 
 type RowStatus = 'ok' | 'error' | 'duplicate';
 
-interface PreviewRow {
+export interface PreviewRow {
   line: number;
   status: RowStatus;
   errors: string[];

@@ -1,4 +1,4 @@
-import type { VcMarketEvent } from '../market/providers/vietcap.provider';
+import type { VcMarketEvent } from '../market/providers/vietcap';
 import {
   buildCalendar,
   classifyEvent,

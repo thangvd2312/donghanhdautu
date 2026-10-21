@@ -1,4 +1,4 @@
-import type { PortfolioService } from '../portfolio/portfolio.module';
+import type { PortfolioService } from '../portfolio/portfolio.service';
 import { testPrisma, testUser } from '../test-utils/test-db';
 import { GoalsService } from './goals.module';
 
