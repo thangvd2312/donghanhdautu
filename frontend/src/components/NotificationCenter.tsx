@@ -90,7 +90,7 @@ export default function Bell() {
   const body = (
     <Box sx={{ overflowY: 'auto', pb: mobile ? 'calc(12px + env(safe-area-inset-bottom))' : 1 }}>
       {notifications.length === 0 ? (
-        <Stack spacing={1} sx={{ alignItems: 'center', textAlign: 'center', px: 3, py: 3 }}>
+        <Stack spacing={1} sx={{ alignItems: 'center', textAlign: 'center', px: 3, py: 5 }}>
           <NotificationsNoneOutlined sx={{ fontSize: 40, color: 'text.disabled' }} />
           <Typography sx={{ fontWeight: 600 }}>Chưa có thông báo</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -135,8 +135,7 @@ export default function Bell() {
             paper: {
               role: 'dialog',
               'aria-label': 'Thông báo',
-              // Cao theo nội dung, tối đa ~70% màn hình: ít tin thì sheet thấp, vẫn thấy trang phía sau
-              sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '70dvh', display: 'flex', flexDirection: 'column' },
+              sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, height: '88dvh', display: 'flex', flexDirection: 'column' },
             },
           }}
         >
