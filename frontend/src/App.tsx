@@ -4,7 +4,7 @@ import Layout from './components/Layout'
 import { useAuth } from './lib/auth-context'
 import { ChatProvider } from './lib/chat'
 import { MarketProvider } from './lib/market'
-import { onboardingSkipped } from './lib/nav'
+import { onboardingSkipped, safeNext } from './lib/nav'
 import { track } from './lib/track'
 import AuthPage from './pages/AuthPage'
 import HomePage from './pages/HomePage'
@@ -54,11 +54,18 @@ export default function App() {
     )
   }
 
+  // Vừa đăng nhập / đăng ký: App sang nhánh đã đăng nhập ngay khi có `me`, trước khi trang đăng nhập kịp điều hướng,
+  // nên lấy đích từ ?next của chính trang đó thay vì rơi về "/"
+  const authDest = /^\/(login|register)$/.test(loc.pathname)
+    ? safeNext(new URLSearchParams(loc.search).get('next'))
+    : null
+
   // Khảo sát mời làm ngay sau đăng ký nhưng không bắt buộc: "Để sau" thì dùng app bình thường, phần tư vấn cá nhân
   // nói rõ là chưa có hồ sơ. Đích ban đầu (vd link trong thông báo) được giữ qua khảo sát.
   if (!me.onboarded && !onboardingSkipped() && loc.pathname !== '/onboarding') {
-    return <Navigate to={`/onboarding?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />
+    return <Navigate to={`/onboarding?next=${encodeURIComponent(authDest ?? loc.pathname + loc.search)}`} replace />
   }
+  if (authDest) return <Navigate to={authDest} replace />
 
   return (
     <MarketProvider>
