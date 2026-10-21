@@ -237,6 +237,9 @@ function universeNote(filters: Filter[], universe: number, postFiltered: boolean
     (filters.find((f) => f.key === 'exchange') as MultiFilter | undefined)?.values ?? EXCHANGES.map((e) => e.value);
   const base = `Quét ${universe.toLocaleString('vi-VN')} mã trên ${exchanges.join(', ')}`;
   if (!postFiltered) return base;
+  // Đã xét hết các mã khớp điều kiện còn lại (chưa chạm giới hạn) thì không có gì bị bỏ sót
+  if (scanned < DIVIDEND_SCAN_CAP)
+    return `${base}. Tỷ suất cổ tức tính ở ứng dụng trên toàn bộ ${scanned.toLocaleString('vi-VN')} mã khớp các điều kiện còn lại`;
   return `${base}. Tỷ suất cổ tức tính ở ứng dụng nên chỉ xét tối đa ${DIVIDEND_SCAN_CAP} mã đầu trong số mã khớp các điều kiện còn lại (đã xét ${scanned.toLocaleString('vi-VN')} mã); có thể bỏ sót mã khớp ngoài phạm vi này`;
 }
 
