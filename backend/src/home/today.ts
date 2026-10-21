@@ -1,5 +1,6 @@
 import type { AssetType } from '../market/market.service';
 import { REFERENCE_ALLOCATION, RISK_TYPE_LABEL } from '../profile/quiz';
+import type { LedgerTx } from '../portfolio/ledger';
 import type { Valuation } from '../portfolio/valuation';
 
 /** Thay đổi "hôm nay" mỗi loại tài sản được tính so với mốc nào */
@@ -28,6 +29,18 @@ export interface DayTrade {
   costsVnd: number;
 }
 
+/**
+ * Khoản thu/chi trong ngày không phải mua bán và không phải vốn: cổ tức sau thuế, phí riêng, phí/thuế đi kèm
+ * nạp/rút/nhận cổ phiếu. Quy VND theo tỷ giá hiện tại; dương là thu, âm là chi.
+ */
+export interface DayIncome {
+  /** Gắn với tài sản nào (cổ tức của mã, phí của mã); null/tiền mặt thì chỉ tính vào tổng danh mục */
+  assetType: AssetType | null;
+  symbol: string | null;
+  netVnd: number;
+  kind: 'dividend' | 'cost';
+}
+
 /** Tài sản đã bán hết trong ngày: không còn trong định giá nhưng vẫn có lãi/lỗ hôm nay */
 export interface ClosedToday {
   assetType: AssetType;
@@ -43,9 +56,28 @@ export interface DayLedger {
   /** Số lượng nắm giữ đầu ngày theo `assetType:symbol` (gồm cả số dư khai báo hôm nay — xem openedToday) */
   startQty: Map<string, number>;
   trades: DayTrade[];
+  /** Cổ tức và chi phí ngoài mua/bán; tiền nạp/rút (vốn) không nằm ở đây */
+  income: DayIncome[];
   /** Tài sản khai báo số dư đầu kỳ hôm nay: không biết mua lúc nào nên coi như đã giữ từ đầu ngày */
   openedToday: Set<string>;
   closed: ClosedToday[];
+}
+
+/**
+ * Cổ tức sau thuế và chi phí ngoài mua/bán, cùng cách sổ cái cộng/trừ tiền mặt. Phí/thuế của buy/sell đã nằm trong
+ * `DayTrade`; nạp/rút là vốn nên chỉ lấy phần phí/thuế đi kèm. Giao dịch khác (mua/bán/khai báo) trả null.
+ */
+export function dayIncomeOf(t: LedgerTx, usdtRate: number): DayIncome | null {
+  const toVnd = t.currency === 'USDT' ? usdtRate : 1;
+  const charges = t.fee.add(t.tax).toNumber() * toVnd;
+  const amount = (t.amount?.toNumber() ?? 0) * toVnd;
+  const target = { assetType: t.assetType, symbol: t.symbol };
+  if (t.type === 'dividend') return { ...target, kind: 'dividend', netVnd: amount - charges };
+  if (t.type === 'fee') return { ...target, kind: 'cost', netVnd: -(amount + charges) };
+  if ((t.type === 'deposit' || t.type === 'withdraw' || t.type === 'bonus') && charges > 0) {
+    return { ...target, kind: 'cost', netVnd: -charges };
+  }
+  return null;
 }
 
 const keyOf = (h: { assetType: string; symbol: string }) => `${h.assetType}:${h.symbol}`;
@@ -54,6 +86,7 @@ const keyOf = (h: { assetType: string; symbol: string }) => `${h.assetType}:${h.
  * Danh mục tăng/giảm bao nhiêu hôm nay và do tài sản nào. Với mỗi tài sản:
  * lãi/lỗ hôm nay = giá trị cuối − giá trị đầu ngày (theo giá mốc) − tiền bỏ ra mua hôm nay + tiền thu về khi bán hôm nay.
  * Mua hôm nay chỉ tính phần giá chạy sau lúc mua; bán hôm nay tính theo giá bán thực tế; tiền nạp/rút không phải lãi.
+ * Cổ tức (sau thuế) cộng vào lãi, phí riêng và phí/thuế đi kèm nạp/rút trừ vào lãi: tiền mặt tăng/giảm vì chúng là lãi/lỗ thật.
  * Không có sổ (`ledger` bỏ trống) thì giả định số lượng không đổi trong ngày.
  */
 export function dayChange(v: Valuation, ledger?: DayLedger) {
@@ -86,8 +119,28 @@ export function dayChange(v: Valuation, ledger?: DayLedger) {
     const change = a.quantity * a.priceVnd - startQty * refPrice - bought + sold;
     return { ...a, change };
   });
-  const known = rows.filter((r) => r.change !== null);
-  const changeVnd = known.reduce((s, r) => s + r.change, 0);
+  // Thu/chi gắn với tài sản có số liệu thì cộng vào tài sản đó; còn lại (tiền mặt, mã không còn trong sổ, thiếu giá) tính chung
+  const income = ledger?.income ?? [];
+  const attachable = new Set(rows.filter((r) => r.change !== null && r.h.assetType !== 'cash').map((r) => r.key));
+  const incomeKey = (i: DayIncome) =>
+    i.assetType && i.symbol ? keyOf({ assetType: i.assetType, symbol: i.symbol }) : null;
+  const withIncome = rows.map((r) =>
+    r.change === null
+      ? r
+      : {
+          ...r,
+          change:
+            r.change +
+            income.filter((i) => incomeKey(i) === r.key && attachable.has(r.key)).reduce((s, i) => s + i.netVnd, 0),
+        },
+  );
+  const unattached = income.filter((i) => {
+    const k = incomeKey(i);
+    return !k || !attachable.has(k);
+  });
+  const unattachedVnd = unattached.reduce((s, i) => s + i.netVnd, 0);
+  const known = withIncome.filter((r) => r.change !== null);
+  const changeVnd = known.reduce((s, r) => s + r.change, 0) + (known.length ? unattachedVnd : 0);
   const valueNow = known.reduce((s, r) => s + (r.valueNow ?? 0), 0);
   // Gốc tính %: giá trị hiện tại trừ phần lãi/lỗ hôm nay = giá trị đầu ngày + tiền nạp ròng trong ngày
   const base = valueNow - changeVnd;
@@ -106,11 +159,14 @@ export function dayChange(v: Valuation, ledger?: DayLedger) {
       basis: DAY_BASIS[r.h.assetType],
     }));
 
-  const missing = rows.filter((r) => r.change === null).map((r) => r.h.displayName);
+  const missing = withIncome.filter((r) => r.change === null).map((r) => r.h.displayName);
   const nameOf = (k: string) => assets.find((a) => a.key === k)?.h.displayName ?? k.split(':')[1];
   const changedToday = ledger ? [...ledger.openedToday].filter((k) => !k.startsWith('cash:')).map(nameOf) : [];
   const traded = ledger ? [...new Set(ledger.trades.map(keyOf))].map(nameOf) : [];
   const notes: string[] = [];
+  if (income.some((i) => i.kind === 'dividend')) notes.push('Đã gồm cổ tức nhận hôm nay (sau thuế).');
+  if (income.some((i) => i.kind === 'cost'))
+    notes.push('Đã trừ các khoản phí riêng hôm nay; tiền nạp/rút không tính là lãi.');
   if (missing.length) notes.push(`Chưa có dữ liệu thay đổi trong ngày của ${missing.join(', ')} nên chưa tính vào.`);
   if (traded.length) {
     notes.push(

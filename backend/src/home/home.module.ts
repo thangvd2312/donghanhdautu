@@ -15,7 +15,7 @@ import { CorporateActionsService } from '../portfolio/corporate-actions.service'
 import { toLedgerTx, TransactionsService } from '../portfolio/transactions';
 import { PrismaService } from '../prisma/prisma.module';
 import { planSignals } from '../plans/plan-rules';
-import { dayChange, DayLedger, DayTrade, ReviewPoint, reviewPoints } from './today';
+import { dayChange, dayIncomeOf, DayIncome, DayLedger, DayTrade, ReviewPoint, reviewPoints } from './today';
 
 const NEWS_HOURS = 48;
 const MAX_NEWS = 8;
@@ -61,8 +61,11 @@ export class HomeService {
     const start = ledgerOfAll(txs.filter((t) => t.date < today));
     const startQty = new Map(start.positions.map((p) => [`${p.assetType}:${p.symbol}`, p.quantity.toNumber()]));
     const trades: DayTrade[] = [];
+    const income: DayIncome[] = [];
     const openedToday = new Set<string>();
     for (const t of txs.filter((x) => x.date === today)) {
+      const extra = dayIncomeOf(t, rate);
+      if (extra) income.push(extra);
       if (!t.assetType || t.assetType === 'cash' || !t.symbol || !t.quantity) continue;
       const key = `${t.assetType}:${t.symbol}`;
       const toVnd = t.currency === 'USDT' ? rate : 1;
@@ -98,7 +101,7 @@ export class HomeService {
           dayChangePct: this.market.dayChangePct(assetType, symbol),
         };
       });
-    return { startQty, trades, openedToday, closed };
+    return { startQty, trades, income, openedToday, closed };
   }
 
   async review(userId: string) {
