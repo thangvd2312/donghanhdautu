@@ -34,32 +34,56 @@ export function actionKey(portfolioId: string | null, symbol: string, kind: stri
   return `${portfolioId ?? '-'}:${symbol}:${kind}:${exDate}`;
 }
 
+/** Giao dịch gom theo danh mục, mỗi nhóm đã sắp thứ tự */
+export function groupByPortfolio(txs: LedgerTx[]): Map<string | null, LedgerTx[]> {
+  const byPortfolio = new Map<string | null, LedgerTx[]>();
+  for (const t of txs) byPortfolio.set(t.portfolioId ?? null, [...(byPortfolio.get(t.portfolioId ?? null) ?? []), t]);
+  for (const [id, list] of byPortfolio) byPortfolio.set(id, sortTxs(list));
+  return byPortfolio;
+}
+
+/** Số cổ phiếu đang giữ hết ngày trước `beforeDate` (người mua từ ngày GDKHQ không được hưởng); null nếu sổ không hợp lệ */
+export function heldBefore(sorted: LedgerTx[], symbol: string, beforeDate: string): number | null {
+  try {
+    const ledger = computeLedger(sorted.filter((t) => t.date < beforeDate));
+    return ledger.positions.find((p) => p.assetType === 'stock' && p.symbol === symbol)?.quantity.toNumber() ?? 0;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cổ tức tiền mặt đã ghi sổ: cùng mã, hoặc không ghi mã nhưng số tiền gần đúng (trước hoặc sau thuế).
+ * Dùng chung cho gợi ý ghi sổ và lịch thu nhập để một khoản không bao giờ vừa "đã nhận" vừa "dự kiến".
+ */
+export function cashDividendRecorded(sorted: LedgerTx[], e: CorporateEvent, expectedAmount: number): boolean {
+  const until = addDays(e.payoutDate ?? e.exDate, 60);
+  return sorted.some((t) => {
+    if (t.type !== 'dividend' || t.date < addDays(e.exDate, -7) || t.date > until) return false;
+    if (t.symbol === e.symbol) return true;
+    const a = t.amount?.toNumber() ?? 0;
+    return !t.symbol && Math.abs(a - expectedAmount) <= expectedAmount * 0.1;
+  });
+}
+
 export function missingActions(
   txs: LedgerTx[],
   events: CorporateEvent[],
   today: string,
   dismissed: Set<string> = new Set(),
 ): MissingAction[] {
-  const byPortfolio = new Map<string | null, LedgerTx[]>();
-  for (const t of txs) byPortfolio.set(t.portfolioId ?? null, [...(byPortfolio.get(t.portfolioId ?? null) ?? []), t]);
+  const byPortfolio = groupByPortfolio(txs);
   const out: MissingAction[] = [];
   const earliest = addDays(today, -LOOKBACK_DAYS);
 
-  for (const [portfolioId, list] of byPortfolio) {
-    const sorted = sortTxs(list);
+  for (const [portfolioId, sorted] of byPortfolio) {
     for (const e of events) {
       if (e.exDate > today || e.exDate < earliest) continue;
       const key = actionKey(portfolioId, e.symbol, e.kind, e.exDate);
       if (dismissed.has(key)) continue;
       // Số đang giữ hết ngày trước GDKHQ (người mua từ ngày GDKHQ không được hưởng)
-      let held = 0;
-      try {
-        const before = computeLedger(sorted.filter((t) => t.date < e.exDate));
-        held = before.positions.find((p) => p.assetType === 'stock' && p.symbol === e.symbol)?.quantity.toNumber() ?? 0;
-      } catch {
-        continue;
-      }
-      if (held <= 0) continue;
+      const held = heldBefore(sorted, e.symbol, e.exDate);
+      if (held === null || held <= 0) continue;
 
       if (e.kind === 'stock') {
         // Cổ phiếu lẻ phát sinh bị huỷ: làm tròn xuống
@@ -89,15 +113,7 @@ export function missingActions(
         if (e.payoutDate && e.payoutDate > today) continue;
         const amount = Math.round(held * (e.valuePerShare ?? 0));
         if (amount <= 0) continue;
-        const until = addDays(e.payoutDate ?? e.exDate, 60);
-        // Cổ tức đã ghi: cùng mã, hoặc không ghi mã nhưng số tiền gần đúng (trước hoặc sau thuế)
-        const recorded = sorted.some((t) => {
-          if (t.type !== 'dividend' || t.date < addDays(e.exDate, -7) || t.date > until) return false;
-          if (t.symbol === e.symbol) return true;
-          const a = t.amount?.toNumber() ?? 0;
-          return !t.symbol && Math.abs(a - amount) <= amount * 0.1;
-        });
-        if (recorded) continue;
+        if (cashDividendRecorded(sorted, e, amount)) continue;
         out.push({
           key,
           portfolioId,

@@ -36,6 +36,7 @@ import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../lib/format'
 import { type HoldingRow, type Performance, type Portfolio, type PortfolioAccount, type Transaction } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
 import { track } from '../lib/track'
+import IncomeTeaser from '../components/IncomeTeaser'
 import CorporateActionsPanel from '../components/CorporateActionsPanel'
 
 type TxAsset = NonNullable<TxPreset['assetType']>
@@ -165,6 +166,8 @@ export default function PortfolioPage() {
           </Stack>
         </Box>
       </Paper>
+
+      <IncomeTeaser refreshKey={version} />
 
       <CorporateActionsPanel refreshKey={version} portfolioId={pf || undefined} onRecord={setPreset} />
 

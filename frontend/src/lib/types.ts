@@ -842,3 +842,68 @@ export interface SavedScreen {
   createdAt: string
   updatedAt: string
 }
+
+// --- Thu nhập cổ tức (GET /portfolio/income) ---
+export interface IncomeReceivedItem {
+  type: 'received'
+  txId: string
+  date: string
+  symbol: string
+  portfolioId: string | null
+  portfolioName: string | null
+  gross: number
+  tax: number
+  fee: number
+  net: number
+  note: string | null
+}
+
+export interface IncomeExpectedItem {
+  type: 'expected'
+  /** actionKey(portfolioId, symbol, 'cash', exDate): dùng cho bỏ qua / chống trùng */
+  key: string
+  symbol: string
+  portfolioId: string | null
+  portfolioName: string | null
+  exDate: string
+  recordDate: string | null
+  payoutDate: string | null
+  /** Tháng xếp lịch = payoutDate ?? exDate */
+  month: string
+  valuePerShare: number
+  eligibleQty: number
+  gross: number
+  /** Thuế TNCN 5% là giả định */
+  tax: number
+  net: number
+  certainty: 'locked' | 'announced'
+  overdue: boolean
+  basis: string
+  suggestion: { type: 'dividend'; date: string; symbol: string; amount: number; tax: number; portfolioId: string | null }
+}
+
+export type IncomeItem = IncomeReceivedItem | IncomeExpectedItem
+
+export interface IncomeMonth {
+  /** YYYY-MM */
+  month: string
+  receivedNet: number
+  expectedNet: number
+  items: IncomeItem[]
+}
+
+export interface IncomeResponse {
+  months: IncomeMonth[]
+  summary: {
+    receivedNet: number
+    expectedNet: number
+    lockedNet: number
+    yieldOnCostPct: number | null
+  }
+  notes: string[]
+  unavailable: boolean
+  /** Có cổ phiếu đang giữ hay không (để phân biệt "chưa có cổ phiếu" với "chưa có cổ tức"); thiếu thì suy từ dữ liệu */
+  hasHoldings?: boolean
+  source: string
+  asOf: string
+}

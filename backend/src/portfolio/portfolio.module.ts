@@ -266,6 +266,12 @@ class PortfolioController {
     return this.corporateActions.missing(user.id);
   }
 
+  /** Lịch thu nhập cổ tức: đã nhận và dự kiến theo tháng. ?past=1–36 (mặc định 12 tháng) */
+  @Get('income')
+  income(@CurrentUser() user: AuthUser, @Query('past') past?: string) {
+    return this.corporateActions.income(user.id, past);
+  }
+
   @Post('corporate-actions/dismiss')
   dismissAction(@CurrentUser() user: AuthUser, @Body() dto: DismissDto) {
     return this.corporateActions.dismiss(user.id, dto.key);

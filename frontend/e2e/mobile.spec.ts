@@ -71,6 +71,17 @@ const scenarios: Scenario[] = [
     },
   },
   { name: 'events-reminders', path: '/events', act: (p) => click(p, /Cài đặt nhắc sự kiện/) },
+  {
+    name: 'income',
+    path: '/income',
+    act: async (p) => {
+      // Backend thật: nguồn sự kiện có thể lỗi / chặn IP nên khoản dự kiến có thể thiếu — chỉ cần trang ra một trạng thái hợp lệ
+      // (tổng quan, trống hoặc báo lỗi) chứ không treo ở khung tải
+      await p.getByTestId('income-summary').or(p.getByTestId('income-empty')).or(p.getByRole('alert')).first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(800)
+    },
+  },
+  { name: 'income-24', path: '/income?past=24', act: async (p) => { await p.getByRole('button', { name: '24 tháng qua' }).waitFor({ timeout: 25_000 }); await p.waitForTimeout(1500) } },
   { name: 'screener', path: '/screener' },
   { name: 'screener-picker', path: '/screener', act: (p) => click(p, 'Tự chọn điều kiện') },
   {

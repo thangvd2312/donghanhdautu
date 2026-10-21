@@ -204,6 +204,11 @@ function Body({
         >
           Xem cổ phiếu {e.symbol}
         </Button>
+        {e.kind === 'cash' && (
+          <Button variant="outlined" component={RouterLink} to="/income" onClick={onClose} sx={{ minHeight: 46, borderRadius: 99 }}>
+            Xem thu nhập cổ tức
+          </Button>
+        )}
         {reminders.enabled ? (
           <Button
             variant="outlined"

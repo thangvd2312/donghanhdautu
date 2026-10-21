@@ -11,6 +11,7 @@ import ButtonBase from '@mui/material/ButtonBase'
 import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
 import IconButton from '@mui/material/IconButton'
+import Link from '@mui/material/Link'
 import Skeleton from '@mui/material/Skeleton'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
@@ -321,6 +322,9 @@ export default function EventsPage() {
       <Typography variant="caption" color="text.secondary">
         Lịch cho mã bạn giữ và theo dõi, để nắm thông tin chứ không phải tín hiệu mua bán.
       </Typography>
+      <Link component={RouterLink} to="/income" underline="always" sx={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', minHeight: 36, fontSize: 14, fontWeight: 600 }}>
+        Xem thu nhập cổ tức
+      </Link>
 
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <ToggleButtonGroup

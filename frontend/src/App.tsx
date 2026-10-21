@@ -15,6 +15,7 @@ const ComparePage = lazy(() => import('./pages/ComparePage'))
 const CryptoPage = lazy(() => import('./pages/CryptoPage'))
 const DemoPage = lazy(() => import('./pages/DemoPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
+const IncomePage = lazy(() => import('./pages/IncomePage'))
 const GoalsPage = lazy(() => import('./pages/GoalsPage'))
 const MarketPage = lazy(() => import('./pages/MarketPage'))
 const NewsPage = lazy(() => import('./pages/NewsPage'))
@@ -89,6 +90,7 @@ export default function App() {
             <Route path="/plans" element={page(<PlansPage />)} />
             <Route path="/plans/:id" element={page(<PlanDetailPage />)} />
             <Route path="/events" element={page(<EventsPage />)} />
+            <Route path="/income" element={page(<IncomePage />)} />
             <Route path="/goals" element={page(<GoalsPage />)} />
             <Route path="/settings" element={page(<SettingsPage />)} />
           </Route>
