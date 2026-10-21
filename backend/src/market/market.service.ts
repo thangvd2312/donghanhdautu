@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.module';
+import { AppRuntime } from '../runtime/app-role';
 import { BinanceProvider, FEATURED_COINS } from './providers/binance.provider';
 import { GoldFxProvider, OZ_PER_LUONG } from './providers/gold-fx.provider';
 import { safe, VietcapHistoryAdapter, VietcapQuotesAdapter, VietcapSymbolsAdapter } from './providers/vietcap';
@@ -28,6 +29,18 @@ export type MarketEvent =
 export type AssetType = 'stock' | 'crypto' | 'gold' | 'cash';
 
 type SourceKey = 'stocks' | 'indices' | 'gold' | 'fx' | 'usdt';
+type DemandKey = 'stocks' | 'crypto' | 'gold' | 'fx' | 'usdt' | 'tracked';
+
+/** Worker lấy giá theo yêu cầu: không gọi lại một nguồn sớm hơn chu kỳ này (bằng chu kỳ poll của web), lỗi thì thử lại sau 30 giây */
+const ON_DEMAND_MS: Record<DemandKey, number> = {
+  stocks: 30_000,
+  crypto: 30_000,
+  gold: 5 * 60_000,
+  usdt: 5 * 60_000,
+  fx: 30 * 60_000,
+  tracked: 60_000,
+};
+const ON_DEMAND_RETRY_MS = 30_000;
 
 /** Chỉ dùng khi chưa từng lấy được tỷ giá Vietcombank, để không chặn quy đổi; luôn gắn nhãn dự phòng */
 const DEFAULT_USD_VND = 25500;
@@ -85,8 +98,12 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     'VPL',
     'VRE',
   ];
+  private trackedCrypto = new Set<string>();
   private timers: NodeJS.Timeout[] = [];
   private pendingCrypto = new Map<string, CryptoQuote>();
+  /** Worker: lần tới được phép gọi lại từng nguồn, và lần lấy giá cổ phiếu thành công gần nhất */
+  private nextDemandAt: Record<DemandKey, number> = { stocks: 0, crypto: 0, gold: 0, usdt: 0, fx: 0, tracked: 0 };
+  private freshening: Promise<void> | null = null;
 
   constructor(
     private symbols: VietcapSymbolsAdapter,
@@ -95,9 +112,12 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     readonly binance: BinanceProvider,
     private goldFx: GoldFxProvider,
     private prisma: PrismaService,
+    private runtime: AppRuntime,
   ) {}
 
   async onApplicationBootstrap() {
+    // Worker không giữ websocket / vòng poll: giá được lấy theo yêu cầu qua ensureFresh() ngay trước mỗi việc cần giá
+    if (!this.runtime.pollsRealtimeMarket) return;
     this.binance.onUpdate = (changed) => {
       for (const q of changed) this.pendingCrypto.set(q.symbol, q);
     };
@@ -147,6 +167,70 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
       this.timers.push(setTimeout(() => void tick(), delay()));
     };
     this.timers.push(setTimeout(() => void tick(), delay()));
+  }
+
+  /**
+   * Bảo đảm dữ liệu giá đủ mới cho một việc nền. Web đã có vòng poll liên tục nên không làm gì; worker (không poll)
+   * gọi từng nguồn khi quá chu kỳ của nó: cổ phiếu và coin 30 giây (cổ phiếu ngoài phiên chỉ tải lại khi chưa có giá
+   * đóng cửa phiên gần nhất), vàng / USDT 5 phút, tỷ giá USD 30 phút. Nhiều việc gọi cùng lúc dùng chung một lượt tải.
+   * Không ném lỗi: nguồn lỗi thì giữ dữ liệu cũ và `priceInfo` tự gắn trạng thái cũ / thiếu như khi poll.
+   */
+  async ensureFresh(now = Date.now()): Promise<void> {
+    if (this.runtime.pollsRealtimeMarket) return;
+    this.freshening ??= this.refreshDue(now)
+      .catch((e: Error) => this.log.warn(`Lấy giá theo yêu cầu lỗi: ${e.message}`))
+      .finally(() => (this.freshening = null));
+    return this.freshening;
+  }
+
+  private async refreshDue(now: number): Promise<void> {
+    await this.refreshOnDemand('tracked', now, async () => {
+      await this.refreshTracked();
+      await this.refreshTrackedCrypto();
+    });
+    const lastStockPoll = this.sources.stocks.lastSuccessAt;
+    const stocksNeeded =
+      isStockSessionOpen(new Date(now)) || stockStatus(lastStockPoll ? new Date(lastStockPoll) : null) !== 'fresh';
+    await Promise.all([
+      stocksNeeded && this.refreshOnDemand('stocks', now, () => this.pollStocks(), ['stocks', 'indices']),
+      this.refreshOnDemand('crypto', now, () => this.binance.refreshRest([...this.trackedCrypto])),
+      this.refreshOnDemand('gold', now, () => this.pollGold(), ['gold']),
+      this.refreshOnDemand('fx', now, () => this.pollFx(), ['fx']),
+      this.refreshOnDemand('usdt', now, () => this.pollUsdt(), ['usdt']),
+    ]);
+  }
+
+  /** Chạy `load` nếu đã tới hạn; thành công thì chờ hết chu kỳ, lỗi (nguồn không có lần thành công mới) thì thử lại sau 30 giây */
+  private async refreshOnDemand(key: DemandKey, now: number, load: () => Promise<void>, sources: SourceKey[] = []) {
+    if (now < this.nextDemandAt[key]) return;
+    const before = sources.map((k) => this.sources[k].lastSuccessAt);
+    this.nextDemandAt[key] = now + ON_DEMAND_RETRY_MS;
+    try {
+      await load();
+    } catch (e) {
+      this.log.warn(`Lấy ${key} theo yêu cầu lỗi: ${(e as Error).message}`);
+      return;
+    }
+    const ok = sources.every((k, i) => this.sources[k].lastSuccessAt !== before[i]);
+    this.nextDemandAt[key] = now + (ok ? ON_DEMAND_MS[key] : ON_DEMAND_RETRY_MS);
+  }
+
+  /** Các cặp coin người dùng nắm giữ / theo dõi / đặt cảnh báo: worker lấy qua REST vì không có websocket phủ mọi cặp */
+  private async refreshTrackedCrypto() {
+    const [h, w, a] = await Promise.all([
+      this.prisma.holding.findMany({ where: { assetType: 'crypto' }, select: { symbol: true }, distinct: ['symbol'] }),
+      this.prisma.watchItem.findMany({
+        where: { assetType: 'crypto' },
+        select: { symbol: true },
+        distinct: ['symbol'],
+      }),
+      this.prisma.priceAlert.findMany({
+        where: { assetType: 'crypto', active: true },
+        select: { symbol: true },
+        distinct: ['symbol'],
+      }),
+    ]);
+    this.trackedCrypto = new Set([...h, ...w, ...a].map((x) => normalizeCrypto(x.symbol)));
   }
 
   /** Theo dõi VN30 + mọi mã cổ phiếu người dùng đang nắm giữ, quan tâm hoặc đặt cảnh báo giá */

@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
-import { VN_TZ } from '../market/types';
 import { PrismaService } from '../prisma/prisma.module';
 import { cleanProps, EventName, RETENTION_DAYS } from './events';
 
@@ -50,8 +48,7 @@ export class AnalyticsService {
     return run ? { key: run.key, kind: run.key.split(':')[1] } : null;
   }
 
-  /** Chính sách lưu giữ: xoá sự kiện cũ hơn RETENTION_DAYS ngày */
-  @Cron('30 3 * * *', { timeZone: VN_TZ })
+  /** Chính sách lưu giữ: xoá sự kiện cũ hơn RETENTION_DAYS ngày (3:30 hằng ngày, worker/scheduled-jobs.ts) */
   async purge() {
     const before = new Date(Date.now() - RETENTION_DAYS * 86_400_000);
     const { count } = await this.prisma.analyticsEvent.deleteMany({ where: { createdAt: { lt: before } } });

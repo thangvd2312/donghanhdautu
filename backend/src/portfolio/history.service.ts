@@ -1,9 +1,8 @@
-import { BadRequestException, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { VndirectProvider } from '../market/providers/vndirect.provider';
 import type { AssetType } from '../market/market.service';
-import { VN_TZ, vnDateKey } from '../market/types';
+import { vnDateKey } from '../market/types';
 import { addDays, daysBetween } from '../plans/plan-rules';
 import { PrismaService } from '../prisma/prisma.module';
 import { assetBreakdown, buildHistory, compareBenchmark, DayPrice, periodPerformance } from './history';
@@ -24,7 +23,7 @@ type Series = Map<string, number>;
  * Ngày hôm nay dùng giá hiện tại.
  */
 @Injectable()
-export class HistoryService implements OnApplicationBootstrap {
+export class HistoryService {
   private log = new Logger(HistoryService.name);
   private cryptoCache = new Map<string, { at: number; series: Series }>();
 
@@ -34,11 +33,6 @@ export class HistoryService implements OnApplicationBootstrap {
     private transactions: TransactionsService,
     private vndirect: VndirectProvider,
   ) {}
-
-  /** Lưu giá ngay sau khi khởi động (chờ dữ liệu thị trường tải xong) để có mốc của hôm nay */
-  onApplicationBootstrap() {
-    setTimeout(() => void this.recordDaily().catch((e: Error) => this.log.warn(e.message)), 90_000).unref();
-  }
 
   async history(userId: string, range: string, portfolioId?: string) {
     if (!(range in RANGES)) throw new BadRequestException('Khoảng thời gian không hợp lệ');
@@ -303,14 +297,15 @@ export class HistoryService implements OnApplicationBootstrap {
   }
 
   /**
-   * 23:50 mỗi ngày: lưu giá vàng (giá mua vào) và tỷ giá USDT/VND — hai thứ không có nguồn lịch sử.
+   * 23:50 mỗi ngày (worker/scheduled-jobs.ts; worker cũng chạy một lần sau khi khởi động): lưu giá vàng (giá mua vào) và tỷ giá USDT/VND — hai thứ không có nguồn lịch sử.
    * Cổ phiếu và coin lấy lịch sử trực tiếp từ nguồn nên không cần lưu.
    * Chỉ lưu giá còn mới theo nguồn: bộ nhớ đệm cũ (nguồn mất nhiều ngày) hay tỷ giá dự phòng không được ghi thành giá
    * chốt của hôm nay, vì khi đọc lại ngày bản ghi được coi là ngày của giá. Ngày không có bản ghi sẽ dùng giá gần nhất
    * trước đó và tự đánh dấu ước tính khi quá xa (MAX_GAP). Cron và lần chạy sau khi khởi động cùng quy tắc này.
    */
-  @Cron('50 23 * * *', { timeZone: VN_TZ })
   async recordDaily() {
+    // Worker không poll giá: lấy vàng / tỷ giá USDT mới ngay trước khi ghi (web đã có vòng poll nên bước này không làm gì)
+    await this.market.ensureFresh();
     const date = new Date(`${vnDateKey()}T00:00:00Z`);
     const rows = [
       ...this.market

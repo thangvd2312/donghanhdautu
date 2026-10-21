@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
-import { VN_TZ, vnDateKey } from '../market/types';
+import { MarketService } from '../market/market.service';
+import { vnDateKey } from '../market/types';
 import { NewsService } from '../news/news.module';
 import type { NewsItem } from '../news/news.module';
 import { addDays } from '../plans/plan-rules';
@@ -44,6 +44,7 @@ export class WeeklyBriefService {
 
   constructor(
     private prisma: PrismaService,
+    private market: MarketService,
     private history: HistoryService,
     private portfolio: PortfolioService,
     private news: NewsService,
@@ -54,7 +55,7 @@ export class WeeklyBriefService {
     queue.register('weekly', (userId, day) => this.generate(userId, false, day));
   }
 
-  @Cron('0 9 * * 6', { timeZone: VN_TZ })
+  /** 9:00 sáng thứ 7 giờ VN (worker/scheduled-jobs.ts) */
   async runAll() {
     if (this.running) return;
     this.running = true;
@@ -82,6 +83,7 @@ export class WeeklyBriefService {
 
   /** Bảng số liệu + nhận định AI của một tuần; null khi chưa có gì để tổng kết */
   private async build(userId: string, today: string): Promise<BriefContent | null> {
+    await this.market.ensureFresh();
     const summary = await this.history.weekSummary(userId);
     if (!summary) return null;
     const table = weeklyTable(summary);

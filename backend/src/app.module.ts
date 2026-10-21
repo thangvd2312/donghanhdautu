@@ -1,6 +1,5 @@
-import { Controller, Get, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ScheduleModule } from '@nestjs/schedule';
 import { AdvisorModule } from './advisor/advisor.module';
 import { AiModule } from './ai/ai-usage.service';
 import { AlertsModule } from './alerts/alerts.module';
@@ -20,25 +19,20 @@ import { NewsModule } from './news/news.module';
 import { AnalysisModule } from './portfolio/analysis/analysis.module';
 import { DividendsModule } from './portfolio/dividends/dividends.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
+import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
+import { RuntimeModule } from './runtime/runtime.module';
 import { ProfileModule } from './profile/profile.module';
 import { PracticeModule } from './practice/practice.module';
 import { ScreenerModule } from './screener/screener.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 
-@Controller('health')
-class HealthController {
-  @Get()
-  health() {
-    return { ok: true };
-  }
-}
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ScheduleModule.forRoot(),
+    // Không có ScheduleModule: @Cron / @Interval chỉ chạy ở worker (worker/worker.module.ts)
     PrismaModule,
+    RuntimeModule,
     AnalyticsModule,
     AiModule,
     AuthModule,

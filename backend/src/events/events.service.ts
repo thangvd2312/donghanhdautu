@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { NotifierService } from '../alerts/notifier.service';
-import { VN_TZ, vnDateKey } from '../market/types';
+import { vnDateKey } from '../market/types';
 import { VietcapEventsAdapter } from '../market/providers/vietcap';
 import type { MarketEvents } from '../market/providers/vietcap';
 import { PrismaService } from '../prisma/prisma.module';
@@ -102,8 +101,7 @@ export class EventsService {
     return this.toSettings(row);
   }
 
-  /** 08:00 và 17:00 hằng ngày (giờ VN): lượt chiều bắt sự kiện công bố muộn trong ngày; dedupeKey chống nhắc trùng */
-  @Cron('0 8,17 * * *', { timeZone: VN_TZ })
+  /** 08:00 và 17:00 hằng ngày giờ VN (worker/scheduled-jobs.ts): lượt chiều bắt sự kiện công bố muộn trong ngày; dedupeKey chống nhắc trùng */
   async remindDaily() {
     try {
       await this.runReminders();

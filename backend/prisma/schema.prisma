@@ -155,6 +155,8 @@ model Notification {
 
   @@unique([userId, dedupeKey])
   @@index([userId, createdAt])
+  /// Web đọc thông báo mới do worker tạo để đẩy xuống socket (truy vấn theo createdAt)
+  @@index([createdAt])
 }
 
 /// Cảnh báo khi giá chạm mốc người dùng tự đặt; bắn 1 lần rồi tự tắt
@@ -749,4 +751,13 @@ model MarketCache {
   staleUntil DateTime
 
   @@index([staleUntil])
+}
+
+/// Nhịp tim của tiến trình worker (một dòng mỗi worker): web và bước kiểm tra sau deploy đọc để biết worker còn chạy
+model WorkerHeartbeat {
+  name      String   @id
+  /// Lúc tiến trình này khởi động (đổi mỗi lần worker khởi động lại)
+  startedAt DateTime
+  beatAt    DateTime
+  version   String
 }

@@ -12,7 +12,6 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
 import { Holding, InvestorProfile } from '@prisma/client';
 import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { ALERT_SYSTEM_PROMPT } from '../advisor/prompt';
@@ -29,11 +28,13 @@ import { PortfolioModule } from '../portfolio/portfolio.module';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.module';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
+import { RuntimeModule } from '../runtime/runtime.module';
 import { BriefQueueService } from './brief-queue.service';
 import { BriefRunService } from './brief-run.service';
 import { BriefsService } from './briefs.service';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
+import { NotificationRelayService } from './notification-relay.service';
 import { NotifierService } from './notifier.service';
 import type { NotificationInput } from './notifier.service';
 import { WeeklyBriefService } from './weekly.service';
@@ -132,11 +133,12 @@ export class AlertsService {
     return base;
   }
 
-  @Interval(60_000)
+  /** Mỗi phút (worker/scheduled-jobs.ts): giá biến động mạnh, chạm mốc đã đặt, tỷ giá */
   async checkPrices() {
     if (this.running.price) return;
     this.running.price = true;
     try {
+      await this.market.ensureFresh();
       await this.checkHoldingMoves();
       await this.checkPriceTargets();
       await this.checkFx();
@@ -236,7 +238,7 @@ export class AlertsService {
     }
   }
 
-  @Interval(10 * 60_000)
+  /** Mỗi 10 phút (worker/scheduled-jobs.ts): tin về mã đang nắm giữ và tin vĩ mô quan trọng */
   async checkNews() {
     if (this.running.news) return;
     this.running.news = true;
@@ -346,6 +348,7 @@ export class AlertsService {
       sources?: { title: string; url: string }[];
     },
   ) {
+    await this.market.ensureFresh();
     const valuation = await this.portfolio.valuation(user.id);
     const p = user.profile;
     const draft = await this.llm.json<AlertDraft>({
@@ -498,7 +501,7 @@ class NotificationsController {
 }
 
 @Module({
-  imports: [MarketModule, NewsModule, PortfolioModule, MacroModule],
+  imports: [MarketModule, NewsModule, PortfolioModule, MacroModule, RuntimeModule],
   controllers: [NotificationsController, AlertsController],
   providers: [
     AlertsService,
@@ -509,7 +512,8 @@ class NotificationsController {
     LlmService,
     NewsTaggerService,
     NotifierService,
+    NotificationRelayService,
   ],
-  exports: [LlmService, NotifierService],
+  exports: [LlmService, NotifierService, AlertsService, BriefsService, WeeklyBriefService, BriefQueueService],
 })
 export class AlertsModule {}

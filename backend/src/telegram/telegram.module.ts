@@ -6,6 +6,7 @@ import {
   Get,
   Injectable,
   Logger,
+  BeforeApplicationShutdown,
   Module,
   OnApplicationBootstrap,
   OnModuleDestroy,
@@ -19,6 +20,8 @@ import { IsBoolean, IsInt, IsObject, IsOptional, Max, Min } from 'class-validato
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { PrismaService } from '../prisma/prisma.module';
+import type { JobRunner } from '../runtime/job-runner';
+import { shutdownGraceMs, waitWhileBusy } from '../runtime/wait';
 import { decide, DEFAULT_KINDS, formatMessage, KIND_LABEL, KINDS, retryAt } from '../notifications/channel-rules';
 
 class SettingsDto {
@@ -49,7 +52,7 @@ class TelegramError extends Error {
  * Không có TELEGRAM_BOT_TOKEN thì tắt hẳn.
  */
 @Injectable()
-export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy {
+export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy, BeforeApplicationShutdown {
   private log = new Logger(TelegramService.name);
   private token = process.env.TELEGRAM_BOT_TOKEN || null;
   private appUrl = process.env.APP_URL || process.env.FRONTEND_ORIGIN || null;
@@ -65,13 +68,23 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
     return !!this.token;
   }
 
+  /** Tên bot cần cho cả web (tạo link kết nối) lẫn worker */
   async onApplicationBootstrap() {
     if (!this.token) {
       this.log.log('Chưa cấu hình TELEGRAM_BOT_TOKEN, tắt gửi Telegram');
       return;
     }
     await this.resolveBot();
-    if (process.env.TELEGRAM_POLLING !== 'false') void this.poll();
+  }
+
+  /**
+   * Chỉ worker gọi: nhận lệnh bằng long polling và gửi hàng đợi mỗi 10 giây. Telegram chỉ cho một getUpdates tại một
+   * thời điểm (cái thứ hai bị lỗi 409), nên mỗi lượt long polling chạy dưới khoá của JobRunner: worker nào không giành
+   * được khoá thì chờ rồi thử lại. Gửi hàng đợi không cần khoá vì mỗi tin được nhận bằng cập nhật có điều kiện.
+   */
+  start(jobs: JobRunner) {
+    if (!this.token || this.timer) return;
+    if (process.env.TELEGRAM_POLLING !== 'false') void this.poll(jobs);
     this.timer = setInterval(() => void this.processQueue(), 10_000);
     this.timer.unref();
   }
@@ -79,6 +92,10 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
   onModuleDestroy() {
     this.stopped = true;
     if (this.timer) clearInterval(this.timer);
+  }
+
+  async beforeApplicationShutdown() {
+    await waitWhileBusy(() => this.processing, shutdownGraceMs());
   }
 
   /** Lấy tên bot từ Telegram; lỗi mạng lúc khởi động thì các lần sau gọi lại */
@@ -115,18 +132,26 @@ export class TelegramService implements OnApplicationBootstrap, OnModuleDestroy 
   }
 
   /** Long polling: nhận lệnh người dùng gửi cho bot */
-  private async poll() {
+  private async poll(jobs: JobRunner) {
     while (!this.stopped) {
       try {
-        const updates = await this.call<TgUpdate[]>(
-          'getUpdates',
-          { offset: this.offset, timeout: 25, allowed_updates: ['message'] },
-          35_000,
+        const turn = await jobs.run(
+          'telegram.poll',
+          async () => {
+            const updates = await this.call<TgUpdate[]>(
+              'getUpdates',
+              { offset: this.offset, timeout: 25, allowed_updates: ['message'] },
+              35_000,
+            );
+            for (const u of updates) {
+              this.offset = u.update_id + 1;
+              await this.handle(u).catch((e: Error) => this.log.warn(`Xử lý tin Telegram lỗi: ${e.message}`));
+            }
+          },
+          { timeoutMs: 120_000, quiet: true },
         );
-        for (const u of updates) {
-          this.offset = u.update_id + 1;
-          await this.handle(u).catch((e: Error) => this.log.warn(`Xử lý tin Telegram lỗi: ${e.message}`));
-        }
+        // Worker khác đang nhận lệnh: chờ rồi thử lại, đừng quay vòng liên tục
+        if (turn.status === 'skipped') await new Promise((r) => setTimeout(r, 5000));
       } catch (e) {
         if (this.stopped) return;
         this.log.warn(`Telegram getUpdates: ${(e as Error).message}`);
@@ -401,5 +426,6 @@ class TelegramController {
 @Module({
   controllers: [TelegramController],
   providers: [TelegramService],
+  exports: [TelegramService],
 })
 export class TelegramModule {}

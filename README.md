@@ -51,9 +51,9 @@ Không có `LLM_API_KEY` thì mọi thứ vẫn chạy, trừ chat cố vấn; t
 
 ## Deploy (production)
 
-Push lên `main` → GitHub Actions build, unit test, test tích hợp PostgreSQL, lint; rồi self-hosted runner (label `dautu`) trên server tự deploy vào `/home/thangvv/apps/dautu`: rsync code, `docker compose up` Postgres, build, sao lưu DB (`~/backups/dautu/pre-deploy/`), `prisma migrate deploy`, `pm2 startOrReload`, health check `http://127.0.0.1:4200/api/health`. Xem `.github/workflows/deploy.yml` và [docs/OPERATIONS.md](docs/OPERATIONS.md) (lệnh, khôi phục, rollback).
+Push lên `main` → GitHub Actions build, unit test, test tích hợp PostgreSQL, lint; rồi self-hosted runner (label `dautu`) trên server tự deploy vào `/home/thangvv/apps/dautu`: rsync code, `docker compose up` Postgres, build, sao lưu DB (`~/backups/dautu/pre-deploy/`), `prisma migrate deploy`, `pm2 startOrReload` (cả hai app), health check `http://127.0.0.1:4200/api/health` rồi kiểm tra nhịp tim worker (phải lên trong 90 giây, nếu không deploy thất bại). Xem `.github/workflows/deploy.yml` và [docs/OPERATIONS.md](docs/OPERATIONS.md) (lệnh, khôi phục, rollback).
 
-- Một process NestJS (pm2 `dautu`, `ecosystem.config.cjs`) phục vụ cả `/api`, socket.io và `frontend/dist`.
+- Hai process NestJS cùng codebase (`ecosystem.config.cjs`): `dautu` (web) phục vụ `/api`, socket.io, `frontend/dist` và poll bảng giá realtime; `dautu-worker` (`dist/worker.js`, không mở cổng) chạy cron, hàng đợi bản tin, gửi Telegram / Web Push. Mỗi lượt việc định kỳ giữ khoá tư vấn PostgreSQL nên không bao giờ chạy trùng. Nhịp tim worker: `curl 127.0.0.1:4200/api/health` → `worker.ok`. Chạy local cần việc nền thì mở thêm `npm run start:worker:dev` (trong `backend/`).
 - `.env` ở thư mục gốc trên server (không nằm trong git): biến `POSTGRES_*` cho docker compose + toàn bộ biến của backend (`PORT=4200`, `FRONTEND_ORIGIN=https://dautu.thangvu.io.vn`…).
 - Postgres 16 trong Docker, chỉ mở `127.0.0.1:5434`, dữ liệu ở volume cố định `dautuchungkhoan_dautu-pg`.
 - Sao lưu: cron 3:00 hằng ngày chạy `scripts/backup-db.sh` → `~/backups/dautu/`, giữ 14 bản.
@@ -63,7 +63,7 @@ Push lên `main` → GitHub Actions build, unit test, test tích hợp PostgreSQ
 
 ### Bật thông báo Telegram
 
-1. Tạo bot với @BotFather (`/newbot`), thêm `TELEGRAM_BOT_TOKEN=...` vào `.env` trên server, `pm2 restart dautu`.
+1. Tạo bot với @BotFather (`/newbot`), thêm `TELEGRAM_BOT_TOKEN=...` vào `.env` trên server, `pm2 restart ecosystem.config.cjs --update-env`.
 2. Server ở Việt Nam bị chặn `api.telegram.org`: tạo Cloudflare Worker chuyển tiếp (chỉ cho đúng bot của app) rồi đặt `TELEGRAM_API_BASE=https://<worker>.workers.dev`. Log đúng: `Telegram bot @<tên> sẵn sàng`.
 3. Link trong tin dùng `APP_URL`, không có thì dùng `FRONTEND_ORIGIN`. Chạy nhiều instance thì đặt `TELEGRAM_POLLING=false` cho các instance phụ.
 

@@ -14,7 +14,9 @@ import { MarketService } from './market.service';
 })
 export class MarketGateway implements OnGatewayConnection, OnModuleInit {
   private log = new Logger(MarketGateway.name);
-  @WebSocketServer() server!: Server;
+  @WebSocketServer() server?: Server;
+  /** Id thông báo đã đẩy xuống socket: thông báo do web tạo không bị đẩy lại khi relay đọc từ DB */
+  private delivered = new Set<string>();
 
   constructor(
     private market: MarketService,
@@ -32,7 +34,21 @@ export class MarketGateway implements OnGatewayConnection, OnModuleInit {
     client.emit('snapshot', this.market.snapshot());
   }
 
-  notifyUser(userId: string, event: string, payload: unknown) {
+  /** Worker không có socket server (this.server undefined): thông báo của nó được web đẩy qua NotificationRelayService */
+  notifyUser(userId: string, event: string, payload: unknown): boolean {
+    const id = (payload as { id?: unknown } | null)?.id;
+    if (event === 'notification' && typeof id === 'string') {
+      if (this.delivered.has(id)) return false;
+      this.remember(id);
+    }
+    if (!this.server) return false;
     this.server.to(`user:${userId}`).emit(event, payload);
+    return true;
+  }
+
+  private remember(id: string) {
+    this.delivered.add(id);
+    // Chỉ cần nhớ đủ lâu để relay (quét lại ~15 giây gần nhất) không đẩy trùng
+    if (this.delivered.size > 5000) this.delivered.delete(this.delivered.values().next().value as string);
   }
 }

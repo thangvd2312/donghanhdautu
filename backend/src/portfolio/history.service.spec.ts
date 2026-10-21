@@ -54,6 +54,7 @@ function fakeMarket() {
     get usdtVnd() {
       return state.fx;
     },
+    ensureFresh: jest.fn(() => Promise.resolve()),
     snapshot: () => ({ indices: [] }),
     stockHistory: () => Promise.resolve([]),
   };
@@ -93,6 +94,12 @@ describe('HistoryService.recordDaily: không biến giá cũ thành giá chốt 
 
   const at = (iso: string) => jest.setSystemTime(new Date(iso));
   const stored = (assetType: string) => [...prisma.rows.values()].filter((r) => r.assetType === assetType);
+
+  it('worker không poll giá: lấy giá mới (ensureFresh) trước khi đọc bảng giá để ghi', async () => {
+    at('2026-10-21T16:50:00Z');
+    await service.recordDaily();
+    expect(market.ensureFresh).toHaveBeenCalledTimes(1);
+  });
 
   it('vàng: nguồn cập nhật lần cuối 10/10 thì cron ngày 21/10 không ghi giá cũ thành giá chốt', async () => {
     at('2026-10-21T16:50:00Z'); // 23:50 giờ VN ngày 21/10

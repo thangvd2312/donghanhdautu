@@ -1,5 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import { Cron, Interval } from '@nestjs/schedule';
+import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.module';
 import { MarketDataMetrics } from './market-data-metrics';
@@ -52,11 +51,12 @@ interface L1Entry {
  * nếu không thì ném lỗi như trước. Lỗi của L2 (DB) không bao giờ làm hỏng lần đọc: tụt về gọi nguồn.
  */
 @Injectable()
-export class MarketDataCache {
+export class MarketDataCache implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(MarketDataCache.name);
   private readonly l1 = new Map<string, L1Entry>();
   private readonly inflight = new Map<string, Promise<unknown>>();
   private lastSummary = '';
+  private summaryTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -81,7 +81,7 @@ export class MarketDataCache {
     return count;
   }
 
-  @Cron('17 * * * *')
+  /** Dọn định kỳ do worker gọi (xem worker/scheduled-jobs.ts); lỗi chỉ ghi log, lượt sau thử lại */
   async purgeExpiredJob(): Promise<void> {
     try {
       const count = await this.purgeExpired();
@@ -91,8 +91,17 @@ export class MarketDataCache {
     }
   }
 
+  /** Bộ đếm là của riêng từng tiến trình nên web và worker mỗi bên tự ghi tổng kết, không qua bộ lập lịch của worker */
+  onModuleInit(): void {
+    this.summaryTimer = setInterval(() => this.logSummary(), 600_000);
+    this.summaryTimer.unref();
+  }
+
+  onModuleDestroy(): void {
+    if (this.summaryTimer) clearInterval(this.summaryTimer);
+  }
+
   /** Tổng kết bộ đếm mỗi 10 phút ở mức debug; bỏ qua nếu không có gì thay đổi */
-  @Interval(600_000)
   logSummary(): void {
     const s = this.metrics.snapshot();
     const line = Object.entries(s)

@@ -81,20 +81,18 @@ export class BinanceProvider implements OnModuleDestroy {
     ws.on('error', (e) => this.log.warn(`Binance ws: ${e.message}`));
   }
 
-  async refreshRest() {
+  /**
+   * Lấy giá 24h qua REST. Mặc định các coin hiển thị mặc định; worker (không giữ websocket) truyền thêm các cặp người dùng đang theo dõi.
+   * Một cặp không tồn tại làm Binance từ chối cả lô, nên lỗi thì thử lại chỉ với danh sách mặc định.
+   */
+  async refreshRest(extra: string[] = []) {
+    const wanted = [...new Set([...FEATURED_COINS, ...extra])];
     try {
-      const r = await fetch(`${REST}/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(FEATURED_COINS))}`, {
-        signal: AbortSignal.timeout(15000),
+      const rows = await this.ticker24h(wanted).catch((e: Error) => {
+        if (wanted.length === FEATURED_COINS.length) throw e;
+        this.log.warn(`Binance REST (${wanted.length} cặp): ${e.message}, thử lại với danh sách mặc định`);
+        return this.ticker24h(FEATURED_COINS);
       });
-      const rows = (await r.json()) as {
-        symbol: string;
-        lastPrice: string;
-        openPrice: string;
-        highPrice: string;
-        lowPrice: string;
-        quoteVolume: string;
-        closeTime: number;
-      }[];
       for (const t of rows) {
         this.quotes.set(
           t.symbol,
@@ -105,6 +103,23 @@ export class BinanceProvider implements OnModuleDestroy {
     } catch (e) {
       this.log.warn(`Binance REST: ${(e as Error).message}`);
     }
+  }
+
+  private async ticker24h(symbols: string[]) {
+    const r = await fetch(`${REST}/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(symbols))}`, {
+      signal: AbortSignal.timeout(15000),
+    });
+    const rows = (await r.json()) as unknown;
+    if (!r.ok || !Array.isArray(rows)) throw new Error(`HTTP ${r.status}`);
+    return rows as {
+      symbol: string;
+      lastPrice: string;
+      openPrice: string;
+      highPrice: string;
+      lowPrice: string;
+      quoteVolume: string;
+      closeTime: number;
+    }[];
   }
 
   async history(symbol: string, days: number): Promise<Candle[]> {

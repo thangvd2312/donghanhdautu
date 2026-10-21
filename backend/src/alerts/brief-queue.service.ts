@@ -1,7 +1,8 @@
-import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy, Optional } from '@nestjs/common';
+import { BeforeApplicationShutdown, Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { BriefJob, Prisma } from '@prisma/client';
 import { AiUsageService } from '../ai/ai-usage.service';
 import { PrismaService } from '../prisma/prisma.module';
+import { shutdownGraceMs, waitWhileBusy } from '../runtime/wait';
 
 export type BriefJobKind = 'morning' | 'closing' | 'weekly';
 /** Trả về khác null khi đã gửi; null khi không có gì để gửi hoặc kỳ này đã có bản tin */
@@ -31,12 +32,13 @@ export const backoffMs = (attempts: number) => 2 ** attempts * 60_000;
  * (xem / chạy lại bằng `npm run briefs:jobs`); việc dở dang khi server tắt được nhận lại.
  */
 @Injectable()
-export class BriefQueueService implements OnApplicationBootstrap, OnModuleDestroy {
+export class BriefQueueService implements OnModuleDestroy, BeforeApplicationShutdown {
   private log = new Logger(BriefQueueService.name);
   private handlers = new Map<BriefJobKind, BriefHandler>();
   private active = 0;
   private timer?: NodeJS.Timeout;
   private pumping = false;
+  private stopped = false;
 
   constructor(
     private prisma: PrismaService,
@@ -48,13 +50,26 @@ export class BriefQueueService implements OnApplicationBootstrap, OnModuleDestro
     this.handlers.set(kind, handler);
   }
 
-  onApplicationBootstrap() {
+  /**
+   * Bắt đầu lấy việc mỗi 15 giây — chỉ worker gọi (worker/worker-lifecycle.ts); web chỉ xếp việc / đăng ký xử lý.
+   * Không bọc khoá tư vấn: hàng đợi đã loại trừ ở mức dòng (FOR UPDATE SKIP LOCKED) nên nhiều worker chia việc được
+   * và không lấy trùng, mạnh hơn một khoá cho cả lượt lấy việc.
+   */
+  start() {
+    if (this.timer) return;
     this.timer = setInterval(() => void this.pump(), 15_000);
     this.timer.unref();
   }
 
   onModuleDestroy() {
+    this.stopped = true;
     if (this.timer) clearInterval(this.timer);
+  }
+
+  /** Lúc tắt: không lấy việc mới, chờ các việc đang chạy xong (việc dở dang còn lại sẽ được nhận lại sau STALE_JOB_MS) */
+  async beforeApplicationShutdown() {
+    if (!(await waitWhileBusy(() => this.active > 0, shutdownGraceMs())))
+      this.log.warn(`Còn ${this.active} việc bản tin chưa xong khi hết thời gian chờ`);
   }
 
   /** Xếp việc cho danh sách người dùng; xếp lại cùng kỳ không tạo trùng (khoá duy nhất người/loại/ngày) */
@@ -71,7 +86,7 @@ export class BriefQueueService implements OnApplicationBootstrap, OnModuleDestro
 
   /** Lấy và chạy việc tới khi hết việc tới hạn hoặc đủ số việc chạy cùng lúc */
   async pump(now = () => new Date()) {
-    if (this.pumping) return;
+    if (this.pumping || this.stopped) return;
     this.pumping = true;
     try {
       await this.recoverStale(now());

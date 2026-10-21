@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
  *   npm run briefs:jobs                 thống kê 7 ngày + các việc lỗi
  *   npm run briefs:jobs -- retry failed đưa mọi việc "failed" về hàng đợi
  *   npm run briefs:jobs -- retry <id>   đưa một việc về hàng đợi
- * Server đang chạy sẽ lấy việc trong vòng 15 giây.
+ * Worker đang chạy sẽ lấy việc trong vòng 15 giây.
  */
 async function main() {
   const prisma = new PrismaClient();

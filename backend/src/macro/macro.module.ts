@@ -1,5 +1,4 @@
-import { Controller, Get, Injectable, Logger, Module, OnApplicationBootstrap, UseGuards } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
+import { Controller, Get, Injectable, Logger, Module, UseGuards } from '@nestjs/common';
 import { MacroFact } from '@prisma/client';
 import { Subject } from 'rxjs';
 import { JwtAuthGuard } from '../auth/auth.module';
@@ -69,21 +68,20 @@ const MONTHS: Record<string, string> = {
  * (kèm thời điểm đọc thành công gần nhất để AI và người dùng biết độ mới). Mọi thay đổi được ghi lịch sử.
  */
 @Injectable()
-export class MacroService implements OnApplicationBootstrap {
+export class MacroService {
   private log = new Logger(MacroService.name);
   readonly changes$ = new Subject<MacroChange>();
   private running = false;
 
   constructor(private prisma: PrismaService) {}
 
-  /** Khởi động lại nhiều lần (deploy) mà lần nào cũng gọi NHNN sẽ bị chặn 403 → chỉ đọc khi dữ liệu đã cũ */
-  async onApplicationBootstrap() {
+  /** Khởi động lại nhiều lần (deploy) mà lần nào cũng gọi NHNN sẽ bị chặn 403 → chỉ đọc khi dữ liệu đã cũ. Worker gọi khi khởi động */
+  async refreshIfStale() {
     const oldest = await this.prisma.macroFact.findFirst({ orderBy: { fetchedAt: 'asc' } });
     if (!oldest || Date.now() - oldest.fetchedAt.getTime() > 90 * 60_000) void this.refresh();
   }
 
-  /** NHNN cập nhật tỷ giá trung tâm mỗi sáng, lãi suất liên ngân hàng mỗi ngày; 2 giờ/lần là đủ */
-  @Interval(2 * 3600_000)
+  /** NHNN cập nhật tỷ giá trung tâm mỗi sáng, lãi suất liên ngân hàng mỗi ngày; 2 giờ/lần là đủ (worker/scheduled-jobs.ts) */
   async refresh() {
     if (this.running) return;
     this.running = true;

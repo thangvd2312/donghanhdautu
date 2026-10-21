@@ -8,6 +8,7 @@ import {
   Injectable,
   Logger,
   Module,
+  BeforeApplicationShutdown,
   OnApplicationBootstrap,
   OnModuleDestroy,
   Patch,
@@ -32,6 +33,7 @@ import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { decide, DEFAULT_KINDS, KIND_LABEL, KINDS, pushPayload, retryAt } from '../notifications/channel-rules';
 import { PrismaService } from '../prisma/prisma.module';
+import { shutdownGraceMs, waitWhileBusy } from '../runtime/wait';
 
 class KeysDto {
   @IsString() @MaxLength(200) p256dh!: string;
@@ -60,7 +62,7 @@ class SettingsDto {
  * kiểm tra lại cài đặt lúc gửi, có thử lại; thiết bị đã huỷ đăng ký (404/410) bị xoá.
  */
 @Injectable()
-export class PushService implements OnApplicationBootstrap, OnModuleDestroy {
+export class PushService implements OnApplicationBootstrap, OnModuleDestroy, BeforeApplicationShutdown {
   private log = new Logger(PushService.name);
   private publicKey: string | null = null;
   private timer: NodeJS.Timeout | null = null;
@@ -68,14 +70,28 @@ export class PushService implements OnApplicationBootstrap, OnModuleDestroy {
 
   constructor(private prisma: PrismaService) {}
 
+  /** Khoá VAPID cần cho cả web (trả publicKey khi đăng ký thiết bị) lẫn worker (gửi) */
   async onApplicationBootstrap() {
     await this.ensureKeys().catch((e: Error) => this.log.warn(`Khởi tạo Web Push lỗi: ${e.message}`));
+  }
+
+  /**
+   * Bắt đầu xử lý hàng đợi gửi mỗi 10 giây — chỉ worker gọi. Nhiều worker vẫn không gửi trùng:
+   * mỗi tin được nhận bằng cập nhật có điều kiện (status pending → sending).
+   */
+  startDelivery() {
+    if (this.timer) return;
     this.timer = setInterval(() => void this.processQueue(), 10_000);
     this.timer.unref();
   }
 
   onModuleDestroy() {
     if (this.timer) clearInterval(this.timer);
+  }
+
+  /** Lúc tắt: chờ lượt gửi đang chạy xong để không bỏ lửng giữa lúc đã gửi mà chưa ghi trạng thái */
+  async beforeApplicationShutdown() {
+    await waitWhileBusy(() => this.processing, shutdownGraceMs());
   }
 
   private async ensureKeys() {
@@ -349,5 +365,6 @@ class PushController {
 @Module({
   controllers: [PushController],
   providers: [PushService],
+  exports: [PushService],
 })
 export class PushModule {}

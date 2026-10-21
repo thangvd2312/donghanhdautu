@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { BRIEF_PROMPT } from '../advisor/prompt';
 import { MacroService } from '../macro/macro.module';
 import { MarketService } from '../market/market.service';
@@ -49,12 +48,12 @@ export class BriefsService {
     }
   }
 
-  @Cron('30 8 * * 1-5', { timeZone: VN_TZ })
+  /** 8:30 thứ 2–6 giờ VN (worker/scheduled-jobs.ts) */
   morning() {
     return this.runAll('morning');
   }
 
-  @Cron('10 15 * * 1-5', { timeZone: VN_TZ })
+  /** 15:10 thứ 2–6 giờ VN (worker/scheduled-jobs.ts) */
   closing() {
     return this.runAll('closing');
   }
@@ -118,6 +117,7 @@ export class BriefsService {
   }
 
   private async context(userId: string, kind: BriefKind) {
+    await this.market.ensureFresh();
     const [profile, valuation, tags] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
       this.portfolio.valuation(userId),

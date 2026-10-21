@@ -92,16 +92,27 @@ jobs:
         working-directory: ${{ env.APP_DIR }}/backend
         run: node --env-file=../.env node_modules/.bin/prisma migrate deploy
 
-      - name: Reload app (pm2)
+      # Reload cả hai app (web `dautu` trước, rồi worker `dautu-worker`); ghi mốc để bước kiểm tra biết worker nào là worker mới
+      - name: Reload apps (pm2)
         working-directory: ${{ env.APP_DIR }}
         run: |
+          echo "RELOAD_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
           pm2 startOrReload ecosystem.config.cjs --update-env
           pm2 save
 
       - name: Health check
         run: |
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:4200/api/health; then echo; echo "✅ deployed $GITHUB_SHA"; exit 0; fi
+            if curl -fsS http://127.0.0.1:4200/api/health; then echo; echo "✅ web healthy $GITHUB_SHA"; exit 0; fi
             sleep 2
           done
           echo "❌ app did not become healthy"; pm2 logs dautu --lines 80 --nostream; exit 1
+
+      # Worker mới phải khởi động sau lúc reload và ghi nhịp tim trong 90 giây (không tính nhịp của worker cũ)
+      - name: Worker heartbeat check
+        working-directory: ${{ env.APP_DIR }}/backend
+        run: |
+          if node --env-file=../.env dist/runtime/worker-check-cli.js --since "$RELOAD_STARTED_AT" --timeout 90; then
+            echo "✅ worker healthy $GITHUB_SHA"; exit 0
+          fi
+          echo "❌ worker did not become healthy"; pm2 logs dautu-worker --lines 80 --nostream; exit 1

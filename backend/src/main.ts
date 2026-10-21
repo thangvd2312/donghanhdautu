@@ -6,8 +6,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { AppModule } from './app.module';
 import { pagePreview, withPreview } from './common/link-preview';
+import { declareAppRole } from './runtime/app-role';
 
 async function bootstrap() {
+  // API + socket + poll bảng giá; việc nền chạy ở worker.ts. Khai báo ở đây để APP_ROLE trong .env dùng chung không đổi được vai trò
+  declareAppRole('web');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api');
   // Nhập giao dịch gửi nội dung CSV trong JSON (tối đa ~1 MB)

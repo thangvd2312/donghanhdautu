@@ -24,6 +24,7 @@ export function testUser(prisma: PrismaService, tag: string) {
 /** Giá thị trường giả: đủ cho các service chỉ cần kiểm tra mã và tỷ giá */
 export function fakeMarket() {
   return {
+    ensureFresh: () => Promise.resolve(),
     assertStock: (s: string) => Promise.resolve({ symbol: s }),
     stockQuote: () => Promise.resolve({}),
     goldQuotes: () => [],

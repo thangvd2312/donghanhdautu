@@ -14,7 +14,6 @@ import {
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import { InvestmentPlan, Prisma } from '@prisma/client';
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { IsDateKey } from '../common/dates';
@@ -26,7 +25,7 @@ import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { StockResearchService } from '../market/stock-research.service';
-import { VN_TZ, vnDateKey } from '../market/types';
+import { vnDateKey } from '../market/types';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { AiUsageService } from '../ai/ai-usage.service';
@@ -359,9 +358,9 @@ export class PlansService {
     };
   }
 
-  /** 8:00 mỗi ngày: nhắc các kế hoạch đến hạn xem lại (mỗi ngày xem lại chỉ nhắc một lần) */
-  @Cron('0 8 * * *', { timeZone: VN_TZ })
+  /** 8:00 mỗi ngày (worker/scheduled-jobs.ts): nhắc các kế hoạch đến hạn xem lại (mỗi ngày xem lại chỉ nhắc một lần) */
   async remindDue() {
+    await this.market.ensureFresh(); // tên hiển thị của vàng lấy từ bảng giá
     const today = vnDateKey();
     const due = await this.prisma.investmentPlan.findMany({
       where: { status: 'active', nextReviewAt: { lte: new Date(`${today}T00:00:00Z`) } },
@@ -466,5 +465,6 @@ class PlansController {
   imports: [MarketModule, PortfolioModule, AlertsModule],
   controllers: [PlansController],
   providers: [PlansService],
+  exports: [PlansService],
 })
 export class PlansModule {}

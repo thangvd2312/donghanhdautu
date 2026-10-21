@@ -1,4 +1,5 @@
 import { Controller, Get, Module, Param, ParseIntPipe, DefaultValuePipe, Query, UseGuards } from '@nestjs/common';
+import { RuntimeModule } from '../runtime/runtime.module';
 import { AuthModule, CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { CompareService } from './compare.service';
@@ -66,7 +67,7 @@ class MarketController {
 }
 
 @Module({
-  imports: [AuthModule, VietcapModule],
+  imports: [AuthModule, VietcapModule, RuntimeModule],
   controllers: [MarketController],
   providers: [
     MarketService,
