@@ -907,3 +907,36 @@ export interface IncomeResponse {
   source: string
   asOf: string
 }
+
+// ---- Thử kịch bản (mô phỏng biến động danh mục) ----
+export type SimGroupKey = 'stock' | 'crypto' | 'gold' | 'cash'
+export interface SimShocks {
+  stock?: number
+  crypto?: number
+  gold?: number
+  fx?: number
+  symbols?: Record<string, number>
+}
+export interface SimSnapshot {
+  total: number
+  groups: { group: SimGroupKey; label: string; value: number; weightPct: number }[]
+}
+export interface SimHolding {
+  assetType: string
+  symbol: string
+  label: string
+  before: number
+  after: number
+  delta: number
+  appliedPct: number
+  priceStatus: 'fresh' | 'stale' | 'fallback' | 'missing'
+}
+export interface SimulateResponse {
+  before: SimSnapshot
+  after: SimSnapshot
+  delta: { value: number; pct: number | null }
+  holdings: SimHolding[]
+  notes: string[]
+  missing: { assetType: string; symbol: string; reason: string }[]
+  asOf: string
+}

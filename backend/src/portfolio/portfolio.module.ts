@@ -15,7 +15,19 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsIn,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
 import { MarketModule } from '../market/market.module';
@@ -31,6 +43,7 @@ import { ImportDto, ImportService } from './import.service';
 import { computeLedger, performance } from './ledger';
 import type { LedgerResult } from './ledger';
 import { toLedgerTx, TransactionDto, TransactionsService } from './transactions';
+import { SHOCK_MAX_PCT, SHOCK_MIN_PCT, simulate } from './simulate';
 import { HoldingInput, valuePortfolio } from './valuation';
 
 /** Khai báo nhanh một tài sản đang có (onboarding / "khai báo tài sản đang có") = giao dịch số dư đầu kỳ */
@@ -41,6 +54,27 @@ class HoldingDto {
   @IsNumber() @Min(0) avgCost!: number;
   @IsOptional() @IsString() note?: string;
   @IsOptional() @IsString() @MaxLength(40) portfolioId?: string;
+}
+
+const PCT_RANGE = `phải nằm trong khoảng ${SHOCK_MIN_PCT}% đến +${SHOCK_MAX_PCT}%`;
+
+class ShocksDto {
+  @IsOptional() @IsNumber({}, { message: `stock ${PCT_RANGE}` }) @Min(SHOCK_MIN_PCT) @Max(SHOCK_MAX_PCT) stock?: number;
+  @IsOptional()
+  @IsNumber({}, { message: `crypto ${PCT_RANGE}` })
+  @Min(SHOCK_MIN_PCT)
+  @Max(SHOCK_MAX_PCT)
+  crypto?: number;
+  @IsOptional() @IsNumber({}, { message: `gold ${PCT_RANGE}` }) @Min(SHOCK_MIN_PCT) @Max(SHOCK_MAX_PCT) gold?: number;
+  @IsOptional() @IsNumber({}, { message: `fx ${PCT_RANGE}` }) @Min(SHOCK_MIN_PCT) @Max(SHOCK_MAX_PCT) fx?: number;
+  /** Giá trị từng mã được kiểm tra trong simulate() */
+  @IsOptional() @IsObject() symbols?: Record<string, number>;
+}
+
+/** Kịch bản mô phỏng: không ghi gì vào sổ */
+export class SimulateDto {
+  @IsOptional() @IsString() @MaxLength(40) portfolioId?: string | null;
+  @IsObject() @ValidateNested() @Type(() => ShocksDto) shocks!: ShocksDto;
 }
 
 class DismissDto {
@@ -68,6 +102,17 @@ export class PortfolioService {
       ? holdingsFromLedger(await this.transactions.ledger(userId, portfolioId), portfolioId, this.market.usdtVnd.rate)
       : await this.prisma.holding.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
     return this.value(holdings);
+  }
+
+  /**
+   * Mô phỏng kịch bản giá trên tài sản đang giữ. "Trước" lấy từ đúng valuation() mà màn Danh mục dùng
+   * (cùng danh mục, giá, trạng thái giá, tỷ giá); không ghi gì vào DB.
+   */
+  async simulate(userId: string, dto: SimulateDto) {
+    const portfolioId = dto.portfolioId || undefined;
+    if (portfolioId) await this.transactions.resolvePortfolio(this.prisma, userId, portfolioId);
+    const v = await this.valuation(userId, portfolioId);
+    return { ...simulate(v.holdings, dto.shocks), asOf: v.generatedAt };
   }
 
   /**
@@ -300,6 +345,12 @@ class PortfolioController {
       ...v,
       holdings: v.holdings.map((h) => ({ ...h, portfolios: breakdown[`${h.assetType}:${h.symbol}`] ?? [] })),
     };
+  }
+
+  /** Thử kịch bản giá (cổ phiếu −10%, vàng +5%, tỷ giá +2%…) lên tài sản đang giữ; không ghi vào sổ */
+  @Post('simulate')
+  simulate(@CurrentUser() user: AuthUser, @Body() dto: SimulateDto) {
+    return this.portfolio.simulate(user.id, dto);
   }
 
   /** Tổng tài sản và vốn đưa vào theo ngày + hiệu quả trong kỳ. range: 1m | 3m | 6m | 1y | all */

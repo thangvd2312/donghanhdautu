@@ -22,6 +22,7 @@ const NewsPage = lazy(() => import('./pages/NewsPage'))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
 const PlanDetailPage = lazy(() => import('./pages/PlanDetailPage'))
 const PlansPage = lazy(() => import('./pages/PlansPage'))
+const SimulatePage = lazy(() => import('./pages/SimulatePage'))
 const ScreenerPage = lazy(() => import('./pages/ScreenerPage'))
 const PortfolioPage = lazy(() => import('./pages/PortfolioPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="/stock/:symbol" element={page(<StockPage />)} />
             <Route path="/crypto/:symbol" element={page(<CryptoPage />)} />
             <Route path="/screener" element={page(<ScreenerPage />)} />
+            <Route path="/simulate" element={page(<SimulatePage />)} />
             <Route path="/compare" element={page(<ComparePage />)} />
             <Route path="/news" element={page(<NewsPage />)} />
             <Route path="/plans" element={page(<PlansPage />)} />

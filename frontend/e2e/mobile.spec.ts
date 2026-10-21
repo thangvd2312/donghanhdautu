@@ -82,6 +82,25 @@ const scenarios: Scenario[] = [
     },
   },
   { name: 'income-24', path: '/income?past=24', act: async (p) => { await p.getByRole('button', { name: '24 tháng qua' }).waitFor({ timeout: 25_000 }); await p.waitForTimeout(1500) } },
+  {
+    name: 'simulate',
+    path: '/simulate?s=stock:-10',
+    act: async (p) => {
+      // Backend thật: kết quả (hoặc thông báo lỗi) phải hiện ra, không treo ở khung tải
+      await p.getByTestId('sim-result').or(p.getByRole('alert')).first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(800)
+    },
+  },
+  {
+    name: 'simulate-override',
+    path: '/simulate?s=stock:-10',
+    act: async (p) => {
+      await click(p, /Đặt riêng theo mã/)
+      await p.getByRole('button', { name: 'FPT', exact: true }).click()
+      await p.getByTestId('sim-result').or(p.getByRole('alert')).first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(800)
+    },
+  },
   { name: 'screener', path: '/screener' },
   { name: 'screener-picker', path: '/screener', act: (p) => click(p, 'Tự chọn điều kiện') },
   {

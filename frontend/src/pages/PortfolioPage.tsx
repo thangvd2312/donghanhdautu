@@ -1,3 +1,4 @@
+import TuneOutlined from '@mui/icons-material/TuneOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import ArrowForward from '@mui/icons-material/ArrowForward'
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
@@ -164,6 +165,17 @@ export default function PortfolioPage() {
               ].join('\n\n')}
             </InfoTip>
           </Stack>
+          {p && p.holdings.length > 0 && (
+            <Button
+              variant="outlined"
+              startIcon={<TuneOutlined />}
+              component={RouterLink}
+              to={pf ? `/simulate?p=${encodeURIComponent(pf)}` : '/simulate'}
+              sx={{ mt: 1.25, borderRadius: 99, width: { xs: '100%', sm: 'auto' } }}
+            >
+              Thử kịch bản
+            </Button>
+          )}
         </Box>
       </Paper>
 
