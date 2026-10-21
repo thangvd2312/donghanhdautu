@@ -5,7 +5,7 @@ import { MarketGateway } from '../market/market.gateway';
 import { PrismaService } from '../prisma/prisma.module';
 
 export interface NotificationInput {
-  kind: 'price_move' | 'news' | 'macro' | 'brief' | 'price_target' | 'plan_review';
+  kind: 'price_move' | 'news' | 'macro' | 'brief' | 'price_target' | 'plan_review' | 'event';
   severity: 'info' | 'warning' | 'critical';
   title: string;
   body: string;

@@ -3,6 +3,7 @@ import LightModeOutlined from '@mui/icons-material/LightModeOutlined'
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined'
 import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined'
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined'
+import EventOutlined from '@mui/icons-material/EventOutlined'
 import FlagOutlined from '@mui/icons-material/FlagOutlined'
 import ForumOutlined from '@mui/icons-material/ForumOutlined'
 import HomeOutlined from '@mui/icons-material/HomeOutlined'
@@ -71,6 +72,7 @@ const KIND_LABEL: Record<string, string> = {
   macro: 'Vĩ mô',
   brief: 'Bản tin',
   price_target: 'Mốc giá',
+  event: 'Sự kiện quyền',
 }
 
 /** Thanh đáy trên điện thoại: 4 trang dùng nhiều nhất + "Thêm" */
@@ -84,6 +86,7 @@ const BOTTOM = [
 const MORE = [
   { to: '/market', label: 'Bảng giá', icon: <ShowChartOutlined /> },
   { to: '/goals', label: 'Mục tiêu tài chính', icon: <SavingsOutlined /> },
+  { to: '/events', label: 'Lịch sự kiện', icon: <EventOutlined /> },
   { to: '/news', label: 'Tin tức', icon: <NewspaperOutlined /> },
   { to: '/settings', label: 'Cài đặt & thông báo', icon: <SettingsOutlined /> },
 ]
@@ -395,6 +398,17 @@ function UserMenu() {
           </Typography>
         </Box>
         <Divider />
+        <MenuItem
+          onClick={() => {
+            setAnchor(null)
+            nav('/events')
+          }}
+        >
+          <ListItemIcon>
+            <EventOutlined fontSize="small" />
+          </ListItemIcon>
+          Lịch sự kiện
+        </MenuItem>
         <MenuItem
           onClick={() => {
             setAnchor(null)

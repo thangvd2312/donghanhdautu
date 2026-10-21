@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { HomeModule } from './home/home.module';
 import { PlansModule } from './plans/plans.module';
 import { DemoModule } from './demo/demo.module';
+import { EventsModule } from './events/events.module';
 import { GoalsModule } from './goals/goals.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { PushModule } from './push/push.module';
@@ -52,6 +53,7 @@ class HealthController {
     LogosModule,
     AdvisorModule,
     AlertsModule,
+    EventsModule,
   ],
   controllers: [HealthController],
 })

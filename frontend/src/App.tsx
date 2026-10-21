@@ -13,6 +13,7 @@ import HomePage from './pages/HomePage'
 const AdvisorPage = lazy(() => import('./pages/AdvisorPage'))
 const CryptoPage = lazy(() => import('./pages/CryptoPage'))
 const DemoPage = lazy(() => import('./pages/DemoPage'))
+const EventsPage = lazy(() => import('./pages/EventsPage'))
 const GoalsPage = lazy(() => import('./pages/GoalsPage'))
 const MarketPage = lazy(() => import('./pages/MarketPage'))
 const NewsPage = lazy(() => import('./pages/NewsPage'))
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/news" element={page(<NewsPage />)} />
             <Route path="/plans" element={page(<PlansPage />)} />
             <Route path="/plans/:id" element={page(<PlanDetailPage />)} />
+            <Route path="/events" element={page(<EventsPage />)} />
             <Route path="/goals" element={page(<GoalsPage />)} />
             <Route path="/settings" element={page(<SettingsPage />)} />
           </Route>

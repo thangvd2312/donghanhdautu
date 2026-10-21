@@ -90,3 +90,12 @@ describe('pushPayload', () => {
     expect(p.url).toBe('/');
   });
 });
+
+describe('loại tin mới với liên kết cũ', () => {
+  it('liên kết chưa lưu `event` nhận theo mặc định (bật); đã tắt rõ ràng thì tôn trọng', () => {
+    const old = { active: true, kinds: { price_target: true }, quietStart: null, quietEnd: null };
+    expect(decide(new Date(), 'event', old, 0)).toEqual({ action: 'send' });
+    expect(decide(new Date(), 'event', { ...old, kinds: { event: false } }, 0).action).toBe('skip');
+    expect(decide(new Date(), 'brief', old, 0).action).toBe('skip');
+  });
+});

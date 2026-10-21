@@ -36,6 +36,37 @@ export interface CorporateEvent {
   valuePerShare: number | null;
 }
 
+/**
+ * Sự kiện quyền toàn thị trường, nguyên văn từ Vietcap (đã kiểm tra bằng gọi thật 21/10/2026, 4 tháng, 143 sự kiện DIV/ISS/AGME/EGME):
+ *  - ngày dạng "YYYY-MM-DDT00:00:00" (lịch VN); phân trang size<=500, totalElements đủ cho cả cửa sổ 120 ngày.
+ *  - Sự kiện mới công bố có thể CHƯA có exrightDate/recordDate (chỉ displayDate1 = ngày công bố): không đủ để xếp lịch.
+ *  - DIV: exrightDate = GDKHQ, recordDate = chốt danh sách, payoutDate = thanh toán, valuePerShare = VND/cp (exerciseRatio = %/mệnh giá).
+ *  - ISS: eventTitleEn "Rights issue" = quyền mua (KHÔNG có trường giá phát hành), "Bonus Issue"/"Stock dividend" = cổ phiếu thưởng /
+ *    cổ tức bằng CP; còn lại (ESOP, Private Placements, Convertible Bonds) không phải quyền của cổ đông hiện hữu. exerciseRatio = tỷ lệ (0.5 = 50%).
+ *  - AGME/EGME: exrightDate = GDKHQ để được dự họp, recordDate = ngày chốt, issueDate = ngày họp (không phải lúc nào cũng có;
+ *    displayDate1 là ngày họp nếu có issueDate, còn không thì bằng exrightDate nên không dùng làm ngày họp).
+ */
+export interface VcMarketEvent {
+  id: string;
+  ticker: string;
+  organNameVi?: string;
+  eventCode: string;
+  eventTitleVi?: string;
+  eventTitleEn?: string;
+  publicDate?: string;
+  issueDate?: string;
+  recordDate?: string;
+  exrightDate?: string;
+  payoutDate?: string;
+  exerciseRatio?: number;
+  valuePerShare?: number;
+}
+
+export interface MarketEvents {
+  events: VcMarketEvent[];
+  fetchedAt: string;
+}
+
 interface VcEvent {
   eventCode?: string;
   eventNameVi?: string;
@@ -649,6 +680,26 @@ export class VietcapProvider {
         }
       }
       return out.sort((a, b) => a.exDate.localeCompare(b.exDate));
+    });
+  }
+
+  /**
+   * Sự kiện quyền (DIV, ISS, AGME, EGME) của TOÀN thị trường trong khoảng ngày, một lần gọi (phân trang nếu cần),
+   * cache 1 giờ theo khoảng ngày. Lỗi nguồn thì ném lỗi — nơi gọi quyết định hiển thị "chưa lấy được".
+   */
+  async marketEvents(fromDate: string, toDate: string): Promise<MarketEvents> {
+    return this.cached(`market-events:${fromDate}:${toDate}`, 3600_000, async () => {
+      const ymd = (d: string) => d.replace(/-/g, '');
+      const events: VcMarketEvent[] = [];
+      for (let page = 0; page < 10; page++) {
+        const res = await this.get<{ data: { content?: VcMarketEvent[]; totalPages?: number } | null }>(
+          `${IQ}/events?fromDate=${ymd(fromDate)}&toDate=${ymd(toDate)}&eventCode=DIV,ISS,AGME,EGME&page=${page}&size=500`,
+        );
+        if (!res.data || !Array.isArray(res.data.content)) throw new Error('Vietcap events: phản hồi không đúng dạng');
+        events.push(...res.data.content);
+        if (page + 1 >= (res.data.totalPages ?? 1)) break;
+      }
+      return { events, fetchedAt: new Date().toISOString() };
     });
   }
 

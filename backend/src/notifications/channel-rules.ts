@@ -1,6 +1,6 @@
 /** Quy tắc gửi thông báo ra ngoài app (Telegram, Web Push): loại tin, giờ yên lặng, giới hạn tần suất, nội dung */
 
-export const KINDS = ['price_target', 'price_move', 'plan_review', 'brief', 'news', 'macro'] as const;
+export const KINDS = ['price_target', 'price_move', 'plan_review', 'brief', 'news', 'macro', 'event'] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const KIND_LABEL: Record<Kind, string> = {
@@ -10,6 +10,7 @@ export const KIND_LABEL: Record<Kind, string> = {
   brief: 'Bản tin sáng / cuối phiên / tổng kết tuần',
   news: 'Tin về mã đang giữ',
   macro: 'Tin vĩ mô quan trọng',
+  event: 'Sự kiện quyền sắp tới: cổ tức, quyền mua, đại hội',
 };
 
 /** Mặc định khi mới kết nối: chỉ những tin cần hành động; người dùng tự bật thêm */
@@ -20,6 +21,7 @@ export const DEFAULT_KINDS: Record<Kind, boolean> = {
   brief: false,
   news: false,
   macro: false,
+  event: true,
 };
 
 /** Tối đa số tin / giờ gửi cho một người */
@@ -59,7 +61,9 @@ export function quietEndsAt(now: Date, end: number) {
  */
 export function decide(now: Date, kind: string, link: LinkPrefs | null, sentLastHour: number): Decision {
   if (!link || !link.active) return { action: 'skip', reason: 'Chưa kết nối hoặc đã tắt Telegram' };
-  if (!link.kinds[kind]) return { action: 'skip', reason: 'Đã tắt loại thông báo này' };
+  // Liên kết cũ chưa lưu loại tin mới: dùng mặc định của loại đó thay vì coi như đã tắt
+  if (!(link.kinds[kind] ?? DEFAULT_KINDS[kind as Kind]))
+    return { action: 'skip', reason: 'Đã tắt loại thông báo này' };
   if (inQuietHours(vnMinutes(now), link.quietStart, link.quietEnd)) {
     return { action: 'later', until: quietEndsAt(now, link.quietEnd!), reason: 'Giờ yên lặng' };
   }
@@ -82,6 +86,7 @@ const GENERIC_TITLE: Record<string, string> = {
   macro: 'Có tin vĩ mô quan trọng',
   plan_review: 'Đến hạn xem lại một kế hoạch đầu tư',
   price_target: 'Giá đã chạm mốc bạn đặt',
+  event: 'Sắp có sự kiện quyền của mã bạn quan tâm',
 };
 
 function escapeHtml(s: string) {

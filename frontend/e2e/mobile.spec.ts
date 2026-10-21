@@ -56,6 +56,21 @@ const scenarios: Scenario[] = [
   { name: 'goals', path: '/goals' },
   { name: 'goals-new', path: '/goals', act: (p) => click(p, 'Thêm mục tiêu') },
   { name: 'goals-sim', path: '/goals', act: async (p) => { const l = p.getByText('Thử thay đổi mức góp').first(); if (await l.count()) { await l.click(); await p.waitForTimeout(600) } } },
+  { name: 'events', path: '/events' },
+  { name: 'events-quarter', path: '/events', act: (p) => click(p, '3 tháng') },
+  {
+    name: 'events-detail',
+    path: '/events',
+    act: async (p) => {
+      // Tài khoản test có thể chưa có sự kiện nào trong cửa sổ: khi đó chỉ kiểm tra trạng thái trống
+      const card = p.getByTestId('event-card').first()
+      if (await card.count()) {
+        await card.click()
+        await p.waitForTimeout(700)
+      }
+    },
+  },
+  { name: 'events-reminders', path: '/events', act: (p) => click(p, /Cài đặt nhắc sự kiện/) },
   { name: 'advisor', path: '/advisor' },
   { name: 'advisor-history', path: '/advisor', act: (p) => click(p, 'Lịch sử') },
   { name: 'advisor-composer-focus', path: '/advisor', act: async (p) => { await p.getByPlaceholder(/Có nên mua thêm/).click(); await p.waitForTimeout(600) } },

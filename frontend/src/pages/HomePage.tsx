@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { NewsRow, ReviewList, TodayBlock } from '../components/HomeBlocks'
 import { Panel } from '../components/ui'
+import UpcomingEvents from '../components/UpcomingEvents'
 import WatchlistPanel from '../components/WatchlistPanel'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
@@ -112,6 +113,8 @@ export default function HomePage() {
           </Panel>
         </Grid>
       </Grid>
+
+      <UpcomingEvents />
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 7 }}>

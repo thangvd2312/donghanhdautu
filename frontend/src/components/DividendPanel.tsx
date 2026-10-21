@@ -1,3 +1,4 @@
+import EventOutlined from '@mui/icons-material/EventOutlined'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Stack from '@mui/material/Stack'
@@ -9,12 +10,27 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../lib/api'
 import { fmtDate, fmtNum } from '../lib/format'
 import type { StockDividends } from '../lib/types'
 import { KV, Panel } from './ui'
 
 const PREVIEW = 8
+
+function EventsLink({ symbol }: { symbol: string }) {
+  return (
+    <Button
+      size="small"
+      component={RouterLink}
+      to={`/events?symbol=${encodeURIComponent(symbol)}`}
+      startIcon={<EventOutlined />}
+      sx={{ m: 1, minHeight: 40 }}
+    >
+      Xem lịch sự kiện của {symbol}
+    </Button>
+  )
+}
 
 /** Lịch sử trả cổ tức tiền mặt / cổ phiếu của một mã, kèm tỷ suất cổ tức 12 tháng theo giá hiện tại */
 export default function DividendPanel({ symbol }: { symbol: string }) {
@@ -35,6 +51,7 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
     return (
       <Panel title="Lịch sử cổ tức">
         <Typography color="text.secondary">Chưa lấy được dữ liệu cổ tức lúc này, thử lại sau.</Typography>
+        <EventsLink symbol={symbol} />
       </Panel>
     )
   }
@@ -101,6 +118,7 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
           {all ? 'Thu gọn' : `Xem tất cả ${d.items.length} lần`}
         </Button>
       )}
+      <EventsLink symbol={symbol} />
     </Panel>
   )
 }

@@ -34,6 +34,7 @@ model User {
   portfolios    Portfolio[]
   briefRuns     BriefRun[]
   dismissedActions DismissedAction[]
+  eventReminder EventReminderSetting?
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -666,4 +667,16 @@ model DismissedAction {
   createdAt DateTime @default(now())
 
   @@id([userId, key])
+}
+
+/// Cài đặt nhắc lịch sự kiện quyền (GDKHQ, đại hội) theo người dùng; chưa có dòng = tắt, nhắc trước 1 ngày
+model EventReminderSetting {
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled      Boolean  @default(false)
+  /// Nhắc trước bao nhiêu ngày lịch (1 hoặc 3)
+  daysBefore   Int      @default(1)
+  /// Mã không muốn nhận nhắc
+  mutedSymbols String[] @default([])
+  updatedAt    DateTime @updatedAt
 }
