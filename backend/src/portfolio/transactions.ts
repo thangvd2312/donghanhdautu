@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Holding, Prisma, Transaction } from '@prisma/client';
+import type { ImportBatch as ImportBatchRow } from '@prisma/client';
 import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import type {
   AssetType,
@@ -40,6 +41,16 @@ const CASH_ONLY: TxType[] = ['deposit', 'withdraw', 'fee'];
 const MIN_TX_DATE = '1990-01-01';
 
 const dec = (v: number | undefined | null) => (v === undefined || v === null ? null : new Prisma.Decimal(String(v)));
+/** Dòng Prisma → hợp đồng API, dựng từng trường (không lộ `userId`, `hash`, `portfolioId`) */
+const toImportBatch = (b: ImportBatchRow): ImportBatch => ({
+  id: b.id,
+  fileName: b.fileName,
+  rowCount: b.rowCount,
+  importedCount: b.importedCount,
+  undoneAt: b.undoneAt?.toISOString() ?? null,
+  createdAt: b.createdAt.toISOString(),
+});
+
 const dateKey = (d: Date) => d.toISOString().slice(0, 10);
 
 export type NormalizedTx = Awaited<ReturnType<TransactionsService['normalize']>>;
@@ -208,9 +219,9 @@ export class TransactionsService {
       where: { transactionId: id },
       orderBy: { createdAt: 'desc' },
     });
-    // Giữ nguyên mọi cột (JSON trả ra như cũ); chỉ khẳng định kiểu và đổi Date sang chuỗi ISO như JSON vẫn làm
+    // Dựng từng trường (không lộ `transactionId`); Date → chuỗi ISO như JSON vẫn làm
     return rows.map((r) => ({
-      ...r,
+      id: r.id,
       action: r.action as TransactionRevision['action'],
       before: r.before as TransactionRevision['before'],
       createdAt: r.createdAt.toISOString(),
@@ -317,7 +328,7 @@ export class TransactionsService {
       await db.transaction.updateMany({ where: { id: { in: inBatch.map((t) => t.id) } }, data: { deletedAt: now } });
       const undone = await db.importBatch.update({ where: { id: batchId }, data: { undoneAt: now } });
       return {
-        result: { batch: undone, removed: inBatch.length },
+        result: { batch: toImportBatch(undone), removed: inBatch.length },
         txs: txs.filter((t) => t.importBatchId !== batchId),
       };
     });
@@ -329,11 +340,7 @@ export class TransactionsService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
-    return rows.map((b) => ({
-      ...b,
-      undoneAt: b.undoneAt?.toISOString() ?? null,
-      createdAt: b.createdAt.toISOString(),
-    }));
+    return rows.map(toImportBatch);
   }
 
   /** Giao dịch hiện có (chưa huỷ) để so trùng khi nhập */

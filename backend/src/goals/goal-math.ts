@@ -42,7 +42,14 @@ export function goalProgress(
     const value = (base * a.pct) / 100;
     current += value;
     byType[a.assetType] = (byType[a.assetType] ?? 0) + value;
-    return { ...a, name: h?.displayName ?? a.symbol, value, held: !!h };
+    return {
+      assetType: a.assetType,
+      symbol: a.symbol,
+      pct: a.pct,
+      name: h?.displayName ?? a.symbol,
+      value,
+      held: !!h,
+    };
   });
   const actualAllocation = Object.fromEntries(
     Object.entries(byType).map(([k, v]) => [k, current ? (v / current) * 100 : 0]),

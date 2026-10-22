@@ -425,13 +425,20 @@ export class PlansService {
   }
 }
 
-/** Dòng Prisma → hợp đồng API; Date → chuỗi ISO như JSON vẫn serialize, các cột còn lại (planId) giữ nguyên */
+/** Dòng Prisma → hợp đồng API, dựng từng trường (không lộ `planId`); Date → chuỗi ISO như JSON vẫn serialize */
 function presentReview(r: PlanReviewRow): PlanReview {
-  return { ...r, decision: r.decision as PlanReview['decision'], createdAt: r.createdAt.toISOString() };
+  return {
+    id: r.id,
+    decision: r.decision as PlanReview['decision'],
+    note: r.note,
+    priceAtReview: r.priceAtReview,
+    pnlPctAtReview: r.pnlPctAtReview,
+    createdAt: r.createdAt.toISOString(),
+  };
 }
 
 function presentVersion(v: PlanVersionRow): PlanDetail['versions'][number] {
-  return { ...v, snapshot: v.snapshot as Record<string, unknown>, createdAt: v.createdAt.toISOString() };
+  return { id: v.id, snapshot: v.snapshot as Record<string, unknown>, createdAt: v.createdAt.toISOString() };
 }
 
 function snapshot(p: InvestmentPlan): Prisma.InputJsonValue {

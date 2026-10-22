@@ -81,11 +81,12 @@ export class SavedScreenService {
 
 /**
  * Dòng Prisma → hợp đồng API: `filters` / `sort` đã được `parse` kiểm tra lúc ghi nên chỉ cần khẳng định kiểu;
- * Date → chuỗi ISO đúng như JSON vẫn serialize. Các cột còn lại giữ nguyên để phản hồi không đổi.
+ * Date → chuỗi ISO đúng như JSON vẫn serialize. Dựng từng trường nên cột nội bộ (`userId`) không lọt ra phản hồi.
  */
 function toSavedScreen(row: SavedScreenRow): SavedScreen {
   return {
-    ...row,
+    id: row.id,
+    name: row.name,
     filters: row.filters as unknown as ScreenFilter[],
     sort: row.sort as unknown as ScreenSort | null,
     createdAt: row.createdAt.toISOString(),

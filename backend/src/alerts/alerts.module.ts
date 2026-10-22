@@ -410,10 +410,14 @@ class PriceAlertDto implements PriceAlertRequest {
   @IsOptional() @IsString() @MaxLength(200) note?: string;
 }
 
-/** Dòng Prisma → hợp đồng API; Date → chuỗi ISO như JSON vẫn serialize, các cột còn lại giữ nguyên */
+/** Dòng Prisma → hợp đồng API, dựng từng trường (không lộ `userId`); Date → chuỗi ISO như JSON vẫn serialize */
 function toPriceAlert(r: PriceAlertRow): PriceAlert {
   return {
-    ...r,
+    id: r.id,
+    symbol: r.symbol,
+    targetPrice: r.targetPrice,
+    note: r.note,
+    active: r.active,
     assetType: r.assetType as TrackedAssetType,
     direction: r.direction as PriceAlert['direction'],
     triggeredAt: r.triggeredAt?.toISOString() ?? null,

@@ -122,7 +122,12 @@ export class WatchlistService {
 
 /** Dòng Prisma → hợp đồng API; Date → chuỗi ISO như JSON vẫn serialize, các cột còn lại (userId) giữ nguyên */
 function toEntry(row: WatchItemRow): WatchEntry {
-  return { ...row, assetType: row.assetType as TrackedAssetType, createdAt: row.createdAt.toISOString() };
+  return {
+    id: row.id,
+    assetType: row.assetType as TrackedAssetType,
+    symbol: row.symbol,
+    createdAt: row.createdAt.toISOString(),
+  };
 }
 
 @UseGuards(JwtAuthGuard)
