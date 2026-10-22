@@ -1,5 +1,5 @@
 import { Controller, Get, Injectable, Module, UseGuards } from '@nestjs/common';
-import type { HomeFeed, HomeToday, ReviewPoint } from '@dautu/contracts';
+import type { HomeFeed, HomeToday, PortfolioAlertKind, ReviewPoint } from '@dautu/contracts';
 import { mentionsCompany } from '../alerts/aliases';
 import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
 import type { AuthUser } from '../auth/auth.module';
@@ -17,6 +17,8 @@ import { PortfolioModule } from '../portfolio/portfolio.module';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { toLedgerTx, TransactionsService } from '../portfolio/transactions';
 import { PrismaService } from '../prisma/prisma.module';
+import { parseCheck, toConfig } from '../portfolio-alerts/rule-row';
+import { mergeReviewPoints } from '../portfolio-alerts/rules';
 import { planSignals } from '../plans/plan-rules';
 import { dayChange, dayIncomeOf, DayIncome, DayLedger, DayTrade, reviewPoints } from './today';
 
@@ -162,7 +164,18 @@ export class HomeService {
         ]
       : [];
     const order = { high: 0, medium: 1, info: 2 };
-    return [...points, ...planPoints, ...actionPoints].sort((a, b) => order[a.severity] - order[b.severity]);
+    const all = [...points, ...planPoints, ...actionPoints].sort((a, b) => order[a.severity] - order[b.severity]);
+    // Cảnh báo danh mục người dùng đã bật: dùng ngưỡng / mục tiêu của họ thay cho mốc mặc định, khớp với thông báo
+    const rules = await this.prisma.portfolioAlertRule.findMany({ where: { userId, enabled: true } });
+    if (!rules.length) return all;
+    const drawdown = rules.find((r) => r.kind === 'drawdown');
+    return mergeReviewPoints(
+      all,
+      v,
+      rules.map((r) => toConfig(r.kind as PortfolioAlertKind, r)),
+      drawdown ? parseCheck(drawdown.lastCheck) : null,
+      new Date(),
+    );
   }
 
   /** Giá theo đơn vị của kế hoạch: VND/cp, USDT/coin, VND/lượng (giá mua vào) */

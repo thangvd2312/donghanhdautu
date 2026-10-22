@@ -1,3 +1,4 @@
+import FlagOutlined from '@mui/icons-material/FlagOutlined'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -18,8 +19,19 @@ import { fmtNum } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import { useIsMobile } from '../lib/useIsMobile'
 import { parseNum, todayVn } from '../lib/num'
+import { CASH_REASONS, isJournalTx } from '../lib/journal'
 import { TX_LABEL } from '../lib/tx'
-import type { AssetType, GoldOption, PortfolioAccount, Transaction, TxType } from '../lib/types'
+import type {
+  AssetType,
+  GoldOption,
+  JournalEmotion,
+  JournalPlanRef,
+  JournalReason,
+  PortfolioAccount,
+  Transaction,
+  TxType,
+} from '../lib/types'
+import JournalTagPicker from './JournalTagPicker'
 import StockSearch from './StockSearch'
 import { DialogHeader } from './ui'
 
@@ -83,10 +95,18 @@ export default function TransactionDialog({
   const [gold, setGold] = useState<GoldOption[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // Nhật ký quyết định (tuỳ chọn): cảm xúc, lý do, kế hoạch được gắn. planId undefined = tự gắn theo kế hoạch đang
+  // theo dõi của cùng tài sản (người dùng thấy và bỏ được); null = không gắn
+  const [emotion, setEmotion] = useState<JournalEmotion | null>(null)
+  const [reason, setReason] = useState<JournalReason | null>(null)
+  const [planId, setPlanId] = useState<string | null | undefined>(undefined)
+  const [plans, setPlans] = useState<JournalPlanRef[] | null>(null)
 
   useEffect(() => {
     if (!open) return
     api<GoldOption[]>('/portfolio/gold-options').then(setGold).catch(() => {})
+    setPlans(null)
+    api<JournalPlanRef[]>('/journal/plans').then(setPlans).catch(() => {})
     setError('')
     const t = editing
     setType(t?.type ?? preset?.type ?? 'buy')
@@ -101,6 +121,9 @@ export default function TransactionDialog({
     setCurrency(t?.currency ?? 'VND')
     setFxRate(t?.fxRate != null ? String(t.fxRate) : '')
     setNote(t?.note ?? preset?.note ?? '')
+    setEmotion(t?.emotion ?? null)
+    setReason(t?.reason ?? null)
+    setPlanId(t ? t.planId : undefined)
     setPortfolioId(
       t?.portfolioId ?? preset?.portfolioId ?? defaultPortfolioId ?? accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? '',
     )
@@ -120,6 +143,15 @@ export default function TransactionDialog({
   const qtyN = parseNum(quantity)
   const priceN = parseNum(price)
   const gross = trade && qtyN > 0 && priceN >= 0 ? qtyN * priceN : null
+
+  const journal = isJournalTx(type) && !cashOpening
+  const linkable = type === 'buy' || type === 'sell'
+  const planSymbol = assetType === 'crypto' ? `${symbol.trim().toUpperCase().replace(/USDT$/, '')}USDT` : symbol.trim().toUpperCase()
+  const samePlans = linkable && symbol.trim() ? (plans ?? []).filter((p) => p.assetType === assetType && p.symbol === planSymbol) : []
+  const activePlan = samePlans.find((p) => p.status === 'active') ?? null
+  const linkedPlan = samePlans.find((p) => p.id === (planId === undefined ? activePlan?.id : planId)) ?? null
+  /** Kế hoạch hiện trên chip: kế hoạch đã gắn, hoặc kế hoạch đang theo dõi để gắn */
+  const chipPlan = linkedPlan ?? activePlan
 
   // Giao dịch coin / USDT hôm nay: điền sẵn tỷ giá hiện tại để tính được lãi VND thực tế. Đổi sang ngày khác thì bỏ
   // giá trị tự điền (tỷ giá hôm nay không đúng cho ngày cũ), người dùng tự nhập tỷ giá lúc đó.
@@ -172,6 +204,17 @@ export default function TransactionDialog({
       } else {
         body.currency = currency
         if (currency === 'USDT') body.fxRate = n(fxRate)
+      }
+    }
+    if (journal) {
+      if (editing) {
+        // Sửa: gửi rõ null để xoá nhãn; danh sách kế hoạch chưa tải được thì giữ nguyên liên kết cũ
+        Object.assign(body, { emotion, reason })
+        if (plans) body.planId = linkedPlan?.id ?? null
+      } else {
+        if (emotion) body.emotion = emotion
+        if (reason) body.reason = reason
+        if (linkedPlan) body.planId = linkedPlan.id
       }
     }
     for (const k of ['fee', 'tax', 'fxRate'] as const) {
@@ -279,7 +322,7 @@ export default function TransactionDialog({
                   slotProps={{
                     input: {
                       readOnly: true,
-                      endAdornment: <Chip size="small" label="Đổi" onClick={() => setSymbol('')} sx={{ cursor: 'pointer' }} />,
+                      endAdornment: <Chip label="Đổi" aria-label="Đổi mã" onClick={() => setSymbol('')} sx={{ cursor: 'pointer' }} />,
                     },
                   }}
                 />
@@ -386,6 +429,30 @@ export default function TransactionDialog({
           )}
 
           <TextField size="small" label="Ghi chú (tuỳ chọn)" value={note} onChange={(e) => setNote(e.target.value)} />
+
+          {journal && (
+            <JournalTagPicker
+              emotion={emotion}
+              reason={reason}
+              onEmotion={setEmotion}
+              onReason={setReason}
+              reasons={linkable ? undefined : CASH_REASONS}
+              footer={
+                chipPlan && (
+                  <Chip
+                    icon={<FlagOutlined />}
+                    label={linkedPlan ? `Thuộc kế hoạch ${chipPlan.displayName}` : `Gắn vào kế hoạch ${chipPlan.displayName}`}
+                    clickable
+                    aria-pressed={!!linkedPlan}
+                    color={linkedPlan ? 'primary' : 'default'}
+                    variant={linkedPlan ? 'filled' : 'outlined'}
+                    onClick={() => setPlanId(linkedPlan ? null : chipPlan.id)}
+                    sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+                  />
+                )
+              }
+            />
+          )}
 
           {gross !== null && (
             <Typography variant="body2" color="text.secondary">

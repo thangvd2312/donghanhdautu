@@ -12,7 +12,9 @@ import ForumOutlined from '@mui/icons-material/ForumOutlined'
 import HomeOutlined from '@mui/icons-material/HomeOutlined'
 import FilterAltOutlined from '@mui/icons-material/FilterAltOutlined'
 import PaidOutlined from '@mui/icons-material/PaidOutlined'
+import SummarizeOutlined from '@mui/icons-material/SummarizeOutlined'
 import MenuOutlined from '@mui/icons-material/MenuOutlined'
+import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined'
 import NewspaperOutlined from '@mui/icons-material/NewspaperOutlined'
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined'
 import SearchOutlined from '@mui/icons-material/SearchOutlined'
@@ -78,6 +80,8 @@ const KIND_LABEL: Record<string, string> = {
   brief: 'Bản tin',
   price_target: 'Mốc giá',
   event: 'Sự kiện quyền',
+  portfolio_health: 'Tình trạng danh mục',
+  journal_monthly: 'Nhật ký',
 }
 
 /** Thanh đáy trên điện thoại: 4 trang dùng nhiều nhất + "Thêm" */
@@ -91,8 +95,10 @@ const BOTTOM = [
 const MORE = [
   { to: '/market', label: 'Bảng giá', icon: <ShowChartOutlined /> },
   { to: '/goals', label: 'Mục tiêu tài chính', icon: <SavingsOutlined /> },
+  { to: '/journal', label: 'Nhật ký quyết định', icon: <MenuBookOutlined /> },
   { to: '/events', label: 'Lịch sự kiện', icon: <EventOutlined /> },
   { to: '/income', label: 'Thu nhập cổ tức', icon: <PaidOutlined /> },
+  { to: '/reports', label: 'Báo cáo danh mục', icon: <SummarizeOutlined /> },
   { to: '/screener', label: 'Lọc cổ phiếu', icon: <FilterAltOutlined /> },
   { to: '/compare', label: 'So sánh cổ phiếu', icon: <CompareArrowsOutlined /> },
   { to: '/simulate', label: 'Thử kịch bản', icon: <TuneOutlined /> },
@@ -425,6 +431,17 @@ function UserMenu() {
         <MenuItem
           onClick={() => {
             setAnchor(null)
+            nav('/journal')
+          }}
+        >
+          <ListItemIcon>
+            <MenuBookOutlined fontSize="small" />
+          </ListItemIcon>
+          Nhật ký quyết định
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchor(null)
             nav('/events')
           }}
         >
@@ -443,6 +460,17 @@ function UserMenu() {
             <PaidOutlined fontSize="small" />
           </ListItemIcon>
           Thu nhập cổ tức
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchor(null)
+            nav('/reports')
+          }}
+        >
+          <ListItemIcon>
+            <SummarizeOutlined fontSize="small" />
+          </ListItemIcon>
+          Báo cáo danh mục
         </MenuItem>
         <MenuItem
           onClick={() => {

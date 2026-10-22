@@ -130,7 +130,7 @@ function compareItems(a: IncomeItem, b: IncomeItem) {
 }
 
 /** Giao dịch cổ tức đã ghi trong cửa sổ. net = số tiền − thuế − phí, như sổ; USDT quy VND bằng tỷ giá đã nhập, thiếu tỷ giá thì loại và ghi chú */
-function receivedItems(
+export function receivedItems(
   txs: LedgerTx[],
   firstMonth: string,
   lastMonth: string,

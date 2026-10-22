@@ -1,4 +1,5 @@
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
+import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined'
 import EditOutlined from '@mui/icons-material/EditOutlined'
 import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined'
@@ -19,13 +20,15 @@ import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import { PriceStatusChip } from '../components/DataStatus'
+import JournalTagPicker from '../components/JournalTagPicker'
 import PlanEditor from '../components/PlanEditor'
 import { KV, Panel } from '../components/ui'
 import { api, post } from '../lib/api'
 import { changeColor, fmtDate, fmtNum, fmtPct, fmtPrice, fmtVndShort, timeAgo } from '../lib/format'
+import { EMOTION_LABEL, REASON_LABEL, REVIEW_REASONS } from '../lib/journal'
 import { todayVn } from '../lib/num'
 import { TX_LABEL } from '../lib/tx'
-import type { PlanDetail, PlanReview } from '../lib/types'
+import type { JournalEmotion, JournalReason, PlanDetail, PlanReview } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
 
 const DECISION: Record<PlanReview['decision'], string> = {
@@ -200,7 +203,20 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Panel title="Nhật ký xem lại">
+          <Panel
+            title="Nhật ký xem lại"
+            action={
+              <Button
+                size="small"
+                startIcon={<MenuBookOutlined />}
+                component={RouterLink}
+                to={`/journal?plan=${p.id}`}
+                sx={{ borderRadius: 99, minHeight: 32 }}
+              >
+                Xem trong nhật ký
+              </Button>
+            }
+          >
             {p.reviews.length ? (
               <Stack divider={<Divider flexItem />} spacing={1.5}>
                 {p.reviews.map((r) => (
@@ -209,6 +225,13 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
                       {DECISION[r.decision]}
                     </Typography>
                     {r.note && <Typography variant="body2">{r.note}</Typography>}
+                    {(r.emotion || r.reason) && (
+                      <Typography variant="caption" component="div" sx={{ color: 'text.secondary' }}>
+                        {[r.emotion && `Cảm xúc: ${EMOTION_LABEL[r.emotion]}`, r.reason && `Lý do: ${REASON_LABEL[r.reason]}`]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Typography>
+                    )}
                     <Typography variant="caption" color="text.secondary">
                       {fmtDate(r.createdAt)}
                       {r.priceAtReview !== null && ` · giá lúc đó ${fmtPrice(r.priceAtReview, p.currency)}`}
@@ -231,7 +254,7 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
                 {p.transactions.map((t) => (
                   <KV
                     key={t.id}
-                    k={`${fmtDate(t.date)} · ${TX_LABEL[t.type]}${t.period === 'before' ? ' · trước khi lập kế hoạch' : t.period === 'after' ? ' · sau khi kết thúc' : ''}`}
+                    k={`${fmtDate(t.date)} · ${TX_LABEL[t.type]}${t.period === 'before' ? ' · trước khi lập kế hoạch' : t.period === 'after' ? ' · sau khi kết thúc' : ''}${t.linked ? ' · gắn kế hoạch' : ''}${t.emotion ? ` · ${EMOTION_LABEL[t.emotion].toLowerCase()}` : ''}`}
                     v={
                       t.quantity !== null && t.price !== null
                         ? `${fmtNum(t.quantity, p.assetType === 'stock' ? 0 : 4)} × ${fmtPrice(t.price, p.currency)}`
@@ -280,6 +303,8 @@ Với từng điều kiện, cho tôi biết đã xảy ra chưa; tách rõ đi�
 function ReviewForm({ plan, onDone }: { plan: PlanDetail; onDone: () => void }) {
   const [decision, setDecision] = useState<PlanReview['decision']>('keep')
   const [note, setNote] = useState('')
+  const [emotion, setEmotion] = useState<JournalEmotion | null>(null)
+  const [reason, setReason] = useState<JournalReason | null>(null)
   const defaultNext = () => {
     const d = new Date(`${todayVn()}T00:00:00Z`)
     d.setUTCDate(d.getUTCDate() + (plan.reviewEveryDays ?? 30))
@@ -298,8 +323,12 @@ function ReviewForm({ plan, onDone }: { plan: PlanDetail; onDone: () => void }) 
         decision,
         note: note.trim() || undefined,
         nextReviewAt: decision === 'close' ? undefined : next,
+        emotion: emotion ?? undefined,
+        reason: reason ?? undefined,
       })
       setNote('')
+      setEmotion(null)
+      setReason(null)
       onDone()
     } catch (e) {
       setError((e as Error).message)
@@ -322,6 +351,14 @@ function ReviewForm({ plan, onDone }: { plan: PlanDetail; onDone: () => void }) 
           minRows={2}
           value={note}
           onChange={(e) => setNote(e.target.value)}
+        />
+        <JournalTagPicker
+          emotion={emotion}
+          reason={reason}
+          onEmotion={setEmotion}
+          onReason={setReason}
+          reasons={REVIEW_REASONS}
+          emotionLabel="Lúc quyết định bạn thấy"
         />
         {decision === 'adjust' && (
           <Typography variant="caption" color="text.secondary">

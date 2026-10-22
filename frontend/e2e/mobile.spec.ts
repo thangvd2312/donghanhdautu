@@ -53,6 +53,58 @@ const scenarios: Scenario[] = [
   { name: 'plans-new', path: '/plans', act: (p) => click(p, 'Lập kế hoạch') },
   { name: 'plan-detail', path: '/plans', act: async (p) => { await p.locator('a[href^="/plans/"]').first().click(); await p.waitForTimeout(2500) } },
   { name: 'plan-edit', path: '/plans', act: async (p) => { await p.locator('a[href^="/plans/"]').first().click(); await p.waitForTimeout(2500); await click(p, /^Sửa$/) } },
+  {
+    name: 'plan-review-tags',
+    path: '/plans',
+    act: async (p) => {
+      // Ghi lần xem lại: chip cảm xúc / lý do (tuỳ chọn) ngay trong form
+      await p.locator('a[href^="/plans/"]').first().click()
+      await p.getByTestId('journal-tags').first().scrollIntoViewIfNeeded()
+      await p.getByRole('button', { name: 'Bình tĩnh' }).first().click()
+      await p.waitForTimeout(500)
+    },
+  },
+  {
+    name: 'portfolio-new-tx-tags',
+    path: '/portfolio',
+    act: async (p) => {
+      // Ghi giao dịch mua: chọn cảm xúc + lý do (tuỳ chọn, không chặn lưu)
+      await click(p, /^(Ghi giao dịch|Giao dịch)$/)
+      await p.getByTestId('journal-tags').scrollIntoViewIfNeeded()
+      await p.getByRole('button', { name: 'Sợ lỡ cơ hội' }).click()
+      await p.getByRole('button', { name: 'Nghe người khác' }).click()
+      await p.waitForTimeout(500)
+    },
+  },
+  {
+    name: 'journal',
+    path: '/journal',
+    act: async (p) => {
+      await p.getByTestId('journal-summary').waitFor({ timeout: 25_000 })
+      await p.getByTestId('journal-timeline').waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(500)
+    },
+  },
+  {
+    name: 'journal-prev-month',
+    path: '/journal',
+    act: async (p) => {
+      await p.getByTestId('journal-summary').waitFor({ timeout: 25_000 })
+      await click(p, 'Tháng trước')
+      await p.getByTestId('journal-timeline').waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(800)
+    },
+  },
+  { name: 'journal-filter', path: '/journal?emotion=fomo', act: (p) => p.getByTestId('journal-timeline').waitFor({ timeout: 25_000 }) },
+  {
+    name: 'journal-tag-sheet',
+    path: '/journal',
+    act: async (p) => {
+      await p.getByTestId('journal-timeline').waitFor({ timeout: 25_000 })
+      const b = p.getByRole('button', { name: /^(Gắn nhãn|Sửa nhãn)$/ })
+      if (await b.count()) await click(p, /^(Gắn nhãn|Sửa nhãn)$/)
+    },
+  },
   { name: 'goals', path: '/goals' },
   { name: 'goals-new', path: '/goals', act: (p) => click(p, 'Thêm mục tiêu') },
   { name: 'goals-sim', path: '/goals', act: async (p) => { const l = p.getByText('Thử thay đổi mức góp').first(); if (await l.count()) { await l.click(); await p.waitForTimeout(600) } } },
@@ -164,6 +216,49 @@ const scenarios: Scenario[] = [
   { name: 'news', path: '/news' },
   { name: 'settings', path: '/settings' },
   { name: 'settings-price-alert', path: '/settings', act: (p) => click(p, 'Thêm mốc') },
+  {
+    name: 'settings-portfolio-alerts',
+    path: '/settings',
+    act: async (p) => {
+      // Cảnh báo danh mục (FREE-09): mỗi quy tắc có dòng "Hiện tại / Chưa kiểm tra" xem trước từ backend thật
+      await p.getByTestId('palert-preview').first().waitFor({ timeout: 25_000 })
+      await p.getByTestId('portfolio-alerts').scrollIntoViewIfNeeded()
+      await p.waitForTimeout(600)
+    },
+  },
+  {
+    name: 'portfolio-alerts',
+    path: '/portfolio-alerts',
+    act: async (p) => {
+      await p.getByTestId('palert-preview').first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(600)
+    },
+  },
+  {
+    name: 'portfolio-alerts-live-preview',
+    path: '/portfolio-alerts',
+    act: async (p) => {
+      // Sửa ngưỡng chưa lưu: xem trước cập nhật theo giá trị đang nhập, hiện nút Lưu / Huỷ
+      await p.getByTestId('palert-preview').first().waitFor({ timeout: 25_000 })
+      await p.getByTestId('palert-concentration').getByRole('textbox').fill('15')
+      await p.getByTestId('palert-concentration').getByRole('button', { name: 'Lưu' }).waitFor()
+      await p.waitForTimeout(1500)
+    },
+  },
+  {
+    name: 'portfolio-alerts-targets',
+    path: '/portfolio-alerts',
+    act: async (p) => {
+      // Tỷ trọng mục tiêu: gợi ý theo hồ sơ / mục tiêu tài chính hoặc tự nhập
+      await p.getByTestId('palert-preview').first().waitFor({ timeout: 25_000 })
+      const drift = p.getByTestId('palert-drift')
+      const edit = drift.getByRole('button', { name: 'Sửa' })
+      if (await edit.count()) await edit.click()
+      else await drift.locator('input[type=checkbox]').click()
+      await drift.scrollIntoViewIfNeeded()
+      await p.waitForTimeout(800)
+    },
+  },
   { name: 'stock', path: '/stock/FPT' },
   { name: 'stock-alert', path: '/stock/FPT', act: (p) => click(p, 'Cảnh báo giá') },
   { name: 'stock-plan', path: '/stock/HPG', act: async (p) => { const b = p.getByRole('button', { name: 'Lập kế hoạch' }); if (await b.count()) await click(p, 'Lập kế hoạch') } },
@@ -193,6 +288,28 @@ const scenarios: Scenario[] = [
       await p.waitForTimeout(600)
     },
   },
+  // Báo cáo danh mục theo kỳ: bản xem trước (hoặc báo cáo trống / lỗi) phải hiện ra
+  {
+    name: 'reports',
+    path: '/reports',
+    act: async (p) => {
+      await p.getByTestId('report-summary').or(p.getByTestId('report-empty')).or(p.getByRole('alert')).first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(500)
+    },
+  },
+  {
+    name: 'reports-masked',
+    path: '/reports',
+    act: async (p) => {
+      await p.getByTestId('report-preview').waitFor({ timeout: 25_000 })
+      await p.getByRole('switch', { name: 'Ẩn số tiền' }).check()
+      await p.getByRole('switch', { name: 'Ẩn mã' }).check()
+      await p.getByText('Đã ẩn mã').first().waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(500)
+    },
+  },
+  { name: 'reports-custom-range', path: '/reports', act: async (p) => { await p.getByTestId('report-preview').waitFor({ timeout: 25_000 }); await click(p, 'Tự chọn') } },
+  { name: 'reports-csv-menu', path: '/reports', act: async (p) => { await p.getByTestId('report-preview').waitFor({ timeout: 25_000 }); await click(p, 'Tải CSV') } },
   { name: 'onboarding', path: '/onboarding' },
 ]
 

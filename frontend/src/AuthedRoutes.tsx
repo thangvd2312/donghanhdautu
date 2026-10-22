@@ -19,12 +19,15 @@ const NewsPage = lazy(() => import('./pages/NewsPage'))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
 const PlanDetailPage = lazy(() => import('./pages/PlanDetailPage'))
 const PlansPage = lazy(() => import('./pages/PlansPage'))
+const JournalPage = lazy(() => import('./pages/JournalPage'))
 const SimulatePage = lazy(() => import('./pages/SimulatePage'))
 const RebalancePage = lazy(() => import('./pages/RebalancePage'))
 const ScreenerPage = lazy(() => import('./pages/ScreenerPage'))
 const PortfolioPage = lazy(() => import('./pages/PortfolioPage'))
 const PracticePage = lazy(() => import('./pages/PracticePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage'))
+const PortfolioAlertsPage = lazy(() => import('./pages/PortfolioAlertsPage'))
 const StockPage = lazy(() => import('./pages/StockPage'))
 
 /** Chỗ giữ trong lúc tải chunk của trang (thanh điều hướng vẫn giữ nguyên) */
@@ -53,11 +56,14 @@ export default function AuthedRoutes() {
             <Route path="/news" element={page(<NewsPage />)} />
             <Route path="/plans" element={page(<PlansPage />)} />
             <Route path="/plans/:id" element={page(<PlanDetailPage />)} />
+            <Route path="/journal" element={page(<JournalPage />)} />
             <Route path="/events" element={page(<EventsPage />)} />
             <Route path="/income" element={page(<IncomePage />)} />
             <Route path="/goals" element={page(<GoalsPage />)} />
             <Route path="/practice" element={page(<PracticePage />)} />
             <Route path="/settings" element={page(<SettingsPage />)} />
+            <Route path="/reports" element={page(<ReportsPage />)} />
+            <Route path="/portfolio-alerts" element={page(<PortfolioAlertsPage />)} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

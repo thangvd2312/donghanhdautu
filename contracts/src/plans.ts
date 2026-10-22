@@ -1,6 +1,7 @@
 /** Kế hoạch đầu tư (/plans) */
 
 import type { Currency, PriceStatus, TrackedAssetType } from './common'
+import type { JournalEmotion, JournalReason } from './journal'
 import type { TxType } from './portfolio'
 
 export interface PlanPrice {
@@ -44,6 +45,9 @@ export interface PlanReview {
   note: string | null
   priceAtReview: number | null
   pnlPctAtReview: number | null
+  /** Nhật ký quyết định (FREE-08): nhãn tuỳ chọn */
+  reason: JournalReason | null
+  emotion: JournalEmotion | null
   createdAt: string
 }
 
@@ -81,6 +85,9 @@ export interface PlanDetail extends Plan {
     currency: Currency
     /** So với thời gian của kế hoạch này (từ ngày lập tới ngày kết thúc) */
     period: 'before' | 'during' | 'after'
+    /** Người dùng đã gắn giao dịch này vào kế hoạch này (nhật ký quyết định) */
+    linked: boolean
+    emotion: JournalEmotion | null
   }[]
 }
 
@@ -113,6 +120,9 @@ export interface PlanRequest {
 export interface PlanReviewRequest {
   decision: PlanDecision
   note?: string
+  /** Nhật ký quyết định: tuỳ chọn */
+  reason?: JournalReason | null
+  emotion?: JournalEmotion | null
   /** YYYY-MM-DD */
   nextReviewAt?: string
 }

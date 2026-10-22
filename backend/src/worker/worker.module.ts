@@ -9,7 +9,9 @@ import { MacroModule } from '../macro/macro.module';
 import { MarketCacheModule } from '../market/cache/market-cache.module';
 import { MarketModule } from '../market/market.module';
 import { PlansModule } from '../plans/plans.module';
+import { JournalModule } from '../journal/journal.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
+import { PortfolioAlertsModule } from '../portfolio-alerts/portfolio-alerts.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PushModule } from '../push/push.module';
 import { RuntimeModule } from '../runtime/runtime.module';
@@ -33,8 +35,10 @@ import { WorkerLifecycle } from './worker-lifecycle';
     MarketCacheModule,
     MacroModule,
     PortfolioModule,
+    PortfolioAlertsModule,
     AlertsModule,
     PlansModule,
+    JournalModule,
     EventsModule,
     TelegramModule,
     PushModule,

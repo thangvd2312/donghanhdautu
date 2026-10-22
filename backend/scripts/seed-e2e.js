@@ -1,14 +1,14 @@
 /**
  * Tạo tài khoản e2e@local có sẵn dữ liệu cho audit giao diện điện thoại (frontend/e2e/mobile.spec.ts) và in JWT.
- * Chỉ chạy trên database tên kết thúc bằng _test hoặc _e2e; chạy lại thì xoá tài khoản cũ và tạo lại.
+ * Chỉ chạy trên database tên kết thúc bằng _test, _e2e hoặc _e2e_<hậu tố> (DB e2e riêng, vd dautu_e2e_08); chạy lại thì xoá tài khoản cũ và tạo lại.
  *   npm run build && DATABASE_URL=postgresql://…/dautu_test JWT_SECRET=… node scripts/seed-e2e.js
  */
 const path = require('node:path');
 const jwt = require('jsonwebtoken');
 
 const url = process.env.DATABASE_URL ?? '';
-if (!/_(test|e2e)$/.test(url ? new URL(url).pathname : '')) {
-  console.error('DATABASE_URL phải trỏ tới database tên kết thúc bằng _test hoặc _e2e');
+if (!/_(test|e2e)(_[a-z0-9]+)?$/.test(url ? new URL(url).pathname : '')) {
+  console.error('DATABASE_URL phải trỏ tới database tên kết thúc bằng _test, _e2e hoặc _e2e_<hậu tố>');
   process.exit(1);
 }
 if (!process.env.JWT_SECRET) {
@@ -71,7 +71,7 @@ async function main() {
       { userId: user.id, assetType: 'crypto', symbol: 'SOLUSDT' },
     ],
   });
-  await prisma.investmentPlan.create({
+  const plan = await prisma.investmentPlan.create({
     data: {
       userId: user.id,
       assetType: 'stock',
@@ -83,6 +83,21 @@ async function main() {
       stopPrice: 100_000,
       reviewEveryDays: 30,
       nextReviewAt: new Date(`${addDays(today, 3)}T00:00:00Z`),
+    },
+  });
+  // Nhật ký quyết định (FREE-08): vài lệnh có nhãn cảm xúc / lý do, một lệnh gắn kế hoạch, một lần xem lại có nhãn
+  const tag = (symbol, type, data) => prisma.transaction.updateMany({ where: { userId: user.id, symbol, type }, data });
+  await tag('FPT', 'buy', { planId: plan.id, emotion: 'calm', reason: 'plan' });
+  await tag('ETHUSDT', 'buy', { emotion: 'fomo', reason: 'tip' });
+  await tag('HPG', 'sell', { emotion: 'anxious', reason: 'need_cash' });
+  await prisma.planReview.create({
+    data: {
+      planId: plan.id,
+      decision: 'keep',
+      note: 'Kết quả kinh doanh quý vẫn tăng đều, giữ nguyên kế hoạch.',
+      reason: 'plan',
+      emotion: 'calm',
+      priceAtReview: 120_000,
     },
   });
   await prisma.goal.create({

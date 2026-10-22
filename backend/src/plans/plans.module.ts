@@ -45,6 +45,7 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { AiUsageService } from '../ai/ai-usage.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.module';
+import { JournalReviewTagsDto } from '../journal/journal-tags';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { addDays, DEFAULT_REVIEW_DAYS, displaySymbol, distancePct, planSignals } from './plan-rules';
 
@@ -69,7 +70,8 @@ class PlanDto implements PlanRequest {
   @IsOptional() @IsDateKey() nextReviewAt?: string;
 }
 
-class ReviewDto implements PlanReviewRequest {
+/** Nhãn lý do / cảm xúc (nhật ký quyết định) kế thừa từ JournalReviewTagsDto, tuỳ chọn */
+class ReviewDto extends JournalReviewTagsDto implements PlanReviewRequest {
   @IsIn(['keep', 'adjust', 'close']) decision!: 'keep' | 'adjust' | 'close';
   @IsOptional() @IsString() @MaxLength(2000) note?: string;
   @IsOptional() @IsDateKey() nextReviewAt?: string;
@@ -147,7 +149,7 @@ export class PlansService {
     return symbol;
   }
 
-  private displayName(assetType: string, symbol: string) {
+  displayName(assetType: string, symbol: string) {
     if (assetType === 'gold') return this.market.goldQuotes().find((g) => g.code === symbol)?.name ?? symbol;
     return displaySymbol(assetType, symbol);
   }
@@ -238,6 +240,8 @@ export class PlansService {
         amount: t.amount?.toNumber() ?? null,
         currency: t.currency as Currency,
         period: period(t.date.toISOString().slice(0, 10)),
+        linked: t.planId === p.id,
+        emotion: t.emotion as PlanDetail['transactions'][number]['emotion'],
       })),
     };
   }
@@ -288,6 +292,8 @@ export class PlansService {
           note: dto.note?.trim() || null,
           priceAtReview: price.value,
           pnlPctAtReview: held?.pnlPct ?? null,
+          reason: dto.reason ?? null,
+          emotion: dto.emotion ?? null,
         },
       });
       await db.investmentPlan.update({
@@ -433,6 +439,8 @@ function presentReview(r: PlanReviewRow): PlanReview {
     note: r.note,
     priceAtReview: r.priceAtReview,
     pnlPctAtReview: r.pnlPctAtReview,
+    reason: r.reason as PlanReview['reason'],
+    emotion: r.emotion as PlanReview['emotion'],
     createdAt: r.createdAt.toISOString(),
   };
 }

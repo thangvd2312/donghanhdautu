@@ -188,6 +188,11 @@ export default function PortfolioPage() {
               </Button>
             </Stack>
           )}
+          {p && p.holdings.length > 0 && (
+            <Link component={RouterLink} to="/portfolio-alerts" variant="body2" sx={{ display: 'inline-block', mt: 1 }}>
+              Cảnh báo danh mục: nhắc khi tập trung, lệch tỷ trọng, giảm từ đỉnh
+            </Link>
+          )}
         </Box>
       </Paper>
 

@@ -130,8 +130,41 @@ export class HistoryService {
     };
   }
 
-  /** Dựng lịch sử từ ngày `fromOf(ngày giao dịch đầu, hôm nay)` tới hôm nay */
-  private async compute(userId: string, fromOf: (firstTx: string, today: string) => string, portfolioId?: string) {
+  /**
+   * Số liệu của một kỳ bất kỳ [from, to] (báo cáo theo kỳ): cùng cách dựng lịch sử, cùng nguồn giá và cùng hàm hiệu quả
+   * như màn Lịch sử. Mốc đầu kỳ là cuối ngày trước `from` nên giao dịch ngày `from` thuộc kỳ. to ≤ hôm nay.
+   */
+  async periodData(userId: string, from: string, to: string, portfolioId?: string) {
+    const r = await this.compute(userId, () => addDays(from, -1), portfolioId, to);
+    if (!r) return null;
+    const firstTx = r.txs.reduce((m, t) => (t.date < m ? t.date : m), r.txs[0].date);
+    return {
+      txs: r.txs,
+      firstTx,
+      today: r.today,
+      points: r.points,
+      // Danh mục bắt đầu trong kỳ khi giao dịch đầu tiên từ ngày `from` trở đi (không phải từ mốc đầu kỳ)
+      period: periodPerformance(r.points, from, firstTx),
+      notes: r.notes,
+      price: r.price,
+      usdt: r.usdt,
+      displayName: (assetType: string, symbol: string) => this.displayName(assetType, symbol),
+    };
+  }
+
+  /** Điểm lịch sử `days` ngày gần nhất tới hôm nay, gộp mọi danh mục (cảnh báo giảm từ đỉnh của portfolio-alerts) */
+  async recentPoints(userId: string, days: number) {
+    const r = await this.compute(userId, (_first, today) => addDays(today, -days));
+    return { today: r?.today ?? vnDateKey(), points: r?.points ?? [] };
+  }
+
+  /** Dựng lịch sử từ ngày `fromOf(ngày giao dịch đầu, hôm nay)` tới `toDate` (mặc định hôm nay) */
+  private async compute(
+    userId: string,
+    fromOf: (firstTx: string, today: string) => string,
+    portfolioId?: string,
+    toDate?: string,
+  ) {
     const txs = (await this.transactions.activeTransactions(userId, portfolioId)).map(toLedgerTx);
     const today = vnDateKey();
     if (!txs.length) return null;
@@ -211,7 +244,7 @@ export class HistoryService {
     const points = buildHistory({
       txs,
       from: loadFrom,
-      to: today,
+      to: toDate && toDate < today ? toDate : today,
       price,
       usdt,
       displayName: (t, s) => this.displayName(t, s),

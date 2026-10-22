@@ -37,6 +37,7 @@ model User {
   eventReminder EventReminderSetting?
   savedScreens  SavedScreen[]
   paperAccount  PaperAccount?
+  portfolioAlertRules PortfolioAlertRule[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -289,10 +290,18 @@ model Transaction {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   revisions TransactionRevision[]
+  /// Nhật ký quyết định (FREE-08), tuỳ chọn: lý do (plan | dca | price_level | thesis_changed | rebalance | need_cash | news | tip)
+  reason    String?
+  /// Cảm xúc lúc quyết định: calm | confident | unsure | anxious | fomo | fear | greedy
+  emotion   String?
+  /// Kế hoạch người dùng gắn giao dịch vào (cùng tài sản); null = giao dịch không theo kế hoạch nào
+  planId    String?
+  plan      InvestmentPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
   @@index([importBatchId])
   @@index([portfolioId])
+  @@index([planId])
 }
 
 model TransactionRevision {
@@ -338,6 +347,7 @@ model InvestmentPlan {
   updatedAt      DateTime       @updatedAt
   versions       PlanVersion[]
   reviews        PlanReview[]
+  transactions   Transaction[]
 
   @@index([userId, status])
   @@index([status, nextReviewAt])
@@ -365,6 +375,9 @@ model PlanReview {
   /// Dữ kiện lúc xem lại (để đối chiếu sau này)
   priceAtReview  Float?
   pnlPctAtReview Float?
+  /// Nhật ký quyết định (FREE-08), tuỳ chọn: cùng bộ lý do / cảm xúc với Transaction
+  reason         String?
+  emotion        String?
   createdAt      DateTime       @default(now())
 
   @@index([planId])
@@ -760,4 +773,29 @@ model WorkerHeartbeat {
   startedAt DateTime
   beatAt    DateTime
   version   String
+}
+
+/// Cảnh báo theo tình trạng danh mục (FREE-09): mỗi người tối đa một dòng cho mỗi loại, mặc định tắt
+model PortfolioAlertRule {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// concentration | drift | drawdown
+  kind         String
+  enabled      Boolean  @default(false)
+  /// concentration: % tổng tài sản; drift: điểm % lệch; drawdown: % giảm từ đỉnh
+  thresholdPct Float
+  /// drawdown: số ngày nhìn lại để tìm đỉnh
+  windowDays   Int?
+  /// drift: tỷ trọng mục tiêu theo nhóm, vd {"stock":55,"crypto":5,"gold":15,"cash":25}
+  targets      Json?
+  /// Nhắc lại tối đa mỗi N ngày khi tình trạng vẫn còn
+  cooldownDays Int      @default(3)
+  /// Kết quả lần kiểm tra gần nhất {at, status, title, reason} (worker ghi; trang Hôm nay đọc cho quy tắc giảm từ đỉnh)
+  lastCheck    Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, kind])
+  @@index([enabled])
 }

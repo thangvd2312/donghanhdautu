@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { NotificationSettingsPanel, PriceAlertsPanel } from '../components/AlertsPanels'
+import PortfolioAlertsPanel from '../components/PortfolioAlertsPanel'
 import PushPanel from '../components/PushPanel'
 import TelegramPanel from '../components/TelegramPanel'
 import { KV, Panel } from '../components/ui'
@@ -41,6 +42,7 @@ export default function SettingsPage() {
             <ProfilePanel />
             <NotificationSettingsPanel />
             <PriceAlertsPanel />
+            <PortfolioAlertsPanel />
           </Stack>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>

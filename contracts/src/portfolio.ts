@@ -1,4 +1,5 @@
 import type { AssetType, Currency, DataQuality, PriceMeta, PriceStatus } from './common'
+import type { JournalEmotion, JournalReason } from './journal'
 
 /** Một tài sản trong danh mục kèm giá trị hiện tại (GET /portfolio) */
 export interface HoldingRow {
@@ -109,6 +110,10 @@ export interface Transaction {
   source: TxSource
   edited: boolean
   createdAt: string
+  /** Nhật ký quyết định (FREE-08): nhãn tuỳ chọn và kế hoạch được gắn */
+  reason: JournalReason | null
+  emotion: JournalEmotion | null
+  planId: string | null
 }
 
 export interface TransactionRevision {

@@ -1,6 +1,16 @@
 /** Quy tắc gửi thông báo ra ngoài app (Telegram, Web Push): loại tin, giờ yên lặng, giới hạn tần suất, nội dung */
 
-export const KINDS = ['price_target', 'price_move', 'plan_review', 'brief', 'news', 'macro', 'event'] as const;
+export const KINDS = [
+  'price_target',
+  'price_move',
+  'plan_review',
+  'brief',
+  'news',
+  'macro',
+  'event',
+  'portfolio_health',
+  'journal_monthly',
+] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const KIND_LABEL: Record<Kind, string> = {
@@ -11,6 +21,8 @@ export const KIND_LABEL: Record<Kind, string> = {
   news: 'Tin về mã đang giữ',
   macro: 'Tin vĩ mô quan trọng',
   event: 'Sự kiện quyền sắp tới: cổ tức, quyền mua, đại hội',
+  portfolio_health: 'Tình trạng danh mục',
+  journal_monthly: 'Tổng kết nhật ký quyết định hằng tháng',
 };
 
 /** Mặc định khi mới kết nối: chỉ những tin cần hành động; người dùng tự bật thêm */
@@ -22,6 +34,10 @@ export const DEFAULT_KINDS: Record<Kind, boolean> = {
   news: false,
   macro: false,
   event: true,
+  // Quy tắc người dùng tự bật trong Cảnh báo danh mục: luôn có trong app, gửi ra ngoài khi người dùng chọn thêm
+  portfolio_health: false,
+  // Lời mời xem tổng kết tháng (nhật ký quyết định): luôn có trong app, gửi ra ngoài khi người dùng tự bật
+  journal_monthly: false,
 };
 
 /** Tối đa số tin / giờ gửi cho một người */
@@ -87,6 +103,8 @@ const GENERIC_TITLE: Record<string, string> = {
   plan_review: 'Đến hạn xem lại một kế hoạch đầu tư',
   price_target: 'Giá đã chạm mốc bạn đặt',
   event: 'Sắp có sự kiện quyền của mã bạn quan tâm',
+  portfolio_health: 'Danh mục của bạn có điểm cần xem lại',
+  journal_monthly: 'Tổng kết thói quen đầu tư tháng trước đã sẵn sàng',
 };
 
 function escapeHtml(s: string) {

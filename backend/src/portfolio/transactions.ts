@@ -10,6 +10,7 @@ import type {
   TxSource,
 } from '@dautu/contracts';
 import { isDateKey, IsDateKey } from '../common/dates';
+import { journalColumns, JournalTagsDto } from '../journal/journal-tags';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService, normalizeCrypto } from '../market/market.service';
 import { vnDateKey } from '../market/types';
@@ -19,7 +20,8 @@ import type { Currency, LedgerResult, LedgerTx, TxType } from './ledger';
 
 type Db = Prisma.TransactionClient | PrismaService;
 
-export class TransactionDto {
+/** Nhãn nhật ký (reason / emotion / planId) kế thừa từ JournalTagsDto: tuỳ chọn, không ảnh hưởng tới sổ */
+export class TransactionDto extends JournalTagsDto {
   @IsIn(TX_TYPES) type!: TxType;
   @IsDateKey() date!: string;
   @IsOptional() @IsIn(['stock', 'crypto', 'gold', 'cash']) assetType?: 'stock' | 'crypto' | 'gold' | 'cash';
@@ -233,7 +235,8 @@ export class TransactionsService {
     const data = await this.normalize(dto);
     const result = await this.write(userId, async (db, txs) => {
       const portfolioId = await this.resolvePortfolio(db, userId, dto.portfolioId);
-      const row = await db.transaction.create({ data: { ...data, userId, portfolioId } });
+      const journal = await journalColumns(db, userId, data, dto);
+      const row = await db.transaction.create({ data: { ...data, ...journal, userId, portfolioId } });
       return { result: this.present(row, 0), txs: [...txs, row] };
     });
     this.firstRealAsset(userId, 'manual');
@@ -250,7 +253,8 @@ export class TransactionsService {
       const portfolioId = dto.portfolioId
         ? await this.resolvePortfolio(db, userId, dto.portfolioId)
         : before.portfolioId;
-      const row = await db.transaction.update({ where: { id }, data: { ...data, portfolioId } });
+      const journal = await journalColumns(db, userId, { ...data, current: before }, dto);
+      const row = await db.transaction.update({ where: { id }, data: { ...data, ...journal, portfolioId } });
       return { result: this.present(row, 1), txs: txs.map((t) => (t.id === id ? row : t)) };
     });
   }
@@ -431,6 +435,9 @@ export class TransactionsService {
       importBatchId: null,
       deletedAt: null,
       updatedAt: r.createdAt,
+      reason: null,
+      emotion: null,
+      planId: null,
     }));
   }
 
@@ -505,6 +512,9 @@ export class TransactionsService {
       source: t.source as TxSource,
       edited: revisionCount > 0,
       createdAt: t.createdAt.toISOString(),
+      reason: t.reason as TransactionView['reason'],
+      emotion: t.emotion as TransactionView['emotion'],
+      planId: t.planId,
     };
   }
 }

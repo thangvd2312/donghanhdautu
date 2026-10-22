@@ -9,7 +9,9 @@ import { MacroService } from '../macro/macro.module';
 import { MarketDataCache } from '../market/cache/market-data-cache';
 import { VN_TZ } from '../market/types';
 import { PlansService } from '../plans/plans.module';
+import { JournalService } from '../journal/journal.service';
 import { HistoryService } from '../portfolio/history.service';
+import { PortfolioAlertsService } from '../portfolio-alerts/portfolio-alerts.module';
 import { JobRunner } from '../runtime/job-runner';
 
 const MIN = 60_000;
@@ -25,8 +27,11 @@ const HOUR = 60 * MIN;
  * | briefs.closing          | 15:10 thứ 2-6           | BriefsService.closing (xếp hàng đợi) |
  * | briefs.weekly           | 9:00 thứ 7              | WeeklyBriefService.runAll            |
  * | plans.remindDue         | 8:00 hằng ngày          | PlansService.remindDue               |
+ * | journal.monthlyDigest   | 9:00 ngày 1 hằng tháng  | JournalService.monthlyDigest         |
  * | events.remind           | 8:00, 17:00 hằng ngày   | EventsService.remindDaily            |
  * | history.recordDaily     | 23:50 hằng ngày         | HistoryService.recordDaily           |
+ * | portfolioAlerts.intraday| 9:00–14:30 mỗi 30 phút, thứ 2-6 | PortfolioAlertsService.runAll (tập trung, lệch tỷ trọng) |
+ * | portfolioAlerts.daily   | 15:20 hằng ngày         | PortfolioAlertsService.runAll (cả giảm từ đỉnh) |
  * | analytics.purge         | 3:30 hằng ngày          | AnalyticsService.purge               |
  * | market-cache.purge      | phút 17 mỗi giờ         | MarketDataCache.purgeExpiredJob      |
  * | alerts.prices           | mỗi 60 giây             | AlertsService.checkPrices            |
@@ -40,8 +45,10 @@ export class ScheduledJobs {
     private readonly briefs: BriefsService,
     private readonly weekly: WeeklyBriefService,
     private readonly plans: PlansService,
+    private readonly journal: JournalService,
     private readonly events: EventsService,
     private readonly history: HistoryService,
+    private readonly portfolioAlerts: PortfolioAlertsService,
     private readonly analytics: AnalyticsService,
     private readonly cache: MarketDataCache,
     private readonly alerts: AlertsService,
@@ -68,6 +75,11 @@ export class ScheduledJobs {
     return this.jobs.run('plans.remindDue', () => this.plans.remindDue());
   }
 
+  @Cron('0 9 1 * *', { timeZone: VN_TZ })
+  journalMonthlyDigest() {
+    return this.jobs.run('journal.monthlyDigest', () => this.journal.monthlyDigest());
+  }
+
   @Cron('0 8,17 * * *', { timeZone: VN_TZ })
   eventsRemind() {
     return this.jobs.run('events.remind', () => this.events.remindDaily());
@@ -76,6 +88,17 @@ export class ScheduledJobs {
   @Cron('50 23 * * *', { timeZone: VN_TZ })
   historyRecordDaily() {
     return this.jobs.run('history.recordDaily', () => this.history.recordDaily());
+  }
+
+  @Cron('0,30 9-14 * * 1-5', { timeZone: VN_TZ })
+  portfolioAlertsIntraday() {
+    return this.jobs.run('portfolioAlerts.intraday', () => this.portfolioAlerts.runAll({ drawdown: false }));
+  }
+
+  /** Sau phiên (giá đóng cửa đã chốt): cả ba quy tắc; chạy cả cuối tuần cho danh mục vàng / crypto */
+  @Cron('20 15 * * *', { timeZone: VN_TZ })
+  portfolioAlertsDaily() {
+    return this.jobs.run('portfolioAlerts.daily', () => this.portfolioAlerts.runAll({ drawdown: true }));
   }
 
   @Cron('30 3 * * *', { timeZone: VN_TZ })

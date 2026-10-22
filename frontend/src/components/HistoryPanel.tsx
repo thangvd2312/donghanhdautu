@@ -1,3 +1,4 @@
+import SummarizeOutlined from '@mui/icons-material/SummarizeOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Link from '@mui/material/Link'
@@ -9,6 +10,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { AreaSeries, ColorType, createChart, LineSeries, LineStyle, type MouseEventParams, type Time } from 'lightweight-charts'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { api } from '../lib/api'
 import { changeColor, fmtDate, fmtNum, fmtPct, fmtVnd, fmtVndAxis, fmtVndShort } from '../lib/format'
 import type { HistoryPoint, PortfolioHistory } from '../lib/types'
@@ -267,6 +269,17 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
             </Typography>
           )}
         </>
+      )}
+      {data && points.length > 0 && (
+        <Link
+          component={RouterLink}
+          to={portfolioId ? `/reports?p=${encodeURIComponent(portfolioId)}` : '/reports'}
+          variant="body2"
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mt: 1, minHeight: 32, fontWeight: 600 }}
+        >
+          <SummarizeOutlined sx={{ fontSize: 18 }} />
+          Báo cáo theo tháng (PDF / CSV)
+        </Link>
       )}
     </Panel>
   )
