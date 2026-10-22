@@ -15,7 +15,7 @@ function decode(s: string) {
   }
 }
 
-export interface PagePreview {
+interface PagePreview {
   title: string;
   description: string;
   /** Đường dẫn chuẩn cho og:url (không kèm tham số lạ) */

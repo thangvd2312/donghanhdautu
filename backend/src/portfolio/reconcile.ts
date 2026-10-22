@@ -5,7 +5,7 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { ledgerOfAll } from './ledger';
-import { toLedgerTx } from './transactions';
+import { toLedgerTx } from './transactions.presenter';
 
 async function main() {
   const db = new PrismaClient();

@@ -1,4 +1,4 @@
-import type { AuthService } from '../auth/auth.module';
+import type { AuthService } from '../auth/auth.service';
 import { MarketGateway } from '../market/market.gateway';
 import { testPrisma, testUser } from '../test-utils/test-db';
 import { NotificationRelayService, RELAY_OVERLAP_MS } from './notification-relay.service';

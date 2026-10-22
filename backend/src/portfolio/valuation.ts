@@ -1,6 +1,6 @@
 import type { AssetType, Portfolio } from '@dautu/contracts';
 import type { PriceInfo, PriceStatus } from '../market/freshness';
-import type { FxInfo } from '../market/market.service';
+import type { FxInfo } from '../market/price-info';
 
 export const TYPE_LABEL: Record<AssetType, string> = {
   stock: 'Cổ phiếu',
@@ -18,7 +18,7 @@ export interface HoldingInput {
   note: string | null;
 }
 
-export interface ValuationDeps {
+interface ValuationDeps {
   priceInfo(type: AssetType, symbol: string): PriceInfo;
   dayChangePct(type: AssetType, symbol: string): number | null;
   displayName(type: AssetType, symbol: string): string;

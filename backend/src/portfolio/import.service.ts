@@ -1,7 +1,6 @@
 import { BadRequestException, HttpException, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { IsArray, IsIn, IsInt, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 import type { ImportCommitResult, ImportPreview, ImportPreviewRow as PreviewRow } from '@dautu/contracts';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService } from '../market/market.service';
@@ -9,21 +8,11 @@ import { autoMapping, dupKey, FIELD_LABEL, FIELDS, MAX_BYTES, MAX_ROWS, parseCsv
 import type { Field, Mapping } from './csv-import';
 import { computeLedger, LedgerError, LedgerResult, LedgerTx } from './ledger';
 import type { Currency } from './ledger';
-import { PrismaService } from '../prisma/prisma.module';
-import { NormalizedTx, toLedgerTx, TransactionsService } from './transactions';
-
-export class ImportDto {
-  @IsString() @MaxLength(MAX_BYTES, { message: 'File quá lớn (tối đa khoảng 1 MB)' }) csv!: string;
-  @IsOptional() @IsString() @MaxLength(200) fileName?: string;
-  @IsOptional() @IsObject() mapping?: Mapping;
-  @IsOptional() @IsIn(['.', ',']) decimal?: '.' | ',';
-  /** Số dòng (theo file) của các dòng nghi trùng mà người dùng vẫn muốn nhập */
-  @IsOptional() @IsArray() @IsInt({ each: true }) includeDuplicates?: number[];
-  /** Danh mục nhận giao dịch; bỏ trống = danh mục chính */
-  @IsOptional() @IsString() @MaxLength(40) portfolioId?: string;
-}
-
-export type { PreviewRow };
+import { PrismaService } from '../prisma/prisma.service';
+import type { ImportDto } from './dto/import.dto';
+import { NormalizedTx } from './transaction-input';
+import { toLedgerTx } from './transactions.presenter';
+import { TransactionsService } from './transactions.service';
 
 const num = (d: Prisma.Decimal | null) => (d === null ? null : d.toNumber());
 const dateKey = (d: Date) => d.toISOString().slice(0, 10);
@@ -48,7 +37,7 @@ function normalizedToLedger(n: NormalizedTx, id: string, createdAt: Date): Ledge
 }
 
 /** Băm nội dung yêu cầu nhập: cùng file, cách đọc cột, danh mục và lựa chọn dòng nghi trùng = cùng một lần nhập */
-export function requestHash(userId: string, dto: ImportDto) {
+function requestHash(userId: string, dto: ImportDto) {
   return createHash('sha256')
     .update(
       JSON.stringify({

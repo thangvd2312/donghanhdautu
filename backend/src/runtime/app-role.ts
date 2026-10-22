@@ -6,9 +6,9 @@ import { ConfigService } from '@nestjs/config';
  *  - web: API HTTP, socket.io, poll giá realtime cho bảng giá. Không chạy lịch, hàng đợi, gửi thông báo.
  *  - worker: Nest application context không có HTTP; chạy cron, hàng đợi bản tin, gửi Telegram / Web Push.
  */
-export type AppRole = 'web' | 'worker';
+type AppRole = 'web' | 'worker';
 
-export const APP_ROLES: readonly AppRole[] = ['web', 'worker'];
+const APP_ROLES: readonly AppRole[] = ['web', 'worker'];
 
 /** Không đặt (hoặc rỗng) = web để chạy local như trước; giá trị lạ thì dừng ngay lúc khởi động thay vì đoán */
 export function parseAppRole(raw: string | undefined): AppRole {

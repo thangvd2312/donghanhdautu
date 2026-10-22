@@ -1,9 +1,9 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { MarketGateway } from '../market/market.gateway';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { AppRuntime } from '../runtime/app-role';
 
-export const RELAY_INTERVAL_MS = 2_000;
+const RELAY_INTERVAL_MS = 2_000;
 /** Giao dịch tạo thông báo có thể commit sau một dòng có createdAt muộn hơn: luôn quét lại khoảng này, bản đã đẩy bị bỏ qua */
 export const RELAY_OVERLAP_MS = 15_000;
 

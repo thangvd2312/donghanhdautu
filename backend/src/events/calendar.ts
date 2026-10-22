@@ -3,11 +3,10 @@ import type { VcMarketEvent } from '../market/providers/vietcap';
 
 /** Hàm thuần của lịch sự kiện quyền: phân loại sự kiện Vietcap, lọc theo cửa sổ ngày, hợp nhất danh mục / watchlist, quyết định nhắc */
 
-export type { EventKind, EventRange, ReminderSettings };
-
-export const RANGE_DAYS: Record<EventRange, number> = { week: 7, month: 30, quarter: 92 };
+export type { EventRange, ReminderSettings };
+const RANGE_DAYS: Record<EventRange, number> = { week: 7, month: 30, quarter: 92 };
 /** Số ngày trong quá khứ vẫn hiển thị để người dùng thấy sự kiện vừa qua */
-export const PAST_DAYS = 7;
+const PAST_DAYS = 7;
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = { enabled: false, daysBefore: 1, mutedSymbols: [] };
 
@@ -24,14 +23,14 @@ type Classified = Omit<
 
 const day = (s?: string | null) => (s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : null);
 
-export function addDays(date: string, n: number) {
+function addDays(date: string, n: number) {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
 
 /** Số ngày lịch từ `from` đến `to` (dương nếu `to` sau `from`) */
-export function daysBetween(from: string, to: string) {
+function daysBetween(from: string, to: string) {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
@@ -132,7 +131,7 @@ export function reminderDedupeKey(e: Pick<CalendarEvent, 'symbol' | 'sourceId'>,
   return `event:${e.symbol}:${e.sourceId}:${anchor}`;
 }
 
-export interface CalendarInput {
+interface CalendarInput {
   events: VcMarketEvent[];
   /** mã → tổng số cổ phiếu đang giữ (mọi danh mục), chỉ mã > 0 */
   holdings: Map<string, number>;

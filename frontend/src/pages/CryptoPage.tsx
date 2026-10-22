@@ -3,33 +3,26 @@ import Grid from '@mui/material/Grid'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import AssetHero from '../components/AssetHero'
-import PriceAlertDialog from '../components/PriceAlertDialog'
+import PriceAlertDialog from '../components/alerts/PriceAlertDialog'
 import PriceChart from '../components/PriceChart'
 import TechnicalsPanel from '../components/TechnicalsPanel'
 import { Panel } from '../components/ui'
-import { api } from '../lib/api'
+import { getCrypto, getCryptoHistory } from '../api/market'
+import { useAssetDetail } from '../hooks/useAssetDetail'
 import { changeColor, fmtPct, fmtUsd, fmtVnd } from '../lib/format'
 import { useMarket } from '../lib/market-context'
-import type { Candle, CryptoDetail } from '../lib/types'
 
 export default function CryptoPage() {
   const { symbol = '' } = useParams()
   const base = symbol.toUpperCase()
   const { snapshot } = useMarket()
-  const [d, setD] = useState<CryptoDetail | null>(null)
-  const [candles, setCandles] = useState<Candle[]>([])
-  const [error, setError] = useState('')
+  const loadDetail = useCallback(() => getCrypto(base), [base])
+  const loadCandles = useCallback(() => getCryptoHistory(base), [base])
+  const { detail: d, candles, error } = useAssetDetail(loadDetail, loadCandles)
   const [alertOpen, setAlertOpen] = useState(false)
-
-  useEffect(() => {
-    setD(null)
-    setError('')
-    api<CryptoDetail>(`/market/crypto/${base}`).then(setD).catch((e: Error) => setError(e.message))
-    api<Candle[]>(`/market/crypto/${base}/history?days=400`).then(setCandles).catch(() => setCandles([]))
-  }, [base])
 
   if (error) return <Alert severity="error">{error}</Alert>
   if (!d) return <Skeleton variant="rounded" height={420} />

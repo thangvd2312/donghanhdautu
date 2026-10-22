@@ -12,8 +12,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { MarketGateway } from '../market/market.gateway';
 import { NotifierService } from '../alerts/notifier.service';
-import { PushService } from '../push/push.module';
-import { TelegramService } from '../telegram/telegram.module';
+import { PushDeliveryService } from '../push/push-delivery.service';
+import { PushSender } from '../push/push-sender.service';
+import { PushService } from '../push/push.service';
+import { TelegramApi } from '../telegram/telegram-api.client';
+import { TelegramDeliveryService } from '../telegram/telegram-delivery.service';
+import { TelegramLinkService } from '../telegram/telegram-link.service';
 import { testPrisma, testUser } from '../test-utils/test-db';
 
 const prisma = testPrisma();
@@ -108,12 +112,20 @@ beforeEach(async () => {
 });
 
 // Tạo dịch vụ sau khi đặt biến môi trường (token / URL được đọc lúc khởi tạo đối tượng)
-const telegram = () => Promise.resolve(new TelegramService(prisma));
+const telegram = () => {
+  const api = new TelegramApi();
+  return Promise.resolve({
+    delivery: new TelegramDeliveryService(prisma, api),
+    links: new TelegramLinkService(prisma, api),
+  });
+};
 const push = async () => {
-  const s = new PushService(prisma);
-  await s.onApplicationBootstrap();
-  s.onModuleDestroy();
-  return s;
+  const sender = new PushSender(prisma);
+  const delivery = new PushDeliveryService(prisma, sender);
+  const service = new PushService(sender, delivery);
+  await service.onApplicationBootstrap();
+  service.onModuleDestroy();
+  return delivery;
 };
 
 const sentText = (h: Hit) => (JSON.parse(h.body.toString()) as { text: string }).text;
@@ -139,7 +151,7 @@ describe('Telegram (Bot API giả)', () => {
   it('gửi đúng chat, mặc định không lộ số liệu nhạy cảm, có link mở đúng nội dung', async () => {
     const u = await linked('tg-ok');
     await notifier.send(u.id, { ...notification, dedupeKey: `a:${u.id}` });
-    await (await telegram()).processQueue();
+    await (await telegram()).delivery.processQueue();
     const call = hits.find((h) => h.path === '/bottest-token/sendMessage')!;
     const body = JSON.parse(call.body.toString()) as { chat_id: string; text: string; parse_mode: string };
     expect(body.chat_id).toBe(`chat-${u.id}`);
@@ -152,7 +164,7 @@ describe('Telegram (Bot API giả)', () => {
   it('người dùng bật "hiện chi tiết" thì có tiêu đề và nội dung', async () => {
     const u = await linked('tg-details', { showDetails: true });
     await notifier.send(u.id, { ...notification, dedupeKey: `a:${u.id}` });
-    await (await telegram()).processQueue();
+    await (await telegram()).delivery.processQueue();
     expect(sentText(hits[0])).toContain('FPT chạm 120.000');
   });
 
@@ -160,7 +172,7 @@ describe('Telegram (Bot API giả)', () => {
     const u = await linked('tg-optout');
     await notifier.send(u.id, { ...notification, dedupeKey: `a:${u.id}` });
     await prisma.telegramLink.update({ where: { userId: u.id }, data: { kinds: { price_target: false } } });
-    await (await telegram()).processQueue();
+    await (await telegram()).delivery.processQueue();
     expect(hits).toHaveLength(0);
     expect(await delivery(u.id)).toMatchObject({ status: 'skipped' });
   });
@@ -170,7 +182,7 @@ describe('Telegram (Bot API giả)', () => {
     reply = () => ({ status: 502, body: { ok: false, error_code: 502, description: 'Bad Gateway' } });
     await notifier.send(u.id, { ...notification, dedupeKey: `a:${u.id}` });
     const now = new Date();
-    await (await telegram()).processQueue(now);
+    await (await telegram()).delivery.processQueue(now);
     const d = await delivery(u.id);
     expect(d).toMatchObject({ status: 'pending', attempts: 1, lastError: 'Bad Gateway' });
     expect(d.nextAttemptAt.getTime()).toBeGreaterThan(now.getTime());
@@ -183,14 +195,14 @@ describe('Telegram (Bot API giả)', () => {
       body: { ok: false, error_code: 403, description: 'Forbidden: bot was blocked by the user' },
     });
     await notifier.send(u.id, { ...notification, dedupeKey: `a:${u.id}` });
-    await (await telegram()).processQueue();
+    await (await telegram()).delivery.processQueue();
     expect(await delivery(u.id)).toMatchObject({ status: 'failed' });
     expect(await prisma.telegramLink.findUnique({ where: { userId: u.id } })).toMatchObject({ active: false });
   });
 
   it('nút "Gửi thử" gửi tin thử tới đúng chat', async () => {
     const u = await linked('tg-test');
-    await (await telegram()).sendTest(u.id);
+    await (await telegram()).links.sendTest(u.id);
     expect(JSON.parse(hits[0].body.toString())).toMatchObject({ chat_id: `chat-${u.id}` });
     expect(sentText(hits[0])).toContain('Tin thử');
   });

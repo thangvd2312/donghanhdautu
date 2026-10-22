@@ -1,6 +1,6 @@
 import type { PortfolioService } from '../portfolio/portfolio.service';
-import type { PrismaService } from '../prisma/prisma.module';
-import { GoalsService } from './goals.module';
+import type { PrismaService } from '../prisma/prisma.service';
+import { GoalsService } from './goals.service';
 
 type SavedGoal = { data: { allocations: { create: { symbol: string }[] } } };
 

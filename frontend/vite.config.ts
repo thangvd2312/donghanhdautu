@@ -1,6 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Rollup } from 'vite'
 import react from '@vitejs/plugin-react'
-import type { GetModuleInfo } from 'rollup'
+
+type GetModuleInfo = Rollup.GetModuleInfo
 
 /** Mô-đun `id` có được import tĩnh (bắc cầu) từ một mô-đun thoả `isRoot` không */
 function reachableFrom(id: string, getModuleInfo: GetModuleInfo, isRoot: (id: string, entry: boolean) => boolean) {

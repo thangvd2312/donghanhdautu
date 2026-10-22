@@ -8,9 +8,10 @@ import type {
   PracticeTrade,
   PracticeTradesPage,
 } from '@dautu/contracts';
-import { MarketService, normalizeCrypto } from '../market/market.service';
+import { MarketService } from '../market/market.service';
+import { normalizeCrypto } from '../market/crypto-symbol';
 import { vnDateKey } from '../market/types';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   assertCanAfford,
   assertCanSell,
@@ -31,11 +32,11 @@ import {
   validateOrder,
 } from './practice-logic';
 
-export const TRADES_PAGE_SIZE = 30;
+const TRADES_PAGE_SIZE = 30;
 const BENCHMARK_TTL_MS = 30 * 60_000;
 const NO_ACCOUNT = 'Bạn chưa mở tài khoản luyện tập';
 
-export interface PlaceOrderInput extends OrderInput {
+interface PlaceOrderInput extends OrderInput {
   symbol: string;
 }
 

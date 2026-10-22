@@ -67,7 +67,7 @@ export const KIND_LABEL: Record<EventKind, string> = {
 }
 
 /** Đã qua ngày GDKHQ nhưng ngày họp đại hội còn phía trước: quyền dự họp đã chốt, vẫn là sự kiện sắp tới */
-export const meetingAhead = (e: CalendarEvent, today: string) =>
+const meetingAhead = (e: CalendarEvent, today: string) =>
   (e.kind === 'agm' || e.kind === 'egm') && !!e.meetingDate && e.date < today && e.meetingDate >= today
 
 /** Ngày dùng để xếp nhóm trong danh sách: ngày họp khi GDKHQ đã qua mà họp chưa diễn ra */

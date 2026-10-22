@@ -2,13 +2,13 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import type { SavedScreen as SavedScreenRow } from '@prisma/client';
 import type { OkResponse, SavedScreen, ScreenFilter, ScreenSort } from '@dautu/contracts';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { Filter, ScreenerInputError, Sort, validateFilters, validateSort } from './screener.logic';
 
 export const MAX_SAVED_SCREENS = 20;
 const NOT_FOUND = 'Không tìm thấy bộ lọc đã lưu';
 
-export interface SavedScreenInput {
+interface SavedScreenInput {
   name?: string;
   filters?: unknown;
   /** undefined: giữ nguyên; null: bỏ cách sắp xếp */

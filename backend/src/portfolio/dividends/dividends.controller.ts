@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import type { CorporateActionsResponse, IncomeResponse, OkResponse } from '@dautu/contracts';
-import { CurrentUser, JwtAuthGuard } from '../../auth/auth.module';
-import type { AuthUser } from '../../auth/auth.module';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import type { AuthUser } from '../../auth/current-user.decorator';
 import { CorporateActionsService } from './corporate-actions.service';
-import { DismissDto } from './dividends.dto';
+import { DismissDto } from './dto/dismiss.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('portfolio')

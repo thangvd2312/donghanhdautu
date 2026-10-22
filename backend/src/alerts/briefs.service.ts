@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BRIEF_PROMPT } from '../advisor/prompt';
-import { MacroService } from '../macro/macro.module';
+import { MacroService } from '../macro/macro.service';
 import { MarketService } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
-import { NewsService } from '../news/news.module';
+import { NewsService } from '../news/news.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { LlmService } from './llm.service';
 import { NewsTaggerService } from './news-tagger.service';
@@ -13,7 +13,7 @@ import { BriefQueueService } from './brief-queue.service';
 import { writeChecked } from './number-check';
 import { BriefContent, BriefRunService } from './brief-run.service';
 
-export type BriefKind = 'morning' | 'closing';
+type BriefKind = 'morning' | 'closing';
 
 const LABEL: Record<BriefKind, string> = { morning: 'Bản tin sáng', closing: 'Tổng kết phiên' };
 

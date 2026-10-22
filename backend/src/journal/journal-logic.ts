@@ -41,15 +41,13 @@ export const EMOTION_LABEL: Record<JournalEmotion, string> = {
 
 export const JOURNAL_REASONS = Object.keys(REASON_LABEL) as JournalReason[];
 export const JOURNAL_EMOTIONS = Object.keys(EMOTION_LABEL) as JournalEmotion[];
-export const JOURNAL_TX_TYPES: readonly JournalTxType[] = ['buy', 'sell', 'deposit', 'withdraw'];
+const JOURNAL_TX_TYPES: readonly JournalTxType[] = ['buy', 'sell', 'deposit', 'withdraw'];
 /** Loại giao dịch gắn được vào kế hoạch (có tài sản và giá) */
 export const PLAN_LINK_TX_TYPES: readonly JournalTxType[] = ['buy', 'sell'];
 /** Cảm xúc dễ cuốn người ta làm khác kế hoạch: được liệt kê riêng trong tổng kết */
-export const PRESSURED_EMOTIONS: readonly JournalEmotion[] = ['fomo', 'fear', 'greedy'];
+const PRESSURED_EMOTIONS: readonly JournalEmotion[] = ['fomo', 'fear', 'greedy'];
 
 export const isJournalTxType = (t: string): t is JournalTxType => (JOURNAL_TX_TYPES as readonly string[]).includes(t);
-export const isReason = (v: unknown): v is JournalReason => typeof v === 'string' && v in REASON_LABEL;
-export const isEmotion = (v: unknown): v is JournalEmotion => typeof v === 'string' && v in EMOTION_LABEL;
 
 // ---------- Tháng ----------
 

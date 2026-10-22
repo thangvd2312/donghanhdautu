@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Ctx } from './chat-context'
-import { streamPost } from './api'
-import type { AdvisorMessage, AdvisorStreamEvent } from './types'
+import { streamAdvisorChat } from '../api/advisorChat'
+import type { AdvisorMessage } from './types'
 
 /** Một tin trên màn hình: tin của API (AdvisorMessage) cộng các trạng thái chỉ giao diện dùng khi đang stream */
 export interface ChatMsg extends AdvisorMessage {
@@ -51,8 +51,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setActive((a) => (a ? { ...a, messages: [...a.messages.slice(0, -1), f(a.messages[a.messages.length - 1])] } : a))
 
     try {
-      await streamPost<AdvisorStreamEvent>(
-        '/advisor/chat',
+      await streamAdvisorChat(
         { conversationId, message: text },
         (e) => {
           switch (e.type) {

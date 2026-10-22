@@ -5,7 +5,7 @@ import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
-import { api } from '../lib/api'
+import { searchStocks } from '../api/search'
 import type { StockHit } from '../lib/types'
 import AssetAvatar from './AssetAvatar'
 
@@ -33,7 +33,7 @@ export default function StockSearch({
     }
     setLoading(true)
     const t = setTimeout(() => {
-      api<StockHit[]>(`/market/search?q=${encodeURIComponent(input)}`)
+      searchStocks(input)
         .then(setOptions)
         .catch(() => setOptions([]))
         .finally(() => setLoading(false))

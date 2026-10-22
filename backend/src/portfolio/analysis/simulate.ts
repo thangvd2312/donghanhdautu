@@ -15,11 +15,10 @@ type Dec = Prisma.Decimal;
 
 export const SHOCK_MIN_PCT = -90;
 export const SHOCK_MAX_PCT = 200;
-export const MAX_SYMBOL_OVERRIDES = 50;
+const MAX_SYMBOL_OVERRIDES = 50;
 
-export type { SimGroup, Shocks, Snapshot, SimHolding };
 /** Kết quả mô phỏng chưa kèm thời điểm giá (`asOf` do service thêm vào) */
-export type SimulationResult = Omit<SimulateResponse, 'asOf'>;
+type SimulationResult = Omit<SimulateResponse, 'asOf'>;
 
 const GROUP_ORDER: SimGroup[] = ['stock', 'crypto', 'gold', 'cash'];
 

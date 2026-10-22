@@ -2,7 +2,7 @@ import type { DividendItem, StockDividends } from '@dautu/contracts';
 import type { CorporateEvent } from './providers/vietcap/events.adapter';
 
 /** Mệnh giá cổ phiếu VN: tỷ lệ cổ tức tiền mặt công bố theo % mệnh giá */
-export const PAR_VALUE = 10_000;
+const PAR_VALUE = 10_000;
 
 /**
  * Lịch sử cổ tức của một mã, mới nhất trước. Tổng tiền mặt 12 tháng tính theo ngày không hưởng quyền trong 365 ngày

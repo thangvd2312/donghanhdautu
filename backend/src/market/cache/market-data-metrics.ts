@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-export type MarketMetric =
+type MarketMetric =
   'hitL1' | 'hitL2' | 'miss' | 'staleServed' | 'fetchError' | 'l2Error' | 'skippedOversize' | 'breakerOpened';
 
 /** Bộ đếm trong tiến trình: rẻ (một phép cộng), dùng để ghi log tổng kết định kỳ và để test; không có endpoint công khai */

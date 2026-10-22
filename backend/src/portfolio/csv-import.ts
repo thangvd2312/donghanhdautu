@@ -3,7 +3,7 @@
  * Thuần (không gọi DB / mạng) để test được; kiểm tra mã tài sản và cả sổ nằm ở ImportService.
  */
 import type { ImportField } from '@dautu/contracts';
-import type { TransactionDto } from './transactions';
+import type { TransactionDto } from './dto/transaction.dto';
 import type { TxType } from './ledger';
 
 export const MAX_ROWS = 1000;
@@ -43,7 +43,7 @@ export const FIELD_LABEL: Record<Field, string> = {
 };
 
 /** Bỏ dấu tiếng Việt, chữ thường, chỉ giữ chữ số và chữ cái */
-export function slug(s: string) {
+function slug(s: string) {
   return s
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -176,7 +176,7 @@ function lookup<K extends string>(aliases: Record<K, string[]>, raw: string): K 
   return null;
 }
 
-export interface RowResult {
+interface RowResult {
   /** Số dòng trong file (tính cả dòng tiêu đề), để báo lỗi đúng chỗ */
   line: number;
   cells: string[];

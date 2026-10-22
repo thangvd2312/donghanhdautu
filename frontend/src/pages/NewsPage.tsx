@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import SourceLogo from '../components/SourceLogo'
-import { api } from '../lib/api'
+import { listNews } from '../api/news'
 import { timeAgo } from '../lib/format'
 import type { NewsItem } from '../lib/types'
 
@@ -21,7 +21,7 @@ export default function NewsPage() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      api<NewsItem[]>(`/news${q.trim() ? `?q=${encodeURIComponent(q)}` : ''}`).then(setItems)
+      listNews(q).then(setItems)
     }, 250)
     return () => clearTimeout(t)
   }, [q])

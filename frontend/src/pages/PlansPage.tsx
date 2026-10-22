@@ -9,10 +9,11 @@ import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import PlanEditor from '../components/PlanEditor'
-import { api } from '../lib/api'
+import PlanEditor from '../components/plans/PlanEditor'
+import { listPlans } from '../api/plans'
+import { useResource } from '../hooks/useResource'
 import { changeColor, fmtDate, fmtPct, fmtPrice } from '../lib/format'
 import type { PlanListItem } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
@@ -22,20 +23,9 @@ import { ChangePill } from '../components/ui'
 /** Danh sách kế hoạch: đang theo dõi (ưu tiên cái đến hạn / chạm mốc) và đã kết thúc */
 export default function PlansPage() {
   const nav = useNavigate()
-  const [plans, setPlans] = useState<PlanListItem[] | null>(null)
-  const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
 
-  const load = useCallback(
-    () =>
-      api<PlanListItem[]>('/plans')
-        .then(setPlans)
-        .catch((e: Error) => setError(e.message)),
-    [],
-  )
-  useEffect(() => {
-    void load()
-  }, [load])
+  const { data: plans, error } = useResource(listPlans)
 
   const active = (plans ?? [])
     .filter((p) => p.status === 'active')

@@ -1,7 +1,7 @@
-import { Global, HttpException, HttpStatus, Injectable, Logger, Module } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { vnDateKey } from '../market/types';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { estimateCost, PRICE_VERSION, UsageLike } from './pricing';
 
 export type AiFeature =
@@ -14,7 +14,7 @@ export type AiFeature =
   | 'news_tag'
   | 'plan_draft'
   | 'eval';
-export type AiRequestKind = 'chat' | 'brief_test' | 'plan_draft';
+type AiRequestKind = 'chat' | 'brief_test' | 'plan_draft';
 
 /** Lượt "đang chạy" quá thời gian này coi như đã chết (tiến trình khởi động lại giữa chừng), không chặn lượt mới */
 const RUNNING_STALE_MS = 10 * 60_000;
@@ -147,7 +147,3 @@ export class AiUsageService {
 function dayStart(now: Date) {
   return new Date(`${vnDateKey(now)}T00:00:00+07:00`);
 }
-
-@Global()
-@Module({ providers: [AiUsageService], exports: [AiUsageService] })
-export class AiModule {}

@@ -1,17 +1,19 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { PortfolioHistory } from '@dautu/contracts';
-import { MarketService, normalizeCrypto } from '../market/market.service';
+import { MarketService } from '../market/market.service';
+import { normalizeCrypto } from '../market/crypto-symbol';
 import { VndirectProvider } from '../market/providers/vndirect.provider';
 import type { AssetType } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { addDays, daysBetween } from '../plans/plan-rules';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { assetBreakdown, buildHistory, compareBenchmark, DayPrice, periodPerformance } from './history';
 import { ledgerOfAll } from './ledger';
-import { toLedgerTx, TransactionsService } from './transactions';
+import { toLedgerTx } from './transactions.presenter';
+import { TransactionsService } from './transactions.service';
 
-export const RANGES = { '1m': 30, '3m': 90, '6m': 180, '1y': 365, all: 1100 } as const;
-export type Range = keyof typeof RANGES;
+const RANGES = { '1m': 30, '3m': 90, '6m': 180, '1y': 365, all: 1100 } as const;
+type Range = keyof typeof RANGES;
 
 /** Cách tối đa (ngày) giữa ngày cần giá và ngày có giá gần nhất trước đó để vẫn coi là giá đúng */
 const MAX_GAP: Record<string, number> = { stock: 5, crypto: 2, gold: 4 };

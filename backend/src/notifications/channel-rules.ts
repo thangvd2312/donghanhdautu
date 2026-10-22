@@ -42,16 +42,16 @@ export const DEFAULT_KINDS: Record<Kind, boolean> = {
 
 /** Tối đa số tin / giờ gửi cho một người */
 export const MAX_PER_HOUR = 10;
-export const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 5;
 
-export interface LinkPrefs {
+interface LinkPrefs {
   active: boolean;
   kinds: Partial<Record<string, boolean>>;
   quietStart: number | null;
   quietEnd: number | null;
 }
 
-export type Decision =
+type Decision =
   { action: 'send' } | { action: 'skip'; reason: string } | { action: 'later'; until: Date; reason: string };
 
 /** Phút trong ngày theo giờ VN (UTC+7, không có giờ mùa hè) */

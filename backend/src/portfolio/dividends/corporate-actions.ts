@@ -15,7 +15,7 @@ export const DIVIDEND_TAX_RATE = 0.05;
 export const LOOKBACK_DAYS = 730;
 
 /** Gợi ý ghi sổ như service tính ra, chưa kèm tên danh mục (service ghép thêm) */
-export type MissingAction = Omit<MissingActionView, 'portfolioName'>;
+type MissingAction = Omit<MissingActionView, 'portfolioName'>;
 
 export function actionKey(portfolioId: string | null, symbol: string, kind: string, exDate: string) {
   return `${portfolioId ?? '-'}:${symbol}:${kind}:${exDate}`;

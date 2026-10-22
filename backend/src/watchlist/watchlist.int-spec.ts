@@ -1,9 +1,12 @@
 import type { MarketService } from '../market/market.service';
+import { TrackedSymbolResolver } from '../market/tracked-symbol.resolver';
 import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
-import { MAX_WATCH_ITEMS, WatchlistService } from './watchlist.module';
+import { MAX_WATCH_ITEMS } from './watchlist.constants';
+import { WatchlistService } from './watchlist.service';
 
 const prisma = testPrisma();
-const watchlist = new WatchlistService(prisma, fakeMarket() as unknown as MarketService);
+const market = fakeMarket() as unknown as MarketService;
+const watchlist = new WatchlistService(prisma, market, new TrackedSymbolResolver(market));
 
 afterAll(() => prisma.$disconnect());
 

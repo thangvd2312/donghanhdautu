@@ -5,7 +5,7 @@
  */
 import type { ClientEvent } from '@dautu/contracts';
 
-export interface EventDef {
+interface EventDef {
   source: 'server' | 'client';
   description: string;
   /** Thuộc tính được ghi và ý nghĩa */

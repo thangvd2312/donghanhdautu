@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { cleanProps, EventName, RETENTION_DAYS } from './events';
 
-export interface TrackOptions {
+interface TrackOptions {
   userId?: string | null;
   anonId?: string | null;
   props?: Record<string, unknown>;

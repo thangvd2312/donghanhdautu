@@ -1,33 +1,24 @@
-import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
-import AssetAvatar from '../components/AssetAvatar'
-import CompareChart from '../components/CompareChart'
-import { MetricBlocks, MetricTable, ReturnsGrid, StockCard, SuggestChips, SymbolBar } from '../components/CompareParts'
+import { ApiError } from '../api/client'
+import { compareStocks } from '../api/market'
+import CompareChart from '../components/compare/CompareChart'
+import { MetricBlocks, MetricTable, ReturnsGrid, StockCard, SymbolBar } from '../components/compare/CompareParts'
 import SearchDialog from '../components/SearchDialog'
+import ComparePrompt from '../components/compare/ComparePrompt'
+import CompareSkeleton from '../components/compare/CompareSkeleton'
 import { Panel } from '../components/ui'
-import { api, ApiError } from '../lib/api'
-import {
-  COMPARE_RANGES,
-  DEFAULT_RANGE,
-  fmtClock,
-  MAX_COMPARE,
-  parseRange,
-  parseSymbols,
-  reconcileSlots,
-  sameSlots,
-} from '../lib/compare'
+import { COMPARE_RANGES, DEFAULT_RANGE, fmtClock, MAX_COMPARE, parseRange, parseSymbols, reconcileSlots, sameSlots } from '../lib/compare'
 import { fmtDate } from '../lib/format'
 import { useMarket } from '../lib/market-context'
-import type { CompareRange, CompareResponse, WatchItem } from '../lib/types'
+import type { CompareRange, CompareResponse } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
 
 interface Failure {
@@ -83,7 +74,7 @@ export default function ComparePage() {
     const ctrl = new AbortController()
     setLoading(true)
     setFailure(null)
-    api<CompareResponse>(`/market/compare?symbols=${symKey}&range=${range}`, { signal: ctrl.signal })
+    compareStocks(symKey, range, ctrl.signal)
       .then((d) => {
         setData(d)
         setLoading(false)
@@ -123,7 +114,7 @@ export default function ComparePage() {
 
       <SymbolBar symbols={symbols} slots={slots} invalid={invalid} onRemove={remove} onAdd={() => setPickerOpen(true)} />
 
-      {symbols.length < 2 && <Prompt symbols={symbols} onAdd={add} onOpen={() => setPickerOpen(true)} snapshotNames={snapshot?.stocks} />}
+      {symbols.length < 2 && <ComparePrompt symbols={symbols} onAdd={add} onOpen={() => setPickerOpen(true)} snapshotNames={snapshot?.stocks} />}
 
       {failure && (
         <Alert
@@ -237,89 +228,6 @@ export default function ComparePage() {
         exclude={symbols}
         pickHint={symbols.length ? `Chọn mã để so sánh với ${symbols.join(', ')}` : 'Chọn mã cổ phiếu đầu tiên'}
       />
-    </Stack>
-  )
-}
-
-/** 0–1 mã: giải thích ngắn + nút lớn mở chọn mã + gợi ý nhanh */
-function Prompt({
-  symbols,
-  onAdd,
-  onOpen,
-  snapshotNames,
-}: {
-  symbols: string[]
-  onAdd: (s: string) => void
-  onOpen: () => void
-  snapshotNames?: { symbol: string; name: string; valueBn: number }[]
-}) {
-  const [watch, setWatch] = useState<string[]>([])
-  useEffect(() => {
-    let alive = true
-    api<WatchItem[]>('/watchlist')
-      .then((l) => alive && setWatch(l.filter((w) => w.assetType === 'stock').map((w) => w.symbol)))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [])
-  const picked = symbols[0]
-  const fromWatch = watch.filter((s) => !symbols.includes(s)).slice(0, 8)
-  const popular = (snapshotNames ?? [])
-    .slice()
-    .sort((a, b) => b.valueBn - a.valueBn)
-    .map((s) => s.symbol)
-    .filter((s) => !symbols.includes(s) && !fromWatch.includes(s))
-    .slice(0, 8)
-  const name = snapshotNames?.find((s) => s.symbol === picked)?.name
-  return (
-    <Panel>
-      <Stack spacing={2} sx={{ alignItems: 'stretch' }}>
-        {picked ? (
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-            <AssetAvatar assetType="stock" symbol={picked} size={44} />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 800, fontSize: 20, lineHeight: 1.2 }}>{picked}</Typography>
-              {name && (
-                <Typography variant="caption" color="text.secondary" noWrap component="div">
-                  {name}
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-        ) : (
-          <Box sx={{ color: 'primary.main' }}>
-            <CompareArrowsOutlined sx={{ fontSize: 40 }} />
-          </Box>
-        )}
-        <Typography sx={{ fontWeight: 600 }}>
-          {picked ? `Chọn thêm ít nhất 1 mã để so sánh với ${picked}.` : 'Chọn ít nhất 2 mã để so sánh.'}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Bạn có thể so sánh tối đa {MAX_COMPARE} mã: diễn biến giá cùng mốc, thay đổi giá theo kỳ, P/E, P/B, tăng trưởng và cổ tức. Chỉ là số liệu để
-          đối chiếu, không phải khuyến nghị.
-        </Typography>
-        <Button variant="contained" size="large" onClick={onOpen} startIcon={<CompareArrowsOutlined />} sx={{ borderRadius: 99, minHeight: 52 }}>
-          Thêm mã để so sánh
-        </Button>
-        <SuggestChips label="Trong danh sách theo dõi của bạn" symbols={fromWatch} onAdd={onAdd} />
-        <SuggestChips label="Mã giao dịch nhiều hôm nay" symbols={popular} onAdd={onAdd} />
-      </Stack>
-    </Panel>
-  )
-}
-
-function CompareSkeleton({ count }: { count: number }) {
-  return (
-    <Stack spacing={1.75} aria-busy aria-label="Đang tải so sánh">
-      <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: `repeat(${count}, minmax(0, 1fr))` } }}>
-        {Array.from({ length: count }, (_, i) => (
-          <Skeleton key={i} variant="rounded" height={168} />
-        ))}
-      </Box>
-      <Skeleton variant="rounded" height={340} />
-      <Skeleton variant="rounded" height={210} />
-      <Skeleton variant="rounded" height={260} />
     </Stack>
   )
 }

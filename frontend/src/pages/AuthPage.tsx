@@ -12,10 +12,9 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import { Logo } from '../components/ui'
-import { api } from '../lib/api'
+import { getAuthConfig } from '../api/auth'
 import { useAuth } from '../lib/auth-context'
 import { safeNext } from '../lib/nav'
-import type { AuthConfig } from '../lib/types'
 
 export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { login, register, loginWithGoogle } = useAuth()
@@ -37,7 +36,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     let alive = true
     let timer: ReturnType<typeof setTimeout> | undefined
     const load = (attempt: number) =>
-      api<AuthConfig>('/auth/config')
+      getAuthConfig()
         .then((c) => alive && setGoogleClientId(c.googleClientId))
         .catch(() => {
           if (!alive) return

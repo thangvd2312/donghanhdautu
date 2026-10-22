@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { CompareResponse, CompareStock } from '@dautu/contracts';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   buildChart,
   buildMetricRows,

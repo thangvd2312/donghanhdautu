@@ -13,9 +13,10 @@ import Stepper from '@mui/material/Stepper'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import HoldingForm from '../components/HoldingForm'
+import HoldingForm from '../components/portfolio/HoldingForm'
 import { Logo } from '../components/ui'
-import { api, put } from '../lib/api'
+import { getQuiz, submitQuiz } from '../api/auth'
+import { getPortfolio } from '../api/portfolio'
 import { useAuth } from '../lib/auth-context'
 import { safeNext, skipOnboarding } from '../lib/nav'
 import { track } from '../lib/track'
@@ -49,10 +50,10 @@ export default function OnboardingPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api<QuizQuestion[]>('/profile/quiz').then(setQuiz)
+    getQuiz().then(setQuiz)
   }, [])
 
-  const loadPortfolio = () => api<Portfolio>('/portfolio').then(setPortfolio)
+  const loadPortfolio = () => getPortfolio().then(setPortfolio)
 
   const choose = async (qid: string, value: string) => {
     const nextAnswers = { ...answers, [qid]: value }
@@ -62,7 +63,7 @@ export default function OnboardingPage() {
       return
     }
     try {
-      setProfile(await put<InvestorProfile>('/profile', { answers: nextAnswers }))
+      setProfile(await submitQuiz(nextAnswers))
       await loadPortfolio()
       setStage(1)
     } catch (e) {

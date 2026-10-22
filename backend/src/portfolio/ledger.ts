@@ -325,7 +325,7 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
   };
 }
 
-export interface PerformanceInput {
+interface PerformanceInput {
   ledger: LedgerResult;
   /** Tổng giá trị danh mục hiện tại (VND), từ phần định giá */
   totalValueVnd: number;
@@ -395,25 +395,12 @@ export function performance({
   };
 }
 
-export function num(d: Dec) {
+function num(d: Dec) {
   return d.toNumber();
 }
 
-/**
- * Sổ của từng danh mục (mỗi danh mục kiểm tra riêng: không bán được tài sản đang nằm ở danh mục khác).
- * Ném LedgerError của danh mục sai đầu tiên.
- */
-export function computeByPortfolio(txs: LedgerTx[]): Map<string, LedgerResult> {
-  const groups = new Map<string, LedgerTx[]>();
-  for (const t of txs) {
-    const k = t.portfolioId ?? '';
-    groups.set(k, [...(groups.get(k) ?? []), t]);
-  }
-  return new Map([...groups].map(([k, g]) => [k, computeLedger(g)]));
-}
-
 /** Gộp sổ nhiều danh mục thành một (tổng số lượng, giá vốn, tiền mặt, vốn đưa vào…) */
-export function mergeLedgers(results: LedgerResult[]): LedgerResult {
+function mergeLedgers(results: LedgerResult[]): LedgerResult {
   const positions = new Map<string, Position>();
   const sumFlow = (a: Flow, b: Flow): Flow => ({
     amount: a.amount.add(b.amount),

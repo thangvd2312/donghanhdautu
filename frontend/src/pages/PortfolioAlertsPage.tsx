@@ -3,7 +3,7 @@ import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router-dom'
-import PortfolioAlertsPanel from '../components/PortfolioAlertsPanel'
+import PortfolioAlertsPanel from '../components/portfolio-alerts/PortfolioAlertsPanel'
 
 /** /portfolio-alerts — cảnh báo theo tình trạng cả danh mục (khác cảnh báo giá một mã ở Cài đặt) */
 export default function PortfolioAlertsPage() {

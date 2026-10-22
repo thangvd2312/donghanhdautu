@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.module';
+import { PrismaService } from '../../prisma/prisma.service';
 import { MarketDataMetrics } from './market-data-metrics';
 
 /** Chính sách cho một khoá: `freshMs` là thời gian dữ liệu được coi là mới; `staleMs` là thời gian dùng tạm khi nguồn lỗi */

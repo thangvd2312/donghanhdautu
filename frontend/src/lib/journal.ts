@@ -1,4 +1,5 @@
-import type { JournalEmotion, JournalReason, JournalTxType, TxType } from './types'
+import { fmtDate } from './format'
+import type { JournalEmotion, JournalEntry, JournalReason, JournalTxType, TxType } from './types'
 
 /** Nhãn hiển thị của nhật ký quyết định. Thứ tự khoá = thứ tự chip trên giao diện (khớp bộ nhãn ở backend) */
 export const EMOTION_LABEL: Record<JournalEmotion, string> = {
@@ -48,4 +49,18 @@ export const isMonth = (v: string | null): v is string => !!v && /^\d{4}-(0[1-9]
 export function monthTitle(month: string) {
   const [y, m] = month.split('-')
   return `Tháng ${Number(m)}/${y}`
+}
+
+const WEEKDAY = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
+export const dayTitle = (d: string) => `${WEEKDAY[new Date(`${d}T00:00:00Z`).getUTCDay()]}, ${fmtDate(d)}`
+
+/** Nhóm các mục theo ngày, giữ thứ tự (mới nhất trước) */
+export function groupByDay(entries: JournalEntry[]) {
+  const out: { date: string; entries: JournalEntry[] }[] = []
+  for (const e of entries) {
+    const last = out[out.length - 1]
+    if (last && last.date === e.date) last.entries.push(e)
+    else out.push({ date: e.date, entries: [e] })
+  }
+  return out
 }

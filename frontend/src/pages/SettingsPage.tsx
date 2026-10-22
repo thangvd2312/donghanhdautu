@@ -11,12 +11,12 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { NotificationSettingsPanel, PriceAlertsPanel } from '../components/AlertsPanels'
-import PortfolioAlertsPanel from '../components/PortfolioAlertsPanel'
-import PushPanel from '../components/PushPanel'
-import TelegramPanel from '../components/TelegramPanel'
+import { NotificationSettingsPanel, PriceAlertsPanel } from '../components/alerts/AlertsPanels'
+import PortfolioAlertsPanel from '../components/portfolio-alerts/PortfolioAlertsPanel'
+import PushPanel from '../components/channels/PushPanel'
+import TelegramPanel from '../components/channels/TelegramPanel'
 import { KV, Panel } from '../components/ui'
-import { patch } from '../lib/api'
+import { updateProfileSettings } from '../api/auth'
 import { useAuth } from '../lib/auth-context'
 import { RISK_LABEL } from '../lib/types'
 
@@ -68,7 +68,7 @@ function ProfilePanel() {
   const [saved, setSaved] = useState(false)
 
   const save = async () => {
-    await patch('/profile/settings', { alertThresholdPct: Number(threshold) })
+    await updateProfileSettings({ alertThresholdPct: Number(threshold) })
     await refresh()
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)

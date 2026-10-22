@@ -17,18 +17,17 @@ import {
 import { computeLedger } from '../ledger';
 import type { LedgerTx } from '../ledger';
 
-export const DEFAULT_PAST_MONTHS = 12;
-export const MAX_PAST_MONTHS = 36;
+const DEFAULT_PAST_MONTHS = 12;
+const MAX_PAST_MONTHS = 36;
 /** Số tháng tương lai tối đa hiện khoản dự kiến */
-export const MAX_FUTURE_MONTHS = 12;
+const MAX_FUTURE_MONTHS = 12;
 /** Chưa biết ngày trả: coi là quá hạn sau chừng này ngày kể từ GDKHQ */
 const DEFAULT_PAYOUT_LAG_DAYS = 45;
 
-export type { IncomeItem, IncomeMonth };
 export type ReceivedItem = IncomeReceivedItem;
 export type ExpectedItem = IncomeExpectedItem;
 /** Phần lịch thu nhập tính thuần từ sổ và sự kiện; service thêm nguồn, thời điểm và cờ `unavailable` */
-export type IncomeResult = Pick<IncomeResponse, 'months' | 'summary' | 'notes' | 'hasHoldings'>;
+type IncomeResult = Pick<IncomeResponse, 'months' | 'summary' | 'notes' | 'hasHoldings'>;
 
 export interface IncomeInput {
   txs: LedgerTx[];
@@ -47,7 +46,7 @@ export function clampPast(raw: unknown): number {
   return Math.min(MAX_PAST_MONTHS, Math.max(1, n));
 }
 
-export function monthOf(date: string) {
+function monthOf(date: string) {
   return date.slice(0, 7);
 }
 

@@ -6,7 +6,6 @@ export type {
   PracticeAssetType,
   PracticePosition,
   PracticePriceStatus,
-  PracticeResponse,
   PracticeSide,
   PracticeState,
   PracticeTrade,
@@ -25,7 +24,7 @@ export const STOCK_FEE = 0.0015
 export const STOCK_SELL_TAX = 0.001
 export const CRYPTO_FEE = 0.001
 export const LOT = 100
-export const CRYPTO_DECIMALS = 6
+const CRYPTO_DECIMALS = 6
 
 export const PRICE_STATUS_LABEL: Record<PracticePriceStatus, string> = {
   fresh: 'Giá mới',
@@ -120,4 +119,10 @@ export const fmtQty = (q: number) =>
 export const baseSymbol = (assetType: PracticeAssetType, symbol: string) =>
   assetType === 'crypto' ? symbol.replace(/USDT$/, '') : symbol
 
-export const unitLabel = (assetType: PracticeAssetType) => (assetType === 'stock' ? 'cp' : '')
+
+/** Quy tắc hiển thị khi máy chủ chưa trả danh sách quy tắc */
+export const FALLBACK_RULES = [
+  'Lệnh thị trường, khớp ngay toàn bộ theo giá hiện tại của app. Không mô phỏng trượt giá, khối lượng khớp, giá trần/sàn hay T+2.',
+  'Cổ phiếu: lô 100 cp (có thể bật lô lẻ), phí 0,15% mỗi chiều, thuế bán 0,1%. Crypto: phí 0,1%, tối đa 6 số lẻ.',
+  'Không vay ký quỹ: mua cần đủ tiền (gồm phí), bán không quá số đang giữ. Thiếu giá hoặc giá cũ thì lệnh bị từ chối.',
+]

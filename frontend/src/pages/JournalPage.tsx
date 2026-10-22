@@ -14,10 +14,11 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router-dom'
-import { EntryRow, MonthlySummary, TagSheet } from '../components/JournalParts'
-import { api } from '../lib/api'
-import { fmtDate } from '../lib/format'
-import { currentMonth, EMOTION_LABEL, EMOTIONS, isMonth, monthTitle, shiftMonth } from '../lib/journal'
+import { EntryRow } from '../components/journal/EntryRow'
+import { MonthlySummary } from '../components/journal/MonthlySummary'
+import { TagSheet } from '../components/journal/TagSheet'
+import { getJournalMonth, getJournalSummary } from '../api/journal'
+import { currentMonth, dayTitle, EMOTION_LABEL, EMOTIONS, groupByDay, isMonth, monthTitle, shiftMonth } from '../lib/journal'
 import type {
   JournalEmotion,
   JournalMonth,
@@ -25,9 +26,6 @@ import type {
   JournalReviewEntry,
   JournalTradeEntry,
 } from '../lib/types'
-
-const WEEKDAY = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
-const dayTitle = (d: string) => `${WEEKDAY[new Date(`${d}T00:00:00Z`).getUTCDay()]}, ${fmtDate(d)}`
 
 /**
  * Nhật ký quyết định: mỗi lần mua / bán, xem lại hay sửa kế hoạch trong tháng, kèm cảm xúc / lý do người dùng tự gắn,
@@ -56,10 +54,7 @@ export default function JournalPage() {
   }
 
   const loadEntries = useCallback(() => {
-    const q = new URLSearchParams({ month })
-    if (emotion) q.set('emotion', emotion)
-    if (planId) q.set('planId', planId)
-    return api<JournalMonth>(`/journal?${q}`)
+    return getJournalMonth(month, { emotion: emotion ?? undefined, planId })
       .then((d) => {
         setData(d)
         setError('')
@@ -69,7 +64,7 @@ export default function JournalPage() {
 
   const loadSummary = useCallback(
     () =>
-      api<JournalMonthSummary>(`/journal/summary?month=${month}`)
+      getJournalSummary(month)
         .then(setSummary)
         .catch(() => setSummary(null)),
     [month],
@@ -85,15 +80,7 @@ export default function JournalPage() {
   }, [loadSummary])
 
   // Nhóm theo ngày, giữ thứ tự mới nhất trước
-  const days = useMemo(() => {
-    const out: { date: string; entries: JournalMonth['entries'] }[] = []
-    for (const e of data?.entries ?? []) {
-      const last = out[out.length - 1]
-      if (last && last.date === e.date) last.entries.push(e)
-      else out.push({ date: e.date, entries: [e] })
-    }
-    return out
-  }, [data])
+  const days = useMemo(() => groupByDay(data?.entries ?? []), [data])
 
   const filtered = !!emotion || !!planId
   const planName = data?.plans.find((p) => p.id === planId)?.displayName

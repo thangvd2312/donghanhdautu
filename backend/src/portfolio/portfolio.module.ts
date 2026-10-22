@@ -5,7 +5,7 @@ import { ImportService } from './import.service';
 import { PortfolioController } from './portfolio.controller';
 import { PortfolioService } from './portfolio.service';
 import { TransactionsController } from './transactions.controller';
-import { TransactionsService } from './transactions';
+import { TransactionsService } from './transactions.service';
 
 /**
  * Lõi danh mục: định giá, sổ giao dịch, nhập CSV, lịch sử. Mô phỏng (analysis/) và cổ tức (dividends/)

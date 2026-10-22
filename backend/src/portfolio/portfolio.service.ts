@@ -9,11 +9,12 @@ import type {
 } from '@dautu/contracts';
 import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { computeLedger, performance } from './ledger';
 import type { LedgerResult } from './ledger';
-import type { HoldingDto } from './portfolio.dto';
-import { toLedgerTx, TransactionsService } from './transactions';
+import type { HoldingDto } from './dto/portfolio.dto';
+import { toLedgerTx } from './transactions.presenter';
+import { TransactionsService } from './transactions.service';
 import { HoldingInput, valuePortfolio } from './valuation';
 
 @Injectable()

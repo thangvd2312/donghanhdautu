@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AnalyticsService } from '../analytics/analytics.service';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { NotificationInput, NotifierService } from './notifier.service';
 
 /** Lượt "running" lâu hơn mức này coi như tiến trình đã chết giữa chừng và được nhận lại */

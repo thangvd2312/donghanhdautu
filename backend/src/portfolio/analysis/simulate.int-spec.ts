@@ -2,7 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { MarketService } from '../../market/market.service';
 import { fakeMarket, testPrisma, testUser } from '../../test-utils/test-db';
 import { PortfolioService } from '../portfolio.service';
-import { TransactionsService } from '../transactions';
+import { TransactionsService } from '../transactions.service';
 import { AnalysisService } from './analysis.service';
 
 const prisma = testPrisma();

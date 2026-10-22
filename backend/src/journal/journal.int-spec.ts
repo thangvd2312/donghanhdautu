@@ -1,8 +1,8 @@
 import type { NotifierService } from '../alerts/notifier.service';
 import type { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
-import type { PlansService } from '../plans/plans.module';
-import { TransactionsService } from '../portfolio/transactions';
+import type { PlanAssetsService } from '../plans/plan-assets.service';
+import { TransactionsService } from '../portfolio/transactions.service';
 import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
 import { shiftMonth } from './journal-logic';
 import { JournalService } from './journal.service';
@@ -17,7 +17,7 @@ const plans = {
   displayName: (_t: string, s: string) => s.replace(/USDT$/, ''),
   priceNative: (_t: string, s: string) =>
     prices[s] ? { value: prices[s], status: 'fresh' } : { value: null, status: 'missing' },
-} as unknown as PlansService;
+} as unknown as PlanAssetsService;
 const sent: { userId: string; dedupeKey: string; kind: string; link?: string }[] = [];
 const notifier = {
   send: (userId: string, n: { dedupeKey: string; kind: string; link?: string }) => {

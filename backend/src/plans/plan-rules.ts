@@ -2,7 +2,7 @@
 
 export const DEFAULT_REVIEW_DAYS = 30;
 
-export interface PlanLite {
+interface PlanLite {
   id: string;
   assetType: string;
   symbol: string;
@@ -23,7 +23,7 @@ export function displaySymbol(assetType: string, symbol: string) {
   return assetType === 'crypto' ? symbol.replace(/USDT$/, '') : symbol;
 }
 
-export interface PlanSignal {
+interface PlanSignal {
   kind: 'due' | 'target' | 'stop';
   message: string;
 }

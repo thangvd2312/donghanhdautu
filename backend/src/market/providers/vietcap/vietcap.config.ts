@@ -23,7 +23,7 @@ export interface VietcapHttpOptions {
 
 export const VIETCAP_HTTP_OPTIONS = Symbol('VIETCAP_HTTP_OPTIONS');
 
-export const DEFAULT_LIMITS: Record<VietcapHost, HostLimit> = {
+const DEFAULT_LIMITS: Record<VietcapHost, HostLimit> = {
   trading: { ratePerSec: 10, maxConcurrent: 8 },
   iq: { ratePerSec: 5, maxConcurrent: 4 },
   dnse: { ratePerSec: 5, maxConcurrent: 4 },

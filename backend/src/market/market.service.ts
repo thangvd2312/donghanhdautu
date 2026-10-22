@@ -1,12 +1,17 @@
 import { Injectable, Logger, NotFoundException, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import type { AssetType, Candle, CryptoDetail, StockHit } from '@dautu/contracts';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { AppRuntime } from '../runtime/app-role';
 import { BinanceProvider, FEATURED_COINS } from './providers/binance.provider';
 import { GoldFxProvider, OZ_PER_LUONG } from './providers/gold-fx.provider';
 import { safe, VietcapHistoryAdapter, VietcapQuotesAdapter, VietcapSymbolsAdapter } from './providers/vietcap';
-import { ageStatus, PriceInfo, SourceStatus, STALE_AFTER_MS, stockStatus, worst } from './freshness';
+import { normalizeCrypto } from './crypto-symbol';
+import { ageStatus, PriceInfo, SourceStatus, STALE_AFTER_MS, stockStatus } from './freshness';
+import { OnDemandGate } from './on-demand-gate';
+import type { SourceKey } from './on-demand-gate';
+import { dayChangePct, priceInfo, priceVnd } from './price-info';
+import type { FxInfo, PriceBook } from './price-info';
 import { technicals } from './technicals';
 import {
   CryptoQuote,
@@ -19,7 +24,7 @@ import {
   UsdtRate,
 } from './types';
 
-export type MarketEvent =
+type MarketEvent =
   | { type: 'stocks'; data: StockQuote[] }
   | { type: 'indices'; data: IndexQuote[] }
   | { type: 'crypto'; data: CryptoQuote[] }
@@ -28,20 +33,6 @@ export type MarketEvent =
   | { type: 'usdt'; data: UsdtRate };
 
 export type { AssetType };
-
-type SourceKey = 'stocks' | 'indices' | 'gold' | 'fx' | 'usdt';
-type DemandKey = 'stocks' | 'crypto' | 'gold' | 'fx' | 'usdt' | 'tracked';
-
-/** Worker lấy giá theo yêu cầu: không gọi lại một nguồn sớm hơn chu kỳ này (bằng chu kỳ poll của web), lỗi thì thử lại sau 30 giây */
-const ON_DEMAND_MS: Record<DemandKey, number> = {
-  stocks: 30_000,
-  crypto: 30_000,
-  gold: 5 * 60_000,
-  usdt: 5 * 60_000,
-  fx: 30 * 60_000,
-  tracked: 60_000,
-};
-const ON_DEMAND_RETRY_MS = 30_000;
 
 /** Chỉ dùng khi chưa từng lấy được tỷ giá Vietcombank, để không chặn quy đổi; luôn gắn nhãn dự phòng */
 const DEFAULT_USD_VND = 25500;
@@ -102,8 +93,11 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   private trackedCrypto = new Set<string>();
   private timers: NodeJS.Timeout[] = [];
   private pendingCrypto = new Map<string, CryptoQuote>();
-  /** Worker: lần tới được phép gọi lại từng nguồn, và lần lấy giá cổ phiếu thành công gần nhất */
-  private nextDemandAt: Record<DemandKey, number> = { stocks: 0, crypto: 0, gold: 0, usdt: 0, fx: 0, tracked: 0 };
+  /** Worker: làm mới theo yêu cầu, mỗi nguồn không gọi sớm hơn chu kỳ của nó */
+  private onDemand = new OnDemandGate(
+    (k) => this.sources[k].lastSuccessAt,
+    (m) => this.log.warn(m),
+  );
   private freshening: Promise<void> | null = null;
 
   constructor(
@@ -185,7 +179,7 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
   }
 
   private async refreshDue(now: number): Promise<void> {
-    await this.refreshOnDemand('tracked', now, async () => {
+    await this.onDemand.run('tracked', now, async () => {
       await this.refreshTracked();
       await this.refreshTrackedCrypto();
     });
@@ -193,27 +187,12 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     const stocksNeeded =
       isStockSessionOpen(new Date(now)) || stockStatus(lastStockPoll ? new Date(lastStockPoll) : null) !== 'fresh';
     await Promise.all([
-      stocksNeeded && this.refreshOnDemand('stocks', now, () => this.pollStocks(), ['stocks', 'indices']),
-      this.refreshOnDemand('crypto', now, () => this.binance.refreshRest([...this.trackedCrypto])),
-      this.refreshOnDemand('gold', now, () => this.pollGold(), ['gold']),
-      this.refreshOnDemand('fx', now, () => this.pollFx(), ['fx']),
-      this.refreshOnDemand('usdt', now, () => this.pollUsdt(), ['usdt']),
+      stocksNeeded && this.onDemand.run('stocks', now, () => this.pollStocks(), ['stocks', 'indices']),
+      this.onDemand.run('crypto', now, () => this.binance.refreshRest([...this.trackedCrypto])),
+      this.onDemand.run('gold', now, () => this.pollGold(), ['gold']),
+      this.onDemand.run('fx', now, () => this.pollFx(), ['fx']),
+      this.onDemand.run('usdt', now, () => this.pollUsdt(), ['usdt']),
     ]);
-  }
-
-  /** Chạy `load` nếu đã tới hạn; thành công thì chờ hết chu kỳ, lỗi (nguồn không có lần thành công mới) thì thử lại sau 30 giây */
-  private async refreshOnDemand(key: DemandKey, now: number, load: () => Promise<void>, sources: SourceKey[] = []) {
-    if (now < this.nextDemandAt[key]) return;
-    const before = sources.map((k) => this.sources[k].lastSuccessAt);
-    this.nextDemandAt[key] = now + ON_DEMAND_RETRY_MS;
-    try {
-      await load();
-    } catch (e) {
-      this.log.warn(`Lấy ${key} theo yêu cầu lỗi: ${(e as Error).message}`);
-      return;
-    }
-    const ok = sources.every((k, i) => this.sources[k].lastSuccessAt !== before[i]);
-    this.nextDemandAt[key] = now + (ok ? ON_DEMAND_MS[key] : ON_DEMAND_RETRY_MS);
   }
 
   /** Các cặp coin người dùng nắm giữ / theo dõi / đặt cảnh báo: worker lấy qua REST vì không có websocket phủ mọi cặp */
@@ -445,130 +424,28 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
 
   /** Giá hiện tại quy ra VND/đơn vị. Vàng tính theo giá MUA VÀO của cửa hàng (giá bạn bán được) */
   priceVnd(assetType: AssetType, symbol: string): number | null {
-    switch (assetType) {
-      case 'stock':
-        return this.stocks.get(symbol)?.price ?? null;
-      case 'crypto': {
-        const q = this.binance.quotes.get(normalizeCrypto(symbol));
-        return q ? q.price * this.usdtVnd.rate : null;
-      }
-      case 'gold': {
-        const g = this.gold.find((x) => x.code === symbol);
-        return g ? g.buy : null;
-      }
-      case 'cash':
-        return 1;
-    }
+    return priceVnd(this.priceBook, assetType, symbol);
   }
 
   /** Giá hiện tại quy ra VND kèm nguồn, thời điểm dữ liệu và trạng thái (mới / cũ / dự phòng / thiếu) */
   priceInfo(assetType: AssetType, symbol: string, now = new Date()): PriceInfo {
-    switch (assetType) {
-      case 'stock': {
-        const q = this.stocks.get(symbol);
-        const fetchedAt = this.stockFetchedAt.get(symbol) ?? null;
-        if (!q)
-          return { value: null, status: 'missing', source: 'Vietcap', asOf: null, reason: 'Chưa lấy được giá mã này' };
-        const status = stockStatus(fetchedAt, now);
-        return {
-          value: q.price,
-          status,
-          source: 'Vietcap',
-          asOf: fetchedAt?.toISOString() ?? null,
-          reason: status === 'stale' ? 'Quá lâu chưa cập nhật được giá từ nguồn' : undefined,
-        };
-      }
-      case 'crypto': {
-        const q = this.binance.quotes.get(normalizeCrypto(symbol));
-        if (!q)
-          return {
-            value: null,
-            status: 'missing',
-            source: 'Binance',
-            asOf: null,
-            reason: 'Chưa lấy được giá coin này',
-          };
-        const fx = this.usdtVnd;
-        // Coin ít giao dịch có thể lâu không đổi giá: chỉ coi là cũ khi cả luồng giá Binance ngừng cập nhật
-        const priceStatus = ageStatus(this.binance.lastMessageAt ?? new Date(q.time), STALE_AFTER_MS.crypto, now);
-        const status = worst(priceStatus, fx.status);
-        return {
-          value: q.price * fx.rate,
-          status,
-          source: `Binance; quy đổi theo ${fx.source}`,
-          asOf: new Date(q.time).toISOString(),
-          reason:
-            fx.status === 'fallback'
-              ? 'Quy ra VND bằng tỷ giá dự phòng'
-              : status === 'stale'
-                ? priceStatus === 'stale'
-                  ? 'Giá coin quá lâu chưa cập nhật'
-                  : 'Tỷ giá USDT/VND quá lâu chưa cập nhật'
-                : undefined,
-        };
-      }
-      case 'gold': {
-        const g = this.gold.find((x) => x.code === symbol);
-        if (!g)
-          return {
-            value: null,
-            status: 'missing',
-            source: 'vang.today',
-            asOf: null,
-            reason: 'Nguồn không còn loại vàng này',
-          };
-        const status = ageStatus(new Date(g.updatedAt), STALE_AFTER_MS.gold, now);
-        return {
-          value: g.buy,
-          status,
-          source: g.source,
-          asOf: g.updatedAt,
-          reason: status === 'stale' ? 'Giá vàng của nguồn đã lâu chưa cập nhật' : undefined,
-        };
-      }
-      case 'cash': {
-        if (symbol !== 'USDT') return { value: 1, status: 'fresh', source: 'Sổ giao dịch', asOf: null };
-        // Tiền mặt USDT (trên sàn): quy VND theo tỷ giá USDT/VND hiện tại
-        const fx = this.usdtVnd;
-        return {
-          value: fx.rate,
-          status: fx.status,
-          source: fx.source,
-          asOf: fx.asOf,
-          reason: fx.status === 'fallback' ? 'Quy ra VND bằng tỷ giá dự phòng' : undefined,
-        };
-      }
-    }
+    return priceInfo(this.priceBook, assetType, symbol, now);
   }
 
   /** % thay đổi trong ngày (cổ phiếu: so tham chiếu; coin: 24h; vàng: so hôm trước) */
   dayChangePct(assetType: AssetType, symbol: string): number | null {
-    switch (assetType) {
-      case 'stock':
-        return this.stocks.get(symbol)?.changePct ?? null;
-      case 'crypto':
-        return this.binance.quotes.get(normalizeCrypto(symbol))?.changePct ?? null;
-      case 'gold': {
-        const g = this.gold.find((x) => x.code === symbol);
-        if (!g || !g.buy) return null;
-        return (g.changeBuy / (g.buy - g.changeBuy)) * 100;
-      }
-      default:
-        return null;
-    }
+    return dayChangePct(this.priceBook, assetType, symbol);
   }
-}
 
-export function normalizeCrypto(symbol: string) {
-  const s = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return s.endsWith('USDT') ? s : `${s}USDT`;
-}
-
-export interface FxInfo {
-  rate: number;
-  source: string;
-  status: PriceInfo['status'];
-  asOf: string | null;
+  private get priceBook(): PriceBook {
+    return {
+      stocks: this.stocks,
+      stockFetchedAt: this.stockFetchedAt,
+      gold: this.gold,
+      crypto: this.binance,
+      usdtVnd: () => this.usdtVnd,
+    };
+  }
 }
 
 function emptyStatus(source: string): SourceStatus {

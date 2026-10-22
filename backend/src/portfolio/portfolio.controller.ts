@@ -11,15 +11,16 @@ import type {
   Transaction,
 } from '@dautu/contracts';
 import { AnalyticsService } from '../analytics/analytics.service';
-import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
-import type { AuthUser } from '../auth/auth.module';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { AuthUser } from '../auth/current-user.decorator';
 import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { HistoryService } from './history.service';
-import { HoldingDto, PortfolioNameDto } from './portfolio.dto';
+import { HoldingDto, PortfolioNameDto } from './dto/portfolio.dto';
 import { PortfolioService } from './portfolio.service';
-import { TransactionsService } from './transactions';
+import { TransactionsService } from './transactions.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('portfolio')

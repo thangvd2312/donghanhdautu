@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, Interval } from '@nestjs/schedule';
-import { AlertsService } from '../alerts/alerts.module';
+import { AlertsService } from '../alerts/alerts.service';
 import { BriefsService } from '../alerts/briefs.service';
 import { WeeklyBriefService } from '../alerts/weekly.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { EventsService } from '../events/events.service';
-import { MacroService } from '../macro/macro.module';
+import { MacroService } from '../macro/macro.service';
 import { MarketDataCache } from '../market/cache/market-data-cache';
 import { VN_TZ } from '../market/types';
-import { PlansService } from '../plans/plans.module';
+import { PlanReminderService } from '../plans/plan-reminder.service';
 import { JournalService } from '../journal/journal.service';
 import { HistoryService } from '../portfolio/history.service';
-import { PortfolioAlertsService } from '../portfolio-alerts/portfolio-alerts.module';
+import { PortfolioAlertsRunner } from '../portfolio-alerts/portfolio-alerts.runner';
 import { JobRunner } from '../runtime/job-runner';
 
 const MIN = 60_000;
@@ -26,12 +26,12 @@ const HOUR = 60 * MIN;
  * | briefs.morning          | 8:30 thứ 2-6            | BriefsService.morning (xếp hàng đợi) |
  * | briefs.closing          | 15:10 thứ 2-6           | BriefsService.closing (xếp hàng đợi) |
  * | briefs.weekly           | 9:00 thứ 7              | WeeklyBriefService.runAll            |
- * | plans.remindDue         | 8:00 hằng ngày          | PlansService.remindDue               |
+ * | plans.remindDue         | 8:00 hằng ngày          | PlanReminderService.remindDue        |
  * | journal.monthlyDigest   | 9:00 ngày 1 hằng tháng  | JournalService.monthlyDigest         |
  * | events.remind           | 8:00, 17:00 hằng ngày   | EventsService.remindDaily            |
  * | history.recordDaily     | 23:50 hằng ngày         | HistoryService.recordDaily           |
- * | portfolioAlerts.intraday| 9:00–14:30 mỗi 30 phút, thứ 2-6 | PortfolioAlertsService.runAll (tập trung, lệch tỷ trọng) |
- * | portfolioAlerts.daily   | 15:20 hằng ngày         | PortfolioAlertsService.runAll (cả giảm từ đỉnh) |
+ * | portfolioAlerts.intraday| 9:00–14:30 mỗi 30 phút, thứ 2-6 | PortfolioAlertsRunner.runAll (tập trung, lệch tỷ trọng) |
+ * | portfolioAlerts.daily   | 15:20 hằng ngày         | PortfolioAlertsRunner.runAll (cả giảm từ đỉnh) |
  * | analytics.purge         | 3:30 hằng ngày          | AnalyticsService.purge               |
  * | market-cache.purge      | phút 17 mỗi giờ         | MarketDataCache.purgeExpiredJob      |
  * | alerts.prices           | mỗi 60 giây             | AlertsService.checkPrices            |
@@ -44,11 +44,11 @@ export class ScheduledJobs {
     private readonly jobs: JobRunner,
     private readonly briefs: BriefsService,
     private readonly weekly: WeeklyBriefService,
-    private readonly plans: PlansService,
+    private readonly plans: PlanReminderService,
     private readonly journal: JournalService,
     private readonly events: EventsService,
     private readonly history: HistoryService,
-    private readonly portfolioAlerts: PortfolioAlertsService,
+    private readonly portfolioAlerts: PortfolioAlertsRunner,
     private readonly analytics: AnalyticsService,
     private readonly cache: MarketDataCache,
     private readonly alerts: AlertsService,

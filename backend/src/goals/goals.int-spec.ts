@@ -1,6 +1,6 @@
 import type { PortfolioService } from '../portfolio/portfolio.service';
 import { testPrisma, testUser } from '../test-utils/test-db';
-import { GoalsService } from './goals.module';
+import { GoalsService } from './goals.service';
 
 const prisma = testPrisma();
 const goals = new GoalsService(prisma, {} as PortfolioService);

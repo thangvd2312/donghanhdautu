@@ -11,9 +11,9 @@ import type { ReactNode } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import type { Plan } from '../lib/types'
 import AssetAvatar from './AssetAvatar'
-import PlanButton from './PlanButton'
+import PlanButton from './plans/PlanButton'
 import { ChangePill, QuickAction, ScrollRow } from './ui'
-import WatchButton from './WatchButton'
+import WatchButton from './watchlist/WatchButton'
 
 const ask = (text: string) => `/advisor?q=${encodeURIComponent(text)}`
 

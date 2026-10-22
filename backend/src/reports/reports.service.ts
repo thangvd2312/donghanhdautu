@@ -2,10 +2,11 @@ import { Injectable } from '@nestjs/common';
 import type { PortfolioReport } from '@dautu/contracts';
 import { vnDateKey } from '../market/types';
 import { HistoryService } from '../portfolio/history.service';
-import { TransactionsService } from '../portfolio/transactions';
-import { PrismaService } from '../prisma/prisma.module';
-import { buildReport, periodHasData, resolvePeriod } from './report';
-import type { ReportQueryDto } from './reports.dto';
+import { TransactionsService } from '../portfolio/transactions.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { buildReport } from './report-assembly';
+import { periodHasData, resolvePeriod } from './report-period';
+import type { ReportQueryDto } from './dto/report-query.dto';
 
 /** Báo cáo danh mục theo kỳ: chỉ đọc sổ và lịch sử, không ghi gì, không tạo link công khai */
 @Injectable()

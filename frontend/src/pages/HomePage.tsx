@@ -10,40 +10,18 @@ import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { NewsRow, ReviewList, TodayBlock } from '../components/HomeBlocks'
+import { NewsRow, ReviewList, TodayBlock } from '../components/home/HomeBlocks'
 import { Panel } from '../components/ui'
-import UpcomingEvents from '../components/UpcomingEvents'
-import WatchlistPanel from '../components/WatchlistPanel'
-import { api } from '../lib/api'
+import UpcomingEvents from '../components/events/UpcomingEvents'
+import WatchlistPanel from '../components/watchlist/WatchlistPanel'
+import { getHomeFeed, getHomeReview, getHomeToday } from '../api/home'
+import { useResource } from '../hooks/useResource'
 import { useAuth } from '../lib/auth-context'
 import { timeAgo } from '../lib/format'
-import type { HomeFeed, HomeToday, ReviewPoint } from '../lib/types'
+import type { HomeFeed } from '../lib/types'
 
 const ask = (text: string) => `/advisor?q=${encodeURIComponent(text)}`
-
-/** Mỗi khối tự tải dữ liệu của mình: một khối lỗi không làm hỏng cả trang */
-function useBlock<T>(path: string, refreshMs: number) {
-  const [data, setData] = useState<T | null>(null)
-  const [error, setError] = useState('')
-  const load = useCallback(
-    () =>
-      api<T>(path)
-        .then((d) => {
-          setData(d)
-          setError('')
-        })
-        .catch((e: Error) => setError(e.message)),
-    [path],
-  )
-  useEffect(() => {
-    void load()
-    const t = setInterval(() => void load(), refreshMs)
-    return () => clearInterval(t)
-  }, [load, refreshMs])
-  return { data, error, reload: load }
-}
 
 function BlockError({ what, onRetry }: { what: string; onRetry: () => void }) {
   return (
@@ -63,9 +41,9 @@ function BlockError({ what, onRetry }: { what: string; onRetry: () => void }) {
 
 export default function HomePage() {
   const { me } = useAuth()
-  const today = useBlock<HomeToday>('/home/today', 15000)
-  const review = useBlock<ReviewPoint[]>('/home/review', 60000)
-  const feed = useBlock<HomeFeed>('/home/feed', 5 * 60000)
+  const today = useResource(getHomeToday, { refreshMs: 15000 })
+  const review = useResource(getHomeReview, { refreshMs: 60000 })
+  const feed = useResource(getHomeFeed, { refreshMs: 5 * 60000 })
   const dateLabel = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })
 
   return (

@@ -8,7 +8,7 @@ export type WeekSummary = NonNullable<Awaited<ReturnType<HistoryService['weekSum
 
 const TYPE_LABEL: Record<string, string> = { stock: 'Cổ phiếu', crypto: 'Crypto', gold: 'Vàng', cash: 'Tiền mặt' };
 
-export function money(v: number) {
+function money(v: number) {
   const a = Math.abs(v);
   const sign = v < 0 ? '−' : '';
   if (a >= 1e9) return `${sign}${(a / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tỷ`;

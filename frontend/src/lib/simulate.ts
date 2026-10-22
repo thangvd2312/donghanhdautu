@@ -1,16 +1,16 @@
 import { fmtNum, fmtPct, fmtVndShort } from './format'
-import type { SimGroupKey, SimShocks } from './types'
+import type { HoldingRow, SimGroupKey, SimShocks } from './types'
 
 /** Biên % theo API */
-export const SHOCK_MIN = -90
-export const SHOCK_MAX = 200
+const SHOCK_MIN = -90
+const SHOCK_MAX = 200
 /** Thanh trượt chỉ kéo trong khoảng thường dùng; muốn xa hơn thì gõ số */
 export const SLIDER_MIN = -50
 export const SLIDER_MAX = 50
 export const QUICK_PCT = [-20, -10, 0, 10] as const
 
 export type GroupShockKey = 'stock' | 'crypto' | 'gold' | 'fx'
-export const GROUP_KEYS: GroupShockKey[] = ['stock', 'crypto', 'gold', 'fx']
+const GROUP_KEYS: GroupShockKey[] = ['stock', 'crypto', 'gold', 'fx']
 
 export interface ShockState {
   stock: number
@@ -21,7 +21,7 @@ export interface ShockState {
 }
 export const EMPTY_SHOCKS: ShockState = { stock: 0, crypto: 0, gold: 0, fx: 0, symbols: {} }
 
-export const GROUP_PHRASE: Record<GroupShockKey, string> = {
+const GROUP_PHRASE: Record<GroupShockKey, string> = {
   stock: 'cổ phiếu',
   crypto: 'crypto (giá USDT)',
   gold: 'vàng',
@@ -109,4 +109,21 @@ export function describeScenario(s: ShockState, delta: { value: number; pct: num
   const pct = delta.pct === null ? '' : ` (${fmtPct(delta.pct, 1)})`
   const out = rounded === 0 ? 'gần như không đổi' : `${rounded < 0 ? 'giảm' : 'tăng'} khoảng ${fmtVndShort(Math.abs(rounded))}${pct}`
   return `Nếu ${cond}, tổng tài sản của bạn ${out}.`
+}
+
+/** Nhóm tài sản người dùng thật sự đang giữ: quyết định các dòng điều chỉnh hiện ra */
+export function heldGroups(holdings: HoldingRow[] | undefined) {
+  const hs = holdings ?? []
+  const stock = hs.some((h) => h.assetType === 'stock')
+  const crypto = hs.some((h) => h.assetType === 'crypto')
+  const gold = hs.some((h) => h.assetType === 'gold')
+  const usdtCash = hs.some((h) => h.assetType === 'cash' && h.symbol.toUpperCase() === 'USDT')
+  return { stock, crypto, gold, fx: crypto || usdtCash, usdt: crypto || usdtCash, any: hs.length > 0 }
+}
+
+/** Các mã cổ phiếu / crypto đang giữ (mỗi mã một lần) để đặt mức giá riêng */
+export function heldSymbols(holdings: HoldingRow[] | undefined) {
+  const seen = new Map<string, string>()
+  for (const h of holdings ?? []) if ((h.assetType === 'stock' || h.assetType === 'crypto') && !seen.has(h.symbol)) seen.set(h.symbol, h.assetType)
+  return Array.from(seen, ([symbol, assetType]) => ({ symbol, assetType }))
 }

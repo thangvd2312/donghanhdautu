@@ -2,16 +2,12 @@
 import type {
   ScreenCriterion as Criterion,
   ScreenCriterionKey as CriterionKey,
-  ScreenGroup as CriterionGroup,
   ScreenOption as Option,
-  ScreenPreset as Preset,
-  ScreenUnit as CriterionUnit,
 } from '@dautu/contracts';
 
-export type { Criterion, CriterionGroup, CriterionKey, CriterionUnit, Option, Preset };
-
+export type { CriterionKey, Option };
 /** Cách một tiêu chí khoảng được hỏi ở Vietcap và đọc lại từ kết quả */
-export interface VietcapSource {
+interface VietcapSource {
   /** `name` trong phần tử filter */
   name: string;
   /** Nhân giá trị người dùng (đơn vị của tiêu chí) với hệ số này để ra đơn vị thô của Vietcap (VND) */

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Ctx } from './auth-context'
-import { api, getToken, post, setToken } from './api'
-import type { AuthToken, Me } from './types'
+import { getMe, login as apiLogin, loginWithGoogle as apiLoginWithGoogle, register as apiRegister } from '../api/auth'
+import { getToken, setToken } from '../api/client'
+import type { Me } from './types'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null)
@@ -14,7 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     try {
-      setMe(await api<Me>('/auth/me'))
+      setMe(await getMe())
     } catch {
       setMe(null)
     } finally {
@@ -27,19 +28,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   const login = async (email: string, password: string) => {
-    const { token } = await post<AuthToken>('/auth/login', { email, password })
+    const { token } = await apiLogin(email, password)
     setToken(token)
     await refresh()
   }
 
   const register = async (name: string, email: string, password: string) => {
-    const { token } = await post<AuthToken>('/auth/register', { name, email, password })
+    const { token } = await apiRegister(name, email, password)
     setToken(token)
     await refresh()
   }
 
   const loginWithGoogle = async (credential: string) => {
-    const { token } = await post<AuthToken>('/auth/google', { credential })
+    const { token } = await apiLoginWithGoogle(credential)
     setToken(token)
     await refresh()
   }

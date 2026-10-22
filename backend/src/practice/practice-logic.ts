@@ -8,11 +8,11 @@ export type { PracticeAssetType, PracticeSide };
 
 export const START_CASH_OPTIONS = [50_000_000, 100_000_000, 500_000_000, 1_000_000_000] as const;
 
-export const STOCK_LOT = 100;
-export const STOCK_FEE_RATE = 0.0015;
-export const STOCK_SELL_TAX_RATE = 0.001;
-export const CRYPTO_FEE_RATE = 0.001;
-export const CRYPTO_MAX_DECIMALS = 6;
+const STOCK_LOT = 100;
+const STOCK_FEE_RATE = 0.0015;
+const STOCK_SELL_TAX_RATE = 0.001;
+const CRYPTO_FEE_RATE = 0.001;
+const CRYPTO_MAX_DECIMALS = 6;
 
 /** Quy tắc khớp lệnh, hiển thị nguyên văn cho người dùng */
 export const PRACTICE_RULES: string[] = [
@@ -33,7 +33,7 @@ export interface OrderInput {
   quantity: number;
 }
 
-export interface FeeBreakdown {
+interface FeeBreakdown {
   gross: number;
   fee: number;
   tax: number;
@@ -114,7 +114,7 @@ export function assertCanSell(held: number, quantity: number): void {
   }
 }
 
-export interface LedgerResult {
+interface LedgerResult {
   positions: Position[];
   /** Lãi/lỗ đã chốt của từng lệnh bán, theo thứ tự đầu vào (null với lệnh mua) */
   realizedPnl: (number | null)[];
@@ -150,7 +150,7 @@ export function computePositions(trades: TradeRecord[]): LedgerResult {
   return { positions, realizedPnl };
 }
 
-export type PricedPosition = PracticePosition;
+type PricedPosition = PracticePosition;
 
 /** Định giá vị thế. Thiếu giá: tạm tính theo giá vốn (lãi/lỗ 0) và đánh dấu trạng thái, không đoán giá */
 export function pricePositions(
@@ -192,7 +192,7 @@ export function computeTotals(
   return { value, pnl, pnlPct: startCash > 0 ? (pnl / startCash) * 100 : 0, tradeCount, feesPaid };
 }
 
-export function fmtVnd(n: number) {
+function fmtVnd(n: number) {
   return `${Math.round(n).toLocaleString('vi-VN')} ₫`;
 }
 

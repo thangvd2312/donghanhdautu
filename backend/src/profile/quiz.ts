@@ -2,13 +2,13 @@
  * Bộ câu hỏi khảo sát khẩu vị rủi ro. Mỗi lựa chọn có điểm 0-4 (trừ các câu chỉ để phân loại).
  * Câu hỏi được dùng chung cho frontend (render) và backend (chấm điểm).
  */
-export interface QuizOption {
+interface QuizOption {
   value: string;
   label: string;
   score?: number;
 }
 
-export interface QuizQuestion {
+interface QuizQuestion {
   id: string;
   question: string;
   hint?: string;

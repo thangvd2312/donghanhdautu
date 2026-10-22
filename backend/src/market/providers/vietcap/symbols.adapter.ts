@@ -9,7 +9,7 @@ import { VietcapHttpClient } from './vietcap-http.client';
 const MAP_TTL_MS = 3600_000;
 
 /** Một mã niêm yết; cũng là phần tử của GET /market/search */
-export type SymbolInfo = StockHit;
+type SymbolInfo = StockHit;
 
 /** Danh mục mã niêm yết (HSX, HNX, UPCOM) và các nhóm chỉ số như VN30 */
 @Injectable()

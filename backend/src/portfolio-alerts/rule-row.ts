@@ -1,7 +1,8 @@
 /** Dòng PortfolioAlertRule (DB) → cấu hình đánh giá; dùng chung cho service và trang Hôm nay */
 import type { Prisma, PortfolioAlertRule as RuleRow } from '@prisma/client';
 import type { GroupTargets, PortfolioAlertCheck, PortfolioAlertKind, PortfolioAlertStatus } from '@dautu/contracts';
-import { defaultRule, normalizeTargets, RuleConfig } from './rules';
+import { defaultRule, normalizeTargets } from './rule-config';
+import type { RuleConfig } from './rule-config';
 
 export function toConfig(kind: PortfolioAlertKind, row: RuleRow | null | undefined): RuleConfig {
   if (!row) return defaultRule(kind);

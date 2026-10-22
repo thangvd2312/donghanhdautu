@@ -10,8 +10,7 @@ export interface Evidence {
   content: string;
 }
 
-export type { Verification, VerificationIssue };
-
+export type { Verification };
 const SCHEMA = {
   type: 'object',
   properties: {

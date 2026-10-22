@@ -16,6 +16,5 @@ export type {
 export { safe } from './safe';
 export { VietcapStatementsAdapter } from './statements.adapter';
 export { VietcapSymbolsAdapter } from './symbols.adapter';
-export type { SymbolInfo } from './symbols.adapter';
 export { VietcapModule } from './vietcap.module';
 export { DEFAULT_HTTP_OPTIONS } from './vietcap.config';

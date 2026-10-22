@@ -1,15 +1,13 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import type { WorkerStatus } from '@dautu/contracts';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 
-export const HEARTBEAT_INTERVAL_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 30_000;
 /** Ba nhịp liên tiếp không ghi được thì coi worker đã dừng */
 export const HEARTBEAT_STALE_MS = 90_000;
 export const WORKER_NAME = process.env.WORKER_NAME || 'worker';
 /** Tên dòng nhịp tim (mặc định `worker`); chỉ test cần đổi để không đụng nhau */
-export const HEARTBEAT_NAME = Symbol('HEARTBEAT_NAME');
-
-export type { WorkerStatus };
+const HEARTBEAT_NAME = Symbol('HEARTBEAT_NAME');
 
 /**
  * Sau deploy: worker MỚI đã chạy chưa? Phải khởi động sau `sinceMs` (thời điểm bắt đầu reload) và nhịp còn mới —

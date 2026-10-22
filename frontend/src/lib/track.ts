@@ -1,4 +1,5 @@
-import { getToken } from './api'
+import { postClientEvent } from '../api/analytics'
+import { getToken } from '../api/client'
 import type { ClientEvent } from './types'
 
 const ANON_KEY = 'dautu_anon_id'
@@ -19,11 +20,5 @@ function anonId() {
 
 /** Gửi một sự kiện đo hành vi; lỗi mạng bỏ qua, không ảnh hưởng thao tác của người dùng */
 export function track(name: ClientEvent, props?: Record<string, string | number | boolean>) {
-  const token = getToken()
-  void fetch('/api/events', {
-    method: 'POST',
-    keepalive: true,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ name, props, anonId: token ? undefined : anonId() }),
-  }).catch(() => {})
+  postClientEvent({ name, props, anonId: getToken() ? undefined : anonId() })
 }

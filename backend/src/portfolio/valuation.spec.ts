@@ -1,5 +1,5 @@
 import type { PriceInfo } from '../market/freshness';
-import type { FxInfo } from '../market/market.service';
+import type { FxInfo } from '../market/price-info';
 import { HoldingInput, valuePortfolio } from './valuation';
 
 const USDT: FxInfo = { rate: 26000, source: 'Binance P2P', status: 'fresh', asOf: '2026-10-20T03:00:00.000Z' };

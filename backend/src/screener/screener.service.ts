@@ -4,7 +4,7 @@ import { dividendHistory } from '../market/dividends';
 import { VietcapEventsAdapter, VietcapScreeningAdapter } from '../market/providers/vietcap';
 import type { CorporateEvent, VcScreenCriterion, VcScreenPage, VcScreenRow } from '../market/providers/vietcap';
 import { vnDateKey } from '../market/types';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { CRITERIA, EXCHANGES, FALLBACK_SECTORS, Option } from './screener.catalog';
 import {
   Filter,
@@ -23,11 +23,11 @@ import {
 } from './screener.logic';
 
 /** Số mã tối đa quét khi phải lọc theo tỷ suất cổ tức ở server (nguồn không lọc được) */
-export const DIVIDEND_SCAN_CAP = 300;
+const DIVIDEND_SCAN_CAP = 300;
 const SOURCE_PAGE_SIZE = 100;
 const SOURCE_DOWN = 'Nguồn dữ liệu lọc cổ phiếu (Vietcap) đang không phản hồi, bạn thử lại sau ít phút nhé';
 
-export interface RunRequest {
+interface RunRequest {
   filters?: unknown;
   sort?: unknown;
   page?: number;

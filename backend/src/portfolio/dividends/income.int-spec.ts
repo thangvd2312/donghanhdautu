@@ -4,7 +4,7 @@ import { vnDateKey } from '../../market/types';
 import { addDays } from '../../plans/plan-rules';
 import { fakeMarket, testPrisma, testUser } from '../../test-utils/test-db';
 import { CorporateActionsService } from './corporate-actions.service';
-import { TransactionsService } from '../transactions';
+import { TransactionsService } from '../transactions.service';
 import type { ExpectedItem, ReceivedItem } from './income';
 
 const prisma = testPrisma();

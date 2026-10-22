@@ -4,14 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import { isIP } from 'net';
 import { JSDOM, VirtualConsole } from 'jsdom';
 
-export interface SearchHit {
+interface SearchHit {
   title: string;
   url: string;
   snippet: string;
   date: string | null;
 }
 
-export interface PageContent {
+interface PageContent {
   url: string;
   title: string;
   siteName: string | null;

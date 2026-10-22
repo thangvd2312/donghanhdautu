@@ -9,13 +9,14 @@ import { NestFactory } from '@nestjs/core';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { AdvisorModule } from '../advisor/advisor.module';
-import { AiModule } from '../ai/ai-usage.service';
+import { AiModule } from '../ai/ai.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { AdvisorEvent, AdvisorService } from '../advisor/advisor.service';
 import { classifySource } from '../advisor/source-tiers';
 import type { Verification } from '../advisor/verifier.service';
 import { LlmService } from '../alerts/llm.service';
-import { PrismaModule, PrismaService } from '../prisma/prisma.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { scoreQuiz } from '../profile/quiz';
 import { EVAL_CASES, EvalCase } from './cases';
 

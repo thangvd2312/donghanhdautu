@@ -1,10 +1,11 @@
 import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import type { PortfolioReport } from '@dautu/contracts';
-import { CurrentUser, JwtAuthGuard } from '../auth/auth.module';
-import type { AuthUser } from '../auth/auth.module';
-import { csvFileName, toCsv } from './report';
-import { ReportCsvQueryDto, ReportQueryDto } from './reports.dto';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { AuthUser } from '../auth/current-user.decorator';
+import { csvFileName, toCsv } from './report-csv';
+import { ReportCsvQueryDto, ReportQueryDto } from './dto/report-query.dto';
 import { ReportsService } from './reports.service';
 
 @UseGuards(JwtAuthGuard)

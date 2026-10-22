@@ -31,7 +31,7 @@ const SHORT: Record<string, string> = {
   grossMargin: 'Biên lãi gộp',
   dividendYield: 'Tỷ suất cổ tức',
 }
-export const shortLabel = (key: string, crit?: ScreenCriterion) => SHORT[key] ?? crit?.label ?? key
+const shortLabel = (key: string, crit?: ScreenCriterion) => SHORT[key] ?? crit?.label ?? key
 
 export const SORT_OPTIONS: { key: ScreenCriterionKey; dir: 'asc' | 'desc'; label: string }[] = [
   { key: 'marketCap', dir: 'desc', label: 'Vốn hoá: lớn đến nhỏ' },

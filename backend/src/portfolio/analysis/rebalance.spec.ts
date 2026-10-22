@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { rebalance } from './rebalance';
-import type { RebalanceContext, RebalanceHolding, RebalanceRequest, RebalanceResult } from './rebalance';
+import type { RebalanceContext, RebalanceHolding, RebalanceRequest, RebalanceResult } from './rebalance.types';
 
 const NO_FEES = { stockBuyPct: 0, stockSellPct: 0, stockSellTaxPct: 0, cryptoPct: 0 };
 

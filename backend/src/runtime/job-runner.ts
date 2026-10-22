@@ -1,5 +1,5 @@
 import { BeforeApplicationShutdown, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Khoá loại trừ giữa các tiến trình. `tryRun` chạy `fn` khi giành được khoá `key`, ngược lại trả `acquired: false`
@@ -43,16 +43,16 @@ export class NoAdvisoryLock implements AdvisoryLock {
   }
 }
 
-export type JobOutcome<T> = { status: 'ran'; value: T } | { status: 'skipped'; reason: 'locked' | 'shutting-down' };
+type JobOutcome<T> = { status: 'ran'; value: T } | { status: 'skipped'; reason: 'locked' | 'shutting-down' };
 
-export interface JobOptions {
+interface JobOptions {
   /** Hạn tối đa giữ khoá (mặc định 30 phút) */
   timeoutMs?: number;
   /** Việc chạy dày (mỗi phút hoặc long polling): lượt xong / lượt bị bỏ vì khoá chỉ ghi ở mức debug */
   quiet?: boolean;
 }
 
-export const DEFAULT_JOB_TIMEOUT_MS = 30 * 60_000;
+const DEFAULT_JOB_TIMEOUT_MS = 30 * 60_000;
 const DEFAULT_SHUTDOWN_GRACE_MS = 25_000;
 
 /**

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NewsTag } from '@prisma/client';
 import { NEWS_TAG_PROMPT } from '../advisor/prompt';
-import { NewsItem, NewsService } from '../news/news.module';
-import { PrismaService } from '../prisma/prisma.module';
+import { NewsItem, NewsService } from '../news/news.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { mentionsCompany } from './aliases';
 import { LlmService } from './llm.service';
 

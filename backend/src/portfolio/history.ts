@@ -219,7 +219,7 @@ export function periodPerformance(points: HistoryPoint[], from: string, firstTxD
 }
 
 /** Kỳ ngắn hơn số ngày này không quy ra lợi suất năm (XIRR) */
-export const MIN_XIRR_DAYS = 90;
+const MIN_XIRR_DAYS = 90;
 
 type FlowPoint = { date: string; value: number; netContributions: number; preTrackingGain: number };
 
@@ -280,7 +280,7 @@ export function xirr(flows: { t: number; amount: number }[]): number | null {
   return ((lo + hi) / 2) * 100;
 }
 
-export interface BenchmarkInput {
+interface BenchmarkInput {
   name: string;
   /** Giá đóng cửa của chỉ số theo ngày (YYYY-MM-DD → điểm) */
   closes: Map<string, number>;

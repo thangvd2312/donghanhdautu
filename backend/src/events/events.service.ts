@@ -4,7 +4,7 @@ import { NotifierService } from '../alerts/notifier.service';
 import { vnDateKey } from '../market/types';
 import { VietcapEventsAdapter } from '../market/providers/vietcap';
 import type { MarketEvents } from '../market/providers/vietcap';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   buildCalendar,
   DEFAULT_REMINDER_SETTINGS,
@@ -16,7 +16,7 @@ import {
 } from './calendar';
 import type { CalendarEvent, EventRange, ReminderSettings } from './calendar';
 
-export type ReminderPatch = ReminderSettingsPatch;
+type ReminderPatch = ReminderSettingsPatch;
 
 interface UserSymbols {
   holdings: Map<string, number>;

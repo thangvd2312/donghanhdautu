@@ -12,19 +12,20 @@ import TableRow from '@mui/material/TableRow'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import PriceAlertDialog from '../components/PriceAlertDialog'
+import PriceAlertDialog from '../components/alerts/PriceAlertDialog'
 import AssetHero from '../components/AssetHero'
-import DividendPanel from '../components/DividendPanel'
+import DividendPanel from '../components/stock/DividendPanel'
 import PriceChart from '../components/PriceChart'
-import StockFundamentals, { StatementTable } from '../components/StockFundamentals'
+import { StatementTable } from '../components/stock/FinancialStatements'
+import StockFundamentals from '../components/stock/StockFundamentals'
 import TechnicalsPanel from '../components/TechnicalsPanel'
 import { KV, Panel } from '../components/ui'
-import { api } from '../lib/api'
+import { getStock, getStockHistory } from '../api/market'
+import { useAssetDetail } from '../hooks/useAssetDetail'
 import { changeColor, fmtNum, fmtPct, fmtStockPrice, fmtVnd, stockPriceColor } from '../lib/format'
 import { useMarket } from '../lib/market-context'
-import type { Candle, StockDetail } from '../lib/types'
 
 const RATIO_ROWS: [string, string, 'x' | '%'][] = [
   ['pe', 'P/E', 'x'],
@@ -49,18 +50,11 @@ const HIGHLIGHT = /Lợi nhuận gộp|Doanh thu thuần|Cổ đông của Công
 export default function StockPage() {
   const { symbol = '' } = useParams()
   const { snapshot } = useMarket()
-  const [d, setD] = useState<StockDetail | null>(null)
-  const [candles, setCandles] = useState<Candle[]>([])
-  const [error, setError] = useState('')
+  const loadDetail = useCallback(() => getStock(symbol), [symbol])
+  const loadCandles = useCallback(() => getStockHistory(symbol), [symbol])
+  const { detail: d, candles, error } = useAssetDetail(loadDetail, loadCandles)
   const [incomeView, setIncomeView] = useState<'years' | 'quarters'>('years')
   const [alertOpen, setAlertOpen] = useState(false)
-
-  useEffect(() => {
-    setD(null)
-    setError('')
-    api<StockDetail>(`/market/stocks/${symbol}`).then(setD).catch((e: Error) => setError(e.message))
-    api<Candle[]>(`/market/stocks/${symbol}/history?days=400`).then(setCandles).catch(() => setCandles([]))
-  }, [symbol])
 
   if (error) return <Alert severity="error">{error}</Alert>
   if (!d)

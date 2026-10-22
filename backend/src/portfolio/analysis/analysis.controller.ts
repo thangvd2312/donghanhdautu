@@ -1,10 +1,11 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import type { RebalanceResponse, SimulateResponse } from '@dautu/contracts';
-import { CurrentUser, JwtAuthGuard } from '../../auth/auth.module';
-import type { AuthUser } from '../../auth/auth.module';
+import { CurrentUser } from '../../auth/current-user.decorator';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import type { AuthUser } from '../../auth/current-user.decorator';
 import { AnalysisService } from './analysis.service';
-import { RebalanceDto } from './rebalance.dto';
-import { SimulateDto } from './simulate.dto';
+import { RebalanceDto } from './dto/rebalance.dto';
+import { SimulateDto } from './dto/simulate.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('portfolio')

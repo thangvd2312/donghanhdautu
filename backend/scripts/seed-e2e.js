@@ -17,8 +17,8 @@ if (!process.env.JWT_SECRET) {
 }
 
 const dist = (p) => require(path.join(__dirname, '../dist', p));
-const { PrismaService } = dist('prisma/prisma.module');
-const { TransactionsService } = dist('portfolio/transactions');
+const { PrismaService } = dist('prisma/prisma.service');
+const { TransactionsService } = dist('portfolio/transactions.service');
 const { scoreQuiz } = dist('profile/quiz');
 const { vnDateKey } = dist('market/types');
 

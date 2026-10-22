@@ -1,5 +1,5 @@
 import { MarketDataCache } from '../market/cache/market-data-cache';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 
 /** Cache giả không nhớ gì: luôn gọi nguồn. Cho test adapter không cần kiểm tra việc cache */
 export function passthroughCache(): MarketDataCache {

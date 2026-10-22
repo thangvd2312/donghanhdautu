@@ -1,17 +1,17 @@
 import { BeforeApplicationShutdown, Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { BriefJob, Prisma } from '@prisma/client';
 import { AiUsageService } from '../ai/ai-usage.service';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { shutdownGraceMs, waitWhileBusy } from '../runtime/wait';
 
-export type BriefJobKind = 'morning' | 'closing' | 'weekly';
+type BriefJobKind = 'morning' | 'closing' | 'weekly';
 /** Trả về khác null khi đã gửi; null khi không có gì để gửi hoặc kỳ này đã có bản tin */
-export type BriefHandler = (userId: string, day: string) => Promise<unknown>;
+type BriefHandler = (userId: string, day: string) => Promise<unknown>;
 
 const num = (v: string | undefined, d: number) => (v !== undefined && v !== '' && Number.isFinite(+v) ? +v : d);
 
 /** Số việc chạy cùng lúc trong một tiến trình (mỗi việc gọi AI vài chục giây) */
-export const BRIEF_CONCURRENCY = num(process.env.BRIEF_CONCURRENCY, 3);
+const BRIEF_CONCURRENCY = num(process.env.BRIEF_CONCURRENCY, 3);
 /** Việc "running" lâu hơn mức này coi như tiến trình đã chết, đưa lại vào hàng đợi */
 export const STALE_JOB_MS = 15 * 60_000;
 /** Bản tin quá hạn thì bỏ, không gửi muộn: sáng/chiều sau 6 giờ, tuần sau 2 ngày */

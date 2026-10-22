@@ -15,7 +15,7 @@ export interface TargetRowInfo {
 export const rowKey = (assetType: string, symbol: string) => `${assetType}:${symbol}`
 export const CASH_KEY = rowKey('cash', 'VND')
 export const MAX_ROWS = 20
-export const MAX_NEW_MONEY = 1e12
+const MAX_NEW_MONEY = 1e12
 
 /** Hạt giống từ danh mục: mỗi tài sản đang giữ một dòng + luôn có dòng tiền mặt VND (nơi nhận phần còn lại) */
 export function buildRows(p: Portfolio | null | undefined, added: string[]): TargetRowInfo[] {
@@ -142,7 +142,7 @@ export function buildRequest(
 }
 
 /** Số lượng: cổ phiếu nguyên, coin tới 6 số lẻ, vàng theo lượng (kèm chỉ: 1 lượng = 10 chỉ) */
-export function quantityText(a: RebalanceAction): string {
+function quantityText(a: RebalanceAction): string {
   if (a.unit === 'cp') return `${fmtNum(a.quantity)}`
   if (a.unit === 'coin') return fmtNum(a.quantity, a.quantity >= 1 ? 4 : 6).replace(/,?0+$/, '')
   const chi = Math.round(a.quantity * 10 * 10) / 10

@@ -2,7 +2,7 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import type { MarketService } from '../market/market.service';
 import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
 import { ImportService } from './import.service';
-import { TransactionsService } from './transactions';
+import { TransactionsService } from './transactions.service';
 
 const prisma = testPrisma();
 const market = fakeMarket() as unknown as MarketService;

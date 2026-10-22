@@ -3,10 +3,11 @@ import type { CorporateActionsResponse, IncomeResponse, OkResponse } from '@daut
 import { vnDateKey } from '../../market/types';
 import { VietcapEventsAdapter } from '../../market/providers/vietcap';
 import type { CorporateEvent } from '../../market/providers/vietcap';
-import { PrismaService } from '../../prisma/prisma.module';
+import { PrismaService } from '../../prisma/prisma.service';
 import { missingActions } from './corporate-actions';
 import { buildIncome, clampPast } from './income';
-import { toLedgerTx, TransactionsService } from '../transactions';
+import { toLedgerTx } from '../transactions.presenter';
+import { TransactionsService } from '../transactions.service';
 
 /** Gợi ý ghi sự kiện quyền còn thiếu vào sổ, theo dữ liệu sự kiện của Vietcap */
 @Injectable()

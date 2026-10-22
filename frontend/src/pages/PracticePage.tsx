@@ -1,5 +1,4 @@
 import MoreVert from '@mui/icons-material/MoreVert'
-import SchoolOutlined from '@mui/icons-material/SchoolOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -14,41 +13,20 @@ import Stack from '@mui/material/Stack'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useState } from 'react'
-import PracticeOrderSheet, { type OrderPreset } from '../components/PracticeOrderSheet'
-import { PositionCard, RulesPanel, StartCashPicker, SummaryCard, TradeRow, VirtualBadge } from '../components/PracticeParts'
-import Sheet from '../components/Sheet'
-import { ApiError, api, post } from '../lib/api'
+import { useEffect, useState } from 'react'
+import PracticeOrderSheet, { type OrderPreset } from '../components/practice/PracticeOrderSheet'
+import { PositionCard, RulesPanel, SummaryCard, VirtualBadge } from '../components/practice/PracticeParts'
+import PracticeIntro from '../components/practice/PracticeIntro'
+import ResetSheet from '../components/practice/ResetSheet'
+import TradeHistory from '../components/practice/TradeHistory'
+import { usePracticeAccount } from '../hooks/usePracticeAccount'
 import { fmtVnd } from '../lib/format'
-import {
-  baseSymbol,
-  DEFAULT_START_CASH,
-  fmtQty,
-  type PracticeResponse,
-  type PracticeState,
-  type PracticeTrade,
-} from '../lib/practice'
-import { virtualColor } from '../lib/practiceStyle'
-import type { PracticeTradesPage } from '../lib/types'
+import { baseSymbol, FALLBACK_RULES, fmtQty } from '../lib/practice'
 import { useIsMobile } from '../lib/useIsMobile'
-
-const FALLBACK_RULES = [
-  'Lệnh thị trường, khớp ngay toàn bộ theo giá hiện tại của app. Không mô phỏng trượt giá, khối lượng khớp, giá trần/sàn hay T+2.',
-  'Cổ phiếu: lô 100 cp (có thể bật lô lẻ), phí 0,15% mỗi chiều, thuế bán 0,1%. Crypto: phí 0,1%, tối đa 6 số lẻ.',
-  'Không vay ký quỹ: mua cần đủ tiền (gồm phí), bán không quá số đang giữ. Thiếu giá hoặc giá cũ thì lệnh bị từ chối.',
-]
-
-const INTRO_POINTS = [
-  'Tài khoản ảo hoàn toàn riêng: không lẫn vào Danh mục, mục tiêu hay thống kê thật của bạn.',
-  'Tập đặt lệnh, xem phí và thuế ảnh hưởng thế nào, để quen trước khi dùng tiền thật.',
-  'Kết quả chỉ để học: giá khớp đơn giản hơn thị trường thật nên đừng xem đó là dự báo lãi lỗ.',
-]
 
 export default function PracticePage() {
   const mobile = useIsMobile()
-  const [state, setState] = useState<PracticeState | null>(null)
-  const [started, setStarted] = useState<boolean | null>(null)
-  const [error, setError] = useState('')
+  const { state, started, error, reload: load, apply } = usePracticeAccount()
   const [tab, setTab] = useState<'pos' | 'hist'>('pos')
   const [order, setOrder] = useState<OrderPreset | null>(null)
   const [resetOpen, setResetOpen] = useState(false)
@@ -58,22 +36,6 @@ export default function PracticePage() {
   useEffect(() => {
     document.title = 'Luyện tập · Đồng Hành Đầu Tư'
   }, [])
-
-  const load = useCallback(() => {
-    setError('')
-    api<PracticeResponse>('/practice')
-      .then((r) => {
-        if (r.account) setState(r)
-        setStarted(!!r.account)
-      })
-      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Chưa tải được tài khoản luyện tập.'))
-  }, [])
-  useEffect(load, [load])
-
-  const apply = (s: PracticeState) => {
-    setState(s)
-    setStarted(true)
-  }
 
   return (
     <Stack spacing={2} sx={{ maxWidth: 760, mx: 'auto', pb: 2 }}>
@@ -121,7 +83,7 @@ export default function PracticePage() {
           <Skeleton variant="rounded" height={120} />
         </Stack>
       )}
-      {started === false && <Intro onStarted={apply} />}
+      {started === false && <PracticeIntro onStarted={apply} />}
       {state && (
         <>
           <SummaryCard state={state} onBuy={() => setOrder({ side: 'buy' })} />
@@ -147,7 +109,7 @@ export default function PracticePage() {
                 </Typography>
               )
             ) : (
-              <History key={state.totals.tradeCount + state.account.startedAt} />
+              <TradeHistory key={state.totals.tradeCount + state.account.startedAt} />
             )}
           </Paper>
           <RulesPanel rules={state.rules.length ? state.rules : FALLBACK_RULES} />
@@ -194,168 +156,6 @@ export default function PracticePage() {
         anchorOrigin={{ vertical: 'bottom', horizontal: mobile ? 'center' : 'left' }}
         sx={{ bottom: { xs: 'calc(72px + env(safe-area-inset-bottom))', md: 24 } }}
       />
-    </Stack>
-  )
-}
-
-/** Chưa mở tài khoản: giải thích, quy tắc và chọn vốn ban đầu */
-function Intro({ onStarted }: { onStarted: (s: PracticeState) => void }) {
-  const [cash, setCash] = useState(DEFAULT_START_CASH)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const start = async () => {
-    setBusy(true)
-    setError('')
-    try {
-      onStarted(await post<PracticeState>('/practice/start', { startCash: cash }))
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Chưa mở được tài khoản luyện tập.')
-    } finally {
-      setBusy(false)
-    }
-  }
-  return (
-    <Stack spacing={2} data-testid="practice-intro">
-      <Paper sx={{ p: 2.5, borderStyle: 'dashed', borderWidth: 1.5, borderColor: 'color-mix(in srgb, #7c3aed 55%, transparent)' }}>
-        <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-            <SchoolOutlined sx={virtualColor} aria-hidden />
-            <Typography variant="h6" component="h2">
-              Tập mua bán với tiền ảo
-            </Typography>
-          </Stack>
-          <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.75, lineHeight: 1.5 } }}>
-            {INTRO_POINTS.map((t) => (
-              <li key={t}>
-                <Typography variant="body2" component="span">
-                  {t}
-                </Typography>
-              </li>
-            ))}
-          </Box>
-          <Typography variant="subtitle2" component="h3" sx={{ pt: 0.5 }}>
-            Chọn vốn ảo ban đầu
-          </Typography>
-          <StartCashPicker value={cash} onChange={setCash} />
-          {error && (
-            <Alert severity="error" role="alert">
-              {error}
-            </Alert>
-          )}
-          <Button variant="contained" size="large" fullWidth disabled={busy} onClick={() => void start()} sx={{ minHeight: 48, bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }}>
-            {busy ? 'Đang mở…' : 'Bắt đầu'}
-          </Button>
-          <Typography variant="caption" color="text.secondary">
-            Bạn có thể đặt lại bất cứ lúc nào từ menu ⋮.
-          </Typography>
-        </Stack>
-      </Paper>
-      <RulesPanel rules={FALLBACK_RULES} defaultOpen />
-    </Stack>
-  )
-}
-
-/** Lịch sử lệnh, tải từng trang */
-function History() {
-  const [items, setItems] = useState<PracticeTrade[] | null>(null)
-  const [next, setNext] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-
-  const fetchPage = useCallback((cursor: string | null) => {
-    setBusy(true)
-    setError('')
-    api<PracticeTradesPage>(`/practice/trades${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`)
-      .then((r) => {
-        setItems((prev) => (cursor && prev ? [...prev, ...r.items] : r.items))
-        setNext(r.nextCursor)
-      })
-      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Chưa tải được lịch sử lệnh.'))
-      .finally(() => setBusy(false))
-  }, [])
-  useEffect(() => fetchPage(null), [fetchPage])
-
-  if (error)
-    return (
-      <Alert severity="error" role="alert" sx={{ m: 1.5 }} action={<Button color="inherit" size="small" onClick={() => fetchPage(null)}>Thử lại</Button>}>
-        {error}
-      </Alert>
-    )
-  if (!items) return <Skeleton variant="rounded" height={140} sx={{ m: 1.5 }} />
-  if (!items.length)
-    return (
-      <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }} data-testid="practice-no-trades">
-        Chưa có lệnh nào.
-      </Typography>
-    )
-  return (
-    <Box data-testid="practice-history">
-      {items.map((t) => (
-        <TradeRow key={t.id} t={t} />
-      ))}
-      {next && (
-        <Box sx={{ p: 1.5 }}>
-          <Button fullWidth variant="outlined" disabled={busy} onClick={() => fetchPage(next)} sx={{ minHeight: 44 }}>
-            {busy ? 'Đang tải…' : 'Xem thêm'}
-          </Button>
-        </Box>
-      )}
-    </Box>
-  )
-}
-
-/** Đặt lại: xoá lệnh và vị thế ảo, chọn lại vốn */
-function ResetSheet({
-  open,
-  current,
-  onClose,
-  onDone,
-}: {
-  open: boolean
-  current: number
-  onClose: () => void
-  onDone: (s: PracticeState) => void
-}) {
-  return (
-    <Sheet open={open} onClose={onClose} label="Đặt lại tài khoản ảo" title="Đặt lại tài khoản ảo">
-      {open && <ResetForm current={current} onClose={onClose} onDone={onDone} />}
-    </Sheet>
-  )
-}
-
-function ResetForm({ current, onClose, onDone }: { current: number; onClose: () => void; onDone: (s: PracticeState) => void }) {
-  const [cash, setCash] = useState(current)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const reset = async () => {
-    setBusy(true)
-    setError('')
-    try {
-      onDone(await post<PracticeState>('/practice/reset', { startCash: cash }))
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Chưa đặt lại được.')
-      setBusy(false)
-    }
-  }
-  return (
-    <Stack spacing={1.5} data-testid="practice-reset">
-      <Typography variant="body2" color="text.secondary">
-        Xoá toàn bộ lệnh và vị thế ảo, bắt đầu lại với vốn mới. Danh mục thật của bạn không bị ảnh hưởng.
-      </Typography>
-      <StartCashPicker value={cash} onChange={setCash} />
-      {error && (
-        <Alert severity="error" role="alert">
-          {error}
-        </Alert>
-      )}
-      <Stack direction="row" spacing={1}>
-        <Button fullWidth variant="outlined" onClick={onClose} disabled={busy} sx={{ minHeight: 48 }}>
-          Huỷ
-        </Button>
-        <Button fullWidth variant="contained" color="error" onClick={() => void reset()} disabled={busy} sx={{ minHeight: 48 }}>
-          {busy ? 'Đang đặt lại…' : 'Đặt lại'}
-        </Button>
-      </Stack>
     </Stack>
   )
 }

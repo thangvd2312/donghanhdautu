@@ -34,7 +34,7 @@ const HOSTS: Record<VietcapHost, { label: string; base: string; headers: Record<
 
 export { CircuitOpenError };
 
-export class VietcapHttpError extends Error {
+class VietcapHttpError extends Error {
   constructor(
     readonly status: number,
     message: string,

@@ -1,6 +1,5 @@
-import { ApiError, getToken } from './api'
 import { fmtNum, fmtPct, fmtVnd } from './format'
-import type { ReportAmount, ReportCsvDelimiter, ReportMask } from './types'
+import type { ReportAmount, ReportMask } from './types'
 
 /** Kỳ đang chọn: tháng, hoặc khoảng ngày tự chọn; null = để máy chủ chọn (tháng trọn vẹn gần nhất) */
 export type ReportSelection = { month: string } | { from: string; to: string } | null
@@ -24,7 +23,7 @@ export function reportQuery(sel: ReportSelection, portfolioId: string, mask: Rep
   return s ? `?${s}` : ''
 }
 
-export function addMonths(month: string, n: number) {
+function addMonths(month: string, n: number) {
   const total = Number(month.slice(0, 4)) * 12 + (Number(month.slice(5, 7)) - 1) + n
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
 }
@@ -59,34 +58,4 @@ export const signOf = (a: ReportAmount) => (a.vnd ?? a.pct ?? 0)
 export function qtyText(v: number | null) {
   if (v === null) return '—'
   return fmtNum(v, Number.isInteger(v) ? 0 : Math.min(8, String(v).split('.')[1]?.length ?? 0))
-}
-
-/** Tải file CSV báo cáo (kèm token đăng nhập); tên file lấy từ máy chủ */
-export async function downloadReportCsv(query: string, delimiter: ReportCsvDelimiter) {
-  const sep = query ? '&' : '?'
-  const res = await fetch(`/api/reports/portfolio/csv${query}${sep}delimiter=${delimiter}`, {
-    headers: { Authorization: `Bearer ${getToken() ?? ''}` },
-  })
-  if (!res.ok) {
-    let msg = res.statusText
-    try {
-      const body = (await res.json()) as { message?: string | string[] }
-      msg = Array.isArray(body.message) ? body.message.join(', ') : (body.message ?? msg)
-    } catch {
-      /* không phải JSON */
-    }
-    throw new ApiError(res.status, msg)
-  }
-  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? 'bao-cao-danh-muc.csv'
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  // Safari cần URL còn sống thêm một nhịp sau khi bấm
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-  return name
 }

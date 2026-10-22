@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import Layout from './components/Layout'
+import Layout from './components/layout/Layout'
 import { ChatProvider } from './lib/chat'
 import { MarketProvider } from './lib/market'
 import HomePage from './pages/HomePage'

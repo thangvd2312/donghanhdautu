@@ -14,7 +14,7 @@ export interface StatRow {
 }
 
 /** Dải phân vị của một chỉ số định giá, chưa kèm vị trí hiện tại (phần đó do `valuationBand` thêm) */
-export type Band = Omit<ValuationBand, 'currentPercentile' | 'position'>;
+type Band = Omit<ValuationBand, 'currentPercentile' | 'position'>;
 
 /** P/E âm (thua lỗ) hoặc quá cao (lợi nhuận gần 0) không phản ánh định giá — loại khỏi thống kê */
 const PE_VALID = (v: number) => v > 0 && v < 100;
@@ -109,8 +109,6 @@ export function valuationBand(rows: StatRow[], currentPrice: number | null, maxQ
     })),
   };
 }
-
-export type { StatementRow };
 
 /** Nợ ròng = vay ngắn hạn + vay dài hạn − tiền − đầu tư ngắn hạn (doanh nghiệp thường, tỷ VND) */
 export function netDebt(row: StatementRow, f: { stDebt: string; ltDebt: string; cash: string; stInv: string }) {

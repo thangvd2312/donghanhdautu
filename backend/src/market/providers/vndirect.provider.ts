@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 /** Một phiên: giá đóng cửa gốc (VND, giá khớp thật hôm đó) và giá đã điều chỉnh theo sự kiện quyền */
-export interface RawClose {
+interface RawClose {
   date: string;
   close: number;
   adjClose: number;

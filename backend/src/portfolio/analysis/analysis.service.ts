@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { RebalanceResponse, SimulateResponse } from '@dautu/contracts';
 import { MarketService } from '../../market/market.service';
-import { PrismaService } from '../../prisma/prisma.module';
+import { PrismaService } from '../../prisma/prisma.service';
 import { PortfolioService } from '../portfolio.service';
-import { TransactionsService } from '../transactions';
-import { newStockSymbols, rebalance } from './rebalance';
-import type { RebalanceDto } from './rebalance.dto';
+import { TransactionsService } from '../transactions.service';
+import { newStockSymbols } from './rebalance.validation';
+import { rebalance } from './rebalance';
+import type { RebalanceDto } from './dto/rebalance.dto';
 import { simulate } from './simulate';
-import type { SimulateDto } from './simulate.dto';
+import type { SimulateDto } from './dto/simulate.dto';
 
 /** Mô phỏng trên danh mục đang giữ (kịch bản giá, tái cân bằng): chỉ đọc, không ghi gì vào sổ */
 @Injectable()

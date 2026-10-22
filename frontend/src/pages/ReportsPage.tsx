@@ -15,18 +15,17 @@ import Skeleton from '@mui/material/Skeleton'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
 import Switch from '@mui/material/Switch'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
-import ReportDocument, { REPORT_CSS } from '../components/ReportDocument'
-import Sheet from '../components/Sheet'
+import { listPortfolios } from '../api/portfolio'
+import { downloadReportCsv, getPortfolioReport } from '../api/reports'
+import ReportDocument, { REPORT_CSS } from '../components/reports/ReportDocument'
+import CustomRange from '../components/reports/CustomRange'
 import { InfoTip, ScrollRow } from '../components/ui'
-import { api } from '../lib/api'
 import { todayVN } from '../lib/events'
-import { fmtDate } from '../lib/format'
-import { downloadReportCsv, maskOf, monthChip, monthOptions, reportQuery, type ReportSelection } from '../lib/reports'
+import { maskOf, monthChip, monthOptions, reportQuery, type ReportSelection } from '../lib/reports'
 import type { PortfolioAccount, PortfolioReport, ReportCsvDelimiter } from '../lib/types'
 
 /** iPhone mở app từ màn hình chính (PWA): bảng in có thể không hiện, cần mở bằng Safari */
@@ -58,14 +57,14 @@ export default function ReportsPage() {
   const today = todayVN()
 
   useEffect(() => {
-    api<PortfolioAccount[]>('/portfolio/portfolios').then(setAccounts).catch(() => {})
+    listPortfolios().then(setAccounts).catch(() => {})
   }, [])
 
   useEffect(() => {
     let alive = true
     setLoading(true)
     setError('')
-    api<PortfolioReport>(`/reports/portfolio${query}`)
+    getPortfolioReport(query)
       .then((r) => alive && setData(r))
       .catch((e: Error) => alive && setError(e.message))
       .finally(() => alive && setLoading(false))
@@ -270,57 +269,5 @@ export default function ReportsPage() {
 
       <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast('')} message={toast} />
     </Stack>
-  )
-}
-
-function CustomRange({
-  open,
-  onClose,
-  today,
-  dataStart,
-  initial,
-  onApply,
-}: {
-  open: boolean
-  onClose: () => void
-  today: string
-  dataStart: string | null
-  initial: { from: string; to: string } | null
-  onApply: (r: { from: string; to: string }) => void
-}) {
-  const [from, setFrom] = useState(initial?.from ?? dataStart ?? `${today.slice(0, 7)}-01`)
-  const [to, setTo] = useState(initial?.to ?? today)
-  const invalid = !from || !to || from > to || to > today
-  return (
-    <Sheet open={open} onClose={onClose} label="Chọn khoảng ngày" title="Khoảng ngày tự chọn">
-      <Stack spacing={2} sx={{ pt: 1 }}>
-        <TextField
-          size="small"
-          type="date"
-          label="Từ ngày"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
-        />
-        <TextField
-          size="small"
-          type="date"
-          label="Đến ngày"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today, min: from || undefined } }}
-          error={!!from && !!to && from > to}
-          helperText={from && to && from > to ? 'Ngày kết thúc phải sau ngày bắt đầu' : 'Tối đa khoảng 3 năm'}
-        />
-        {dataStart && (
-          <Typography variant="caption" color="text.secondary">
-            Sổ giao dịch bắt đầu từ {fmtDate(dataStart)}.
-          </Typography>
-        )}
-        <Button variant="contained" disabled={invalid} onClick={() => onApply({ from, to })} sx={{ borderRadius: 99 }}>
-          Xem báo cáo
-        </Button>
-      </Stack>
-    </Sheet>
   )
 }

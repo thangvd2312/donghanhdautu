@@ -9,16 +9,15 @@ import type {
 import type { VcScreenFilter, VcScreenRequest, VcScreenRow } from '../market/providers/vietcap';
 import { CRITERIA_BY_KEY, CriterionKey, Option, SORT_FIELDS, VIETCAP_SOURCES } from './screener.catalog';
 
-export type { Filter, MultiFilter, RangeFilter, ScreenItem, Sort };
-
+export type { Filter, MultiFilter, ScreenItem, Sort };
 /** Dữ liệu người dùng gửi sai; controller đổi thành 400 */
 export class ScreenerInputError extends Error {}
 
-export const MAX_FILTERS = 13;
+const MAX_FILTERS = 13;
 export const MAX_PAGE_SIZE = 50;
 export const DEFAULT_SORT: Sort = { key: 'marketCap', dir: 'desc' };
 /** Ngưỡng dưới thay cho "không giới hạn" của P/E, P/B: loại mã lỗ (âm) và mã không có số liệu (0) */
-export const POSITIVE_FLOOR = 0.01;
+const POSITIVE_FLOOR = 0.01;
 
 /** Mã sàn trong filter của Vietcap (HOSE gọi là hsx) */
 const EXCHANGE_CODE: Record<string, string> = { HOSE: 'hsx', HNX: 'hnx', UPCOM: 'upcom' };
@@ -163,7 +162,7 @@ const round = (n: number, digits = 2) => {
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 /** Vietcap gọi sàn HOSE là HSX */
-export const exchangeLabel = (e: string) => (e === 'HSX' ? 'HOSE' : e);
+const exchangeLabel = (e: string) => (e === 'HSX' ? 'HOSE' : e);
 
 /**
  * Một dòng kết quả. `values` chỉ gồm các chỉ tiêu đang lọc/sắp xếp cùng vốn hoá (tỷ ₫) và giá trị giao dịch bình quân (tỷ ₫/phiên,

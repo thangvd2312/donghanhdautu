@@ -8,7 +8,7 @@ const DAY = 24 * HOUR;
  * Phiên bản khoá theo miền dữ liệu: đổi cách ánh xạ / hình dạng kết quả của một adapter thì tăng số ở đây,
  * các dòng cũ trong PostgreSQL tự bị bỏ qua (và được dọn khi hết hạn "dùng tạm").
  */
-export const VIETCAP_KEY_VERSIONS = {
+const VIETCAP_KEY_VERSIONS = {
   symbols: 1,
   group: 1,
   company: 1,
@@ -23,7 +23,7 @@ export const VIETCAP_KEY_VERSIONS = {
   history: 1,
 } as const;
 
-export type VietcapDomain = keyof typeof VIETCAP_KEY_VERSIONS;
+type VietcapDomain = keyof typeof VIETCAP_KEY_VERSIONS;
 
 /** `vietcap:v1:ratios:FPT` */
 export function vietcapKey(domain: VietcapDomain, ...parts: (string | number)[]): string {

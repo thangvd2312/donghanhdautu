@@ -1,7 +1,7 @@
 import type { MarketService } from '../market/market.service';
 import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
 import { PortfolioService } from './portfolio.service';
-import { TransactionsService } from './transactions';
+import { TransactionsService } from './transactions.service';
 
 const prisma = testPrisma();
 const market = fakeMarket() as unknown as MarketService;

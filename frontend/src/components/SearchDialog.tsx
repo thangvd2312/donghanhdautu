@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { searchStocks } from '../api/search'
 import { changeColor, fmtPct, fmtStockPrice, fmtUsd } from '../lib/format'
 import { useMarket } from '../lib/market-context'
 import AssetAvatar from './AssetAvatar'
@@ -95,7 +95,7 @@ export default function SearchDialog({
     }
     setLoading(true)
     const t = setTimeout(() => {
-      api<StockHit[]>(`/market/search?q=${encodeURIComponent(term)}`)
+      searchStocks(term)
         .then(setStocks)
         .catch(() => setStocks([]))
         .finally(() => setLoading(false))

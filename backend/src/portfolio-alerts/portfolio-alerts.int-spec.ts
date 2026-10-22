@@ -6,7 +6,10 @@ import type { HistoryService } from '../portfolio/history.service';
 import type { PortfolioService } from '../portfolio/portfolio.service';
 import { JobRunner, NoAdvisoryLock } from '../runtime/job-runner';
 import { testPrisma, testUser } from '../test-utils/test-db';
-import { PortfolioAlertsService } from './portfolio-alerts.module';
+import { PortfolioAlertHistory } from './alert-history.service';
+import { PortfolioAlertsRunner } from './portfolio-alerts.runner';
+import { PortfolioAlertsService } from './portfolio-alerts.service';
+import { PortfolioAlertRuleStore } from './rule-store.service';
 
 const prisma = testPrisma();
 const gateway = { notifyUser: () => undefined } as unknown as MarketGateway;
@@ -52,9 +55,12 @@ const history = {
   },
 } as unknown as HistoryService;
 
-const service = new PortfolioAlertsService(prisma, market, portfolio, history, notifier);
+const store = new PortfolioAlertRuleStore(prisma);
+const historyCache = new PortfolioAlertHistory(history);
+const service = new PortfolioAlertsService(prisma, portfolio, store, historyCache);
+const runner = new PortfolioAlertsRunner(prisma, market, portfolio, store, historyCache, notifier);
 const jobs = new JobRunner(new NoAdvisoryLock(), 1000);
-const run = (drawdown: boolean) => jobs.run('portfolioAlerts.test', () => service.runAll({ drawdown }));
+const run = (drawdown: boolean) => jobs.run('portfolioAlerts.test', () => runner.runAll({ drawdown }));
 
 afterAll(() => prisma.$disconnect());
 beforeEach(() => {

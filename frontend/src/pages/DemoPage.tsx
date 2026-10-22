@@ -11,9 +11,9 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { NewsRow, ReviewList, TodayBlock } from '../components/HomeBlocks'
+import { NewsRow, ReviewList, TodayBlock } from '../components/home/HomeBlocks'
 import { KV, Logo, Panel } from '../components/ui'
-import { api } from '../lib/api'
+import { getDemo } from '../api/demo'
 import { changeColor, fmtPct, fmtPrice, fmtVndShort } from '../lib/format'
 import type { DemoResponse } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
@@ -29,7 +29,7 @@ export default function DemoPage() {
 
   useEffect(() => {
     track('demo_viewed')
-    api<DemoResponse>('/demo')
+    getDemo()
       .then(setD)
       .catch((e: Error) => setError(e.message))
   }, [])

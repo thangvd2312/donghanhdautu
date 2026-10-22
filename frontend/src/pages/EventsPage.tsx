@@ -1,165 +1,25 @@
-import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined'
 import ExpandMore from '@mui/icons-material/ExpandMore'
-import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
-import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined'
-import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined'
-import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
-import Chip from '@mui/material/Chip'
 import Collapse from '@mui/material/Collapse'
-import IconButton from '@mui/material/IconButton'
 import Link from '@mui/material/Link'
-import Skeleton from '@mui/material/Skeleton'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
-import ToggleButton from '@mui/material/ToggleButton'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router-dom'
-import EventDetailSheet from '../components/EventDetailSheet'
-import { EventCard } from '../components/EventCards'
-import EventReminderSheet from '../components/EventReminderSheet'
-import { InfoTip } from '../components/ui'
-import { api, patch, post } from '../lib/api'
-import { dayHeader, displayDate, fmtClock, todayVN } from '../lib/events'
-import type { CalendarEvent, EventRange, EventsResponse, ReminderSettings } from '../lib/types'
-
-type KindFilter = 'all' | 'cash' | 'stock' | 'rights' | 'meeting'
-
-const KIND_FILTERS: { value: KindFilter; label: string }[] = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'cash', label: 'Cổ tức tiền' },
-  { value: 'stock', label: 'Cổ phiếu thưởng' },
-  { value: 'rights', label: 'Quyền mua' },
-  { value: 'meeting', label: 'Đại hội' },
-]
-
-const RANGES: { value: EventRange; label: string; phrase: string }[] = [
-  { value: 'week', label: '7 ngày', phrase: '7 ngày' },
-  { value: 'month', label: '30 ngày', phrase: '30 ngày' },
-  { value: 'quarter', label: '3 tháng', phrase: '3 tháng' },
-]
-
-const matchKind = (e: CalendarEvent, k: KindFilter) =>
-  k === 'all' ? true : k === 'meeting' ? e.kind === 'agm' || e.kind === 'egm' : e.kind === k
-
-/** Gom các sự kiện cùng ngày hiển thị, xếp theo ngày */
-function groupByDate(items: CalendarEvent[], today: string) {
-  const groups: { date: string; items: CalendarEvent[] }[] = []
-  const sorted = items
-    .map((e) => ({ e, d: displayDate(e, today) }))
-    .sort((a, b) => a.d.localeCompare(b.d))
-  for (const { e, d } of sorted) {
-    const g = groups[groups.length - 1]
-    if (g && g.date === d) g.items.push(e)
-    else groups.push({ date: d, items: [e] })
-  }
-  return groups
-}
-
-/** Một nhóm ngày: tiêu đề dính ngay dưới thanh trên cùng khi cuộn */
-function DateGroup({
-  date,
-  items,
-  today,
-  muted,
-  onOpen,
-}: {
-  date: string
-  items: CalendarEvent[]
-  today: string
-  muted?: boolean
-  onOpen: (key: string) => void
-}) {
-  const h = dayHeader(date, today)
-  return (
-    <Box component="section" aria-label={h.sub ? `${h.main}, ${h.sub}` : h.main}>
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{
-          position: 'sticky',
-          top: { xs: 'calc(52px + env(safe-area-inset-top))', md: 56 },
-          zIndex: 1,
-          bgcolor: 'background.default',
-          py: 0.75,
-          alignItems: 'baseline',
-        }}
-      >
-        <Typography component="h2" sx={{ fontWeight: 700, fontSize: 15 }}>
-          {h.main}
-        </Typography>
-        {h.sub && (
-          <Typography variant="caption" color="text.secondary">
-            {h.sub}
-          </Typography>
-        )}
-      </Stack>
-      <Stack spacing={1}>
-        {items.map((e) => (
-          <EventCard key={e.key} e={e} today={today} muted={muted} onOpen={onOpen} />
-        ))}
-      </Stack>
-    </Box>
-  )
-}
-
-/** Hàng chip cuộn ngang, tràn ra mép màn hình bằng lề của khung trang (12px điện thoại, 16px tablet) */
-function FilterRow({ children }: { children: ReactNode }) {
-  return (
-    <Box>
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': { display: 'none' },
-          '& > *': { flexShrink: 0 },
-          mx: { xs: -1.5, sm: -2, md: 0 },
-          px: { xs: 1.5, sm: 2, md: 0 },
-        }}
-      >
-        {children}
-      </Stack>
-    </Box>
-  )
-}
-
-function ListSkeleton() {
-  return (
-    <Stack spacing={1} aria-label="Đang tải lịch sự kiện" aria-busy>
-      <Skeleton width={110} height={28} />
-      <Skeleton variant="rounded" height={118} />
-      <Skeleton variant="rounded" height={118} />
-      <Skeleton width={150} height={28} />
-      <Skeleton variant="rounded" height={118} />
-    </Stack>
-  )
-}
-
-function EmptyBox({ title, children, actions }: { title: string; children?: ReactNode; actions?: ReactNode }) {
-  return (
-    <Stack spacing={1.5} sx={{ alignItems: 'center', textAlign: 'center', py: 4, px: 2 }}>
-      <EventAvailableOutlined sx={{ fontSize: 44, color: 'text.disabled' }} aria-hidden />
-      <Typography sx={{ fontWeight: 700 }}>{title}</Typography>
-      {children && (
-        <Typography variant="body2" color="text.secondary" component="div">
-          {children}
-        </Typography>
-      )}
-      {actions && (
-        <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {actions}
-        </Stack>
-      )}
-    </Stack>
-  )
-}
+import { addToWatchlist } from '../api/watchlist'
+import DateGroup from '../components/events/DateGroup'
+import EventDetailSheet from '../components/events/EventDetailSheet'
+import EventReminderSheet from '../components/events/EventReminderSheet'
+import EventFilters from '../components/events/EventFilters'
+import { EmptyBox, ListSkeleton } from '../components/events/EventStates'
+import { useEventCalendar } from '../hooks/useEventCalendar'
+import { groupByDate, matchKind, RANGES, type KindFilter } from '../lib/eventCalendar'
+import { fmtClock, todayVN } from '../lib/events'
+import type { EventRange, ReminderSettingsPatch } from '../lib/types'
 
 /** Lịch sự kiện quyền (cổ tức, thưởng, quyền mua, đại hội) của các mã đang giữ và theo dõi, dạng danh sách theo ngày */
 export default function EventsPage() {
@@ -169,10 +29,7 @@ export default function EventsPage() {
 
   const [range, setRange] = useState<EventRange>('month')
   const [kind, setKind] = useState<KindFilter>('all')
-  const [data, setData] = useState<EventsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [failed, setFailed] = useState(false)
-  const [retry, setRetry] = useState(0)
+  const { data, loading, failed, retry, updateReminders: saveReminders } = useEventCalendar(range)
   const [selected, setSelected] = useState<string | null>(null)
   const [remindersOpen, setRemindersOpen] = useState(false)
   const [pastOpen, setPastOpen] = useState(false)
@@ -180,22 +37,6 @@ export default function EventsPage() {
   const [focusMissing, setFocusMissing] = useState(false)
   const [adding, setAdding] = useState(false)
   const today = todayVN()
-
-  useEffect(() => {
-    let off = false
-    setLoading(true)
-    api<EventsResponse>(`/events?range=${range}`)
-      .then((d) => {
-        if (off) return
-        setData(d)
-        setFailed(false)
-      })
-      .catch(() => !off && setFailed(true))
-      .finally(() => !off && setLoading(false))
-    return () => {
-      off = true
-    }
-  }, [range, retry])
 
   // Mở chi tiết từ link thông báo (?focus=): nếu chưa thấy trong khoảng đang xem thì mở rộng sang 3 tháng một lần
   useEffect(() => {
@@ -224,26 +65,9 @@ export default function EventsPage() {
     setParams(next, { replace: true })
   }
 
-  /** Cập nhật ngay trên màn hình, lưu lên máy chủ; lỗi thì trả về giá trị cũ */
-  const updateReminders = useCallback(
-    async (body: Partial<ReminderSettings>) => {
-      const prev = data?.reminders
-      if (!prev) return
-      setData((d) => d && { ...d, reminders: { ...d.reminders, ...body } })
-      try {
-        const saved = await patch<ReminderSettings>('/events/reminders', body)
-        setData((d) => d && { ...d, reminders: saved })
-        // Lấy lại để ngày nhắc (remindAt) trên từng thẻ khớp cài đặt mới (dữ liệu nguồn nằm trong cache máy chủ)
-        api<EventsResponse>(`/events?range=${range}`)
-          .then((d) => setData(d))
-          .catch(() => {})
-      } catch {
-        setData((d) => d && { ...d, reminders: prev })
-        setToast('Chưa lưu được cài đặt nhắc, bạn thử lại nhé.')
-      }
-    },
-    [data?.reminders, range],
-  )
+  const updateReminders = async (body: ReminderSettingsPatch) => {
+    if (!(await saveReminders(body))) setToast('Chưa lưu được cài đặt nhắc, bạn thử lại nhé.')
+  }
 
   const toggleMute = (symbol: string) => {
     if (!data) return
@@ -268,8 +92,8 @@ export default function EventsPage() {
   const addWatch = async (symbol: string) => {
     setAdding(true)
     try {
-      await post('/watchlist', { assetType: 'stock', symbol })
-      setRetry((n) => n + 1)
+      await addToWatchlist('stock', symbol)
+      retry()
     } catch {
       setToast(`Chưa thêm được ${symbol} vào danh sách theo dõi.`)
     } finally {
@@ -326,99 +150,24 @@ export default function EventsPage() {
         Xem thu nhập cổ tức
       </Link>
 
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <ToggleButtonGroup
-          exclusive
-          fullWidth
-          size="small"
-          color="primary"
-          value={range}
-          aria-label="Khoảng thời gian"
-          onChange={(_, v: EventRange | null) => v && setRange(v)}
-          sx={{ flex: 1 }}
-        >
-          {RANGES.map((r) => (
-            <ToggleButton key={r.value} value={r.value} sx={{ minHeight: 44 }}>
-              {r.label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-        <IconButton
-          aria-label={reminders?.enabled ? 'Cài đặt nhắc sự kiện (đang bật)' : 'Cài đặt nhắc sự kiện (đang tắt)'}
-          onClick={() => setRemindersOpen(true)}
-          disabled={!reminders}
-          sx={{
-            width: 44,
-            height: 44,
-            border: 1,
-            borderColor: reminders?.enabled ? 'primary.main' : 'divider',
-            color: reminders?.enabled ? 'primary.main' : 'text.secondary',
-          }}
-        >
-          {reminders?.enabled ? <NotificationsActiveOutlined /> : <NotificationsNoneOutlined />}
-        </IconButton>
-      </Stack>
-
-      <FilterRow>
-        {KIND_FILTERS.map((f) => (
-          <Chip
-            key={f.value}
-            label={f.label}
-            clickable
-            aria-pressed={kind === f.value}
-            color={kind === f.value ? 'primary' : 'default'}
-            variant={kind === f.value ? 'filled' : 'outlined'}
-            onClick={() => setKind(f.value)}
-            sx={{ height: 36 }}
-          />
-        ))}
-      </FilterRow>
-
-      {symbols.length > 1 && (
-        <Box>
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 0.75 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-              Lọc theo mã
-            </Typography>
-            <InfoTip>{'Biểu tượng ví: mã bạn đang giữ.\nBiểu tượng mắt: mã bạn chỉ đang theo dõi.'}</InfoTip>
-          </Stack>
-          <FilterRow>
-            <Chip
-              label="Tất cả mã"
-              clickable
-              aria-pressed={!symbolParam}
-              color={!symbolParam ? 'primary' : 'default'}
-              variant={!symbolParam ? 'filled' : 'outlined'}
-              onClick={() => setSymbol(null)}
-              sx={{ height: 36 }}
-            />
-            {symbols.map((s) => {
-              const on = symbolParam === s.symbol
-              return (
-                <Chip
-                  key={s.symbol}
-                  label={s.symbol}
-                  clickable
-                  aria-pressed={on}
-                  aria-label={`${s.symbol}, ${s.held ? 'đang giữ' : 'đang theo dõi'}`}
-                  icon={s.held ? <AccountBalanceWalletOutlined /> : <VisibilityOutlined />}
-                  color={on ? 'primary' : 'default'}
-                  variant={on ? 'filled' : 'outlined'}
-                  onClick={() => setSymbol(on ? null : s.symbol)}
-                  sx={{ height: 36 }}
-                />
-              )
-            })}
-          </FilterRow>
-        </Box>
-      )}
+      <EventFilters
+        range={range}
+        kind={kind}
+        symbolParam={symbolParam}
+        symbols={symbols}
+        reminders={reminders}
+        onRange={setRange}
+        onKind={setKind}
+        onSymbol={setSymbol}
+        onOpenReminders={() => setRemindersOpen(true)}
+      />
 
       {failed && (
         <Alert
           severity="warning"
           variant="outlined"
           action={
-            <Button size="small" color="inherit" onClick={() => setRetry((n) => n + 1)}>
+            <Button size="small" color="inherit" onClick={() => retry()}>
               Thử lại
             </Button>
           }
@@ -431,7 +180,7 @@ export default function EventsPage() {
           severity="warning"
           variant="outlined"
           action={
-            <Button size="small" color="inherit" onClick={() => setRetry((n) => n + 1)}>
+            <Button size="small" color="inherit" onClick={() => retry()}>
               Thử lại
             </Button>
           }

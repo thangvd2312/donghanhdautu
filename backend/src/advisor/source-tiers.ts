@@ -6,7 +6,7 @@
  *  2 = báo chí / tổ chức tài chính uy tín: báo lớn, hãng tin, công ty chứng khoán
  *  3 = thứ cấp: mạng xã hội, diễn đàn, blog, trang dịch vụ, nguồn chưa phân loại
  */
-export type SourceTier = 1 | 2 | 3;
+type SourceTier = 1 | 2 | 3;
 
 const TIER1_SUFFIX = ['.gov.vn', '.gov', '.gov.uk', '.europa.eu', '.int'];
 
@@ -189,7 +189,7 @@ function matches(host: string, domain: string) {
   return host === domain || host.endsWith(`.${domain}`);
 }
 
-export function hostOf(url: string): string {
+function hostOf(url: string): string {
   try {
     return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
   } catch {

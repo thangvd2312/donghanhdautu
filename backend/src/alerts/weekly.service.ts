@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
-import { NewsService } from '../news/news.module';
-import type { NewsItem } from '../news/news.module';
+import { NewsService } from '../news/news.service';
+import type { NewsItem } from '../news/news.service';
 import { addDays } from '../plans/plan-rules';
 import { reviewPoints } from '../home/today';
 import { HistoryService } from '../portfolio/history.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { mentionsCompany } from './aliases';
 import { LlmService } from './llm.service';

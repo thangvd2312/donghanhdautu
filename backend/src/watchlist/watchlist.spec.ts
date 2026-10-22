@@ -1,7 +1,9 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { MarketService } from '../market/market.service';
-import type { PrismaService } from '../prisma/prisma.module';
-import { MAX_WATCH_ITEMS, WatchlistService } from './watchlist.module';
+import { TrackedSymbolResolver } from '../market/tracked-symbol.resolver';
+import type { PrismaService } from '../prisma/prisma.service';
+import { MAX_WATCH_ITEMS } from './watchlist.constants';
+import { WatchlistService } from './watchlist.service';
 
 type Item = { id: string; userId: string; assetType: string; symbol: string; createdAt: Date };
 
@@ -62,7 +64,8 @@ function fakeMarket() {
 }
 
 function make(prisma = fakePrisma()) {
-  const service = new WatchlistService(prisma as unknown as PrismaService, fakeMarket() as unknown as MarketService);
+  const market = fakeMarket() as unknown as MarketService;
+  const service = new WatchlistService(prisma as unknown as PrismaService, market, new TrackedSymbolResolver(market));
   return { service, prisma };
 }
 

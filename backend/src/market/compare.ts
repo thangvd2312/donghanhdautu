@@ -16,8 +16,7 @@ import { currentMultiples, StatRow } from './fundamentals';
 import type { dividendHistory } from './dividends';
 import { vnDateKey } from './types';
 
-export type { ChartPoint, CompanyKind, CompareChart, CompareRange, MetricKey, MetricRow, MetricValue, ReturnsByPeriod };
-
+export type { CompanyKind, MetricKey, MetricValue };
 export interface Candle {
   time: number;
   close: number;
@@ -27,8 +26,8 @@ export interface Candle {
 export class CompareInputError extends Error {}
 
 export const COMPARE_RANGES: Record<CompareRange, number> = { '3m': 92, '6m': 183, '1y': 365, '3y': 1096 };
-export const MIN_COMPARE = 2;
-export const MAX_COMPARE = 4;
+const MIN_COMPARE = 2;
+const MAX_COMPARE = 4;
 
 /** Quá số ngày này kể từ đầu khoảng chọn mới coi là "dữ liệu bắt đầu muộn" (Tết có thể nghỉ liền 9 ngày) */
 const LATE_START_TOLERANCE_DAYS = 10;
@@ -65,7 +64,7 @@ export function parseCompareSymbols(raw: string | undefined): string[] {
 // ---------- ngày & giá ----------
 
 /** Ngày VN (YYYY-MM-DD) của một nến; time là giây UTC */
-export function candleDate(c: Candle): string {
+function candleDate(c: Candle): string {
   return vnDateKey(new Date(c.time * 1000));
 }
 
@@ -80,7 +79,7 @@ export function shiftMonths(ymd: string, months: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
 }
 
-export function shiftDays(ymd: string, days: number): string {
+function shiftDays(ymd: string, days: number): string {
   return new Date(Date.parse(`${ymd}T00:00:00Z`) + days * 86400_000).toISOString().slice(0, 10);
 }
 
@@ -94,7 +93,7 @@ interface DatedClose {
 }
 
 /** Nến hợp lệ (giá > 0), đã đổi sang ngày VN, tăng dần, mỗi ngày một điểm (giữ nến cuối ngày) */
-export function datedCloses(candles: Candle[]): DatedClose[] {
+function datedCloses(candles: Candle[]): DatedClose[] {
   const byDate = new Map<string, number>();
   for (const c of candles) {
     if (Number.isFinite(c.close) && c.close > 0) byDate.set(candleDate(c), c.close);

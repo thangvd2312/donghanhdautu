@@ -1,16 +1,16 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { BriefQueueService } from '../alerts/brief-queue.service';
-import { MacroService } from '../macro/macro.module';
+import { MacroService } from '../macro/macro.service';
 import { HistoryService } from '../portfolio/history.service';
-import { PushService } from '../push/push.module';
-import { TelegramService } from '../telegram/telegram.module';
+import { PushService } from '../push/push.service';
+import { TelegramService } from '../telegram/telegram.service';
 import { AppRuntime } from '../runtime/app-role';
 import { HeartbeatService } from '../runtime/heartbeat.service';
 import { JobRunner } from '../runtime/job-runner';
 
 /** Chờ sau khi khởi động để các nguồn / kết nối ổn định rồi mới ghi giá cuối ngày lần đầu */
-export const BOOT_RECORD_DELAY_MS = 20_000;
+const BOOT_RECORD_DELAY_MS = 20_000;
 
 /**
  * Khởi động các vòng lặp không phải cron — chỉ trong worker: nhịp tim, hàng đợi bản tin, gửi Telegram / Web Push,

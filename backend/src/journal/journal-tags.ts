@@ -15,7 +15,7 @@ export class JournalTagsDto extends JournalReviewTagsDto implements JournalTagRe
   @IsOptional() @IsString() @MaxLength(40) planId?: string | null;
 }
 
-export interface TaggableTx {
+interface TaggableTx {
   type: string;
   assetType: string | null;
   symbol: string | null;
@@ -23,7 +23,7 @@ export interface TaggableTx {
   current?: { reason: string | null; emotion: string | null; planId: string | null };
 }
 
-export interface JournalColumns {
+interface JournalColumns {
   reason?: string | null;
   emotion?: string | null;
   planId?: string | null;

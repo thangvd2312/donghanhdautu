@@ -9,7 +9,7 @@ import { compatMode, createAnthropicClient } from '../common/anthropic';
  * brief: bản tin (cần suy luận tổng hợp, chạy ít lần) — model khá trở lên.
  * fast: đọc/gắn nhãn tin và viết lời nhắn thông báo (số liệu đã tính sẵn, chạy nhiều lần) — model nhanh, rẻ.
  */
-export type LlmTier = 'brief' | 'fast';
+type LlmTier = 'brief' | 'fast';
 
 /**
  * Gọi LLM cho các tác vụ nền (soạn thông báo, đọc tin, viết bản tin) và nhận về JSON.

@@ -1,5 +1,6 @@
 import { fmtDay } from './events'
 import { fmtVnd } from './format'
+import type { TxPreset } from './tx'
 import type { IncomeExpectedItem, IncomeItem, IncomeMonth } from './types'
 
 export const PAST_OPTIONS = [12, 24] as const
@@ -16,7 +17,7 @@ export const monthTitle = (m: string) => `Tháng ${Number(m.slice(5, 7))}/${m.sl
 export const currentMonth = (today: string) => today.slice(0, 7)
 
 /** Ngày dùng để xếp trong tháng: ngày nhận (đã nhận) hoặc ngày trả / GDKHQ (dự kiến) */
-export const itemDate = (i: IncomeItem) => (i.type === 'received' ? i.date : (i.payoutDate ?? i.exDate))
+const itemDate = (i: IncomeItem) => (i.type === 'received' ? i.date : (i.payoutDate ?? i.exDate))
 
 export type ExpectedStatus = 'overdue' | 'locked' | 'announced'
 export const statusOf = (i: IncomeExpectedItem): ExpectedStatus => (i.overdue ? 'overdue' : i.certainty === 'locked' ? 'locked' : 'announced')
@@ -57,3 +58,25 @@ export function expectedLine(i: IncomeExpectedItem, today: string) {
     return i.payoutDate ? `Quyền đã chốt, đang chờ công ty trả tiền (dự kiến ${fmtDay(i.payoutDate, today)}).` : 'Quyền đã chốt, đang chờ công ty công bố ngày trả.'
   return `Cần giữ cổ phiếu tới hết phiên liền trước GDKHQ ${ex} mới được hưởng.`
 }
+
+/** Điền sẵn form ghi sổ cổ tức từ một khoản dự kiến (người dùng đối chiếu rồi mới lưu; không tự ghi sổ) */
+export function dividendPreset(i: IncomeExpectedItem, today: string): TxPreset {
+  return {
+    type: 'dividend',
+    symbol: i.suggestion.symbol,
+    label: i.suggestion.symbol,
+    date: i.suggestion.date,
+    amount: i.suggestion.amount,
+    tax: i.suggestion.tax,
+    portfolioId: i.suggestion.portfolioId ?? undefined,
+    note: `Cổ tức tiền mặt GDKHQ ${fmtDay(i.exDate, today)}`,
+  }
+}
+
+/** "đã nhận … · dự kiến ~ …" của một tháng (rỗng nếu không có khoản nào) */
+export function monthTotals(m: { receivedNet: number; expectedNet: number }) {
+  return [m.receivedNet > 0 ? `đã nhận ${vnd(m.receivedNet)}` : '', m.expectedNet > 0 ? `dự kiến ~ ${vnd(m.expectedNet)}` : ''].filter(Boolean)
+}
+
+/** id của khối tháng trong danh sách (để cuộn tới từ biểu đồ) */
+export const monthAnchorId = (m: string) => `income-m-${m}`

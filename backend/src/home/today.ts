@@ -5,14 +5,14 @@ import type { LedgerTx } from '../portfolio/ledger';
 import type { Valuation } from '../portfolio/valuation';
 
 /** Thay đổi "hôm nay" mỗi loại tài sản được tính so với mốc nào */
-export const DAY_BASIS: Record<AssetType, string> = {
+const DAY_BASIS: Record<AssetType, string> = {
   stock: 'so với giá tham chiếu phiên gần nhất',
   crypto: 'trong 24 giờ qua',
   gold: 'so với giá mua vào hôm trước',
   cash: 'không đổi',
 };
 
-export function holdingLink(h: { assetType: AssetType; symbol: string }) {
+function holdingLink(h: { assetType: AssetType; symbol: string }) {
   if (h.assetType === 'stock') return `/stock/${h.symbol}`;
   if (h.assetType === 'crypto') return `/crypto/${h.symbol.replace(/USDT$/, '')}`;
   return null;
@@ -197,14 +197,12 @@ export function dayChange(v: Valuation, ledger?: DayLedger): HomeToday['day'] {
   };
 }
 
-export type { ReviewPoint };
-
-export interface ProfileLite {
+interface ProfileLite {
   riskType: string;
   maxDrawdownPct: number;
 }
 
-export interface AlertLite {
+interface AlertLite {
   id: string;
   assetType: string;
   symbol: string;
@@ -214,13 +212,13 @@ export interface AlertLite {
 }
 
 /** Một tài sản (không tính tiền mặt) chiếm quá tỷ trọng này là rủi ro tập trung */
-export const CONCENTRATION_PCT = 30;
+const CONCENTRATION_PCT = 30;
 /** Lệch khỏi phân bổ tham khảo quá số điểm % này thì nhắc */
-export const ALLOCATION_DRIFT_PTS = 15;
+const ALLOCATION_DRIFT_PTS = 15;
 /** Giá cách mốc cảnh báo trong khoảng % này thì nhắc "sắp chạm" */
-export const NEAR_ALERT_PCT = 2;
+const NEAR_ALERT_PCT = 2;
 /** Lỗ đã tới tỷ lệ này của mức lỗ tối đa chịu được thì nhắc "sắp chạm" */
-export const NEAR_MAX_LOSS_RATIO = 0.8;
+const NEAR_MAX_LOSS_RATIO = 0.8;
 
 const TYPE_TO_REFERENCE: Record<AssetType, (key: string) => boolean> = {
   cash: (k) => k.startsWith('tiền gửi'),

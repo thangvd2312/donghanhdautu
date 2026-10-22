@@ -30,8 +30,8 @@ export function parseSymbols(v: string | null): string[] {
  * sáng đạt cả CVD lẫn nhìn thường; tối còn một cặp đỏ/vàng ΔE 13 (< 15) nên mọi nơi dùng màu đều kèm
  * mã chữ, và đường biểu đồ có kiểu nét riêng cho từng mã (liền, đứt, chấm, đứt dài).
  */
-export const SERIES_LIGHT = ['#2a78d6', '#e34948', '#1baf7a', '#eda100'] as const
-export const SERIES_DARK = ['#3987e5', '#e66767', '#199e70', '#c98500'] as const
+const SERIES_LIGHT = ['#2a78d6', '#e34948', '#1baf7a', '#eda100'] as const
+const SERIES_DARK = ['#3987e5', '#e66767', '#199e70', '#c98500'] as const
 /** Kiểu nét (lightweight-charts LineStyle: 0 liền, 2 đứt, 1 chấm, 3 đứt dài) và dash cho SVG cạnh nhãn */
 export const SERIES_LINE_STYLE = [0, 2, 1, 3] as const
 export const SERIES_DASH = ['', '5 3', '1.5 3', '9 3'] as const

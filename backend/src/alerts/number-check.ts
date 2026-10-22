@@ -12,7 +12,7 @@ const UNITS: [RegExp, number][] = [
   [/^(nghìn|ngàn|k)$/i, 1e3],
 ];
 
-export interface NumberToken {
+interface NumberToken {
   text: string;
   /** Các cách đọc có thể (dấu chấm / phẩy là phân cách nghìn hay thập phân), luôn là số dương */
   values: number[];
@@ -43,7 +43,7 @@ function clauseBefore(text: string, index: number): string {
 }
 
 /** Dấu mà lời văn gán cho số ngay sau nó ("lãi", "giảm" → ±1), 0 nếu không có từ chỉ dấu trong 3 từ liền trước */
-export function wordSign(clause: string): -1 | 0 | 1 {
+function wordSign(clause: string): -1 | 0 | 1 {
   const words = clause
     .toLowerCase()
     .replace(/[*_|`>~]/g, ' ')

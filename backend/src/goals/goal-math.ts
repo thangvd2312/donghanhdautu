@@ -4,7 +4,7 @@ import type { Goal, GoalAssetType } from '@dautu/contracts';
 export const ASSET_TYPES: readonly GoalAssetType[] = ['stock', 'crypto', 'gold', 'cash'];
 export type { GoalAssetType };
 
-export interface HoldingValue {
+interface HoldingValue {
   assetType: string;
   symbol: string;
   displayName: string;

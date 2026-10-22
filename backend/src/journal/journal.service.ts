@@ -21,8 +21,8 @@ import type {
 } from '@dautu/contracts';
 import { NotifierService } from '../alerts/notifier.service';
 import { vnDateKey } from '../market/types';
-import { PlansService } from '../plans/plans.module';
-import { PrismaService } from '../prisma/prisma.module';
+import { PlanAssetsService } from '../plans/plan-assets.service';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   isJournalTxType,
   levelCheck,
@@ -41,11 +41,11 @@ import {
 import { journalColumns } from './journal-tags';
 
 /** Tối đa số mục mỗi loại trong dòng thời gian một tháng (đủ cho nhà đầu tư cá nhân; quá thì báo bị cắt) */
-export const ENTRY_LIMIT = 300;
+const ENTRY_LIMIT = 300;
 /** Tổng kết cần đếm đủ: trần cao hơn chỉ để chặn trường hợp bất thường */
 const SUMMARY_LIMIT = 5000;
 
-export interface JournalFilter {
+interface JournalFilter {
   emotion?: JournalEmotion;
   planId?: string;
 }
@@ -73,7 +73,7 @@ export class JournalService {
 
   constructor(
     private prisma: PrismaService,
-    private plans: PlansService,
+    private planAssets: PlanAssetsService,
     private notifier: NotifierService,
   ) {}
 
@@ -228,7 +228,7 @@ export class JournalService {
             id: p.id,
             assetType: p.assetType as TrackedAssetType,
             symbol: p.symbol,
-            displayName: this.plans.displayName(p.assetType, p.symbol),
+            displayName: this.planAssets.displayName(p.assetType, p.symbol),
             status: p.status as 'active' | 'closed',
           },
           assetType: p.assetType,
@@ -289,7 +289,7 @@ export class JournalService {
       t.assetType && t.assetType !== 'cash' && t.symbol ? { assetType: t.assetType, symbol: t.symbol } : null;
     let since: number | null = null;
     if (withPrices && trade && asset) {
-      const now = this.plans.priceNative(asset.assetType, asset.symbol);
+      const now = this.planAssets.priceNative(asset.assetType, asset.symbol);
       since = now.status === 'missing' ? null : priceSincePct(price, now.value);
     }
     return {
@@ -300,7 +300,7 @@ export class JournalService {
       type,
       assetType: t.assetType as AssetType | null,
       symbol: t.symbol,
-      displayName: asset ? this.plans.displayName(asset.assetType, asset.symbol) : t.symbol,
+      displayName: asset ? this.planAssets.displayName(asset.assetType, asset.symbol) : t.symbol,
       quantity: num(t.quantity),
       price,
       amount: num(t.amount),

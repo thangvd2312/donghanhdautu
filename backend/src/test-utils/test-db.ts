@@ -1,4 +1,4 @@
-import { PrismaService } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Kết nối PostgreSQL cho test tích hợp (`npm run test:int`). Chỉ chạy với database tên kết thúc bằng `_test`
