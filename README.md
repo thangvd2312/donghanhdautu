@@ -108,10 +108,13 @@ frontend (React + Vite + MUI)  ──REST /api, SSE chat, socket.io──▶  ba
 
 - `contracts/` — kiểu của API dùng chung (yêu cầu / phản hồi), một nguồn sự thật cho cả hai phía; xem `contracts/README.md`.
 - `backend/src/advisor/` — system prompt, công cụ và vòng lặp tool-use. Lịch sử hội thoại lưu nguyên khối content của Claude và chỉ nối thêm, để prompt cache và thinking blocks luôn hợp lệ. Bật `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`) để yêu cầu bị từ chối được chạy lại trên model dự phòng.
-- `backend/src/market/` — các provider và `MarketService` giữ trạng thái giá trong bộ nhớ, poll 3 giây/lần trong phiên (9:00–15:00 VN), 5 phút ngoài phiên.
-- `backend/src/alerts/` — quét định kỳ, gắn nhãn tin bằng AI (`news-tagger.service.ts`, kết quả lưu bảng `NewsTag`), bản tin (`briefs.service.ts`, `weekly.service.ts`), cảnh báo mốc giá, soạn thông báo.
-- `backend/src/portfolio/` — sổ giao dịch (`ledger.ts` thuần, `transactions.ts` ghi có khoá theo người dùng và tính lại `Holding`), định giá (`valuation.ts`), nhập CSV, lịch sử (`history.ts`).
-- `backend/src/home`, `plans`, `goals`, `watchlist`, `telegram`, `demo` — mỗi tính năng một module; phần tính toán tách thành hàm thuần có test.
+- `backend/src/market/` — `MarketService` giữ giá realtime trong bộ nhớ (poll 3 giây/lần trong phiên 9:00–15:00 VN, 5 phút ngoài phiên; chỉ ở process web). Dữ liệu không realtime (hồ sơ công ty, báo cáo tài chính, sự kiện quyền, bộ lọc…) đi qua `providers/vietcap/` (adapter theo mảng, client HTTP có giới hạn tần suất và cầu dao ngắt) và `cache/` (cache hai tầng: bộ nhớ + bảng `MarketCache` trong Postgres).
+- `backend/src/alerts/` — cảnh báo giá, biến động mã đang giữ, vĩ mô, tin tức (mỗi loại một service), gắn nhãn tin bằng AI (`news-tagger.service.ts`, bảng `NewsTag`), bản tin (`briefs.service.ts`, `weekly.service.ts`), soạn và lưu thông báo. Việc chạy định kỳ đặt ở `backend/src/worker/scheduled-jobs.ts`, chạy trong process worker.
+- `backend/src/portfolio/` — sổ giao dịch (`ledger.ts` thuần; `transactions.service.ts` ghi có khoá theo người dùng và tính lại `Holding`), định giá (`valuation.ts`), nhập CSV, lịch sử (`history.ts`); module con `analysis/` (thử kịch bản, tái cân bằng) và `dividends/` (gợi ý ghi sổ, thu nhập cổ tức).
+- `backend/src/home`, `plans`, `goals`, `watchlist`, `events`, `screener`, `practice`, `journal`, `portfolio-alerts`, `reports`, `telegram`, `push`, `demo` — mỗi tính năng một module theo cùng bố cục: `*.module.ts` chỉ khai báo, controller, service, `dto/`, presenter (dựng phản hồi theo từng trường), và phần tính toán là hàm thuần có test.
+- Hai process từ cùng một bản build: `dist/main.js` (web: API, socket, giá realtime) và `dist/worker.js` (cron, hàng đợi bản tin, gửi Telegram / Web Push; mỗi job chạy dưới khoá advisory của Postgres, ghi nhịp tim để deploy kiểm tra). `/api/health` trả cả trạng thái worker.
+- `frontend/src/` — `pages/` chỉ là khung trang; gọi API qua `api/<mảng>.ts`; logic tải dữ liệu và form trong `hooks/`; component theo mảng trong `components/<mảng>/`.
+- Chi tiết ranh giới module, quy ước thư mục và checklist khi thêm tính năng: [ARCHITECTURE.md](ARCHITECTURE.md).
 - `npm test` (unit), `npm run test:int` trong `backend` (PostgreSQL thật) và `npm run lint` đều chạy trong CI. Chi tiết các lớp kiểm thử: [docs/TESTING.md](docs/TESTING.md).
 
 ## Lưu ý trước khi mở cho cộng đồng
