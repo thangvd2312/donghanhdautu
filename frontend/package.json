@@ -9,7 +9,8 @@
     "perf:load": "node scripts/loadtime.mjs",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
-    "e2e:mobile": "playwright test"
+    "e2e:mobile": "playwright test",
+    "test": "vitest run"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@playwright/test": "^1.56.1",
+    "@testing-library/react": "^16.3.3",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
@@ -35,8 +37,10 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "jsdom": "^26.1.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^3.2.7"
   }
 }

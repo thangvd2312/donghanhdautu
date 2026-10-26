@@ -1,14 +1,15 @@
 /**
  * Tạo tài khoản e2e@local có sẵn dữ liệu cho audit giao diện điện thoại (frontend/e2e/mobile.spec.ts) và in JWT.
- * Chỉ chạy trên database tên kết thúc bằng _test, _e2e hoặc _e2e_<hậu tố> (DB e2e riêng, vd dautu_e2e_08); chạy lại thì xoá tài khoản cũ và tạo lại.
- *   npm run build && DATABASE_URL=postgresql://…/dautu_test JWT_SECRET=… node scripts/seed-e2e.js
+ * Chỉ chạy trên database tên kết thúc bằng _e2e hoặc _e2e_<hậu tố> (DB e2e riêng, vd dautu_e2e_08); chạy lại thì xoá tài khoản cũ và tạo lại.
+ * Không dùng dautu_test: `npm run test:int` xoá dữ liệu ở đó (xem ARCHITECTURE.md, mục Test).
+ *   npm run build && DATABASE_URL=postgresql://…/dautu_e2e JWT_SECRET=<của web e2e> node scripts/seed-e2e.js
  */
 const path = require('node:path');
 const jwt = require('jsonwebtoken');
 
 const url = process.env.DATABASE_URL ?? '';
-if (!/_(test|e2e)(_[a-z0-9]+)?$/.test(url ? new URL(url).pathname : '')) {
-  console.error('DATABASE_URL phải trỏ tới database tên kết thúc bằng _test, _e2e hoặc _e2e_<hậu tố>');
+if (!/_e2e(_[a-z0-9]+)?$/.test(url ? new URL(url).pathname : '')) {
+  console.error('DATABASE_URL phải trỏ tới database tên kết thúc bằng _e2e hoặc _e2e_<hậu tố>');
   process.exit(1);
 }
 if (!process.env.JWT_SECRET) {

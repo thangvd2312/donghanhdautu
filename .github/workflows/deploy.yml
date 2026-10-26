@@ -45,6 +45,8 @@ jobs:
         run: npm run check
       - name: Backend unit tests
         run: npm test
+      - name: Frontend tests (hook, phản hồi về không theo thứ tự)
+        run: npm test --prefix frontend
       - name: Backend integration tests (PostgreSQL)
         working-directory: backend
         run: |

@@ -43,7 +43,7 @@ Không có `LLM_API_KEY` thì mọi thứ vẫn chạy, trừ chat cố vấn; t
 
 ## Deploy (production)
 
-Push lên `main` → GitHub Actions build, unit test, test tích hợp PostgreSQL, lint; rồi self-hosted runner (label `dautu`) trên server tự deploy vào `/home/thangvv/apps/dautu`: rsync code, `docker compose up` Postgres, build, sao lưu DB (`~/backups/dautu/pre-deploy/`), `prisma migrate deploy`, `pm2 startOrReload` (cả hai app), health check `http://127.0.0.1:4200/api/health` rồi kiểm tra nhịp tim worker (phải lên trong 90 giây, nếu không deploy thất bại). Xem `.github/workflows/deploy.yml`.
+Push lên `main` → GitHub Actions build, unit test (backend + frontend), test tích hợp PostgreSQL, lint; rồi self-hosted runner (label `dautu`) trên server tự deploy vào `/home/thangvv/apps/dautu`: rsync code, `docker compose up` Postgres, build, sao lưu DB (`~/backups/dautu/pre-deploy/`), `prisma migrate deploy`, `pm2 startOrReload` (cả hai app), health check `http://127.0.0.1:4200/api/health` rồi kiểm tra nhịp tim worker (phải lên trong 90 giây, nếu không deploy thất bại). Xem `.github/workflows/deploy.yml`.
 
 - Hai process NestJS cùng codebase (`ecosystem.config.cjs`): `dautu` (web) phục vụ `/api`, socket.io, `frontend/dist` và poll bảng giá realtime; `dautu-worker` (`dist/worker.js`, không mở cổng) chạy cron, hàng đợi bản tin, gửi Telegram / Web Push. Mỗi lượt việc định kỳ giữ khoá tư vấn PostgreSQL nên không bao giờ chạy trùng. Nhịp tim worker: `curl 127.0.0.1:4200/api/health` → `worker.ok`. Chạy local cần việc nền thì mở thêm `npm run start:worker:dev` (trong `backend/`).
 - `.env` ở thư mục gốc trên server (không nằm trong git): biến `POSTGRES_*` cho docker compose + toàn bộ biến của backend (`PORT=4200`, `FRONTEND_ORIGIN=https://dautu.thangvu.io.vn`…).
@@ -115,7 +115,7 @@ frontend (React + Vite + MUI)  ──REST /api, SSE chat, socket.io──▶  ba
 - Hai process từ cùng một bản build: `dist/main.js` (web: API, socket, giá realtime) và `dist/worker.js` (cron, hàng đợi bản tin, gửi Telegram / Web Push; mỗi job chạy dưới khoá advisory của Postgres, ghi nhịp tim để deploy kiểm tra). `/api/health` trả cả trạng thái worker.
 - `frontend/src/` — `pages/` chỉ là khung trang; gọi API qua `api/<mảng>.ts`; logic tải dữ liệu và form trong `hooks/`; component theo mảng trong `components/<mảng>/`.
 - Chi tiết ranh giới module, quy ước thư mục và checklist khi thêm tính năng: [ARCHITECTURE.md](ARCHITECTURE.md).
-- `npm test` (unit), `npm run test:int` trong `backend` (PostgreSQL thật) và `npm run lint` đều chạy trong CI. Giao diện điện thoại: Playwright trong `frontend/e2e` (iPhone 11 Pro, WebKit).
+- `npm test` (unit), `npm run test:int` trong `backend` (PostgreSQL thật), `npm test` trong `frontend` (hành vi hook, Vitest) và `npm run lint` đều chạy trong CI. Giao diện điện thoại: Playwright trong `frontend/e2e` (iPhone 11 Pro, WebKit).
 
 ## Lưu ý trước khi mở cho cộng đồng
 

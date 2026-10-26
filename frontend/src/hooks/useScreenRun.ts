@@ -25,7 +25,11 @@ export function useScreenRun(filters: ScreenFilter[], sort: ScreenSort) {
   const moreCtrl = useRef<AbortController | null>(null)
 
   useEffect(() => {
+    // Bộ lọc / sắp xếp đổi: huỷ lượt tải thêm đang chạy và mở lại nút "Tải thêm" (phản hồi của lượt đã huỷ bị bỏ qua)
     moreCtrl.current?.abort()
+    moreCtrl.current = null
+    setLoadingMore(false)
+    setMoreFailed(false)
     if (!filters.length) {
       setRes(null)
       setFailure(null)
@@ -35,10 +39,10 @@ export function useScreenRun(filters: ScreenFilter[], sort: ScreenSort) {
     const ctrl = new AbortController()
     setLoading(true)
     setFailure(null)
-    setMoreFailed(false)
     const t = setTimeout(() => {
       runScreen({ filters, sort, page: 1, pageSize: PAGE_SIZE }, ctrl.signal)
         .then((d) => {
+          if (ctrl.signal.aborted) return
           setRes(d)
           setPage(1)
           setExhausted(d.items.length === 0 || d.items.length >= d.total)
@@ -56,15 +60,20 @@ export function useScreenRun(filters: ScreenFilter[], sort: ScreenSort) {
       ctrl.abort()
     }
   }, [filters, sort, attempt])
+  useEffect(() => () => moreCtrl.current?.abort(), [])
 
   const loadMore = () => {
-    if (!res || loadingMore) return
+    // Đang chạy bộ lọc mới thì `res`/`page` còn là của bộ lọc cũ: chưa nạp thêm
+    if (!res || loading || loadingMore) return
     const ctrl = new AbortController()
     moreCtrl.current = ctrl
+    const current = () => moreCtrl.current === ctrl
     setLoadingMore(true)
     setMoreFailed(false)
     runScreen({ filters, sort, page: page + 1, pageSize: PAGE_SIZE }, ctrl.signal)
       .then((d) => {
+        if (!current()) return
+        moreCtrl.current = null
         setRes((prev) => {
           if (!prev) return d
           const seen = new Set(prev.items.map((i) => i.symbol))
@@ -75,7 +84,8 @@ export function useScreenRun(filters: ScreenFilter[], sort: ScreenSort) {
         setLoadingMore(false)
       })
       .catch((e: unknown) => {
-        if ((e as Error).name === 'AbortError') return
+        if (!current() || (e as Error).name === 'AbortError') return
+        moreCtrl.current = null
         setMoreFailed(true)
         setLoadingMore(false)
       })

@@ -94,7 +94,8 @@ StockResearchService / CompareService ─ ghép adapter + cache thành chi tiế
 |---|---|---|---|
 | Unit | `cd backend && npx jest` | `*.spec.ts` | không DB, không mạng; Prisma / market giả |
 | Tích hợp | `TEST_DATABASE_URL=…/dautu_test npm run test:int` | `*.int-spec.ts` | PostgreSQL thật, DB tên kết thúc `_test` (code từ chối DB khác) |
-| E2E giao diện | `npx playwright test` trong `frontend/` | `frontend/e2e/*.spec.ts` | web + worker chạy trên DB **`dautu_e2e`**, seed bằng `npm run seed:e2e` |
+| Hành vi frontend | `npm test` trong `frontend/` (Vitest, jsdom) | `frontend/src/**/*.test.ts` | không backend: `api/` giả lập bằng `vi.mock`, phản hồi hoàn tất theo thứ tự test chọn |
+| E2E giao diện | `npx playwright test` trong `frontend/` | `frontend/e2e/*.spec.ts` | web + worker chạy trên DB **`dautu_e2e`**, seed bằng `npm run seed:e2e` (script từ chối DB không kết thúc `_e2e`) |
 
 - `dautu_test` chỉ dành cho integration test: `test:int` xoá và tạo dữ liệu ở đó, nên **không chạy web / worker trên `dautu_test`** (tranh hàng đợi, test chập chờn). Server cho e2e luôn dùng `dautu_e2e`.
 - Dev local: Postgres Docker cổng 5434 (`docker compose up -d`). Không trỏ test hay seed vào DB production.
@@ -169,11 +170,12 @@ Kiểu request / response chỉ định nghĩa ở `contracts/src` (xem mục 4)
 
 ### Kiểm thử
 
-- **Playwright mobile** (`frontend/e2e`): iPhone 11 Pro, WebKit (cùng engine Safari iOS). `mobile.spec.ts` đi qua mọi màn hình và mở từng modal / ngăn kéo, ghi ảnh vào `frontend/e2e-results/` (đã gitignore) và chạy `audit()`; màn nào có lỗi bố cục thì thất bại. `auth-flow.spec.ts`, `chart.spec.ts` cho đăng nhập và biểu đồ.
+- **Hook / logic** (`src/**/*.test.ts`, Vitest + Testing Library, chạy trong CI): kiểm hành vi bất đồng bộ không cần trình duyệt. Mock module `api/` bằng `vi.mock`, mỗi lần gọi trả một `deferred()` (`src/test/deferred.ts`) để test tự chọn thứ tự phản hồi về: đổi tham số khi request cũ chưa xong, phản hồi / lỗi cũ về muộn, polling chồng lên lần tải sau khi ghi, huỷ khi gỡ component. Hook tải dữ liệu theo tham số (danh mục, bộ lọc) phải chỉ nhận phản hồi của request gần nhất — xem `usePortfolioData`, `useScreenRun`, `useResource`.
+- **Playwright mobile** (`frontend/e2e`): iPhone 11 Pro, WebKit (cùng engine Safari iOS). `mobile.spec.ts` đi qua mọi màn hình và mở từng modal / ngăn kéo, ghi ảnh vào `frontend/e2e-results/` (đã gitignore) và chạy `audit()`; màn nào có lỗi bố cục thì thất bại. `auth-flow.spec.ts`, `chart.spec.ts` cho đăng nhập và biểu đồ; `races.spec.ts` giữ chậm request bằng `page.route` để kiểm phản hồi về không theo thứ tự trên giao diện thật.
 - **Database cho e2e**: dùng DB riêng tên kết thúc `_e2e` hoặc `_e2e_<hậu tố>` (ví dụ `dautu_e2e`, `dautu_e2e_fe`), **không** dùng `dautu_test` (`npm run test:int` xoá dữ liệu ở đó, worker đang chạy sẽ tranh hàng đợi với test) và không bao giờ trỏ vào production.
 - Quy trình: build backend ra thư mục tạm (`cd backend && npm run build:contracts && npx tsc -p tsconfig.build.json --outDir <tmp>/be --incremental false`), build frontend ra thư mục tạm (`npx vite build --outDir <tmp>/fe --emptyOutDir`; không build vào `frontend/dist` khi web dev đang phục vụ thư mục đó), chạy web (`APP_ROLE=web`, `WEB_DIST=<tmp>/fe`) và worker (`APP_ROLE=worker`) với `DATABASE_URL` của DB e2e, `JWT_SECRET` tạm, không đặt khoá Telegram / VAPID / LLM. Seed tài khoản có dữ liệu bằng `node backend/scripts/seed-e2e.js` (in ra JWT), rồi:
   `E2E_BASE_URL=http://localhost:<cổng> E2E_TOKEN=<jwt> npx playwright test`
-- Trước khi gộp, frontend phải qua: `npx tsc -b`, `npx eslint . --max-warnings 0`, `npx vite build`, Playwright mobile (0 lỗi audit), `npx knip` (không còn file / export / dependency thừa; cấu hình ở `frontend/knip.json`).
+- Trước khi gộp, frontend phải qua: `npx tsc -b`, `npx eslint . --max-warnings 0`, `npm test`, `npx vite build`, Playwright mobile (0 lỗi audit), `npx knip` (không còn file / export / dependency thừa; cấu hình ở `frontend/knip.json`).
 - Refactor cấu trúc không đổi giao diện: chụp ảnh các trang nặng trước / sau cùng dữ liệu rồi so điểm ảnh (ImageMagick `compare -metric AE`).
 
 ### Thêm một trang: checklist
