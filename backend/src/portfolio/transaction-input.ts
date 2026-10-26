@@ -1,9 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { isDateKey } from '../common/dates';
 import { normalizeCrypto } from '../market/crypto-symbol';
 import type { MarketService } from '../market/market.service';
-import { vnDateKey } from '../market/types';
+import { GOLD_SOURCE_DOWN, vnDateKey } from '../market/types';
 import type { TransactionDto } from './dto/transaction.dto';
 import type { Currency, TxType } from './ledger';
 
@@ -97,6 +97,7 @@ export async function normalizeTransaction(
   if (dto.assetType === 'stock') symbol = (await market.assertStock(symbol)).symbol;
   if (dto.assetType === 'crypto') symbol = normalizeCrypto(symbol);
   if (dto.assetType === 'gold' && !market.goldQuotes().some((g) => g.code === symbol)) {
+    if (!market.goldQuotes().length) throw new ServiceUnavailableException(GOLD_SOURCE_DOWN);
     throw new NotFoundException(`Không có loại vàng ${symbol}`);
   }
   return {

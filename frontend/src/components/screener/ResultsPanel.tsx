@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography'
 import SortIcon from '@mui/icons-material/SortOutlined'
 import { fmtClock } from '../../lib/compare'
 import { fmtNum } from '../../lib/format'
-import { filterLabel, MAX_PICK, PAGE_SIZE, sortLabel } from '../../lib/screener'
+import { filterLabel, MAX_PICK, sortLabel } from '../../lib/screener'
 import type { ScreenCriterion, ScreenFilter, ScreenResult, ScreenSort } from '../../lib/types'
 import { ResultCard } from './ScreenerParts'
 
@@ -71,7 +71,7 @@ export default function ResultsPanel({
         )}
         {res.postFiltered && (
           <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.25 }}>
-            Tỷ suất cổ tức được lọc sau cùng trên các mã đã khớp điều kiện khác, nên mỗi lần tải có thể ít hơn {PAGE_SIZE} mã.
+            Tỷ suất cổ tức được lọc sau cùng, trên các mã đã khớp điều kiện khác.
           </Typography>
         )}
       </Box>

@@ -211,7 +211,7 @@ export function HoldingImpactRow({ h }: { h: SimHolding }) {
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
           <Typography sx={{ fontWeight: 700, fontSize: 15 }} noWrap>
-            {h.symbol}
+            {h.label || h.symbol}
           </Typography>
           {status && <Chip size="small" variant="outlined" label={status} sx={{ height: 22, fontSize: 11 }} />}
         </Stack>

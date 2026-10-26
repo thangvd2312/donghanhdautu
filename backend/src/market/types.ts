@@ -14,6 +14,9 @@ export type {
 
 export const VN_TZ = 'Asia/Ho_Chi_Minh';
 
+/** Bảng giá vàng rỗng (chưa lấy được nguồn lần nào): không phải "không có loại vàng này" */
+export const GOLD_SOURCE_DOWN = 'Chưa lấy được bảng giá vàng từ nguồn, thử lại sau ít phút';
+
 /** Giờ hiện tại theo VN, dạng {weekday 0-6, minutes since midnight} */
 export function vnClock(d = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {

@@ -134,7 +134,7 @@ export function ExpectedCard({
 }) {
   const st = statusOf(i)
   const meta = STATUS[st]
-  const can = recordable(i)
+  const can = recordable(i, today)
   return (
     <Box data-testid="income-expected" data-status={st} sx={{ ...cardSx, borderStyle: 'dashed' }}>
       <AssetAvatar assetType="stock" symbol={i.symbol} size={40} />

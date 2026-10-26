@@ -125,7 +125,8 @@ export class JournalService {
       month: m,
       trades: rows.txs.map((t) => {
         const e = this.tradeEntry(t, plans, prices);
-        return { ...e, linked: e.plan !== null };
+        // Lệnh trước ngày lập kế hoạch (gắn về sau) không tính là làm theo kế hoạch
+        return { ...e, linked: e.plan !== null && !e.beforePlan };
       }),
       reviews: rows.reviews.map((r) => ({
         decision: r.decision as PlanDecision,

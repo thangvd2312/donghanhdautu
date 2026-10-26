@@ -54,19 +54,24 @@ const round2 = (n: number) => Math.round(n * 100) / 100
 export const sumPct = (t: Record<string, number>, rows: TargetRowInfo[]) => round2(rows.reduce((s, r) => s + (t[r.key] ?? 0), 0))
 
 /** Chia 100 thành số nguyên theo trọng số, phần dư dồn cho các dòng có phần lẻ lớn nhất (tổng luôn đúng 100) */
+/**
+ * Chia 100% theo tỷ lệ, làm tròn tới 0,01 (độ chính xác ô nhập) mà tổng vẫn đúng 100. Làm tròn tới số nguyên thì
+ * "Giữ như hiện tại" lệch tới 0,5 điểm và máy tính đề xuất mua / bán chỉ để xoá phần làm tròn.
+ */
 function largestRemainder(weights: number[]): number[] {
+  const UNITS = 10_000
   const sum = weights.reduce((a, b) => a + b, 0)
   if (sum <= 0) return weights.map(() => 0)
-  const raw = weights.map((w) => (w / sum) * 100)
+  const raw = weights.map((w) => (w / sum) * UNITS)
   const out = raw.map(Math.floor)
-  let left = 100 - out.reduce((a, b) => a + b, 0)
+  let left = UNITS - out.reduce((a, b) => a + b, 0)
   raw
     .map((v, i) => ({ i, f: v - Math.floor(v) }))
     .sort((a, b) => b.f - a.f)
     .forEach(({ i }) => {
       if (left-- > 0) out[i]++
     })
-  return out
+  return out.map((u) => u / 100)
 }
 
 export function keepCurrent(rows: TargetRowInfo[]): Record<string, number> {

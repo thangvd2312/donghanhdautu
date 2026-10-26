@@ -150,7 +150,13 @@ const stat = (over: Record<string, number | null>, year = 2026, quarter = 2): St
 });
 const yearRow = (yearReport: number, over: Record<string, number>): Record<string, number> => ({ yearReport, ...over });
 const divs = (trailingYieldPct: number | null) =>
-  ({ items: [], trailingCashPerShare: 0, trailingYieldPct, price: 100 }) as MetricInput['dividends'];
+  ({
+    items: [],
+    trailingCashPerShare: 0,
+    trailingAdjusted: false,
+    trailingYieldPct,
+    price: 100,
+  }) as MetricInput['dividends'];
 
 const corporate = (over: Partial<MetricInput> = {}): MetricInput => ({
   kind: 'corporate',

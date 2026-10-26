@@ -103,6 +103,8 @@ export interface LedgerResult {
   fees: Record<Currency, Dec>;
   /** Phí và thuế đã trả (mua, bán, cổ tức, phí riêng) */
   taxes: Record<Currency, Dec>;
+  /** Phí + thuế theo từng đồng tiền, kèm phần đã quy VND theo tỷ giá lúc giao dịch (không đổi theo tỷ giá hôm nay) */
+  charges: Record<Currency, Flow>;
   dividends: Dec;
   /** Ghi chú về phần chưa hỗ trợ hoặc ước tính */
   warnings: string[];
@@ -135,6 +137,7 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
   const implicitDeposits: Record<Currency, Dec> = { VND: ZERO, USDT: ZERO };
   const fees: Record<Currency, Dec> = { VND: ZERO, USDT: ZERO };
   const taxes: Record<Currency, Dec> = { VND: ZERO, USDT: ZERO };
+  const chargeFlows: Record<Currency, Flow> = { VND: emptyFlow(), USDT: emptyFlow() };
   let dividends = ZERO;
   const warnings: string[] = [];
 
@@ -187,6 +190,7 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
     const charges = tx.fee.add(tx.tax);
     fees[tx.currency] = fees[tx.currency].add(tx.fee);
     taxes[tx.currency] = taxes[tx.currency].add(tx.tax);
+    addFlow(chargeFlows[tx.currency], charges, tx.currency, tx.fxRate);
 
     switch (tx.type) {
       case 'opening': {
@@ -305,6 +309,7 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
       case 'fee': {
         const amount = positive(tx.amount, 'Số tiền phí', tx);
         fees[tx.currency] = fees[tx.currency].add(amount);
+        addFlow(chargeFlows[tx.currency], amount, tx.currency, tx.fxRate);
         spend(tx.currency, amount.add(charges), tx.fxRate);
         break;
       }
@@ -320,6 +325,7 @@ export function computeLedger(input: LedgerTx[]): LedgerResult {
     implicitDeposits,
     fees,
     taxes,
+    charges: chargeFlows,
     dividends,
     warnings,
   };
@@ -387,7 +393,10 @@ export function performance({
     realizedVndActual: realizedActual === null ? null : num(realizedActual),
     unrealized: unrealizedVnd,
     dividends: num(ledger.dividends),
-    feesAndTaxes: num(ledger.fees.VND.add(ledger.taxes.VND).add(ledger.fees.USDT.add(ledger.taxes.USDT).mul(usdtVnd))),
+    // Phí USDT quy VND theo tỷ giá lúc giao dịch; chỉ phần chưa có tỷ giá mới dùng tỷ giá hiện tại
+    feesAndTaxes: num(
+      ledger.charges.VND.vndKnown.add(ledger.charges.USDT.vndKnown).add(ledger.charges.USDT.unknownFx.mul(usdtVnd)),
+    ),
     cash: { VND: num(ledger.cash.VND), USDT: num(ledger.cash.USDT) },
     implicitDeposits: num(implicitVnd),
     isEstimate: totalIsEstimate || fxEstimated,
@@ -414,6 +423,7 @@ function mergeLedgers(results: LedgerResult[]): LedgerResult {
     implicitDeposits: { VND: ZERO, USDT: ZERO },
     fees: { VND: ZERO, USDT: ZERO },
     taxes: { VND: ZERO, USDT: ZERO },
+    charges: { VND: emptyFlow(), USDT: emptyFlow() },
     dividends: ZERO,
     warnings: [],
   };
@@ -447,6 +457,7 @@ function mergeLedgers(results: LedgerResult[]): LedgerResult {
       out.implicitDeposits[c] = out.implicitDeposits[c].add(r.implicitDeposits[c]);
       out.fees[c] = out.fees[c].add(r.fees[c]);
       out.taxes[c] = out.taxes[c].add(r.taxes[c]);
+      out.charges[c] = sumFlow(out.charges[c], r.charges[c]);
     }
     out.dividends = out.dividends.add(r.dividends);
     out.warnings.push(...r.warnings);

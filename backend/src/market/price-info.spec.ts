@@ -57,6 +57,12 @@ describe('price-info', () => {
     expect(priceInfo(book(), 'gold', 'SJL1L10', NOW)).toMatchObject({ value: 8_000_000, status: 'fresh' });
     expect(priceVnd(book(), 'gold', 'SJL1L10')).toBe(8_000_000);
     expect(priceInfo(book(), 'gold', 'NOPE', NOW).status).toBe('missing');
+    expect(priceInfo(book(), 'gold', 'NOPE', NOW).reason).toBe('Nguồn không còn loại vàng này');
+    // Nguồn lỗi từ đầu (bảng giá rỗng): không nói là nguồn không còn loại vàng này (QA-a-09)
+    expect(priceInfo(book({ gold: [] }), 'gold', 'SJL1L10', NOW)).toMatchObject({
+      status: 'missing',
+      reason: 'Chưa lấy được bảng giá vàng từ nguồn',
+    });
   });
 
   it('values cash at 1 and USDT cash at the USDT rate', () => {

@@ -18,7 +18,8 @@ export default function IncomeTeaser({ refreshKey }: { refreshKey: number }) {
       .catch(() => setS(null))
   }, [refreshKey])
   if (!s || (s.summary.receivedNet === 0 && s.summary.expectedNet === 0)) return null
-  const { receivedNet, expectedNet } = s.summary
+  const { receivedNet } = s.summary
+  const expectedNet = s.summary.expectedNet - s.summary.overdueNet
   return (
     <ButtonBase
       component={RouterLink}

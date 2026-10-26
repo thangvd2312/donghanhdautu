@@ -180,7 +180,9 @@ function buildNotes(rows: SimInputRow[], shocks: Shocks, hasMissing: boolean): s
   }
   if (rows.some((r) => r.assetType === 'gold')) notes.push('Vàng định giá theo giá mua vào của cửa hàng.');
   if (hasMissing) {
-    notes.push('Một số tài sản thiếu giá hoặc giá cũ: vẫn tính theo giá đang dùng ở màn Danh mục, xem mục "missing".');
+    notes.push(
+      'Một số tài sản thiếu giá hoặc giá cũ: vẫn tính theo giá đang dùng ở màn Danh mục (đánh dấu ở từng dòng).',
+    );
   }
   return notes;
 }

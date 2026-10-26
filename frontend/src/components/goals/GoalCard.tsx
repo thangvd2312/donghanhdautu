@@ -115,7 +115,7 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
       <Box sx={{ mt: 1.5 }} />
       <Typography variant="caption" color="text.secondary">
         {fmtNum(p.progressPct, 1)}% · từ{' '}
-        {p.assets.length ? p.assets.map((a) => `${a.pct}% ${a.name.replace(/USDT$/, '')}`).join(', ') : 'chưa gán tài sản nào'}
+        {p.assets.length ? p.assets.map((a) => `${a.pct}% ${a.name.replace(/(.)USDT$/, '$1')}`).join(', ') : 'chưa gán tài sản nào'}
       </Typography>
       {p.isEstimate && (
         <Typography variant="caption" color="warning.main" component="div">

@@ -1,5 +1,5 @@
 export { VietcapCompanyAdapter } from './company.adapter';
-export { VietcapEventsAdapter } from './events.adapter';
+export { toCorporateEvent, VietcapEventsAdapter } from './events.adapter';
 export type { CorporateEvent, MarketEvents, VcMarketEvent } from './events.adapter';
 export { VietcapHistoryAdapter } from './history.adapter';
 export type { Candle } from './history.adapter';

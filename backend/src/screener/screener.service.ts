@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import type { ScreenCriterion, ScreenResult } from '@dautu/contracts';
 import { dividendHistory } from '../market/dividends';
-import { VietcapEventsAdapter, VietcapScreeningAdapter } from '../market/providers/vietcap';
+import { toCorporateEvent, VietcapEventsAdapter, VietcapScreeningAdapter } from '../market/providers/vietcap';
 import type { CorporateEvent, VcScreenCriterion, VcScreenPage, VcScreenRow } from '../market/providers/vietcap';
 import { vnDateKey } from '../market/types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -124,9 +124,9 @@ export class ScreenerService {
     let scan = this.dividendScans.get(cacheKey);
     if (!scan || Date.now() - scan.at > 10 * 60_000) {
       const candidates = await this.candidates(rest, sourceSort);
-      const cashByTicker = await this.cashEventsByTicker();
+      const eventsByTicker = await this.dividendEventsByTicker();
       const today = vnDateKey();
-      const yields = candidates.rows.map((r) => trailingYield(r, cashByTicker.get(r.ticker) ?? [], today));
+      const yields = candidates.rows.map((r) => trailingYield(r, eventsByTicker.get(r.ticker) ?? [], today));
       const matched = candidates.rows
         .map((row, i) => ({ row, yieldPct: yields[i] }))
         .filter((c) => inRange(c.yieldPct, range));
@@ -162,29 +162,19 @@ export class ScreenerService {
   }
 
   /**
-   * Cổ tức tiền mặt 12 tháng gần nhất của MỌI mã trong một lần lấy sự kiện quyền toàn thị trường (vài trang) thay vì gọi từng mã:
-   * gọi từng mã cho 300 ứng viên mất hàng phút. Cùng công thức dividendHistory như trang cổ phiếu.
+   * Cổ tức tiền mặt và cổ tức cổ phiếu / thưởng 12 tháng gần nhất của MỌI mã trong một lần lấy sự kiện quyền toàn thị trường
+   * (vài trang) thay vì gọi từng mã: gọi từng mã cho 300 ứng viên mất hàng phút. Cùng công thức dividendHistory như trang
+   * cổ phiếu (tiền trả trước một đợt chia cổ phiếu được quy về số cổ phiếu hiện tại).
    */
-  private async cashEventsByTicker(): Promise<Map<string, CorporateEvent[]>> {
+  private async dividendEventsByTicker(): Promise<Map<string, CorporateEvent[]>> {
     const today = vnDateKey();
     const from = `${Number(today.slice(0, 4)) - 1}${today.slice(4)}`;
     const { events } = await this.events.marketEvents(from, today);
     const out = new Map<string, CorporateEvent[]>();
     for (const e of events) {
-      const exDate = e.exrightDate?.slice(0, 10);
-      if (e.eventCode !== 'DIV' || !exDate || !e.valuePerShare || e.valuePerShare <= 0) continue;
-      const list = out.get(e.ticker) ?? [];
-      list.push({
-        symbol: e.ticker,
-        kind: 'cash',
-        title: e.eventTitleVi ?? '',
-        exDate,
-        recordDate: e.recordDate?.slice(0, 10) ?? null,
-        payoutDate: e.payoutDate?.slice(0, 10) ?? null,
-        ratio: null,
-        valuePerShare: e.valuePerShare,
-      });
-      out.set(e.ticker, list);
+      const ev = toCorporateEvent(e.ticker, e);
+      if (!ev) continue;
+      out.set(e.ticker, [...(out.get(e.ticker) ?? []), ev]);
     }
     return out;
   }

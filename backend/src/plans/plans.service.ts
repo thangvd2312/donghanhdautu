@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import type { InvestmentPlan } from '@prisma/client';
+import type { InvestmentPlan, Prisma } from '@prisma/client';
 import type { Currency, Plan, PlanDetail, PlanListItem, PlanReview, TxType } from '@dautu/contracts';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { MarketService } from '../market/market.service';
@@ -22,10 +22,17 @@ export class PlansService {
     private analytics: AnalyticsService,
   ) {}
 
-  private fields(dto: PlanDto, today: string) {
+  /** `before`: kế hoạch đang sửa — không gửi ngày xem lại và không đổi chu kỳ thì giữ nguyên ngày cũ (kể cả đã quá hạn) */
+  private fields(dto: PlanDto, today: string, before?: InvestmentPlan) {
     const every = dto.reviewEveryDays ?? null;
-    const next = dto.nextReviewAt ?? addDays(today, every ?? DEFAULT_REVIEW_DAYS);
-    if (next < today) throw new BadRequestException('Ngày xem lại phải từ hôm nay trở đi');
+    const keep = before && !dto.nextReviewAt && every === before.reviewEveryDays;
+    const next = keep
+      ? before.nextReviewAt.toISOString().slice(0, 10)
+      : (dto.nextReviewAt ?? addDays(today, every ?? DEFAULT_REVIEW_DAYS));
+    if (!keep && next < today) throw new BadRequestException('Ngày xem lại phải từ hôm nay trở đi');
+    if (dto.targetPrice != null && dto.stopPrice != null && dto.stopPrice >= dto.targetPrice) {
+      throw new BadRequestException('Mốc cắt lỗ phải thấp hơn mốc chốt lời');
+    }
     return {
       thesis: dto.thesis.trim(),
       horizon: dto.horizon?.trim() || null,
@@ -116,14 +123,17 @@ export class PlansService {
 
   async create(userId: string, dto: PlanDto): Promise<Plan> {
     const symbol = await this.assets.normalize(dto.assetType, dto.symbol);
-    const existing = await this.prisma.investmentPlan.findFirst({
-      where: { userId, assetType: dto.assetType, symbol, status: 'active' },
-    });
-    if (existing) {
-      throw new ConflictException({ message: 'Tài sản này đã có kế hoạch đang theo dõi', planId: existing.id });
-    }
-    const plan = await this.prisma.investmentPlan.create({
-      data: { userId, assetType: dto.assetType, symbol, ...this.fields(dto, vnDateKey()) },
+    const data = this.fields(dto, vnDateKey());
+    // Kiểm tra trùng và ghi dưới cùng khoá theo người dùng: hai yêu cầu đồng thời không tạo hai kế hoạch đang theo dõi
+    const plan = await this.prisma.$transaction(async (db) => {
+      await lockPlans(db, userId);
+      const existing = await db.investmentPlan.findFirst({
+        where: { userId, assetType: dto.assetType, symbol, status: 'active' },
+      });
+      if (existing) {
+        throw new ConflictException({ message: 'Tài sản này đã có kế hoạch đang theo dõi', planId: existing.id });
+      }
+      return db.investmentPlan.create({ data: { userId, assetType: dto.assetType, symbol, ...data } });
     });
     void this.analytics.track('plan_created', { userId });
     return this.present(plan);
@@ -131,10 +141,12 @@ export class PlansService {
 
   /** Sửa kế hoạch: lưu bản trước vào lịch sử */
   async update(userId: string, id: string, dto: PlanDto): Promise<Plan> {
-    const before = await this.own(userId, id);
-    if (before.status !== 'active') throw new BadRequestException('Kế hoạch đã kết thúc, không sửa được');
-    const data = this.fields(dto, vnDateKey());
+    await this.own(userId, id);
     const plan = await this.prisma.$transaction(async (db) => {
+      await lockPlans(db, userId);
+      const before = await db.investmentPlan.findUniqueOrThrow({ where: { id } });
+      if (before.status !== 'active') throw new BadRequestException('Kế hoạch đã kết thúc, không sửa được');
+      const data = this.fields(dto, vnDateKey(), before);
       await db.planVersion.create({ data: { planId: id, snapshot: snapshot(before) } });
       return db.investmentPlan.update({ where: { id }, data });
     });
@@ -153,6 +165,10 @@ export class PlansService {
     if (dto.decision !== 'close' && next <= today)
       throw new BadRequestException('Ngày xem lại tiếp theo phải sau hôm nay');
     const saved = await this.prisma.$transaction(async (db) => {
+      // Đọc lại trạng thái dưới khoá: hai lần kết thúc / xem lại đồng thời không cùng được ghi
+      await lockPlans(db, userId);
+      const current = await db.investmentPlan.findUniqueOrThrow({ where: { id }, select: { status: true } });
+      if (current.status !== 'active') throw new BadRequestException('Kế hoạch đã kết thúc');
       const review = await db.planReview.create({
         data: {
           planId: id,
@@ -186,4 +202,8 @@ export class PlansService {
   private present(p: InvestmentPlan): Plan {
     return toPlan(p, this.assets.displayName(p.assetType, p.symbol));
   }
+}
+
+function lockPlans(db: Prisma.TransactionClient, userId: string) {
+  return db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`plans:${userId}`}))`;
 }

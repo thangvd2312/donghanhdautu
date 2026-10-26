@@ -3,6 +3,7 @@
  * Thuần (không gọi DB / mạng) để test được; kiểm tra mã tài sản và cả sổ nằm ở ImportService.
  */
 import type { ImportField } from '@dautu/contracts';
+import { MAX_TX_NUMBER } from './dto/transaction.dto';
 import type { TransactionDto } from './dto/transaction.dto';
 import type { TxType } from './ledger';
 
@@ -195,6 +196,10 @@ export function rowToDto(cells: string[], line: number, mapping: Mapping, decima
       errors.push(`${FIELD_LABEL[f]} "${raw}" không phải số hợp lệ`);
       return undefined;
     }
+    if (v !== null && v > MAX_TX_NUMBER) {
+      errors.push(`${FIELD_LABEL[f]} "${raw}" quá lớn (tối đa 1 triệu tỷ)`);
+      return undefined;
+    }
     return v ?? undefined;
   };
 
@@ -213,6 +218,12 @@ export function rowToDto(cells: string[], line: number, mapping: Mapping, decima
   const currencyRaw = get('currency').toUpperCase();
   const currency = currencyRaw === 'USDT' ? 'USDT' : currencyRaw === '' || currencyRaw === 'VND' ? 'VND' : null;
   if (!currency) errors.push(`Tiền tệ "${get('currency')}" chỉ nhận VND hoặc USDT`);
+  // Giao dịch coin luôn tính bằng USDT: dòng ghi rõ VND mà vẫn nhận thì giá VND sẽ bị hiểu là USDT
+  if (assetType === 'crypto' && type && ['buy', 'sell', 'opening'].includes(type) && currencyRaw === 'VND') {
+    errors.push(
+      'Coin ghi giá và phí bằng USDT; dòng này ghi tiền tệ VND. Đổi giá sang USDT (ghi tỷ giá ở cột tỷ giá nếu có)',
+    );
+  }
 
   const dto: TransactionDto = {
     type: type ?? 'buy',

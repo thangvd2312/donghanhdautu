@@ -1,13 +1,13 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import type { MarketService } from './market.service';
 import { TrackedSymbolResolver } from './tracked-symbol.resolver';
 
-function resolver(over: { stockQuote?: () => Promise<unknown> } = {}) {
+function resolver(over: { stockQuote?: () => Promise<unknown>; gold?: { code: string }[] } = {}) {
   const market = {
     assertStock: jest.fn((s: string) => Promise.resolve({ symbol: s })),
     stockQuote: jest.fn(over.stockQuote ?? (() => Promise.resolve({}))),
     binance: { quotes: new Map([['BTCUSDT', {}]]) },
-    goldQuotes: () => [{ code: 'SJL1L10' }],
+    goldQuotes: () => over.gold ?? [{ code: 'SJL1L10' }],
   };
   return { market, resolver: new TrackedSymbolResolver(market as unknown as MarketService) };
 }
@@ -31,5 +31,10 @@ describe('TrackedSymbolResolver', () => {
     await expect(r.resolve('crypto', 'DOGE')).rejects.toThrow(NotFoundException);
     await expect(r.resolve('gold', 'SJL1L10')).resolves.toBe('SJL1L10');
     await expect(r.resolve('gold', 'NOPE')).rejects.toThrow('Không có loại vàng NOPE');
+  });
+
+  it('gold source down (empty quote list): 503 instead of "no such gold type"', async () => {
+    const { resolver: r } = resolver({ gold: [] });
+    await expect(r.resolve('gold', 'SJL1L10')).rejects.toThrow(ServiceUnavailableException);
   });
 });

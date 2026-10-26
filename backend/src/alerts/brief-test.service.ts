@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import type { Notification as NotificationView } from '@dautu/contracts';
 import { AiUsageService } from '../ai/ai-usage.service';
 import { BriefsService } from './briefs.service';
+import { LlmService } from './llm.service';
 import { toNotificationView } from './notification.presenter';
 import { WeeklyBriefService } from './weekly.service';
 
@@ -12,11 +13,16 @@ export class BriefTestService {
     private briefs: BriefsService,
     private weekly: WeeklyBriefService,
     private aiUsage: AiUsageService,
+    private llm: LlmService,
   ) {}
 
   async sendToSelf(userId: string, kind: string): Promise<NotificationView> {
     if (kind !== 'weekly' && kind !== 'morning' && kind !== 'closing')
       throw new BadRequestException('kind phải là morning, closing hoặc weekly');
+    // Bản tin sáng / chiều do AI viết: AI tắt thì báo rõ, không tính lượt (bản tuần vẫn có bảng số khi không có AI)
+    if (kind !== 'weekly' && !this.llm.enabled) {
+      throw new ServiceUnavailableException('Trợ lý AI đang tắt nên chưa gửi thử được bản tin sáng / chiều');
+    }
     // Gửi thử cũng gọi AI: giới hạn lượt mỗi ngày, một lượt mỗi lúc
     return toNotificationView(await this.aiUsage.run(userId, 'brief_test', () => this.generate(userId, kind)));
   }

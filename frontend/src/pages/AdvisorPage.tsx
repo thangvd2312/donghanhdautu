@@ -191,8 +191,7 @@ export default function AdvisorPage() {
               <Box sx={{ maxWidth: 820, mx: 'auto' }}>
                 {!enabled && (
                   <Alert severity="warning" sx={{ mb: 2 }}>
-                    Cố vấn chưa được bật: cần cấu hình <code>LLM_API_KEY</code> trong <code>backend/.env</code> rồi khởi
-                    động lại backend.
+                    Cố vấn AI đang tạm tắt. Bạn vẫn dùng được danh mục, bảng giá và các công cụ tính; hãy thử lại sau.
                   </Alert>
                 )}
                 {busyElsewhere && active?.conversationId && (

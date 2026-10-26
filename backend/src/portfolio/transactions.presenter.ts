@@ -77,7 +77,32 @@ export function toTransactionRevision(r: RevisionRow): TransactionRevision {
   return {
     id: r.id,
     action: r.action as TransactionRevision['action'],
-    before: r.before as TransactionRevision['before'],
+    before: pickRevisionFields(r.before),
     createdAt: r.createdAt.toISOString(),
   };
+}
+
+/** Trường của bản trước khi sửa được trả ra ngoài; bỏ cột nội bộ (userId, importBatchId, portfolioId…) */
+const REVISION_FIELDS = [
+  'date',
+  'type',
+  'assetType',
+  'symbol',
+  'quantity',
+  'price',
+  'amount',
+  'currency',
+  'fee',
+  'tax',
+  'fxRate',
+  'note',
+  'reason',
+  'emotion',
+] as const;
+
+function pickRevisionFields(before: unknown): TransactionRevision['before'] {
+  const src = (before ?? {}) as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of REVISION_FIELDS) if (k in src) out[k] = src[k];
+  return out;
 }

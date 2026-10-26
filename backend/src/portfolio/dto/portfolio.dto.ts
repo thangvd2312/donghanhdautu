@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
 import type { AssetType } from '../../market/market.service';
 
@@ -12,5 +13,10 @@ export class HoldingDto {
 }
 
 export class PortfolioNameDto {
-  @IsString() @MinLength(1) @MaxLength(60) name!: string;
+  /** Bỏ khoảng trắng hai đầu: tên chỉ toàn dấu cách bị từ chối thay vì lưu thành tên rỗng */
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(1, { message: 'Tên danh mục không được để trống' })
+  @MaxLength(60)
+  name!: string;
 }

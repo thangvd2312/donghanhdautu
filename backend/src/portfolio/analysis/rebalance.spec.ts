@@ -61,7 +61,7 @@ describe('rebalance: kiểm tra đầu vào', () => {
   it('tổng ≠ 100 → 400, sai số 0,01 được chấp nhận', () => {
     expectBad(() => rebalance(req({ targets: t(60, 39) }), base), /100%/);
     expect(() => rebalance(req({ targets: t(60, 39.995) }), base)).not.toThrow();
-    expectBad(() => rebalance(req({ targets: t(60, 39.98) }), base));
+    expectBad(() => rebalance(req({ targets: t(60, 39.98) }), base), /hiện 99,98%/);
   });
   it.each([[-1], [101], [NaN], [Infinity]])('pct %p → 400', (pct) => {
     expectBad(() => rebalance(req({ targets: [stock('FPT', pct), stock('VNM', 100 - pct)] }), base));
@@ -146,6 +146,8 @@ describe('rebalance: chỉ dùng tiền mới (buy_only)', () => {
     ]);
     expect(r.cash.left).toBe(2_000_000);
     expect(r.maxDeviationPct.after).toBe(0);
+    // Không có tiền mới: khoảng cách tính trên đúng tổng ở bảng "trước" (AAA 10% → mục tiêu 40%)
+    expect(r.actions[0].reason).toMatch(/^Thiếu 30(,0)? điểm % so với mục tiêu 40(,0)?%$/);
   });
   it('tiền không đủ cho mọi phần thiếu: chia theo tỷ lệ, tiền mặt không âm', () => {
     const r = rebalance(
@@ -155,6 +157,11 @@ describe('rebalance: chỉ dùng tiền mới (buy_only)', () => {
     // total 2M + 1M = 3M, mục tiêu 1,5M mỗi mã: thiếu 0,5M mỗi mã, tiền 1M vừa đủ
     expect(r.cash.left).toBe(0);
     expect(r.actions.map((a) => a.quantity)).toEqual([5, 5]);
+    // Có tiền mới: bảng "trước" ghi AAA 50% nhưng lý do tính trên 3M → phải nói rõ 33,3%
+    expect(row(r.before, 'AAA').weightPct).toBeCloseTo(50);
+    expect(r.actions[0].reason).toMatch(
+      /^Tính cả tiền mới, đang chiếm 33,3%: thiếu 16,7 điểm % so với mục tiêu 50(,0)?%$/,
+    );
   });
 });
 

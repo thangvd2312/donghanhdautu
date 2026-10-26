@@ -10,3 +10,10 @@ export function parseNum(s: string) {
 export function todayVn() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())
 }
+
+/** Ngày mai theo giờ VN (YYYY-MM-DD): ngày sớm nhất cho các mốc "phải ở tương lai" */
+export function tomorrowVn() {
+  const d = new Date(`${todayVn()}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
+}

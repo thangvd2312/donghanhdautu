@@ -238,6 +238,27 @@ describe('computeLedger — coin và tỷ giá', () => {
     expect(p.notes.join(' ')).toContain('tỷ giá hiện tại');
   });
 
+  it('phí USDT có tỷ giá: quy VND theo tỷ giá lúc giao dịch, không đổi theo tỷ giá hôm nay (QA-a-10)', () => {
+    const txs = [
+      tx({ type: 'deposit', currency: 'USDT', amount: 1_000, fxRate: 25_500 }),
+      coin('buy', 0.01, 60_000, { fee: 10, fxRate: 25_500 }),
+      coin('sell', 0.005, 70_000, { fee: 5 }),
+      tx({ type: 'deposit', amount: 1_000_000 }),
+      stock('buy', 10, 50_000, { fee: 2_000 }),
+    ];
+    const at = (usdtVnd: number) =>
+      performance({
+        ledger: computeLedger(txs),
+        totalValueVnd: 0,
+        unrealizedVnd: null,
+        totalIsEstimate: false,
+        usdtVnd,
+      }).feesAndTaxes;
+    // 10 USDT × 25.500 (tỷ giá lúc mua) + 5 USDT chưa có tỷ giá × tỷ giá hiện tại + 2.000 ₫
+    expect(at(26_000)).toBe(10 * 25_500 + 5 * 26_000 + 2_000);
+    expect(at(27_000) - at(26_000)).toBe(5 * 1_000);
+  });
+
   it('bán coin có tỷ giá: lãi đã chốt VND theo tỷ giá lúc bán', () => {
     const l = computeLedger([coin('buy', 1, 100), coin('sell', 1, 150, { fxRate: 25_500 })]);
     expect(l.positions[0].realizedVnd?.toNumber()).toBe(50 * 25_500);

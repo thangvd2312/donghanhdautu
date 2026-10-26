@@ -24,9 +24,12 @@ export interface CalendarEvent {
   rightsPrice: number | null
   held: boolean
   watched: boolean
+  /** Số cổ phiếu tính cho sự kiện: đang giữ, hoặc số được hưởng (giữ trước GDKHQ) khi đã qua GDKHQ */
   heldQuantity: number | null
-  /** cash && held: số cổ phiếu × mức chi trả, trước thuế */
+  /** cash: heldQuantity × mức chi trả, trước thuế */
   estimatedCash: number | null
+  /** true: đã qua GDKHQ, heldQuantity là số được hưởng đã chốt (có thể khác số đang giữ) */
+  entitlementFixed: boolean
   upcoming: boolean
   /** Ngày sẽ nhắc nếu đang bật nhắc và chưa qua */
   remindAt: string | null

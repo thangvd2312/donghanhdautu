@@ -100,6 +100,22 @@ describe('so với VN-Index', () => {
     expect(mixed.notes.join(' ')).toContain('chỉ để tham khảo');
   });
 
+  it('trước giờ mở phiên nguồn trả chỉ số = 0: dùng giá đóng cửa gần nhất, không ra −100%', () => {
+    const today = '2026-07-31';
+    const r = compareBenchmark({ ...period, end: today }, '2026-07-01', { ...b, current: 0, today }, 0.9);
+    expect(r.returnPct).toBeCloseTo(5);
+    expect(r.conclusive).toBe(true);
+    // Nến ngày hôm nay bằng 0 cũng bỏ qua
+    const zeroCandle = new Map([...closes, ['2026-08-01', 0]]);
+    const z = compareBenchmark(
+      { ...period, end: '2026-08-01' },
+      '2026-07-01',
+      { ...b, closes: zeroCandle, current: 0, today: '2026-08-01' },
+      0.9,
+    );
+    expect(z.returnPct).toBeCloseTo(5);
+  });
+
   it('thiếu giá chỉ số gần đầu / cuối kỳ thì không so sánh', () => {
     const r = compareBenchmark(period, '2026-06-01', { ...b, closes: new Map([['2026-07-31', 1260]]) }, 0.9);
     expect(r.returnPct).toBeNull();

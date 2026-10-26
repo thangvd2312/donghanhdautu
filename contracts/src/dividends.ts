@@ -81,6 +81,8 @@ export interface IncomeResponse {
     receivedNet: number
     expectedNet: number
     lockedNet: number
+    /** Phần của expectedNet đã qua ngày trả mà chưa ghi sổ (nhiều khả năng đã nhận) — không phải "sắp nhận" */
+    overdueNet: number
     yieldOnCostPct: number | null
   }
   notes: string[]

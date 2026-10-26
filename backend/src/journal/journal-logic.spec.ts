@@ -262,6 +262,13 @@ describe('nhận xét bằng lời', () => {
     ]);
   });
 
+  it('tháng chỉ có nạp / rút: nói rõ có các khoản đó, không nói là chưa ghi gì (QA-d-07)', () => {
+    const s = summarize(input({ trades: [trade({ type: 'deposit', reason: 'need_cash' })] }), null);
+    expect(s.insights).toEqual([
+      'Tháng này chưa có lệnh mua / bán hay lần xem lại kế hoạch nào, chỉ có 1 khoản nạp / rút tiền (ở dòng thời gian bên dưới).',
+    ]);
+  });
+
   it('nhắc gắn nhãn khi có lệnh mà chưa lệnh nào có nhãn', () => {
     const s = summarize(input({ trades: [trade(), trade()] }), null);
     expect(s.insights[0]).toBe('Có 2 lệnh mua / bán, chưa lệnh nào gắn với kế hoạch.');

@@ -59,7 +59,7 @@ export function rebalance(req: RebalanceRequest, ctx: RebalanceContext): Rebalan
         fee: t.fee.toNumber(),
         tax: t.tax.toNumber(),
         net: t.net.toNumber(),
-        reason: actionReason(l, side, total0.plus(newMoney)),
+        reason: actionReason(l, side, total0.plus(newMoney), newMoney),
       });
     }
   }

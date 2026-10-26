@@ -29,6 +29,8 @@ describe('kiểm tra lệnh', () => {
     const sell = { assetType: 'stock' as const, side: 'sell' as const, quantity: 150 };
     expect(() => validateOrder(sell, 150)).not.toThrow();
     expect(() => validateOrder(sell, 300)).toThrow('Lô chẵn');
+    // Bán nhiều hơn số đang giữ: báo đúng lý do, không phải lỗi lô
+    expect(() => validateOrder({ ...sell, quantity: 151 }, 150)).toThrow('Bán quá số đang giữ');
     expect(() => validateOrder({ ...sell, side: 'buy' }, 150)).toThrow('Lô chẵn');
   });
 

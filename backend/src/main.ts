@@ -1,4 +1,3 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
@@ -6,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { AppModule } from './app.module';
 import { pagePreview, withPreview } from './common/link-preview';
+import { appValidationPipe } from './common/validation';
 import { declareAppRole } from './runtime/app-role';
 
 async function bootstrap() {
@@ -19,7 +19,7 @@ async function bootstrap() {
     origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
     credentials: true,
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(appValidationPipe());
   serveFrontend(app, process.env.WEB_DIST ?? join(__dirname, '../../frontend/dist'));
   await app.listen(process.env.PORT ?? 3000, process.env.HOST ?? '0.0.0.0');
 }

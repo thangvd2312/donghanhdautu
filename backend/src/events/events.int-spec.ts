@@ -1,7 +1,9 @@
 import { NotifierService } from '../alerts/notifier.service';
 import type { MarketGateway } from '../market/market.gateway';
 import type { VcMarketEvent, VietcapEventsAdapter } from '../market/providers/vietcap';
-import { testPrisma, testUser } from '../test-utils/test-db';
+import type { MarketService } from '../market/market.service';
+import { TransactionsService } from '../portfolio/transactions.service';
+import { fakeMarket, testPrisma, testUser } from '../test-utils/test-db';
 import { EventsService } from './events.service';
 
 const prisma = testPrisma();
@@ -17,6 +19,7 @@ const vietcap = {
       : Promise.resolve({ events, fetchedAt: '2026-10-21T01:00:00.000Z' }),
 } as unknown as VietcapEventsAdapter;
 const service = new EventsService(prisma, vietcap, notifier);
+const transactions = new TransactionsService(prisma, fakeMarket() as unknown as MarketService);
 
 const fpt = (o: Partial<VcMarketEvent> = {}): VcMarketEvent => ({
   id: 'fpt-1',
@@ -114,6 +117,12 @@ describe('nhắc sự kiện (PostgreSQL)', () => {
     await service.runReminders('2026-10-23');
     const keys = (await notes(on.id)).map((n) => n.dedupeKey).sort();
     expect(keys).toEqual(['event:FPT:fpt-1:2026-10-22', 'event:FPT:fpt-1:2026-10-24']);
+    // Lần nhắc theo ngày cũ được thu hồi (đánh dấu đã đọc), lần mới nói rõ đã đổi ngày
+    const all = await notes(on.id);
+    expect(all.find((n) => n.dedupeKey.endsWith('2026-10-22'))!.read).toBe(true);
+    const fresh = all.find((n) => n.dedupeKey.endsWith('2026-10-24'))!;
+    expect(fresh.read).toBe(false);
+    expect(fresh.title).toContain('(đổi từ 22/10)');
   });
 
   it('mã bị tắt nhắc không nhận; nguồn lỗi thì không gửi và không ném lỗi', async () => {
@@ -125,5 +134,49 @@ describe('nhắc sự kiện (PostgreSQL)', () => {
     failing = true;
     await expect(service.runReminders(TODAY)).resolves.toBe(0);
     expect(await notes(u.id)).toHaveLength(0);
+  });
+});
+
+describe('quyền được hưởng và ngày thanh toán (PostgreSQL)', () => {
+  const buy = (date: string, quantity: number) => ({
+    type: 'buy' as const,
+    date,
+    assetType: 'stock' as const,
+    symbol: 'SBH',
+    quantity,
+    price: 10_000,
+  });
+  const sbh = (o: Partial<VcMarketEvent> = {}): VcMarketEvent => ({
+    id: 'sbh-1',
+    ticker: 'SBH',
+    eventCode: 'DIV',
+    eventTitleVi: 'Trả cổ tức bằng tiền mặt - 1,500 VND',
+    exrightDate: '2026-10-21T00:00:00',
+    recordDate: '2026-10-22T00:00:00',
+    payoutDate: '2026-11-20T00:00:00',
+    valuePerShare: 1500,
+    ...o,
+  });
+
+  it('mua sau GDKHQ: không ước nhận; mua trước rồi bán sau GDKHQ: vẫn được hưởng', async () => {
+    events = [sbh()];
+    const late = await testUser(prisma, 'ev-late-buyer');
+    await transactions.create(late.id, buy('2026-10-23', 400));
+    const [l] = (await service.list(late.id, 'month', '2026-10-26')).items;
+    expect(l).toMatchObject({ held: true, heldQuantity: null, estimatedCash: null, entitlementFixed: true });
+
+    const early = await testUser(prisma, 'ev-early-seller');
+    await transactions.create(early.id, buy('2026-10-20', 400));
+    await transactions.create(early.id, { ...buy('2026-10-23', 400), type: 'sell' });
+    const [e] = (await service.list(early.id, 'month', '2026-10-26')).items;
+    expect(e).toMatchObject({ held: true, heldQuantity: 400, estimatedCash: 600_000, entitlementFixed: true });
+  });
+
+  it('GDKHQ đã qua hơn 7 ngày nhưng thanh toán còn tới: vẫn trong lịch, xếp vào ngày thanh toán', async () => {
+    events = [sbh({ exrightDate: '2026-09-25T00:00:00', recordDate: '2026-09-26T00:00:00' })];
+    const u = await testUser(prisma, 'ev-payout-ahead');
+    await transactions.create(u.id, buy('2026-09-01', 100));
+    const [i] = (await service.list(u.id, 'month', '2026-10-26')).items;
+    expect(i).toMatchObject({ key: 'SBH:cash:sbh-1', date: '2026-11-20', upcoming: true, estimatedCash: 150_000 });
   });
 });

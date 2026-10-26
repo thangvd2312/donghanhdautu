@@ -36,6 +36,8 @@ export class TransactionsService {
 
   async list(userId: string, portfolioId?: string): Promise<TransactionView[]> {
     await this.ensureMigrated(this.prisma, userId);
+    // Danh mục không phải của người dùng: 404 như các API danh mục khác, không trả danh sách rỗng
+    if (portfolioId) await this.resolvePortfolio(this.prisma, userId, portfolioId);
     const rows = await this.prisma.transaction.findMany({
       where: { userId, deletedAt: null, ...(portfolioId ? { portfolioId } : {}) },
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
@@ -51,9 +53,12 @@ export class TransactionsService {
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
     if (list.length) return list;
-    return [
-      await db.portfolio.create({ data: { id: `pf_${userId}`, userId, name: 'Danh mục chính', isDefault: true } }),
-    ];
+    // Trang Danh mục gọi nhiều API cùng lúc: tạo bỏ qua trùng rồi đọc lại, không để yêu cầu thứ hai lỗi khoá chính
+    await db.portfolio.createMany({
+      data: [{ id: `pf_${userId}`, userId, name: 'Danh mục chính', isDefault: true }],
+      skipDuplicates: true,
+    });
+    return db.portfolio.findMany({ where: { userId }, orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }] });
   }
 
   /** Danh mục ghi giao dịch: đúng của người dùng, bỏ trống thì là danh mục chính */

@@ -25,7 +25,14 @@ export function MonthlySummary({ s }: { s: JournalMonthSummary }) {
         <Tile
           label="Xem lại kế hoạch"
           value={s.reviews}
-          sub={s.reviews || s.decisions.edits ? `giữ ${s.kept} · đổi ${s.changed}` : 'chưa xem lại'}
+          sub={
+            s.reviews || s.decisions.edits
+              ? // "đổi" chỉ đếm lần xem lại không giữ nguyên; sửa nội dung kế hoạch đếm riêng (không vượt số lần xem lại)
+                [s.reviews && `giữ ${s.kept} · đổi ${s.reviews - s.kept}`, s.decisions.edits && `sửa ${s.decisions.edits}`]
+                  .filter(Boolean)
+                  .join(' · ')
+              : 'chưa xem lại'
+          }
           prev={prev?.reviews}
         />
         <Tile

@@ -12,6 +12,7 @@ import {
   reminderAnchor,
   reminderDedupeKey,
   reminderDue,
+  reminderKeyPrefix,
   reminderMessage,
 } from './calendar';
 import type { CalendarEvent, EventRange, ReminderSettings } from './calendar';
@@ -21,6 +22,8 @@ type ReminderPatch = ReminderSettingsPatch;
 interface UserSymbols {
   holdings: Map<string, number>;
   watched: Set<string>;
+  /** Số cổ phiếu được hưởng quyền theo sổ; không có sổ thì không đặt (dùng số đang giữ) */
+  entitledAt?: (symbol: string, exDate: string) => number;
 }
 
 /** Bỏ trường nội bộ (id nguồn) trước khi trả ra API */
@@ -113,20 +116,50 @@ export class EventsService {
       const items = buildCalendar({ events: source.events, ...mine, today, range: 'week', settings });
       for (const e of items) {
         const anchor = reminderAnchor(e);
-        if (!anchor || settings.mutedSymbols.includes(e.symbol) || !reminderDue(anchor, today, settings.daysBefore))
+        if (!anchor || settings.mutedSymbols.includes(e.symbol) || !reminderDue(e, anchor, today, settings.daysBefore))
           continue;
-        const msg = reminderMessage(e, anchor);
+        const dedupeKey = reminderDedupeKey(e, anchor);
+        // Nguồn đổi ngày: lần nhắc theo ngày cũ được thu hồi, lần nhắc mới nói rõ đã đổi ngày
+        const prefix = reminderKeyPrefix(e);
+        const stale = await this.prisma.notification.findMany({
+          where: { userId: row.userId, dedupeKey: { startsWith: prefix, not: dedupeKey } },
+          select: { id: true, dedupeKey: true },
+          orderBy: { createdAt: 'asc' },
+        });
+        const msg = reminderMessage(
+          e,
+          anchor,
+          stale.length ? stale[stale.length - 1].dedupeKey.slice(prefix.length) : null,
+        );
         const created = await this.notifier.send(row.userId, {
           kind: 'event',
           severity: 'info',
-          dedupeKey: reminderDedupeKey(e, anchor),
+          dedupeKey,
           sources: [{ title: 'Vietcap — lịch sự kiện quyền', url: 'https://trading.vietcap.com.vn/' }],
           ...msg,
         });
-        if (created) sent++;
+        if (created) {
+          sent++;
+          if (stale.length) await this.retract(stale.map((n) => n.id));
+        }
       }
     }
     return sent;
+  }
+
+  /** Lần nhắc theo ngày đã bị nguồn thay đổi: đánh dấu đã đọc và không gửi ra kênh ngoài nếu còn đang chờ */
+  private async retract(ids: string[]) {
+    await this.prisma.$transaction([
+      this.prisma.notification.updateMany({ where: { id: { in: ids } }, data: { read: true } }),
+      this.prisma.telegramDelivery.updateMany({
+        where: { notificationId: { in: ids }, status: 'pending' },
+        data: { status: 'skipped', lastError: 'Sự kiện đổi ngày' },
+      }),
+      this.prisma.pushDelivery.updateMany({
+        where: { notificationId: { in: ids }, status: 'pending' },
+        data: { status: 'skipped', lastError: 'Sự kiện đổi ngày' },
+      }),
+    ]);
   }
 
   /** null khi nguồn lỗi: trang vẫn hiển thị được với `unavailable` */
@@ -144,9 +177,12 @@ export class EventsService {
     return { enabled: row.enabled, daysBefore: row.daysBefore === 3 ? 3 : 1, mutedSymbols: row.mutedSymbols };
   }
 
-  /** Cổ phiếu đang giữ (cộng số lượng mọi danh mục, > 0) và đang theo dõi, theo từng người dùng */
+  /**
+   * Cổ phiếu đang giữ (cộng số lượng mọi danh mục, > 0), đang theo dõi, và số được hưởng quyền theo sổ giao dịch:
+   * mua / bán / nhận thêm có ngày trước GDKHQ. Số dư đầu kỳ không biết ngày mua thật nên luôn tính là được hưởng.
+   */
   private async userSymbols(userIds: string[]): Promise<Map<string, UserSymbols>> {
-    const [holdings, watch] = await Promise.all([
+    const [holdings, watch, txs] = await Promise.all([
       this.prisma.holding.findMany({
         where: { userId: { in: userIds }, assetType: 'stock' },
         select: { userId: true, symbol: true, quantity: true },
@@ -154,6 +190,15 @@ export class EventsService {
       this.prisma.watchItem.findMany({
         where: { userId: { in: userIds }, assetType: 'stock' },
         select: { userId: true, symbol: true },
+      }),
+      this.prisma.transaction.findMany({
+        where: {
+          userId: { in: userIds },
+          deletedAt: null,
+          assetType: 'stock',
+          type: { in: ['buy', 'sell', 'opening', 'bonus'] },
+        },
+        select: { userId: true, symbol: true, type: true, quantity: true, date: true },
       }),
     ]);
     const out = new Map<string, UserSymbols>();
@@ -169,6 +214,18 @@ export class EventsService {
     }
     for (const u of out.values()) for (const [s, q] of u.holdings) if (q <= 0) u.holdings.delete(s);
     for (const w of watch) of(w.userId).watched.add(w.symbol.toUpperCase());
+    const byUser = new Map<string, typeof txs>();
+    for (const t of txs) byUser.set(t.userId, [...(byUser.get(t.userId) ?? []), t]);
+    for (const [id, list] of byUser) {
+      of(id).entitledAt = (symbol, exDate) =>
+        list
+          .filter(
+            (t) =>
+              t.symbol?.toUpperCase() === symbol &&
+              (t.type === 'opening' || t.date.toISOString().slice(0, 10) < exDate),
+          )
+          .reduce((q, t) => q + (t.type === 'sell' ? -1 : 1) * (t.quantity?.toNumber() ?? 0), 0);
+    }
     return out;
   }
 }

@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { RebalanceFees, RebalanceTarget } from '@dautu/contracts';
-import { D, GROUP_ORDER, keyOf, round2, symbolKey } from './rebalance.math';
+import { D, GROUP_ORDER, keyOf, pctText, round2, symbolKey } from './rebalance.math';
 import { DEFAULT_FEES, MAX_NEW_MONEY, MAX_TARGETS } from './rebalance.types';
 import type { RebalanceHolding, RebalanceRequest } from './rebalance.types';
 
@@ -63,7 +63,7 @@ export function validateRebalance(req: RebalanceRequest, holdings: RebalanceHold
     sum = sum.plus(t.pct);
   }
   if (sum.minus(100).abs().gt(PCT_SUM_TOLERANCE)) {
-    throw new BadRequestException(`Tổng tỷ trọng mục tiêu phải bằng 100% (hiện ${round2(sum)}%)`);
+    throw new BadRequestException(`Tổng tỷ trọng mục tiêu phải bằng 100% (hiện ${pctText(round2(sum))}%)`);
   }
 
   const heldKeys = new Set(holdings.map((h) => keyOf(h.assetType, h.symbol)));

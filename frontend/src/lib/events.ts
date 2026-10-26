@@ -109,10 +109,17 @@ export function dateLine(e: CalendarEvent, today: string) {
   return parts.join(' · ')
 }
 
-/** "Bạn đang giữ 500 cp · ước nhận ~1.000.000 ₫ (trước thuế)" — null nếu không giữ */
+/**
+ * "Bạn đang giữ 500 cp · ước nhận ~1.000.000 ₫ (trước thuế)"; đã qua GDKHQ thì theo số được hưởng (giữ trước GDKHQ),
+ * mua sau GDKHQ thì nói rõ không được hưởng — null nếu không giữ
+ */
 export function heldLine(e: CalendarEvent) {
-  if (!e.held || !e.heldQuantity) return null
-  const base = `Bạn đang giữ ${fmtNum(e.heldQuantity)} cp`
+  if (!e.held) return null
+  if (e.entitlementFixed && !e.heldQuantity) return 'Mua sau ngày GDKHQ nên không được hưởng đợt này'
+  if (!e.heldQuantity) return null
+  const base = e.entitlementFixed
+    ? `Được hưởng theo ${fmtNum(e.heldQuantity)} cp giữ trước GDKHQ`
+    : `Bạn đang giữ ${fmtNum(e.heldQuantity)} cp`
   if (e.kind === 'cash' && e.estimatedCash !== null) return `${base} · ước nhận ~${fmtVnd(e.estimatedCash)} (trước thuế)`
   if (e.kind === 'stock' && e.ratioPct !== null)
     return `${base} · ước nhận thêm ~${fmtNum(Math.floor((e.heldQuantity * e.ratioPct) / 100))} cp`

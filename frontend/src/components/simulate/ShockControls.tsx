@@ -27,7 +27,7 @@ interface ShockControlsProps {
   /** Nhóm tài sản đang giữ (chỉ hiện dòng cho nhóm có thật) */
   groups: Record<GroupShockKey, boolean>
   /** Các mã đang giữ, để đặt mức giá riêng */
-  symbols: { symbol: string; assetType: string }[]
+  symbols: { symbol: string; assetType: string; label: string }[]
 }
 
 /** Điều chỉnh % giá theo nhóm tài sản và (tuỳ chọn) theo từng mã */
@@ -100,7 +100,7 @@ export default function ShockControls({ shocks, setShocks, groups, symbols }: Sh
               <ShockRow
                 key={sym}
                 id={`sym-${sym}`}
-                label={sym}
+                label={symbols.find((x) => x.symbol === sym)?.label ?? sym}
                 avatar={<AssetAvatar assetType={symType(sym)} symbol={sym} size={32} />}
                 value={shocks.symbols[sym]}
                 onChange={(v) => setSym(sym, v)}
@@ -117,7 +117,7 @@ export default function ShockControls({ shocks, setShocks, groups, symbols }: Sh
                   {candidates.map((x) => (
                     <Chip
                       key={x.symbol}
-                      label={x.symbol}
+                      label={x.label}
                       variant="outlined"
                       onClick={() => {
                         const g = x.assetType === 'crypto' ? shocks.crypto : shocks.stock

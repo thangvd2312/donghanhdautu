@@ -69,7 +69,7 @@ export class PushDeliveryService {
             quietEnd: settings.quietEnd,
           }
         : null;
-    const decision = decide(now, n.kind, prefs, sentLastHour);
+    const decision = decide(now, n.kind, prefs, sentLastHour, 'push');
     if (decision.action === 'skip') {
       return this.prisma.pushDelivery.update({
         where: { id },

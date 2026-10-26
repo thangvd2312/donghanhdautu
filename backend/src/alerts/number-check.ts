@@ -23,38 +23,64 @@ interface NumberToken {
   money: boolean;
   /** Dấu viết thẳng trước số (+, -, −): 1, -1 hoặc 0 nếu không có */
   sign: -1 | 0 | 1;
-  /** Phần câu (đến dấu ngắt mệnh đề gần nhất) đứng trước số, dùng để suy ra dấu bằng lời và tài sản đang nói tới */
+  /** Phần câu (đến dấu ngắt mệnh đề gần nhất) đứng trước số, dùng để suy ra tài sản đang nói tới */
   clause: string;
+  /** Phần câu đứng trước số tới dấu hết câu (qua cả ":", "(", ","), dùng để suy ra dấu bằng lời */
+  signContext: string;
   /** Phần đầu dòng trước số (nhãn hàng của bảng markdown) */
   linePrefix: string;
 }
 
 const POSITIVE_WORDS = new Set(['lãi', 'lời', 'tăng', 'dương', 'sinh']);
 const NEGATIVE_WORDS = new Set(['lỗ', 'giảm', 'âm', 'sụt', 'mất', 'thua']);
+/** Động từ chỉ thay đổi: đi với từ chỉ mức ("tăng lên 112 triệu") thì số là mức đạt tới, không phải mức tăng */
+const CHANGE_WORDS = new Set(['tăng', 'giảm', 'sụt', 'mất']);
 /** "tăng lên 112 triệu" nói về mức đạt tới, không phải mức tăng */
 const LEVEL_WORDS = new Set(['lên', 'xuống', 'còn', 'đạt', 'tới', 'đến', 'ở', 'mức', 'là']);
+/** "chốt lời", "cắt lỗ": tên mốc trong kế hoạch, không phải nói khoản lãi / lỗ */
+const ORDER_WORDS = new Set(['chốt', 'cắt', 'chặn', 'dừng']);
+/** "không hề lỗ 1 triệu" khẳng định điều ngược lại */
+const NEGATION_WORDS = new Set(['không', 'chẳng', 'chưa', 'chả']);
 const CLAUSE_BREAK = /[.;!?\n(]|,\s|:\s|\s[—–]\s|\s(?:còn|nhưng|trong khi)\s/g;
+const SENTENCE_BREAK = /[.;!?\n]\s|\n|\s(?:nhưng|trong khi)\s/g;
+/** Từ đã là một con số (dừng tìm từ chỉ dấu: từ đứng trước số trước đó thuộc về số đó) */
+const NUMBER_WORD = /^[-+−]?\d/;
 
-function clauseBefore(text: string, index: number): string {
+function textBefore(text: string, index: number, breaks: RegExp): string {
   const head = text.slice(Math.max(0, index - 200), index);
   let start = 0;
-  for (const m of head.matchAll(CLAUSE_BREAK)) start = (m.index ?? 0) + m[0].length;
+  for (const m of head.matchAll(breaks)) start = (m.index ?? 0) + m[0].length;
   return head.slice(start);
 }
 
-/** Dấu mà lời văn gán cho số ngay sau nó ("lãi", "giảm" → ±1), 0 nếu không có từ chỉ dấu trong 3 từ liền trước */
-function wordSign(clause: string): -1 | 0 | 1 {
-  const words = clause
+const clauseBefore = (text: string, index: number) => textBefore(text, index, CLAUSE_BREAK);
+
+/**
+ * Dấu mà lời văn gán cho số ngay sau nó: từ chỉ dấu gần nhất trong 8 từ liền trước, không vượt qua con số khác
+ * ("lãi", "giảm" → ±1; "Lãi … là 1 triệu", "Khoản lãi: 1 triệu" vẫn là +1). Động từ thay đổi đi với từ chỉ mức
+ * ("tăng lên 112 triệu") → 0; phủ định ngay trước ("không hề lỗ") → đảo dấu. Không có từ chỉ dấu → 0.
+ */
+function wordSign(context: string): -1 | 0 | 1 {
+  const words = context
     .toLowerCase()
-    .replace(/[*_|`>~]/g, ' ')
+    .replace(/[*_|`>~():]/g, ' ')
     .split(/\s+/)
-    .map((w) => w.replace(/^[^\p{L}\d]+|[^\p{L}\d]+$/gu, ''))
+    .map((w) => w.replace(/^[^\p{L}\d+−-]+|[^\p{L}\d%]+$/gu, ''))
     .filter(Boolean)
-    .slice(-3);
+    .slice(-8);
+  let sawLevel = false;
   for (let i = words.length - 1; i >= 0; i--) {
-    if (LEVEL_WORDS.has(words[i])) return 0;
-    if (POSITIVE_WORDS.has(words[i])) return 1;
-    if (NEGATIVE_WORDS.has(words[i])) return -1;
+    const w = words[i];
+    if (NUMBER_WORD.test(w)) return 0;
+    if (LEVEL_WORDS.has(w)) {
+      sawLevel = true;
+      continue;
+    }
+    const sign = POSITIVE_WORDS.has(w) ? 1 : NEGATIVE_WORDS.has(w) ? -1 : 0;
+    if (!sign || ORDER_WORDS.has(words[i - 1])) continue;
+    if (sawLevel && CHANGE_WORDS.has(w)) return 0;
+    const negated = words.slice(Math.max(0, i - 2), i).some((x) => NEGATION_WORDS.has(x));
+    return (negated ? -sign : sign) as -1 | 1;
   }
   return 0;
 }
@@ -112,6 +138,7 @@ export function extractNumbers(text: string): NumberToken[] {
       sign,
       money: mult !== 1 || /^\s*(?:₫|đồng\b|vnd\b|vnđ\b)/i.test(clean.slice(end, end + 8)),
       clause: clauseBefore(clean, at),
+      signContext: textBefore(clean, at, SENTENCE_BREAK),
       linePrefix: clean.slice(lineStart, at),
       text: m[0].trim(),
       values: rs.map((r) => r.value * mult),
@@ -129,14 +156,19 @@ interface DataNumber {
   percent: boolean | null;
   /** Tên tài sản (chữ thường) mà số này thuộc về; undefined = số của cả danh mục / thị trường */
   entity?: string;
-  /** Khoản "mức giảm tối đa", "lỗ tối đa"… lưu dạng số dương: không dùng dấu để so */
+  /** Khoản "mức giảm tối đa", "lỗ tối đa"… lưu dạng số dương: không dùng dấu để so, nhưng không thể là một khoản lãi */
   magnitudeOnly: boolean;
+  /** Mức (giá, giá trị, giá vốn, mốc kế hoạch…), không phải lãi / lỗ hay thay đổi: không khớp số được nói là lãi / lỗ */
+  level: boolean;
 }
 
 const ENTITY_KEYS = /^(name|symbol|asset|ticker|displayname|base|code)$/i;
 const PERCENT_KEY = /pct|percent|rate|ratio|weight|share|allocation|yield|%/i;
 const MONEY_KEY = /vnd|usd|value|profit|pnl|effect|price|amount|flow|buy|sell|cost|capital|total/i;
 const MAGNITUDE_KEY = /drawdown|maxloss|decline/i;
+const LEVEL_KEY = /price|cost|target|stop|value|total|capital|balance|allocation|weight|share/i;
+const SIGNED_KEY = /profit|pnl|change|effect|gain|loss|return|flow|delta|diff/i;
+const isLevelKey = (k: string) => LEVEL_KEY.test(k) && !SIGNED_KEY.test(k);
 
 function percentOfKey(key: string, inherited: boolean | null): boolean | null {
   if (PERCENT_KEY.test(key)) return true;
@@ -155,10 +187,20 @@ function entityOf(obj: Record<string, unknown>, inherited?: string): string | un
 function collectDataNumbers(
   data: unknown,
   out: DataNumber[] = [],
-  ctx: { percent: boolean | null; entity?: string; magnitudeOnly: boolean } = { percent: null, magnitudeOnly: false },
+  ctx: { percent: boolean | null; entity?: string; magnitudeOnly: boolean; level: boolean } = {
+    percent: null,
+    magnitudeOnly: false,
+    level: false,
+  },
 ): DataNumber[] {
   if (typeof data === 'number' && Number.isFinite(data)) {
-    out.push({ value: data, percent: ctx.percent, entity: ctx.entity, magnitudeOnly: ctx.magnitudeOnly });
+    out.push({
+      value: data,
+      percent: ctx.percent,
+      entity: ctx.entity,
+      magnitudeOnly: ctx.magnitudeOnly,
+      level: ctx.level,
+    });
   } else if (typeof data === 'string') {
     // Bảng markdown: mỗi dòng có nhãn (tên tài sản / chỉ tiêu) đứng trước các số của dòng
     for (const line of data.split('\n')) {
@@ -173,6 +215,7 @@ function collectDataNumbers(
             percent,
             entity: label || ctx.entity,
             magnitudeOnly: ctx.magnitudeOnly,
+            level: ctx.level,
           });
         }
       }
@@ -187,6 +230,7 @@ function collectDataNumbers(
         percent: percentOfKey(k, ctx.percent),
         entity,
         magnitudeOnly: ctx.magnitudeOnly || MAGNITUDE_KEY.test(k),
+        level: isLevelKey(k) || (ctx.level && !SIGNED_KEY.test(k)),
       });
     }
   }
@@ -234,7 +278,7 @@ function sameEntity(owner: string | undefined, claimed: string): boolean {
 function claimedSigns(t: NumberToken): (-1 | 1)[] {
   const out: (-1 | 1)[] = [];
   if (t.sign) out.push(t.sign);
-  const w = wordSign(t.clause);
+  const w = wordSign(t.signContext);
   if (w) out.push(w);
   return out;
 }
@@ -254,6 +298,9 @@ export function unmatchedNumbers(text: string, data: unknown): string[] {
     const ok = allowed.some((d) => {
       if (d.percent !== null && d.percent !== t.percent) return false;
       if (claimedEntity && !sameEntity(d.entity, claimedEntity)) return false;
+      // Mức (giá, mốc, giá trị) không phải lãi / lỗ; mức lỗ chịu được không phải khoản lãi
+      if (d.level && signs.length) return false;
+      if (d.magnitudeOnly && signs.includes(1)) return false;
       if (!d.magnitudeOnly && d.value !== 0 && signs.some((s) => Math.sign(d.value) !== s)) return false;
       const a = Math.abs(d.value);
       return t.values.some((v) => Math.abs(a - v) <= Math.max(t.tolerance, v * 0.001));

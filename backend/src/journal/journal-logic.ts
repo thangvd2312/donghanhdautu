@@ -223,7 +223,7 @@ export function summarize(input: SummaryInput, previous: JournalMonthTotals | nu
     previous,
     insights: [],
   };
-  summary.insights = insights(summary);
+  summary.insights = insights(summary, input.trades.length - trades.length);
   return summary;
 }
 
@@ -236,11 +236,15 @@ const versus = (prev: number | undefined) => (prev === undefined ? '' : ` (thán
  * Nhận xét bằng lời thường. Chỉ mô tả điều đã xảy ra theo đúng nhãn người dùng tự gắn: không khen chê,
  * không suy ra động cơ, không nói quyết định đúng hay sai, không khuyên mua / bán.
  */
-export function insights(s: JournalMonthSummary): string[] {
+export function insights(s: JournalMonthSummary, cashEntries = 0): string[] {
   const out: string[] = [];
   const prev = s.previous && (s.previous.trades > 0 || s.previous.reviews > 0) ? s.previous : null;
   if (s.trades === 0 && s.reviews === 0 && s.decisions.edits === 0) {
-    out.push('Tháng này chưa có lệnh mua / bán hay lần xem lại kế hoạch nào được ghi.');
+    out.push(
+      cashEntries
+        ? `Tháng này chưa có lệnh mua / bán hay lần xem lại kế hoạch nào, chỉ có ${cashEntries} khoản nạp / rút tiền (ở dòng thời gian bên dưới).`
+        : 'Tháng này chưa có lệnh mua / bán hay lần xem lại kế hoạch nào được ghi.',
+    );
     return out;
   }
   if (s.trades > 0) {

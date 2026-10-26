@@ -32,7 +32,11 @@ export class PortfolioService {
   async valuation(userId: string, portfolioId?: string) {
     const holdings: HoldingInput[] = portfolioId
       ? holdingsFromLedger(await this.transactions.ledger(userId, portfolioId), portfolioId, this.market.usdtVnd.rate)
-      : await this.prisma.holding.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+      : (await this.prisma.holding.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } })).map((h) =>
+          // Tiền mặt USDT không có lãi/lỗ: bảng Holding lưu tỷ giá lúc ghi sổ gần nhất, định giá theo tỷ giá hiện tại
+          // như khi xem từng danh mục, không thì chênh tỷ giá thành lãi/lỗ ảo
+          h.assetType === 'cash' && h.symbol === 'USDT' ? { ...h, avgCost: this.market.usdtVnd.rate } : h,
+        );
     return this.value(holdings);
   }
 

@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import type { TrackedAssetType } from '@dautu/contracts';
 import { MarketService } from './market.service';
 import { normalizeCrypto } from './crypto-symbol';
+import { GOLD_SOURCE_DOWN } from './types';
 
 /**
  * Validates a user-entered symbol for something we track prices for (watchlist, price alerts) against the real
@@ -29,6 +30,7 @@ export class TrackedSymbolResolver {
       return pair;
     }
     if (assetType === 'gold' && !this.market.goldQuotes().some((g) => g.code === symbol)) {
+      if (!this.market.goldQuotes().length) throw new ServiceUnavailableException(GOLD_SOURCE_DOWN);
       throw new NotFoundException(`Không có loại vàng ${symbol}`);
     }
     return symbol;

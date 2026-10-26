@@ -65,6 +65,11 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
           k="Cổ tức tiền mặt 12 tháng qua"
           v={d.trailingCashPerShare > 0 ? `${fmtNum(d.trailingCashPerShare)} ₫ / cổ phiếu` : 'Không trả'}
         />
+        {d.trailingAdjusted && (
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+            Đã quy về số cổ phiếu hiện tại: khoản trả trước đợt cổ tức cổ phiếu / thưởng được chia theo tỷ lệ chia.
+          </Typography>
+        )}
         <KV
           k="Tỷ suất cổ tức theo giá hiện tại"
           v={d.trailingYieldPct === null ? '—' : `${fmtNum(d.trailingYieldPct, 1)}%`}
@@ -84,8 +89,9 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((i) => (
-                <TableRow key={`${i.kind}-${i.exDate}-${i.pct}`} hover>
+              {rows.map((i, idx) => (
+                // Hai đợt cùng ngày cùng mức (vd ANV đợt cuối năm trước và đợt đầu năm nay) vẫn là hai dòng
+                <TableRow key={`${i.kind}-${i.exDate}-${i.pct}-${idx}`} hover>
                   <TableCell className="num">
                     {fmtDate(i.exDate)}
                     {i.upcoming && <Chip label="Sắp tới" size="small" color="primary" variant="outlined" sx={{ ml: 1 }} />}

@@ -70,6 +70,8 @@ export function validateOrder(order: OrderInput, held = 0): void {
   if (!Number.isFinite(quantity) || quantity <= 0) throw new PracticeRuleError('Số lượng phải lớn hơn 0');
   if (assetType === 'stock') {
     if (!Number.isInteger(quantity)) throw new PracticeRuleError('Cổ phiếu phải đặt số lượng nguyên');
+    // Bán nhiều hơn số đang giữ: báo đúng lý do trước khi xét lô
+    if (side === 'sell') assertCanSell(held, quantity);
     const sellsAll = side === 'sell' && quantity === held;
     if (quantity > STOCK_LOT && quantity % STOCK_LOT !== 0 && !sellsAll) {
       throw new PracticeRuleError(

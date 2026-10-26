@@ -176,7 +176,7 @@ describe('dự kiến', () => {
     });
     expect(e.basis).toContain('500 cp × 2.000 ₫');
     expect(e.basis).toContain('5%');
-    expect(e.basis).toContain('2026-10-28');
+    expect(e.basis).toContain('28/10/2026');
     expect(r.summary).toMatchObject({ expectedNet: 950_000, lockedNet: 0 });
     expect(r.months.find((m) => m.month === '2026-11')!.expectedNet).toBe(950_000);
     expect(r.notes.some((x) => x.includes('giả định'))).toBe(true);
@@ -211,6 +211,15 @@ describe('dự kiến', () => {
     expect(expectedOf(noPayoutRecent)[0].overdue).toBe(false);
     const noPayoutOld = run({ txs: [buy(100)], events: [div({ exDate: '2026-08-01', payoutDate: null })] });
     expect(expectedOf(noPayoutOld)[0].overdue).toBe(true);
+  });
+
+  it('tổng quá hạn tách riêng để "sắp nhận" không cộng khoản đã quá ngày trả', () => {
+    const r = run({
+      txs: [buy(100)],
+      events: [div({ exDate: '2026-09-01', payoutDate: '2026-09-20' }), div({ exDate: '2026-10-28' })],
+    });
+    expect(r.summary.expectedNet).toBe(190_000 * 2);
+    expect(r.summary.overdueNet).toBe(190_000);
   });
 
   it('bán hết trước GDKHQ thì không đủ điều kiện (locked) và không còn giữ thì không dự kiến (announced)', () => {
@@ -251,6 +260,40 @@ describe('dự kiến', () => {
     const recorded = tx({ type: 'dividend', date: '2026-10-30', amt: 190_000, symbol: null, assetType: null });
     const r = run({ txs: [buy(100), recorded], events: [div({ exDate: '2026-10-19', payoutDate: '2026-10-30' })] });
     expect(expectedOf(r)).toHaveLength(0);
+  });
+
+  it('hai đợt cùng ngày GDKHQ: khoá riêng, ghi / bỏ qua một đợt không làm mất đợt kia', () => {
+    const tranches = [
+      div({ symbol: 'DGC', title: 'Đợt 1 2026', exDate: '2026-09-14', payoutDate: '2026-10-05', valuePerShare: 3000 }),
+      div({ symbol: 'DGC', title: 'Đợt 2 2025', exDate: '2026-09-14', payoutDate: '2026-10-05', valuePerShare: 5000 }),
+    ];
+    const holding = buy(1000, '2026-06-01', 'DGC');
+    const before = expectedOf(run({ txs: [holding], events: tranches }));
+    expect(before.map((i) => i.gross).sort()).toEqual([3_000_000, 5_000_000]);
+    expect(new Set(before.map((i) => i.key)).size).toBe(2);
+
+    // Ghi đợt 3.000đ (trước thuế, kèm thuế): còn đợt 5.000đ
+    const one = tx({ type: 'dividend', date: '2026-10-05', amt: 3_000_000, taxv: 150_000, symbol: 'DGC' });
+    expect(expectedOf(run({ txs: [holding, one], events: tranches })).map((i) => i.gross)).toEqual([5_000_000]);
+    // Ghi gộp cả hai đợt một lần (sau thuế): không còn dự kiến
+    const both = tx({ type: 'dividend', date: '2026-10-05', amt: 7_600_000, symbol: 'DGC' });
+    expect(expectedOf(run({ txs: [holding, both], events: tranches }))).toHaveLength(0);
+    // Bỏ qua một đợt: đợt kia vẫn hiện
+    const small = before.find((i) => i.gross === 3_000_000)!;
+    const left = expectedOf(run({ txs: [holding], events: tranches, dismissed: new Set([small.key]) }));
+    expect(left.map((i) => i.gross)).toEqual([5_000_000]);
+  });
+
+  it('hai đợt cùng ngày và cùng mức: mỗi lần ghi sổ chỉ khớp một đợt', () => {
+    const same = [
+      div({ symbol: 'ANV', title: 'Đợt 2 2025', exDate: '2026-09-29', payoutDate: '2026-10-10', valuePerShare: 500 }),
+      div({ symbol: 'ANV', title: 'Đợt 1 2026', exDate: '2026-09-29', payoutDate: '2026-10-10', valuePerShare: 500 }),
+    ];
+    const holding = buy(1000, '2026-06-01', 'ANV');
+    const one = tx({ type: 'dividend', date: '2026-10-10', amt: 500_000, symbol: 'ANV' });
+    expect(expectedOf(run({ txs: [holding, one], events: same }))).toHaveLength(1);
+    const two = tx({ type: 'dividend', date: '2026-10-11', amt: 500_000, symbol: 'ANV' });
+    expect(expectedOf(run({ txs: [holding, one, two], events: same }))).toHaveLength(0);
   });
 
   it('khoản đã bỏ qua (dismiss) không hiện', () => {

@@ -315,6 +315,52 @@ describe('TWR khi bán / rút tiền (đầu ra của buildHistory → periodPer
     expect(p.notes.join(' ')).toContain('TWR');
   });
 
+  it('cổ tức về sau khi đã bán hết rồi nạp lại: TWR vẫn tính cho các ngày có vốn, ước tính, có ghi chú', () => {
+    const pts = [
+      { date: '2026-07-01', value: 100, netContributions: 100, preTrackingGain: 0 },
+      { date: '2026-07-02', value: 110, netContributions: 100, preTrackingGain: 0 },
+      { date: '2026-07-03', value: 0, netContributions: -10, preTrackingGain: 0 }, // bán hết, rút 110
+      { date: '2026-07-04', value: 1, netContributions: -10, preTrackingGain: 0 }, // cổ tức 1 về tài khoản trống
+      { date: '2026-07-05', value: 61, netContributions: 50, preTrackingGain: 0 }, // nạp 60
+      { date: '2026-07-06', value: 67.1, netContributions: 50, preTrackingGain: 0 },
+    ].map((p) => ({
+      ...p,
+      profit: p.value - p.netContributions,
+      dividends: 0,
+      uncertainOpenings: [],
+      status: 'complete' as const,
+      missing: [],
+    }));
+    const p = periodPerformance(pts, '2026-06-01', '2026-06-15')!;
+    // +10% (01→02), 0% (ngày rút), nạp 60 vào 1 → 61 (0%), +10% → 1,1 × 1,1
+    expect(p.twrPct).toBeCloseTo(21);
+    expect(p.isEstimate).toBe(true);
+    expect(p.notes.join(' ')).toContain('không còn vốn');
+  });
+
+  it('rút gần hết từ sớm trong kỳ: không trình bày % theo vốn bình quân bị thổi lên, có ghi chú', () => {
+    // Nạp 100 ngày đầu, tăng đều tới 121 ở ngày thứ 30 thì bán và rút hết 121; 60 ngày sau đó tài khoản trống
+    const dayOf = (i: number) => new Date(Date.UTC(2026, 6, 1 + i)).toISOString().slice(0, 10);
+    const pts = Array.from({ length: 90 }, (_, i) =>
+      i < 29
+        ? { date: dayOf(i), value: 100 + (21 * i) / 29, netContributions: 100 }
+        : { date: dayOf(i), value: 0, netContributions: -21 },
+    ).map((p) => ({
+      ...p,
+      preTrackingGain: 0,
+      profit: p.value - p.netContributions,
+      dividends: 0,
+      uncertainOpenings: [],
+      status: 'complete' as const,
+      missing: [],
+    }));
+    const p = periodPerformance(pts, '2026-07-01', '2026-07-01')!;
+    expect(p.profit).toBeCloseTo(21);
+    expect(p.returnPct).toBeNull();
+    expect(p.notes.join(' ')).toContain('rút ra từ sớm');
+    expect(p.twrPct).toBeCloseTo(21);
+  });
+
   it('kỳ chưa tính đủ TWR thì benchmark không kết luận', () => {
     const closes = new Map([
       ['2026-06-30', 1200],

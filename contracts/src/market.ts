@@ -281,7 +281,10 @@ export interface DividendItem {
 /** GET /market/stocks/:symbol/dividends */
 export interface StockDividends {
   items: DividendItem[]
+  /** Tiền mặt / cổ phiếu 12 tháng, đã quy về số cổ phiếu hiện tại nếu sau đó có cổ tức cổ phiếu / thưởng */
   trailingCashPerShare: number
+  /** true: có khoản đã quy đổi theo số cổ phiếu hiện tại (khác mức chi trả gốc trong bảng) */
+  trailingAdjusted: boolean
   trailingYieldPct: number | null
   price: number | null
   source: string

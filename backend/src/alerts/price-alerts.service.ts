@@ -54,18 +54,25 @@ export class PriceAlertsService {
       const price = this.currentPrice(a.assetType, a.symbol);
       if (price === null) continue;
       if (!isTargetHit(a.direction, price, a.targetPrice)) continue;
-      await this.prisma.priceAlert.update({ where: { id: a.id }, data: { active: false, triggeredAt: new Date() } });
       const name = a.assetType === 'crypto' ? a.symbol.replace(/USDT$/, '') : a.symbol;
       const unit = a.assetType === 'crypto' ? 'USDT' : '₫';
       const fmt = (v: number) => `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(v)} ${unit}`;
-      await this.notifier.send(a.userId, {
+      const dedupeKey = `target:${a.id}`;
+      const sent = await this.notifier.send(a.userId, {
         kind: 'price_target',
         severity: 'warning',
         title: `${name} đã ${a.direction === 'above' ? 'lên tới' : 'về'} ${fmt(price)} — chạm mốc bạn đặt`,
         body: `Mốc của bạn: ${a.direction === 'above' ? '≥' : '≤'} ${fmt(a.targetPrice)}.${a.note ? ` Ghi chú: ${a.note}.` : ''} Trước khi hành động, hãy xem lại lý do bạn đặt mốc này hoặc hỏi cố vấn.`,
-        dedupeKey: `target:${a.id}`,
+        dedupeKey,
         link: a.assetType === 'stock' ? `/stock/${a.symbol}` : a.assetType === 'crypto' ? `/crypto/${name}` : '/',
       });
+      // Chỉ tắt mốc khi thông báo đã lưu (lần này hoặc lần trước trùng khoá); lưu lỗi thì giữ mốc để lượt quét sau thử lại
+      const notified =
+        sent ??
+        (await this.prisma.notification.findFirst({ where: { userId: a.userId, dedupeKey }, select: { id: true } }));
+      if (notified) {
+        await this.prisma.priceAlert.update({ where: { id: a.id }, data: { active: false, triggeredAt: new Date() } });
+      }
     }
   }
 }

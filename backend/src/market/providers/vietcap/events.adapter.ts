@@ -81,28 +81,7 @@ export class VietcapEventsAdapter {
         `/events?ticker=${symbol}&fromDate=20180101&toDate=${ymd(new Date(Date.now() + 180 * 86_400_000))}&eventCode=DIV,ISS&page=0&size=200`,
       );
       const items = Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
-      const out: CorporateEvent[] = [];
-      for (const e of items) {
-        const exDate = e.exrightDate?.slice(0, 10);
-        if (!exDate) continue;
-        const base = {
-          symbol,
-          title: e.eventTitleVi ?? e.eventNameVi ?? '',
-          exDate,
-          recordDate: e.recordDate?.slice(0, 10) ?? null,
-          payoutDate: e.payoutDate?.slice(0, 10) ?? null,
-        };
-        if (e.eventCode === 'DIV' && e.valuePerShare && e.valuePerShare > 0) {
-          out.push({ ...base, kind: 'cash', valuePerShare: e.valuePerShare, ratio: null });
-        } else if (
-          e.eventCode === 'ISS' &&
-          /bonus issue|stock dividend|split/i.test(e.eventTitleEn ?? '') &&
-          e.exerciseRatio &&
-          e.exerciseRatio > 0
-        ) {
-          out.push({ ...base, kind: 'stock', ratio: e.exerciseRatio, valuePerShare: null });
-        }
-      }
+      const out = items.map((e) => toCorporateEvent(symbol, e)).filter((e): e is CorporateEvent => e !== null);
       return out.sort((a, b) => a.exDate.localeCompare(b.exDate));
     });
   }
@@ -121,10 +100,64 @@ export class VietcapEventsAdapter {
           `/events?fromDate=${ymd(fromDate)}&toDate=${ymd(toDate)}&eventCode=DIV,ISS,AGME,EGME&page=${page}&size=500`,
         );
         if (!res.data || !Array.isArray(res.data.content)) throw new Error('Vietcap events: phản hồi không đúng dạng');
-        events.push(...res.data.content);
+        // Chỉ giữ các trường dùng tới: bản gốc gấp rưỡi, khoảng ngày dài (lịch, bộ lọc 1 năm) sẽ vượt giới hạn cache
+        events.push(...res.data.content.map(slimEvent));
         if (page + 1 >= (res.data.totalPages ?? 1)) break;
       }
       return { events, fetchedAt: new Date().toISOString() };
     });
   }
+}
+
+/**
+ * Một sự kiện nguồn → sự kiện làm thay đổi tiền / số cổ phiếu của cổ đông hiện hữu, hoặc null (ESOP, phát hành riêng lẻ,
+ * quyền mua, họp…). Dùng chung cho sự kiện theo mã và sự kiện toàn thị trường (bộ lọc).
+ */
+export function toCorporateEvent(
+  symbol: string,
+  e: Omit<VcEvent, 'eventCode'> & { eventCode?: string },
+): CorporateEvent | null {
+  const exDate = e.exrightDate?.slice(0, 10);
+  if (!exDate) return null;
+  const base = {
+    symbol,
+    title: e.eventTitleVi ?? e.eventNameVi ?? '',
+    exDate,
+    recordDate: e.recordDate?.slice(0, 10) ?? null,
+    payoutDate: e.payoutDate?.slice(0, 10) ?? null,
+  };
+  if (e.eventCode === 'DIV' && e.valuePerShare && e.valuePerShare > 0) {
+    return { ...base, kind: 'cash', valuePerShare: e.valuePerShare, ratio: null };
+  }
+  if (
+    e.eventCode === 'ISS' &&
+    /bonus issue|stock dividend|split/i.test(e.eventTitleEn ?? '') &&
+    e.exerciseRatio &&
+    e.exerciseRatio > 0
+  ) {
+    return { ...base, kind: 'stock', ratio: e.exerciseRatio, valuePerShare: null };
+  }
+  return null;
+}
+
+const EVENT_FIELDS = [
+  'id',
+  'ticker',
+  'organNameVi',
+  'eventCode',
+  'eventTitleVi',
+  'eventTitleEn',
+  'publicDate',
+  'issueDate',
+  'recordDate',
+  'exrightDate',
+  'payoutDate',
+  'exerciseRatio',
+  'valuePerShare',
+] as const satisfies readonly (keyof VcMarketEvent)[];
+
+function slimEvent(e: VcMarketEvent): VcMarketEvent {
+  const out: Record<string, unknown> = {};
+  for (const k of EVENT_FIELDS) if (e[k] !== undefined && e[k] !== null) out[k] = e[k];
+  return out as unknown as VcMarketEvent;
 }

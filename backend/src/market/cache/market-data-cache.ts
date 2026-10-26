@@ -28,7 +28,8 @@ export const MARKET_CACHE_OPTIONS = Symbol('MARKET_CACHE_OPTIONS');
 export const DEFAULT_CACHE_OPTIONS: MarketDataCacheOptions = {
   l1MaxEntries: 500,
   l1TtlMs: 60_000,
-  maxValueBytes: 1_000_000,
+  // Lớn nhất là sự kiện quyền toàn thị trường 1 năm cho bộ lọc cổ tức (~1,5 MB sau khi lược trường)
+  maxValueBytes: 2_500_000,
   staleRetryMs: 15_000,
 };
 

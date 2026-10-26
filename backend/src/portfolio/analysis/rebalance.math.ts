@@ -33,3 +33,5 @@ export const vnd = (n: number) =>
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 export const pts = (n: number) => n.toFixed(1).replace('.', ',');
+/** Số % trong câu chữ: tối đa 2 chữ số lẻ, dấu phẩy thập phân như phần còn lại của giao diện ("0,15", "99,98") */
+export const pctText = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');

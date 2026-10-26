@@ -107,6 +107,16 @@ describe('autoMapping + rowToDto', () => {
     expect(r.errors.join(' | ')).toMatch(/Tiền tệ "EUR"/);
   });
 
+  it('coin ghi tiền tệ VND: báo lỗi, không hiểu giá VND thành USDT', () => {
+    const m = autoMapping(['ngay', 'loai', 'loai_tai_san', 'ma', 'so_luong', 'gia', 'tien_te']);
+    const vnd = rowToDto(['2026-01-05', 'Mua', 'crypto', 'ETH', '1', '100000000', 'VND'], 4, m, '.');
+    expect(vnd.dto).toBeNull();
+    expect(vnd.errors.join(' ')).toMatch(/Coin ghi giá và phí bằng USDT/);
+    // Bỏ trống hoặc ghi USDT vẫn nhận
+    expect(rowToDto(['2026-01-05', 'Mua', 'crypto', 'ETH', '1', '3800', ''], 5, m, '.').errors).toEqual([]);
+    expect(rowToDto(['2026-01-05', 'Mua', 'crypto', 'ETH', '1', '3800', 'USDT'], 6, m, '.').errors).toEqual([]);
+  });
+
   it('mua/bán không ghi loại tài sản thì mặc định cổ phiếu; thiếu giá thì báo', () => {
     const m = autoMapping(['ngay', 'loai', 'ma', 'so_luong', 'gia']);
     expect(rowToDto(['2026-01-05', 'Mua', 'HPG', '100', '25000'], 2, m, '.').dto).toMatchObject({ assetType: 'stock' });

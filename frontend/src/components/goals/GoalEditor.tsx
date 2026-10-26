@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react'
 import { createGoal, updateGoal } from '../../api/goals'
 import { fmtNum, fmtVndShort } from '../../lib/format'
 import { buildGoalRequest, sumMix, TYPE_LABEL } from '../../lib/goals'
-import { todayVn } from '../../lib/num'
+import { tomorrowVn } from '../../lib/num'
 import type { Goal, GoalAsset, GoalAssetType } from '../../lib/types'
 import { useIsMobile } from '../../lib/useIsMobile'
 import AssetAvatar from '../AssetAvatar'
@@ -104,7 +104,7 @@ export default function GoalEditor({
                 label="Ngày đích"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: todayVn() } }}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: tomorrowVn() } }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>

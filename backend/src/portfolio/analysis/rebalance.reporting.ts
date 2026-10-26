@@ -1,5 +1,5 @@
 import type { RebalanceFees } from '@dautu/contracts';
-import { BOARD_LOT, D, Dec, pts, UNIT, vnd } from './rebalance.math';
+import { BOARD_LOT, D, Dec, pctText, pts, UNIT, vnd } from './rebalance.math';
 import type { Line } from './rebalance.lines';
 import type { Planner } from './rebalance.planner';
 import type { RebalanceRequest } from './rebalance.types';
@@ -7,20 +7,25 @@ import type { RebalanceRequest } from './rebalance.types';
 /** Vượt mục tiêu quá ngưỡng này (điểm %) mà không được bán thì mới cảnh báo */
 const OVERWEIGHT_WARN_PTS = 0.5;
 
-export function actionReason(l: Line, side: 'buy' | 'sell', investable: Dec): string {
+/**
+ * Lý do mua / bán. Khoảng cách tính trên tổng sau khi cộng tiền mới (đúng căn cứ của phép tính), nên khi có
+ * tiền mới phải nói rõ tỷ trọng đó — nếu không sẽ lệch với tỷ trọng "trước" (chia cho tổng hiện tại).
+ */
+export function actionReason(l: Line, side: 'buy' | 'sell', investable: Dec, newMoney: Dec): string {
   if (side === 'sell' && l.pct === 0) return 'Mục tiêu 0%: bán hết';
   const currentPct = investable.gt(0) ? l.value0.div(investable).mul(100).toNumber() : 0;
   const gap = Math.abs(l.pct - currentPct);
-  return side === 'buy'
-    ? `Thiếu ${pts(gap)} điểm % so với mục tiêu ${pts(l.pct)}%`
-    : `Vượt ${pts(gap)} điểm % so với mục tiêu ${pts(l.pct)}%`;
+  const gapText = `${side === 'buy' ? 'thiếu' : 'vượt'} ${pts(gap)} điểm % so với mục tiêu ${pts(l.pct)}%`;
+  return newMoney.gt(0)
+    ? `Tính cả tiền mới, đang chiếm ${pts(currentPct)}%: ${gapText}`
+    : gapText.charAt(0).toUpperCase() + gapText.slice(1);
 }
 
 export function buildNotes(req: RebalanceRequest, fees: Required<RebalanceFees>, lines: Line[]): string[] {
   const notes = [
     'Chỉ là tính toán theo lựa chọn của bạn, không phải khuyến nghị mua hay bán mã nào và không tạo giao dịch thật.',
     'Giả định khớp đúng giá hiện tại, không trượt giá, tiền mua và tiền bán về tức thì.',
-    `Phí giả định: cổ phiếu mua ${fees.stockBuyPct}%, bán ${fees.stockSellPct}% + thuế ${fees.stockSellTaxPct}%; crypto ${fees.cryptoPct}%; vàng không tính phí.`,
+    `Phí giả định: cổ phiếu mua ${pctText(fees.stockBuyPct)}%, bán ${pctText(fees.stockSellPct)}% + thuế ${pctText(fees.stockSellTaxPct)}%; crypto ${pctText(fees.cryptoPct)}%; vàng không tính phí.`,
     req.lots === 'board'
       ? 'Cổ phiếu mua theo lô chẵn 100 cp (bán hết thì bán cả lô lẻ đang giữ).'
       : 'Cổ phiếu cho phép lô lẻ (1 cp).',

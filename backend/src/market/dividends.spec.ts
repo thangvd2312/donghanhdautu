@@ -36,9 +36,37 @@ describe('dividendHistory', () => {
   });
 
   it('12 tháng: chỉ tiền mặt đã qua ngày không hưởng quyền trong 365 ngày; tỷ suất theo giá hiện tại', () => {
+    // 1.500 trả trước đợt cổ phiếu 15% (01/06) → quy về số cổ phiếu hiện tại 1.500 / 1,15; 1.000 trả sau thì giữ nguyên
     const r = dividendHistory(events, 100_000, '2026-10-21');
-    expect(r.trailingCashPerShare).toBe(2_500);
-    expect(r.trailingYieldPct).toBeCloseTo(2.5);
+    expect(r.trailingCashPerShare).toBe(Math.round(1_500 / 1.15 + 1_000));
+    expect(r.trailingYieldPct).toBeCloseTo(((1_500 / 1.15 + 1_000) / 100_000) * 100);
+    expect(r.trailingAdjusted).toBe(true);
+  });
+
+  it('cổ tức tiền rồi thưởng 100% (VHM): tỷ suất theo số cổ phiếu sau thưởng, không bị gấp đôi', () => {
+    const vhm = [
+      ev({ kind: 'cash', exDate: '2026-06-29', valuePerShare: 6_000 }),
+      ev({ kind: 'stock', exDate: '2026-08-06', ratio: 1 }),
+    ];
+    const r = dividendHistory(vhm, 64_300, '2026-10-26');
+    expect(r.trailingCashPerShare).toBe(3_000);
+    expect(r.trailingYieldPct).toBeCloseTo((3_000 / 64_300) * 100);
+    // Bảng lịch sử vẫn ghi mức chi trả gốc
+    expect(r.items.find((i) => i.kind === 'cash')!.valuePerShare).toBe(6_000);
+  });
+
+  it('đợt chia cổ phiếu chưa tới ngày GDKHQ hoặc trước khoản tiền: không quy đổi', () => {
+    const r = dividendHistory(
+      [
+        ev({ kind: 'stock', exDate: '2026-02-01', ratio: 0.5 }),
+        ev({ kind: 'cash', exDate: '2026-06-29', valuePerShare: 2_000 }),
+        ev({ kind: 'stock', exDate: '2026-12-01', ratio: 1 }),
+      ],
+      50_000,
+      '2026-10-26',
+    );
+    expect(r.trailingCashPerShare).toBe(2_000);
+    expect(r.trailingAdjusted).toBe(false);
   });
 
   it('không có giá hoặc không có cổ tức tiền thì không tính tỷ suất', () => {

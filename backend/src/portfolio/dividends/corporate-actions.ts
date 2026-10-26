@@ -21,6 +21,23 @@ export function actionKey(portfolioId: string | null, symbol: string, kind: stri
   return `${portfolioId ?? '-'}:${symbol}:${kind}:${exDate}`;
 }
 
+/** Các đợt cổ tức tiền của cùng mã có cùng ngày GDKHQ (vd "Đợt 2 2025" và "Đợt 1 2026"), thứ tự ổn định */
+export function cashSiblings(events: CorporateEvent[], e: CorporateEvent): CorporateEvent[] {
+  return events
+    .filter((x) => x.kind === 'cash' && x.symbol === e.symbol && x.exDate === e.exDate)
+    .sort((a, b) => (a.valuePerShare ?? 0) - (b.valuePerShare ?? 0) || a.title.localeCompare(b.title));
+}
+
+/**
+ * Khoá gợi ý / bỏ qua của một đợt cổ tức tiền. Một đợt trong ngày: giữ khoá cũ (các lần bỏ qua đã lưu vẫn đúng);
+ * nhiều đợt cùng ngày GDKHQ: thêm số thứ tự để ghi / bỏ qua đợt này không ảnh hưởng đợt kia.
+ */
+export function cashActionKey(portfolioId: string | null, e: CorporateEvent, events: CorporateEvent[]) {
+  const base = actionKey(portfolioId, e.symbol, 'cash', e.exDate);
+  const siblings = cashSiblings(events, e);
+  return siblings.length > 1 ? `${base}:${siblings.indexOf(e) + 1}` : base;
+}
+
 /** Giao dịch gom theo danh mục, mỗi nhóm đã sắp thứ tự */
 export function groupByPortfolio(txs: LedgerTx[]): Map<string | null, LedgerTx[]> {
   const byPortfolio = new Map<string | null, LedgerTx[]>();
@@ -39,18 +56,44 @@ export function heldBefore(sorted: LedgerTx[], symbol: string, beforeDate: strin
   }
 }
 
+/** Số tiền ghi sổ khớp khoản dự kiến (trước thuế hoặc sau thuế 5%, sai lệch tới 10%) */
+function nearAmount(recorded: number, expected: number) {
+  return [expected, expected * (1 - DIVIDEND_TAX_RATE)].some((x) => Math.abs(recorded - x) <= x * 0.1);
+}
+
 /**
  * Cổ tức tiền mặt đã ghi sổ: cùng mã, hoặc không ghi mã nhưng số tiền gần đúng (trước hoặc sau thuế).
  * Dùng chung cho gợi ý ghi sổ và lịch thu nhập để một khoản không bao giờ vừa "đã nhận" vừa "dự kiến".
+ * Nhiều đợt cùng ngày GDKHQ (`siblings`: từng đợt và số tiền dự kiến): mỗi giao dịch ghi sổ chỉ khớp một đợt theo số
+ * tiền, hoặc khớp cả nhóm khi bằng tổng các đợt — ghi một đợt không làm mất đợt kia.
  */
-export function cashDividendRecorded(sorted: LedgerTx[], e: CorporateEvent, expectedAmount: number): boolean {
+export function cashDividendRecorded(
+  sorted: LedgerTx[],
+  e: CorporateEvent,
+  expectedAmount: number,
+  siblings: { event: CorporateEvent; amount: number }[] = [],
+): boolean {
   const until = addDays(e.payoutDate ?? e.exDate, 60);
-  return sorted.some((t) => {
-    if (t.type !== 'dividend' || t.date < addDays(e.exDate, -7) || t.date > until) return false;
-    if (t.symbol === e.symbol) return true;
+  const inWindow = (t: LedgerTx) => t.type === 'dividend' && t.date >= addDays(e.exDate, -7) && t.date <= until;
+  if (siblings.length <= 1) {
+    return sorted.some((t) => {
+      if (!inWindow(t)) return false;
+      if (t.symbol === e.symbol) return true;
+      return !t.symbol && nearAmount(t.amount?.toNumber() ?? 0, expectedAmount);
+    });
+  }
+  const total = siblings.reduce((sum, x) => sum + x.amount, 0);
+  const matched = new Set<CorporateEvent>();
+  for (const t of sorted) {
+    if (!inWindow(t) || (t.symbol && t.symbol !== e.symbol)) continue;
     const a = t.amount?.toNumber() ?? 0;
-    return !t.symbol && Math.abs(a - expectedAmount) <= expectedAmount * 0.1;
-  });
+    if (nearAmount(a, total)) siblings.forEach((x) => matched.add(x.event));
+    else {
+      const hit = siblings.find((x) => !matched.has(x.event) && nearAmount(a, x.amount));
+      if (hit) matched.add(hit.event);
+    }
+  }
+  return matched.has(e);
 }
 
 export function missingActions(
@@ -66,7 +109,8 @@ export function missingActions(
   for (const [portfolioId, sorted] of byPortfolio) {
     for (const e of events) {
       if (e.exDate > today || e.exDate < earliest) continue;
-      const key = actionKey(portfolioId, e.symbol, e.kind, e.exDate);
+      const key =
+        e.kind === 'cash' ? cashActionKey(portfolioId, e, events) : actionKey(portfolioId, e.symbol, e.kind, e.exDate);
       if (dismissed.has(key)) continue;
       // Số đang giữ hết ngày trước GDKHQ (người mua từ ngày GDKHQ không được hưởng)
       const held = heldBefore(sorted, e.symbol, e.exDate);
@@ -100,7 +144,11 @@ export function missingActions(
         if (e.payoutDate && e.payoutDate > today) continue;
         const amount = Math.round(held * (e.valuePerShare ?? 0));
         if (amount <= 0) continue;
-        if (cashDividendRecorded(sorted, e, amount)) continue;
+        const siblings = cashSiblings(events, e).map((x) => ({
+          event: x,
+          amount: Math.round(held * (x.valuePerShare ?? 0)),
+        }));
+        if (cashDividendRecorded(sorted, e, amount, siblings)) continue;
         out.push({
           key,
           portfolioId,

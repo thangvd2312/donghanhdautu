@@ -123,7 +123,10 @@ export function heldGroups(holdings: HoldingRow[] | undefined) {
 
 /** Các mã cổ phiếu / crypto đang giữ (mỗi mã một lần) để đặt mức giá riêng */
 export function heldSymbols(holdings: HoldingRow[] | undefined) {
-  const seen = new Map<string, string>()
-  for (const h of holdings ?? []) if ((h.assetType === 'stock' || h.assetType === 'crypto') && !seen.has(h.symbol)) seen.set(h.symbol, h.assetType)
-  return Array.from(seen, ([symbol, assetType]) => ({ symbol, assetType }))
+  const seen = new Map<string, { assetType: string; label: string }>()
+  for (const h of holdings ?? [])
+    if ((h.assetType === 'stock' || h.assetType === 'crypto') && !seen.has(h.symbol))
+      // Coin hiện "BTC" thay vì mã cặp "BTCUSDT"
+      seen.set(h.symbol, { assetType: h.assetType, label: h.assetType === 'crypto' ? h.symbol.replace(/(.)USDT$/, '$1') : h.symbol })
+  return Array.from(seen, ([symbol, v]) => ({ symbol, ...v }))
 }

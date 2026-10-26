@@ -23,7 +23,9 @@ export type ExpectedStatus = 'overdue' | 'locked' | 'announced'
 export const statusOf = (i: IncomeExpectedItem): ExpectedStatus => (i.overdue ? 'overdue' : i.certainty === 'locked' ? 'locked' : 'announced')
 
 /** Khoản dự kiến có thể ghi vào sổ ngay: quyền đã chốt (GDKHQ đã qua) hoặc đã quá ngày trả */
-export const recordable = (i: IncomeExpectedItem) => i.overdue || i.certainty === 'locked'
+/** Ghi sổ được khi đã tới ngày trả (hoặc quá hạn): ngày giao dịch không được ở tương lai */
+export const recordable = (i: IncomeExpectedItem, today: string) =>
+  i.overdue || (i.certainty === 'locked' && (i.payoutDate ?? i.exDate) <= today)
 
 export interface MonthSection {
   month: string

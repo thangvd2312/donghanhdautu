@@ -74,7 +74,7 @@ export class TelegramPollerService {
       }
       await this.api.reply(
         chatId,
-        'Đã kết nối với Đồng Hành Đầu Tư. Mặc định bạn sẽ nhận: giá chạm mốc, biến động mạnh, nhắc xem lại kế hoạch. Đổi loại tin và giờ yên lặng trong ứng dụng. Gõ /stop để ngừng nhận.',
+        'Đã kết nối với Đồng Hành Đầu Tư. Mặc định bạn sẽ nhận: giá chạm mốc, biến động mạnh, nhắc xem lại kế hoạch, sự kiện quyền của mã bạn quan tâm. Đổi loại tin và giờ yên lặng trong ứng dụng. Gõ /stop để ngừng nhận.',
       );
       return;
     }

@@ -75,8 +75,22 @@ export function quietEndsAt(now: Date, end: number) {
  * Quyết định cho một tin đang chờ: kiểm tra lại cài đặt NGAY lúc gửi (tắt nhận tin có hiệu lực với cả tin đang chờ),
  * giờ yên lặng thì hoãn, vượt giới hạn tần suất thì hoãn.
  */
-export function decide(now: Date, kind: string, link: LinkPrefs | null, sentLastHour: number): Decision {
-  if (!link || !link.active) return { action: 'skip', reason: 'Chưa kết nối hoặc đã tắt Telegram' };
+export function decide(
+  now: Date,
+  kind: string,
+  link: LinkPrefs | null,
+  sentLastHour: number,
+  channel: 'telegram' | 'push' = 'telegram',
+): Decision {
+  if (!link || !link.active) {
+    return {
+      action: 'skip',
+      reason:
+        channel === 'push'
+          ? 'Thiết bị chưa bật hoặc đã tắt thông báo trình duyệt'
+          : 'Chưa kết nối hoặc đã tắt Telegram',
+    };
+  }
   // Liên kết cũ chưa lưu loại tin mới: dùng mặc định của loại đó thay vì coi như đã tắt
   if (!(link.kinds[kind] ?? DEFAULT_KINDS[kind as Kind]))
     return { action: 'skip', reason: 'Đã tắt loại thông báo này' };

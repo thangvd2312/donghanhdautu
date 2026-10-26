@@ -58,8 +58,7 @@ export class AdvisorService {
     if (!this.client) {
       emit({
         type: 'error',
-        message:
-          'Máy chủ chưa cấu hình LLM_API_KEY nên cố vấn AI chưa hoạt động. Thêm key vào backend/.env rồi khởi động lại.',
+        message: 'Cố vấn AI đang tạm tắt. Bạn vẫn dùng được danh mục, bảng giá và các công cụ tính; hãy thử lại sau.',
       });
       return;
     }

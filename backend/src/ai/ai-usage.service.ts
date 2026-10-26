@@ -111,7 +111,7 @@ export class AiUsageService {
           plan_draft: 'bản nháp kế hoạch',
         }[kind];
         throw new AiQuotaError(
-          `Bạn đã dùng hết ${limit} ${what} của hôm nay. Lượt mới có lại sau 0 giờ; dữ liệu danh mục vẫn dùng bình thường.`,
+          `Bạn đã dùng hết ${limit} ${what} của hôm nay. Lượt mới có lại từ 0 giờ đêm nay; dữ liệu danh mục vẫn dùng bình thường.`,
         );
       }
       const r = await db.aiRequest.create({ data: { userId, kind, createdAt: now } });

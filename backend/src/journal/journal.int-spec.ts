@@ -234,6 +234,25 @@ describe('nhật ký quyết định (PostgreSQL)', () => {
     });
   });
 
+  it('lệnh trước ngày lập kế hoạch (gắn về sau) không tính là lệnh gắn kế hoạch (QA-d-07)', async () => {
+    const { u, plan } = await setup('jr-before');
+    await prisma.investmentPlan.update({
+      where: { id: plan.id },
+      data: { createdAt: new Date(`${day(2)}T03:00:00Z`) },
+    });
+    await transactions.create(u.id, {
+      type: 'buy',
+      date: day(1),
+      assetType: 'stock',
+      symbol: 'FPT',
+      quantity: 10,
+      price: 100_000,
+      planId: plan.id,
+    });
+    const s = await journal.summary(u.id, month);
+    expect(s).toMatchObject({ trades: 1, linked: 0, unlinked: 1 });
+  });
+
   it('lời mời xem tổng kết tháng trước: chỉ người có nhật ký, mỗi tháng một khoá', async () => {
     const { u, plan } = await setup('jr-digest');
     const quiet = await testUser(prisma, 'jr-quiet');

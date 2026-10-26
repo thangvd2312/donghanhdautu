@@ -9,6 +9,8 @@ import { InfoTip } from '../ui'
 /** Tổng đã nhận, khoản sắp nhận (ước tính) và lợi suất trên giá vốn */
 export default function SummaryCard({ data, past }: { data: IncomeResponse; past: number }) {
   const s = data.summary
+  // Khoản quá ngày trả mà chưa ghi sổ nhiều khả năng đã nhận: không cộng vào "sắp nhận"
+  const upcoming = s.expectedNet - s.overdueNet
   const unavailable = data.unavailable
   return (
     <Paper data-testid="income-summary" sx={{ p: 2.5 }}>
@@ -33,10 +35,16 @@ export default function SummaryCard({ data, past }: { data: IncomeResponse; past
             </Box>
           </Typography>
           <Typography className="num" sx={{ fontWeight: 700, fontSize: { xs: 19, sm: 20 }, lineHeight: 1.3 }}>
-            {unavailable ? 'Chưa có số liệu' : `~ ${vnd(s.expectedNet)}`}
+            {unavailable ? 'Chưa có số liệu' : `~ ${vnd(upcoming)}`}
           </Typography>
           <Typography variant="caption" color="text.secondary" component="div">
-            {unavailable ? 'Chưa lấy được lịch sự kiện' : s.expectedNet === 0 ? 'Chưa có khoản nào được công bố' : `đã chốt quyền ${vnd(s.lockedNet)}`}
+            {unavailable
+              ? 'Chưa lấy được lịch sự kiện'
+              : s.expectedNet === 0
+                ? 'Chưa có khoản nào được công bố'
+                : [upcoming > 0 ? `đã chốt quyền ${vnd(s.lockedNet - s.overdueNet)}` : null, s.overdueNet > 0 ? `quá ngày trả chưa ghi ${vnd(s.overdueNet)}` : null]
+                    .filter(Boolean)
+                    .join(' · ')}
           </Typography>
         </Box>
         {s.yieldOnCostPct !== null && (

@@ -7,6 +7,11 @@ export type { EventRange, ReminderSettings };
 const RANGE_DAYS: Record<EventRange, number> = { week: 7, month: 30, quarter: 92 };
 /** Số ngày trong quá khứ vẫn hiển thị để người dùng thấy sự kiện vừa qua */
 const PAST_DAYS = 7;
+/**
+ * Nguồn lọc theo ngày GDKHQ, nhưng ngày thanh toán thường sau GDKHQ 1–3 tháng: lấy lùi thêm để thanh toán sắp tới của
+ * đợt đã qua GDKHQ vẫn có trong lịch.
+ */
+const PAYOUT_LOOKBACK_DAYS = 100;
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = { enabled: false, daysBefore: 1, mutedSymbols: [] };
 
@@ -18,7 +23,7 @@ export interface CalendarEvent extends PublicCalendarEvent {
 
 type Classified = Omit<
   CalendarEvent,
-  'held' | 'watched' | 'heldQuantity' | 'estimatedCash' | 'upcoming' | 'remindAt' | 'companyName'
+  'held' | 'watched' | 'heldQuantity' | 'estimatedCash' | 'entitlementFixed' | 'upcoming' | 'remindAt' | 'companyName'
 > & { companyName: string | null };
 
 const day = (s?: string | null) => (s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : null);
@@ -29,19 +34,20 @@ function addDays(date: string, n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Số ngày lịch từ `from` đến `to` (dương nếu `to` sau `from`) */
-function daysBetween(from: string, to: string) {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+/** Phiên thứ `n` trước ngày `date` (bỏ qua thứ 7, chủ nhật; chưa tính ngày nghỉ lễ) */
+function sessionBefore(date: string, n: number) {
+  let d = date;
+  for (let left = n; left > 0;) {
+    d = addDays(d, -1);
+    const dow = new Date(`${d}T00:00:00Z`).getUTCDay();
+    if (dow !== 0 && dow !== 6) left--;
+  }
+  return d;
 }
 
 /** Phiên giao dịch cuối cùng trước ngày GDKHQ (bỏ qua thứ 7, chủ nhật; chưa tính ngày nghỉ lễ) */
 export function lastBuyDay(exDate: string) {
-  let d = addDays(exDate, -1);
-  for (;;) {
-    const dow = new Date(`${d}T00:00:00Z`).getUTCDay();
-    if (dow !== 0 && dow !== 6) return d;
-    d = addDays(d, -1);
-  }
+  return sessionBefore(exDate, 1);
 }
 
 /**
@@ -89,7 +95,7 @@ export function classifyEvent(e: VcMarketEvent): Classified | null {
 
 /** Khoảng ngày cần lấy từ nguồn: đủ cho mọi `range` và cho cửa sổ nhắc; một lần gọi dùng chung (cache theo ngày) */
 export function fetchWindow(today: string) {
-  return { from: addDays(today, -PAST_DAYS), to: addDays(today, RANGE_DAYS.quarter) };
+  return { from: addDays(today, -PAYOUT_LOOKBACK_DAYS), to: addDays(today, RANGE_DAYS.quarter) };
 }
 
 /** Sự kiện có ít nhất một ngày quan trọng nằm trong [from, to] */
@@ -107,34 +113,60 @@ export function reminderAnchor(e: Pick<CalendarEvent, 'kind' | 'exDate' | 'meeti
   return e.kind === 'agm' || e.kind === 'egm' ? e.meetingDate : null;
 }
 
-/** Hôm nay có nằm trong cửa sổ nhắc [anchor − daysBefore, anchor − 1] không (sự kiện công bố muộn: vào cửa sổ là nhắc ngay) */
-export function reminderDue(anchor: string | null, today: string, daysBefore: number) {
-  if (!anchor) return false;
-  const left = daysBetween(today, anchor);
-  return left >= 1 && left <= daysBefore;
+/**
+ * Cửa sổ nhắc [ngày đầu, ngày cuối]. GDKHQ: tính theo phiên — từ `daysBefore` phiên trước GDKHQ tới phiên mua cuối
+ * (GDKHQ thứ 2 thì nhắc "1 ngày trước" vào thứ 6, không phải chủ nhật khi đã hết phiên mua). Ngày họp: theo ngày lịch.
+ */
+function reminderWindow(anchor: string, isEx: boolean, daysBefore: number) {
+  return isEx
+    ? { first: sessionBefore(anchor, daysBefore), last: lastBuyDay(anchor) }
+    : { first: addDays(anchor, -daysBefore), last: addDays(anchor, -1) };
 }
 
-/** Ngày sẽ nhắc: null nếu tắt nhắc, mã bị tắt, hoặc sự kiện đã tới / qua */
+/** Hôm nay có nằm trong cửa sổ nhắc không (sự kiện công bố muộn: vào cửa sổ là nhắc ngay) */
+export function reminderDue(
+  e: Pick<CalendarEvent, 'exDate'>,
+  anchor: string | null,
+  today: string,
+  daysBefore: number,
+) {
+  if (!anchor) return false;
+  const w = reminderWindow(anchor, anchor === e.exDate, daysBefore);
+  return today >= w.first && today <= w.last;
+}
+
+/** Ngày sẽ nhắc: null nếu tắt nhắc, mã bị tắt, hoặc đã qua cửa sổ nhắc */
 export function remindAt(
   e: Pick<CalendarEvent, 'kind' | 'exDate' | 'meetingDate' | 'symbol'>,
   s: ReminderSettings,
   today: string,
 ) {
   const anchor = reminderAnchor(e);
-  if (!s.enabled || !anchor || s.mutedSymbols.includes(e.symbol) || anchor <= today) return null;
-  const first = addDays(anchor, -s.daysBefore);
-  return first > today ? first : today;
+  if (!s.enabled || !anchor || s.mutedSymbols.includes(e.symbol)) return null;
+  const w = reminderWindow(anchor, anchor === e.exDate, s.daysBefore);
+  if (today > w.last) return null;
+  return w.first > today ? w.first : today;
 }
 
 /** Một lần nhắc theo (mã, sự kiện, ngày): đổi ngày → khoá mới, nên không bao giờ nhắc lại theo ngày cũ */
 export function reminderDedupeKey(e: Pick<CalendarEvent, 'symbol' | 'sourceId'>, anchor: string) {
-  return `event:${e.symbol}:${e.sourceId}:${anchor}`;
+  return `${reminderKeyPrefix(e)}${anchor}`;
+}
+
+/** Tiền tố chung của mọi lần nhắc cùng một sự kiện (mọi ngày) — để thu hồi lần nhắc theo ngày cũ khi nguồn đổi ngày */
+export function reminderKeyPrefix(e: Pick<CalendarEvent, 'symbol' | 'sourceId'>) {
+  return `event:${e.symbol}:${e.sourceId}:`;
 }
 
 interface CalendarInput {
   events: VcMarketEvent[];
   /** mã → tổng số cổ phiếu đang giữ (mọi danh mục), chỉ mã > 0 */
   holdings: Map<string, number>;
+  /**
+   * Số cổ phiếu được hưởng quyền: giữ tới hết phiên trước ngày GDKHQ (giao dịch có ngày < GDKHQ). Không truyền thì
+   * dùng số đang giữ.
+   */
+  entitledAt?: (symbol: string, exDate: string) => number;
   watched: Set<string>;
   today: string;
   range: EventRange;
@@ -150,19 +182,27 @@ export function buildCalendar(input: CalendarInput): CalendarEvent[] {
   for (const raw of input.events) {
     const c = classifyEvent(raw);
     if (!c) continue;
-    const qty = holdings.get(c.symbol) ?? 0;
-    const held = qty > 0;
+    const now = holdings.get(c.symbol) ?? 0;
+    // Đã qua GDKHQ: quyền đã chốt theo số giữ trước GDKHQ (mua sau không được, bán sau vẫn được)
+    const fixed = c.exDate !== null && c.exDate <= today && c.kind !== 'agm' && c.kind !== 'egm';
+    const entitled = fixed ? (input.entitledAt?.(c.symbol, c.exDate!) ?? now) : now;
+    const qty = fixed ? entitled : now;
+    const held = now > 0 || entitled > 0;
     const isWatched = watched.has(c.symbol);
     if (!held && !isWatched) continue;
     if (!inWindow(c, from, to)) continue;
+    // Đợt đã qua GDKHQ nhưng chưa thanh toán: xếp vào ngày thanh toán (mốc còn lại với người được hưởng)
+    const payoutAhead = c.exDate !== null && c.exDate < today && c.payoutDate !== null && c.payoutDate >= today;
     out.push({
       ...c,
+      date: payoutAhead ? c.payoutDate! : c.date,
       held,
       watched: isWatched,
-      heldQuantity: held ? qty : null,
-      estimatedCash: c.kind === 'cash' && held ? Math.round(qty * (c.valuePerShare ?? 0)) : null,
+      heldQuantity: qty > 0 ? qty : null,
+      estimatedCash: c.kind === 'cash' && qty > 0 ? Math.round(qty * (c.valuePerShare ?? 0)) : null,
+      entitlementFixed: fixed,
       // Đại hội: còn "sắp tới" khi ngày họp chưa qua dù GDKHQ đã qua
-      upcoming: c.date >= today || (c.meetingDate !== null && c.meetingDate >= today),
+      upcoming: c.date >= today || payoutAhead || (c.meetingDate !== null && c.meetingDate >= today),
       remindAt: remindAt(c, settings, today),
     });
   }
@@ -175,7 +215,7 @@ const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 const vnd = (n: number) => `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(n)} ₫`;
 
 /** Nội dung nhắc. Ước tính tiền nhận (số liệu danh mục) chỉ nằm trong body — kênh ngoài chỉ hiện khi bật showDetails */
-export function reminderMessage(e: CalendarEvent, anchor: string) {
+export function reminderMessage(e: CalendarEvent, anchor: string, previousAnchor: string | null = null) {
   const what: Record<EventKind, string> = {
     cash: `cổ tức ${vnd(e.valuePerShare ?? 0)}/cp`,
     stock: `cổ phiếu thưởng / cổ tức bằng cổ phiếu tỷ lệ ${e.ratioPct}%`,
@@ -184,8 +224,13 @@ export function reminderMessage(e: CalendarEvent, anchor: string) {
     egm: 'quyền dự ĐHĐCĐ bất thường',
   };
   const isAnchorEx = e.exDate === anchor;
-  const title = `${e.symbol}: ${isAnchorEx ? 'GDKHQ' : 'họp'} ${what[e.kind]} ngày ${dm(anchor)}`;
+  const changed = previousAnchor && previousAnchor !== anchor ? ` (đổi từ ${dm(previousAnchor)})` : '';
+  const title = `${e.symbol}: ${isAnchorEx ? 'GDKHQ' : 'họp'} ${what[e.kind]} ngày ${dm(anchor)}${changed}`;
   const parts: string[] = [];
+  if (changed)
+    parts.push(
+      `Nguồn đã đổi ngày từ ${dm(previousAnchor!)} sang ${dm(anchor)}; lần nhắc theo ngày cũ đã được thu hồi.`,
+    );
   if (isAnchorEx) {
     parts.push(
       `Muốn hưởng quyền phải sở hữu cổ phiếu trước ngày GDKHQ — mua chậm nhất phiên ${dm(lastBuyDay(anchor))}.`,

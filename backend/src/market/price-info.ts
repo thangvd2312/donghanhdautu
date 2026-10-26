@@ -92,7 +92,8 @@ export function priceInfo(book: PriceBook, assetType: AssetType, symbol: string,
           status: 'missing',
           source: 'vang.today',
           asOf: null,
-          reason: 'Nguồn không còn loại vàng này',
+          // Bảng giá rỗng: chưa lấy được nguồn lần nào (nguồn lỗi), khác với nguồn không còn loại vàng này
+          reason: book.gold.length ? 'Nguồn không còn loại vàng này' : 'Chưa lấy được bảng giá vàng từ nguồn',
         };
       const status = ageStatus(new Date(g.updatedAt), STALE_AFTER_MS.gold, now);
       return {

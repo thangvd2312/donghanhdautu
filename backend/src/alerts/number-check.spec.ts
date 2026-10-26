@@ -1,3 +1,4 @@
+import { weeklyTable } from './weekly';
 import { extractNumbers, unmatchedNumbers, writeChecked } from './number-check';
 
 describe('extractNumbers', () => {
@@ -142,4 +143,72 @@ describe('writeChecked: đảo dấu', () => {
     const write = jest.fn(() => Promise.resolve({ markdown: 'Danh mục lãi +1 triệu.' }));
     expect((await writeChecked({ week: { profit: -1_000_000 } }, write)).unmatched).toEqual(['+1 triệu']);
   });
+});
+
+describe('unmatchedNumbers: cách viết khác vẫn không đảo được lỗ thành lãi', () => {
+  // Dữ liệu cùng dạng bản tin tuần: danh mục lỗ 1 triệu (−1,96%), FPT kéo giảm, HPG kéo tăng
+  const week = {
+    from: '2026-10-19',
+    to: '2026-10-26',
+    period: {
+      startValue: 51_000_000,
+      endValue: 50_000_000,
+      netFlows: 0,
+      profit: -1_000_000,
+      returnPct: -1.96,
+      isEstimate: false,
+      notes: [],
+    },
+    endPoint: { profit: -3_400_000 },
+    assets: [
+      {
+        name: 'FPT',
+        assetType: 'stock',
+        priceEffect: -1_250_000,
+        priceChangePct: -4.2,
+        tradedThisWeek: false,
+        priced: true,
+      },
+      {
+        name: 'HPG',
+        assetType: 'stock',
+        priceEffect: 250_000,
+        priceChangePct: 1.2,
+        tradedThisWeek: false,
+        priced: true,
+      },
+    ],
+    allocationStart: { stock: 80, cash: 20 },
+    allocationEnd: { stock: 80, cash: 20 },
+    notes: [],
+  };
+  const data = {
+    numbersTable: weeklyTable(week as unknown as Parameters<typeof weeklyTable>[0]),
+    week,
+    investor: { type: 'Cân bằng', maxDrawdownPct: 20 },
+    plansDueSoon: [{ asset: 'FPT', nextReviewAt: '2026-10-29', stopPrice: 50_000, targetPrice: 160_000 }],
+  };
+  const flagged = (text: string) => unmatchedNumbers(text, data).length > 0;
+
+  it.each([
+    'Lãi của danh mục tuần này là 1 triệu đồng.',
+    'Khoản lãi trong tuần: 1 triệu đồng.',
+    'Bạn có lãi (khoảng 1 triệu đồng).',
+    'Danh mục không hề lỗ 1 triệu đồng mà còn lãi.',
+    'Danh mục lãi 20%.',
+    'Danh mục lãi 160.000 ₫ trong tuần.',
+    'Danh mục lãi +1 triệu đồng.',
+    'FPT tăng 1,2%, HPG giảm 4,2%.',
+  ])('bắt được: %s', (text) => expect(flagged(text)).toBe(true));
+
+  it.each([
+    'Danh mục lỗ 1 triệu đồng.',
+    'Khoản lỗ trong tuần: 1 triệu đồng.',
+    'Danh mục lỗ 1 triệu đồng, tương đương −1,96%.',
+    'HPG kéo danh mục thêm +250.000 ₫, FPT làm giảm 1,3 triệu.',
+    'FPT giảm 4,2%, HPG tăng 1,2%.',
+    'Mức lỗ bạn chấp nhận là 20%.',
+    'Mốc chốt lời FPT trong kế hoạch là 160.000 ₫.',
+    'Giá trị danh mục giảm còn 50 triệu đồng.',
+  ])('không báo nhầm: %s', (text) => expect(flagged(text)).toBe(false));
 });
