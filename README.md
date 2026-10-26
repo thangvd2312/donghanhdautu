@@ -2,19 +2,11 @@
 
 Web xem giá realtime (cổ phiếu VN, vàng, crypto, tỷ giá) cho nhà đầu tư cá nhân người Việt, kèm một **cố vấn AI** biết hồ sơ rủi ro và danh mục của từng người, phân tích có dẫn nguồn và chủ động cảnh báo khi tài sản biến động.
 
-## Tài liệu phát triển sản phẩm
+## Tài liệu
 
-- [Đánh giá hiện trạng, định hướng và roadmap](docs/PRODUCT_ROADMAP.md).
-- [Backlog cho dev: phạm vi, phụ thuộc và tiêu chí nghiệm thu](docs/DEV_BACKLOG.md).
-- [Review mức hoàn thành và các vấn đề cần xử lý](docs/IMPLEMENTATION_REVIEW.md).
-- [Tài liệu gửi dev: câu hỏi xác nhận và mẫu phản hồi](docs/DEV_REVIEW_REQUEST.md).
-
-## Tài liệu vận hành
-
-- [Vận hành production: biến môi trường, tác vụ định kỳ, lệnh, sao lưu / khôi phục, rollback](docs/OPERATIONS.md).
-- [Kiểm thử: các lớp test, mỗi lớp chứng minh gì, cách chạy](docs/TESTING.md).
-- [Đo hành vi và báo cáo sử dụng](docs/ANALYTICS.md) · [Kiểm soát chi phí AI](docs/AI_COSTS.md) · [Mô hình chi phí cho gói trả phí](docs/BIZ_COST_MODEL.md).
-- [Tải trang](docs/PERFORMANCE.md) · [Kiểm tra thông báo ngoài app](docs/NOTIFICATIONS_TEST.md).
+- [Review mức hoàn thành, tiêu chí nghiệm thu và backlog tính năng miễn phí](docs/IMPLEMENTATION_REVIEW.md).
+- [Phản hồi sửa lỗi N1–N6](docs/DEV_RESPONSE_N1-N6.md) · [Báo cáo bàn giao tháng 10/2026](docs/DEV_REPORT_2026-10.md).
+- [Kiến trúc: ranh giới module, quy ước thư mục](ARCHITECTURE.md).
 
 ## Chạy thử
 
@@ -51,7 +43,7 @@ Không có `LLM_API_KEY` thì mọi thứ vẫn chạy, trừ chat cố vấn; t
 
 ## Deploy (production)
 
-Push lên `main` → GitHub Actions build, unit test, test tích hợp PostgreSQL, lint; rồi self-hosted runner (label `dautu`) trên server tự deploy vào `/home/thangvv/apps/dautu`: rsync code, `docker compose up` Postgres, build, sao lưu DB (`~/backups/dautu/pre-deploy/`), `prisma migrate deploy`, `pm2 startOrReload` (cả hai app), health check `http://127.0.0.1:4200/api/health` rồi kiểm tra nhịp tim worker (phải lên trong 90 giây, nếu không deploy thất bại). Xem `.github/workflows/deploy.yml` và [docs/OPERATIONS.md](docs/OPERATIONS.md) (lệnh, khôi phục, rollback).
+Push lên `main` → GitHub Actions build, unit test, test tích hợp PostgreSQL, lint; rồi self-hosted runner (label `dautu`) trên server tự deploy vào `/home/thangvv/apps/dautu`: rsync code, `docker compose up` Postgres, build, sao lưu DB (`~/backups/dautu/pre-deploy/`), `prisma migrate deploy`, `pm2 startOrReload` (cả hai app), health check `http://127.0.0.1:4200/api/health` rồi kiểm tra nhịp tim worker (phải lên trong 90 giây, nếu không deploy thất bại). Xem `.github/workflows/deploy.yml`.
 
 - Hai process NestJS cùng codebase (`ecosystem.config.cjs`): `dautu` (web) phục vụ `/api`, socket.io, `frontend/dist` và poll bảng giá realtime; `dautu-worker` (`dist/worker.js`, không mở cổng) chạy cron, hàng đợi bản tin, gửi Telegram / Web Push. Mỗi lượt việc định kỳ giữ khoá tư vấn PostgreSQL nên không bao giờ chạy trùng. Nhịp tim worker: `curl 127.0.0.1:4200/api/health` → `worker.ok`. Chạy local cần việc nền thì mở thêm `npm run start:worker:dev` (trong `backend/`).
 - `.env` ở thư mục gốc trên server (không nằm trong git): biến `POSTGRES_*` cho docker compose + toàn bộ biến của backend (`PORT=4200`, `FRONTEND_ORIGIN=https://dautu.thangvu.io.vn`…).
@@ -83,6 +75,14 @@ Người dùng tự kết nối ở Cài đặt → "Nhận thông báo qua Tele
 | Kế hoạch đầu tư | Lý do mua, điều kiện xem lại / bán, mốc chốt lời / cắt lỗ, ngày xem lại; AI viết nháp (chỉ lưu khi người dùng xác nhận); nhật ký giữ / điều chỉnh / kết thúc; nhắc 8:00 khi đến hạn. |
 | Mục tiêu tài chính | Gán % tài sản cho từng mục tiêu (không quá 100% / tài sản), tiến độ, lệch tỷ trọng mong muốn, mô phỏng mức góp / lợi suất giả định. |
 | Watchlist | Theo dõi tài sản chưa sở hữu, đặt cảnh báo giá. |
+| Lịch sự kiện | Cổ tức, thưởng, quyền mua, đại hội của mã đang giữ / theo dõi; nhắc trước 1–3 ngày. |
+| So sánh & lọc cổ phiếu | So sánh 2–4 mã trên cùng mốc (hiệu suất, chỉ tiêu cùng kỳ); bộ lọc toàn thị trường lưu được, ghi lý do khớp. |
+| Thu nhập cổ tức | Cổ tức đã nhận / dự kiến theo tháng, căn cứ và mức chắc chắn. |
+| Thử kịch bản & tái cân bằng | Sốc giá theo nhóm / mã, tỷ giá; tính lượng mua / bán để về tỷ trọng mục tiêu với lô và phí. Không ghi vào sổ. |
+| Luyện tập | Tài khoản tiền ảo riêng: lệnh thị trường cổ phiếu / coin, phí, lô, lịch sử, reset; tách hẳn danh mục thật. |
+| Nhật ký quyết định | Nhãn lý do / cảm xúc cho giao dịch và lần xem lại kế hoạch, tổng kết tháng tách "đúng kế hoạch" khỏi lãi / lỗ. |
+| Cảnh báo danh mục | Tập trung, lệch tỷ trọng, giảm từ đỉnh (đã loại dòng vốn); mặc định tắt, bỏ qua khi giá thiếu / cũ. |
+| Báo cáo tháng | Xem trước, in PDF từ trình duyệt, CSV; tuỳ chọn ẩn số tiền / mã. |
 | Dùng thử | `/demo` cho khách: danh mục mẫu định giá bằng giá thật, không đọc dữ liệu người dùng, không gọi AI. |
 | Trang cổ phiếu | Biểu đồ nến + MA20/50/200, chỉ báo kỹ thuật, chỉ số tài chính TTM 5 quý, KQKD 5 năm / 6 quý, khuyến nghị Vietcap Research. |
 | Cố vấn AI | Chat streaming. Claude gọi công cụ lấy dữ liệu thật (danh mục, toàn cảnh thị trường, phân tích/so sánh cổ phiếu, crypto, vàng, tin tức) và tìm kiếm web cho vĩ mô; mọi con số phải có nguồn. Prompt tập trung chống FOMO và tách góc nhìn dài hạn / ngắn hạn. |
@@ -115,10 +115,10 @@ frontend (React + Vite + MUI)  ──REST /api, SSE chat, socket.io──▶  ba
 - Hai process từ cùng một bản build: `dist/main.js` (web: API, socket, giá realtime) và `dist/worker.js` (cron, hàng đợi bản tin, gửi Telegram / Web Push; mỗi job chạy dưới khoá advisory của Postgres, ghi nhịp tim để deploy kiểm tra). `/api/health` trả cả trạng thái worker.
 - `frontend/src/` — `pages/` chỉ là khung trang; gọi API qua `api/<mảng>.ts`; logic tải dữ liệu và form trong `hooks/`; component theo mảng trong `components/<mảng>/`.
 - Chi tiết ranh giới module, quy ước thư mục và checklist khi thêm tính năng: [ARCHITECTURE.md](ARCHITECTURE.md).
-- `npm test` (unit), `npm run test:int` trong `backend` (PostgreSQL thật) và `npm run lint` đều chạy trong CI. Chi tiết các lớp kiểm thử: [docs/TESTING.md](docs/TESTING.md).
+- `npm test` (unit), `npm run test:int` trong `backend` (PostgreSQL thật) và `npm run lint` đều chạy trong CI. Giao diện điện thoại: Playwright trong `frontend/e2e` (iPhone 11 Pro, WebKit).
 
 ## Lưu ý trước khi mở cho cộng đồng
 
 - **Nguồn dữ liệu**: Vietcap / DNSE / vang.today là API công khai mà web của họ dùng, không có hợp đồng — có thể đổi hoặc chặn bất cứ lúc nào (khi xây dựng đã gặp Vietcap trả lỗi 500 ở một số endpoint, nên có dự phòng). Khi ra thị trường cần nguồn có hợp đồng (SSI FastConnect, FiinTrade…).
 - **Pháp lý**: tư vấn đầu tư chứng khoán ở Việt Nam là ngành nghề có điều kiện. Hiện app ghi rõ là phân tích tham khảo; cần tư vấn luật trước khi thu phí hoặc mở rộng.
-- **Chi phí AI**: mỗi câu hỏi phân tích gọi nhiều công cụ và có thể tìm web, tốn nhiều token hơn chat thường. App ghi usage và chi phí ước tính từng lần gọi (`npm run report:usage`), có quota và ngân sách ngày; xem [docs/AI_COSTS.md](docs/AI_COSTS.md).
+- **Chi phí AI**: mỗi câu hỏi phân tích gọi nhiều công cụ và có thể tìm web, tốn nhiều token hơn chat thường. App ghi usage và chi phí ước tính từng lần gọi (`npm run report:usage`), có quota và ngân sách ngày.

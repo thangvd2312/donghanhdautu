@@ -10,8 +10,6 @@
 - [ ] `npm run eval` (AI thật, tốn phí) — chỉ khi đổi prompt / công cụ của cố vấn
 - [ ] Không cần (giải thích):
 
-Xem [docs/TESTING.md](../docs/TESTING.md) để biết mỗi lớp kiểm thử chứng minh được gì và không chứng minh được gì.
-
 ## Luồng chính đã thử tay
 
 <!-- Đánh dấu những luồng bị ảnh hưởng và đã thử trên app chạy thật (local hoặc production) -->
@@ -34,8 +32,8 @@ Xem [docs/TESTING.md](../docs/TESTING.md) để biết mỗi lớp kiểm thử 
 
 **Đối soát sau deploy:** <!-- vd `node --env-file=../.env dist/portfolio/reconcile.js` phải in "Khớp" -->
 
-**Rollback:** <!-- Cách quay lại nếu lỗi: revert commit + migration ngược (SQL), hoặc khôi phục bản sao lưu pre-deploy (docs/OPERATIONS.md). Ghi rõ dữ liệu nào mất nếu khôi phục bản sao lưu. -->
+**Rollback:** <!-- Cách quay lại nếu lỗi: revert commit + migration ngược (SQL), hoặc khôi phục bản sao lưu pre-deploy. Ghi rõ dữ liệu nào mất nếu khôi phục bản sao lưu. -->
 
 ## Biến môi trường / vận hành
 
-<!-- Biến mới trong ~/apps/dautu/.env, cron, lệnh cần chạy tay sau deploy; cập nhật docs/OPERATIONS.md -->
+<!-- Biến mới trong ~/apps/dautu/.env, cron, lệnh cần chạy tay sau deploy -->

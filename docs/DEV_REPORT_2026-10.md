@@ -10,7 +10,7 @@
 |---|---|
 | 6 lỗi N1–N6 | Đã sửa, có regression test; chi tiết trong DEV_RESPONSE_N1-N6.md |
 | Nghiệm thu mobile, đăng ký / onboarding / deep-link | Đạt trên môi trường test; phát hiện và sửa thêm lỗi mất đích sau đăng nhập (2291c83) |
-| NT-01 thông báo | Telegram: chủ sản phẩm xác nhận hoạt động trên thiết bị thật, không làm biên bản từng bước. **Web Push: chưa nghiệm thu.** |
+| NT-01 thông báo | Telegram (21/10) và Web Push (23/10): chủ sản phẩm xác nhận hoạt động trên thiết bị thật, không làm biên bản từng bước. |
 | BIZ-01 gói trả phí | Ngoài phạm vi theo quyết định phát triển miễn phí |
 | Backlog mục 7 (FREE-01 → FREE-10) | **Đã triển khai đủ 10 tính năng**, mục 2 |
 
@@ -76,7 +76,8 @@ Mỗi lần deploy đều sao lưu DB trước ở `~/backups/dautu/pre-deploy/`
 
 ## 7. Việc còn lại
 
-- [ ] **NT-01 Web Push**: thử trên thiết bị thật (Android Chrome, iOS 16.4+ ở chế độ thêm vào màn hình chính).
-- [ ] **Khôi phục thử** bản sao lưu gần nhất vào một DB tạm trên server, đếm số dòng so với DB thật, rồi xoá DB tạm. Cần người có quyền trên server chạy.
+- [x] **NT-01 Web Push**: chủ sản phẩm thử trên thiết bị thật ngày 23/10/2026, không làm biên bản từng bước.
+- [ ] **Khôi phục thử** bản sao lưu: chủ sản phẩm sẽ tự xây cơ chế sao lưu phù hợp với dung lượng dữ liệu; hoãn.
 - [ ] Dùng thử trên điện thoại thật vài ngày và ghi nhận điểm khó hiểu; các tính năng mới mới qua giả lập iPhone.
-- [ ] `README.md` còn link tới các file `docs/` đang bị xoá trong working tree (OPERATIONS, TESTING, ANALYTICS, AI_COSTS, BIZ_COST_MODEL); sửa khi chốt xoá.
+- [ ] Nghiệm thu độc lập từng tính năng trên bản ad1bf5f (QA tách biệt, DB riêng): đang chạy từ 26/10.
+- [x] `README.md` không còn link tới các file `docs/` đã xoá (26/10).

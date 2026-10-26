@@ -85,7 +85,7 @@ jobs:
           npm run install:all
           npm run build
 
-      # Bản sao lưu ngay trước khi đổi schema (thư mục riêng, giữ 14 bản) — khôi phục: docs/OPERATIONS.md
+      # Bản sao lưu ngay trước khi đổi schema (thư mục riêng, giữ 14 bản)
       - name: Back up database before migrating
         working-directory: ${{ env.APP_DIR }}
         run: BACKUP_DIR="$HOME/backups/dautu/pre-deploy" bash scripts/backup-db.sh
