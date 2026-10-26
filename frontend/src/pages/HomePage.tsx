@@ -92,6 +92,8 @@ export default function HomePage() {
         </Grid>
       </Grid>
 
+      <TipPrompt />
+
       <UpcomingEvents />
 
       <Grid container spacing={2.5}>
@@ -111,6 +113,23 @@ export default function HomePage() {
         </Grid>
       </Grid>
     </Stack>
+  )
+}
+
+/** Lối vào Soi lời khuyên: đúng lúc người dùng vừa nghe ai đó hô mã */
+function TipPrompt() {
+  return (
+    <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+      <Box sx={{ flex: '1 1 220px', minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 700 }}>Nghe được tin hô mã?</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Dán vào để xem mức nóng, dữ liệu thật và tác động lên danh mục của bạn trước khi mua.
+        </Typography>
+      </Box>
+      <Button component={RouterLink} to="/tips" variant="outlined" endIcon={<ArrowForward />} sx={{ borderRadius: 99, minHeight: 44 }}>
+        Soi lời khuyên
+      </Button>
+    </Paper>
   )
 }
 

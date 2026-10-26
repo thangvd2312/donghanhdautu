@@ -9,6 +9,8 @@ import HomePage from './pages/HomePage'
 // khách ở /login, /register, /demo không phải tải phần này.
 // Mỗi trang một chunk, tải khi mở: trang đăng nhập / trang chủ không phải tải biểu đồ, markdown… của trang khác
 const AdvisorPage = lazy(() => import('./pages/AdvisorPage'))
+const TipsPage = lazy(() => import('./pages/TipsPage'))
+const TipDetailPage = lazy(() => import('./pages/TipDetailPage'))
 const ComparePage = lazy(() => import('./pages/ComparePage'))
 const CryptoPage = lazy(() => import('./pages/CryptoPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
@@ -56,6 +58,8 @@ export default function AuthedRoutes() {
             <Route path="/news" element={page(<NewsPage />)} />
             <Route path="/plans" element={page(<PlansPage />)} />
             <Route path="/plans/:id" element={page(<PlanDetailPage />)} />
+            <Route path="/tips" element={page(<TipsPage />)} />
+            <Route path="/tips/:id" element={page(<TipDetailPage />)} />
             <Route path="/journal" element={page(<JournalPage />)} />
             <Route path="/events" element={page(<EventsPage />)} />
             <Route path="/income" element={page(<IncomePage />)} />

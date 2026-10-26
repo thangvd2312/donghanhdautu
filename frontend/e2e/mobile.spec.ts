@@ -105,6 +105,11 @@ const scenarios: Scenario[] = [
       if (await b.count()) await click(p, /^(Gắn nhãn|Sửa nhãn)$/)
     },
   },
+  { name: 'tips', path: '/tips' },
+  { name: 'tips-need-symbol', path: '/tips', act: async (p) => { await p.getByLabel('Nội dung lời khuyên').fill('Mai thị trường bùng nổ, múc đi anh em'); await click(p, /^Soi$/); await p.getByLabel('Mã cổ phiếu hoặc coin').waitFor({ timeout: 25_000 }) } },
+  { name: 'tip-detail', path: '/tips', act: async (p) => { await p.locator('a[href^="/tips/"]').first().click(); await p.getByText('Mức nóng / 100').waitFor({ timeout: 25_000 }) } },
+  { name: 'tip-watch-sheet', path: '/tips', act: async (p) => { await p.locator('a[href^="/tips/"]').first().click(); await p.getByText('Mức nóng / 100').waitFor({ timeout: 25_000 }); await click(p, 'Theo dõi'); await p.waitForTimeout(600) } },
+  { name: 'tip-plan-editor', path: '/tips', act: async (p) => { await p.locator('a[href^="/tips/"]').first().click(); await p.getByText('Mức nóng / 100').waitFor({ timeout: 25_000 }); await click(p, 'Viết kế hoạch trước khi mua'); await p.waitForTimeout(800) } },
   { name: 'goals', path: '/goals' },
   { name: 'goals-new', path: '/goals', act: (p) => click(p, 'Thêm mục tiêu') },
   { name: 'goals-sim', path: '/goals', act: async (p) => { const l = p.getByText('Thử thay đổi mức góp').first(); if (await l.count()) { await l.click(); await p.waitForTimeout(600) } } },

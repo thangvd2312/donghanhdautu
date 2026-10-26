@@ -45,6 +45,8 @@ async function main() {
     assertStock: (s) => Promise.resolve({ symbol: s }),
     goldQuotes: () => [],
     usdtVnd: { rate: 26_000 },
+    // Mua coin chỉ nhận cặp có trên Binance (604fe59): khai báo các cặp seed dùng
+    binance: { quotes: new Map([['BTCUSDT', {}], ['ETHUSDT', {}]]) },
   };
   const tx = new TransactionsService(prisma, market);
   const email = 'e2e@local';
@@ -125,6 +127,79 @@ async function main() {
   });
   await prisma.priceAlert.create({
     data: { userId: user.id, assetType: 'stock', symbol: 'FPT', direction: 'above', targetPrice: 200_000 },
+  });
+  // Soi lời khuyên: một phiếu đã phân tích sẵn (không gọi AI) cho audit màn sổ / phiếu / thanh quyết định
+  await prisma.tipCheck.create({
+    data: {
+      userId: user.id,
+      text: 'HPG múc ngay anh em, target 35, ăn chắc 30% trong tháng. Nghe nói sắp ký hợp đồng lớn!',
+      sourceName: 'Nhóm Zalo VIP',
+      sourceKind: 'zalo',
+      assetType: 'stock',
+      symbol: 'HPG',
+      status: 'analyzed',
+      claims: {
+        direction: 'buy',
+        targetPrice: 35_000,
+        stopPrice: null,
+        horizonDays: 30,
+        reasons: ['Sắp ký hợp đồng lớn'],
+        promises: ['ăn chắc 30% trong tháng'],
+        citesSource: false,
+        candidates: [
+          { assetType: 'stock', symbol: 'HPG', displayName: 'HPG' },
+          { assetType: 'stock', symbol: 'FPT', displayName: 'FPT' },
+        ],
+        extractedBy: 'ai',
+      },
+      priceAtCheck: 26_000,
+      priceSource: 'Vietcap',
+      benchmark: 'VNINDEX',
+      benchmarkAtCheck: 1_300,
+      score: 45,
+      scoreParts: [
+        { key: 'urgency', label: 'Lời lẽ hối thúc', points: 10, detail: '"múc", "ăn chắc"' },
+        { key: 'no_stop', label: 'Thiếu', points: 10, detail: 'Không có điểm cắt lỗ' },
+        { key: 'no_numbers', label: 'Thiếu', points: 10, detail: 'Lý do không kèm số liệu nào' },
+        { key: 'no_source', label: 'Thiếu', points: 5, detail: 'Không dẫn nguồn cho thông tin đưa ra' },
+        { key: 'overpromise', label: 'Hứa quá', points: 10, detail: 'Mục tiêu cao hơn giá hiện tại 34,6% trong 30 ngày' },
+      ],
+      personal: {
+        amountVnd: 6_000_000,
+        amountAssumed: true,
+        totalValueVnd: 60_000_000,
+        weightAfterPct: 22.5,
+        maxWeightPct: 15,
+        overWeight: true,
+        stopPct: 15,
+        stopFromTip: false,
+        lossIfStopVnd: 900_000,
+        lossIfStopPctOfTotal: 1.5,
+        maxDrawdownPct: 20,
+        held: { quantity: 300, pnlPct: -3.5, weightPct: 13, exceedsMaxLoss: false },
+        plan: null,
+        cash: { currency: 'VND', available: 9_000_000, enough: true },
+        riskType: 'balanced',
+      },
+      report: {
+        ai: 'ok',
+        aiMessage: null,
+        dataSays: [
+          { point: 'Giá đã tăng 1,7% trong 1 tuần và còn thấp hơn đỉnh 52 tuần 21,2%.', source: 'Vietcap' },
+          { point: 'P/E hiện tại 7,6 lần, thấp hơn trung vị 8 năm 11,1 lần của chính HPG.', source: 'Vietcap' },
+        ],
+        missing: ['Không có điểm cắt lỗ', 'Lý do không kèm số liệu nào', 'Không dẫn nguồn cho thông tin đưa ra'],
+        unverifiable: ['Thông tin "sắp ký hợp đồng lớn" chưa kiểm chứng được.'],
+        verdict: 'Định giá không đắt nhưng lý do của tin chưa có số liệu; mua thêm sẽ đưa HPG lên 22,5% tài sản, vượt mức 15%.',
+        questions: ['Nếu giá giảm 15% sau khi mua, bạn sẽ làm gì?', 'Bạn có chấp nhận HPG chiếm 22,5% tài sản không?'],
+        news: [],
+        droppedPoints: 0,
+        facts: [
+          { label: 'Giá lúc soi', value: '26.000 ₫', source: 'Vietcap' },
+          { label: 'RSI14', value: '50,9', source: 'Vietcap' },
+        ],
+      },
+    },
   });
   await prisma.$disconnect();
   process.stdout.write(jwt.sign({ sub: user.id, email }, process.env.JWT_SECRET, { expiresIn: '1d' }));

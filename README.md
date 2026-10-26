@@ -79,6 +79,7 @@ Người dùng tự kết nối ở Cài đặt → "Nhận thông báo qua Tele
 | So sánh & lọc cổ phiếu | So sánh 2–4 mã trên cùng mốc (hiệu suất, chỉ tiêu cùng kỳ); bộ lọc toàn thị trường lưu được, ghi lý do khớp. |
 | Thu nhập cổ tức | Cổ tức đã nhận / dự kiến theo tháng, căn cứ và mức chắc chắn. |
 | Thử kịch bản & tái cân bằng | Sốc giá theo nhóm / mã, tỷ giá; tính lượng mua / bán để về tỷ trọng mục tiêu với lô và phí. Không ghi vào sổ. |
+| Soi lời khuyên | Dán tin "hô mã" (Zalo, Telegram, môi giới): AI bóc tách mã / mục tiêu / cắt lỗ / lý do; mức nóng 0–100 tính bằng quy tắc (giá đã chạy, RSI, khối lượng, lời lẽ hối thúc, thiếu cắt lỗ / thời hạn / nguồn, hứa quá); dữ liệu thật có nguồn (số AI viết được đối chiếu với dữ liệu, ý sai số bị bỏ); tác động lên danh mục của chính người dùng; quyết định bỏ qua / theo dõi kèm cảnh báo giá / viết kế hoạch / thử tiền ảo; tự ghi "đã mua theo" nếu có lệnh mua trong 7 ngày. Không khuyến nghị mua / bán, không ghi sổ. |
 | Luyện tập | Tài khoản tiền ảo riêng: lệnh thị trường cổ phiếu / coin, phí, lô, lịch sử, reset; tách hẳn danh mục thật. |
 | Nhật ký quyết định | Nhãn lý do / cảm xúc cho giao dịch và lần xem lại kế hoạch, tổng kết tháng tách "đúng kế hoạch" khỏi lãi / lỗ. |
 | Cảnh báo danh mục | Tập trung, lệch tỷ trọng, giảm từ đỉnh (đã loại dòng vốn); mặc định tắt, bỏ qua khi giá thiếu / cũ. |

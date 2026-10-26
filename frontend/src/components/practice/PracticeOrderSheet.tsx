@@ -50,6 +50,8 @@ export interface OrderPreset {
   side: PracticeSide
   assetType?: PracticeAssetType
   symbol?: string
+  /** Số lượng điền sẵn; người dùng vẫn sửa được */
+  quantity?: number
 }
 
 /** Sheet đặt lệnh (gọn, tự co theo nội dung): chọn mã → số lượng → ước tính → xác nhận. Toàn bộ là tiền ảo */
@@ -97,7 +99,7 @@ function OrderForm({
   const [side, setSide] = useState<PracticeSide>(preset.side)
   const [assetType, setAssetType] = useState<PracticeAssetType>(preset.assetType ?? 'stock')
   const [symbol, setSymbol] = useState(preset.symbol ?? '')
-  const [text, setText] = useState('')
+  const [text, setText] = useState(preset.quantity ? String(preset.quantity) : '')
   const [touched, setTouched] = useState(false)
   const [oddLot, setOddLot] = useState(false)
   const [step, setStep] = useState<'form' | 'confirm'>('form')

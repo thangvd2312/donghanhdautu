@@ -18,7 +18,7 @@ import { createPlan, draftPlan, updatePlan } from '../../api/plans'
 import { useGoldOptions } from '../../hooks/useGoldOptions'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { parseNum } from '../../lib/num'
-import type { Plan } from '../../lib/types'
+import type { Plan, PlanRequest } from '../../lib/types'
 import StockSearch from '../StockSearch'
 import { DialogHeader } from '../ui'
 
@@ -35,12 +35,15 @@ export default function PlanEditor({
   onSaved,
   editing,
   fixed,
+  initial,
 }: {
   open: boolean
   onClose: () => void
   onSaved: (plan: Plan) => void
   editing?: Plan | null
   fixed?: { assetType: PlanAsset; symbol: string; label: string } | null
+  /** Nội dung điền sẵn khi lập mới (vd từ phiếu soi lời khuyên); người dùng vẫn sửa và tự bấm lưu */
+  initial?: Partial<PlanRequest> | null
 }) {
   const [assetType, setAssetType] = useState<PlanAsset>('stock')
   const mobile = useIsMobile()
@@ -59,7 +62,7 @@ export default function PlanEditor({
 
   useEffect(() => {
     if (!open) return
-    const p = editing
+    const p = editing ?? initial
     setAssetType(p?.assetType ?? fixed?.assetType ?? 'stock')
     setSymbol(p?.symbol ?? fixed?.symbol ?? '')
     setThesis(p?.thesis ?? '')

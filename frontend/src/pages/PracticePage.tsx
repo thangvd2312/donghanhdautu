@@ -14,6 +14,7 @@ import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import PracticeOrderSheet, { type OrderPreset } from '../components/practice/PracticeOrderSheet'
 import { PositionCard, RulesPanel, SummaryCard, VirtualBadge } from '../components/practice/PracticeParts'
 import PracticeIntro from '../components/practice/PracticeIntro'
@@ -32,6 +33,16 @@ export default function PracticePage() {
   const [resetOpen, setResetOpen] = useState(false)
   const [menu, setMenu] = useState<HTMLElement | null>(null)
   const [toast, setToast] = useState('')
+  // Lệnh điền sẵn từ nơi khác (vd phiếu soi lời khuyên): /practice?buy=HPG&type=stock&qty=400
+  const [params, setParams] = useSearchParams()
+  const presetBuy = params.get('buy')
+  useEffect(() => {
+    if (!presetBuy || !state) return
+    const type = params.get('type') === 'crypto' ? 'crypto' : 'stock'
+    const qty = Number(params.get('qty'))
+    setOrder({ side: 'buy', assetType: type, symbol: presetBuy.toUpperCase(), quantity: qty > 0 ? qty : undefined })
+    setParams({}, { replace: true })
+  }, [presetBuy, state, params, setParams])
 
   useEffect(() => {
     document.title = 'Luyện tập · Đồng Hành Đầu Tư'
