@@ -53,6 +53,7 @@ import { WeeklyBriefService } from './weekly.service';
   ],
   exports: [
     LlmService,
+    PriceAlertsService,
     NotifierService,
     AlertsService,
     BriefsService,

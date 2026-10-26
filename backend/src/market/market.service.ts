@@ -385,6 +385,12 @@ export class MarketService implements OnApplicationBootstrap, OnModuleDestroy {
     return info;
   }
 
+  /** Mã cổ phiếu đang niêm yết / đăng ký giao dịch; null khi chưa lấy được danh sách */
+  async stockSymbols(): Promise<Set<string> | null> {
+    const all = await this.symbols.allSymbols().catch(() => null);
+    return all ? new Set(all.keys()) : null;
+  }
+
   async searchStocks(q: string): Promise<StockHit[]> {
     const s = q.trim().toUpperCase();
     if (!s) return [];

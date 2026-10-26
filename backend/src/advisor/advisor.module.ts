@@ -24,6 +24,6 @@ import { WebService } from './web.service';
     VerifierService,
     LlmService,
   ],
-  exports: [AdvisorService],
+  exports: [AdvisorService, AdvisorToolData, VerifierService],
 })
 export class AdvisorModule {}

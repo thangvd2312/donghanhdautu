@@ -28,6 +28,7 @@ import { ProfileModule } from './profile/profile.module';
 import { PracticeModule } from './practice/practice.module';
 import { ReportsModule } from './reports/reports.module';
 import { ScreenerModule } from './screener/screener.module';
+import { TipsModule } from './tips/tips.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 
 @Module({
@@ -62,6 +63,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     PracticeModule,
     PortfolioAlertsModule,
     ReportsModule,
+    TipsModule,
   ],
   controllers: [HealthController],
 })

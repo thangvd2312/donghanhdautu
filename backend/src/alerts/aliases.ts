@@ -66,3 +66,14 @@ export function mentionsCompany(text: string, ticker: string): boolean {
   const lower = text.toLowerCase();
   return (ALIASES[ticker] ?? []).some((a) => lower.includes(a.toLowerCase()));
 }
+
+/** Doanh nghiệp được nhắc bằng tên thường gọi trong văn bản, kèm vị trí xuất hiện đầu tiên */
+export function aliasMentions(text: string): { ticker: string; index: number }[] {
+  const lower = text.toLowerCase();
+  const out: { ticker: string; index: number }[] = [];
+  for (const [ticker, names] of Object.entries(ALIASES)) {
+    const idx = names.map((n) => lower.indexOf(n.toLowerCase())).filter((i) => i >= 0);
+    if (idx.length) out.push({ ticker, index: Math.min(...idx) });
+  }
+  return out;
+}

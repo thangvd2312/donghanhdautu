@@ -109,6 +109,18 @@ export const EVENTS = {
     props: { decision: 'keep | adjust | close' },
     dedupe: 'Không chống trùng',
   },
+  tip_checked: {
+    source: 'server',
+    description: 'Soi xong một lời khuyên (phiếu đã phân tích)',
+    props: { assetType: 'stock | crypto', hotLevel: 'normal | hot | very_hot', ai: 'ok | off | failed | quota' },
+    dedupe: 'Một lần mỗi phiếu',
+  },
+  tip_decided: {
+    source: 'server',
+    description: 'Ghi quyết định sau khi soi lời khuyên',
+    props: { decision: 'ignore | watch | plan | practice' },
+    dedupe: 'Không chống trùng',
+  },
   demo_viewed: {
     source: 'client',
     description: 'Khách chưa đăng nhập xem danh mục mẫu (sample = true)',

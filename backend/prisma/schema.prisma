@@ -8,70 +8,71 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
+  id                  String                @id @default(cuid())
+  email               String                @unique
   /// null với tài khoản chỉ đăng nhập bằng Google
-  passwordHash  String?
+  passwordHash        String?
   /// "sub" trong ID token của Google
-  googleId      String?        @unique
-  avatarUrl     String?
-  name          String
-  createdAt     DateTime       @default(now())
-  profile       InvestorProfile?
-  holdings      Holding[]
-  watchlist     WatchItem[]
-  conversations Conversation[]
-  notifications Notification[]
-  priceAlerts   PriceAlert[]
-  feedback      AnswerFeedback[]
-  transactions  Transaction[]
-  plans         InvestmentPlan[]
-  importBatches ImportBatch[]
-  goals         Goal[]
-  telegram      TelegramLink?
-  pushSettings  PushSettings?
-  pushSubscriptions PushSubscription[]
-  portfolios    Portfolio[]
-  briefRuns     BriefRun[]
-  dismissedActions DismissedAction[]
-  eventReminder EventReminderSetting?
-  savedScreens  SavedScreen[]
-  paperAccount  PaperAccount?
+  googleId            String?               @unique
+  avatarUrl           String?
+  name                String
+  createdAt           DateTime              @default(now())
+  profile             InvestorProfile?
+  holdings            Holding[]
+  watchlist           WatchItem[]
+  conversations       Conversation[]
+  notifications       Notification[]
+  priceAlerts         PriceAlert[]
+  feedback            AnswerFeedback[]
+  transactions        Transaction[]
+  plans               InvestmentPlan[]
+  importBatches       ImportBatch[]
+  goals               Goal[]
+  telegram            TelegramLink?
+  pushSettings        PushSettings?
+  pushSubscriptions   PushSubscription[]
+  portfolios          Portfolio[]
+  briefRuns           BriefRun[]
+  dismissedActions    DismissedAction[]
+  eventReminder       EventReminderSetting?
+  savedScreens        SavedScreen[]
+  paperAccount        PaperAccount?
   portfolioAlertRules PortfolioAlertRule[]
+  tipChecks           TipCheck[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
 model InvestorProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Câu trả lời thô, giữ lại để giải thích vì sao ra kiểu nhà đầu tư này
-  answers         Json
+  answers           Json
   /// 0-100, càng cao càng chịu được rủi ro
-  riskScore       Int
+  riskScore         Int
   /// conservative | balanced | growth | aggressive
-  riskType        String
+  riskType          String
   /// preserve | accumulate | trade
-  goal            String
+  goal              String
   /// short (<1 năm) | medium (1-3 năm) | long (>3 năm)
-  horizon         String
+  horizon           String
   /// % lỗ tối đa chịu được trước khi muốn bán
-  maxDrawdownPct  Int
+  maxDrawdownPct    Int
   /// Người dùng tự nhận hay mua theo đám đông / hội nhóm
-  fomoProne       Boolean
+  fomoProne         Boolean
   /// % thay đổi giá trong ngày để bắn cảnh báo cho tài sản đang nắm giữ
-  alertThresholdPct Float @default(3)
+  alertThresholdPct Float    @default(3)
   /// Bản tin sáng 8:30 (thứ 2–6)
-  morningBrief      Boolean @default(true)
+  morningBrief      Boolean  @default(true)
   /// Tổng kết cuối phiên 15:10 (thứ 2–6)
-  closingBrief      Boolean @default(true)
+  closingBrief      Boolean  @default(true)
   /// Tổng kết tuần, sáng thứ 7
-  weeklyBrief       Boolean @default(true)
+  weeklyBrief       Boolean  @default(true)
   /// Bản tin coin mỗi giờ (cả cuối tuần), chỉ gửi khi đang giữ / theo dõi coin
-  cryptoBrief       Boolean @default(true)
+  cryptoBrief       Boolean  @default(true)
   /// Cảnh báo tin vĩ mô quan trọng, biến động tỷ giá
-  macroAlerts       Boolean @default(true)
-  updatedAt       DateTime @updatedAt
+  macroAlerts       Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
 }
 
 model Holding {
@@ -105,12 +106,12 @@ model WatchItem {
 }
 
 model Conversation {
-  id        String    @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   messages  ChatMessage[]
 
   @@index([userId])
@@ -136,23 +137,23 @@ model ChatMessage {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// price_move | news | macro
-  kind      String
+  kind             String
   /// info | warning | critical
-  severity  String
-  title     String
-  body      String
+  severity         String
+  title            String
+  body             String
   /// [{title, url}]
-  sources   Json
+  sources          Json
   /// Khoá chống bắn trùng: cùng sự kiện chỉ báo 1 lần / user
-  dedupeKey String
+  dedupeKey        String
   /// Đường dẫn trong app để xem chi tiết (vd. cuộc trò chuyện chứa bản tin)
-  link      String?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  link             String?
+  read             Boolean           @default(false)
+  createdAt        DateTime          @default(now())
   telegramDelivery TelegramDelivery?
   pushDelivery     PushDelivery?
 
@@ -185,40 +186,40 @@ model PriceAlert {
 
 /// Kết quả AI đọc tin: bài nói về mã nào, có phải tin vĩ mô quan trọng không
 model NewsTag {
-  url        String   @id
-  title      String
-  tickers    String[]
+  url         String   @id
+  title       String
+  tickers     String[]
   /// 0 = không phải tin vĩ mô; 1–5 = mức quan trọng với nhà đầu tư cá nhân
-  macroScore Int      @default(0)
+  macroScore  Int      @default(0)
   /// lai_suat | ty_gia | chinh_sach | thue | vang | thi_truong | khac
-  topic      String?
+  topic       String?
   /// Một câu tóm tắt tác động
-  impact     String?
+  impact      String?
   publishedAt DateTime
-  taggedAt   DateTime @default(now())
+  taggedAt    DateTime @default(now())
 
   @@index([publishedAt])
 }
 
 /// Số liệu vĩ mô tham chiếu lấy trực tiếp từ nguồn chính thức (NHNN, Fed…), có kiểm tra hợp lệ
 model MacroFact {
-  key          String   @id
-  label        String
+  key           String   @id
+  label         String
   /// Giá trị hiển thị (có thể là khoảng, vd "3,75–4,00")
-  value        String
-  numericValue Float?
-  unit         String
+  value         String
+  numericValue  Float?
+  unit          String
   /// Ngày của số liệu theo nguồn (ngày áp dụng / kỳ báo cáo)
-  asOf         String
+  asOf          String
   /// Văn bản gốc nếu có, vd "1123/QĐ-NHNN ngày 16/06/2023"
-  document     String?
-  note         String?
-  sourceName   String
-  sourceUrl    String
+  document      String?
+  note          String?
+  sourceName    String
+  sourceUrl     String
   /// Lần cuối đọc thành công từ nguồn
-  fetchedAt    DateTime
+  fetchedAt     DateTime
   /// Lần cuối giá trị thay đổi
-  changedAt    DateTime
+  changedAt     DateTime
   previousValue String?
 }
 
@@ -258,47 +259,47 @@ model AnswerFeedback {
 /// Sổ giao dịch: nguồn gốc của số dư tài sản và tiền mặt. Bảng Holding được tính lại từ sổ này.
 /// Không xoá cứng: huỷ = đặt deletedAt; mọi lần sửa/huỷ lưu bản trước vào TransactionRevision.
 model Transaction {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String                @id @default(cuid())
+  userId        String
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// opening (số dư đầu kỳ) | buy | sell | deposit | withdraw | dividend | fee
-  type      String
+  type          String
   /// Ngày giao dịch theo lịch VN
-  date      DateTime  @db.Date
+  date          DateTime              @db.Date
   /// stock | crypto | gold | cash; null với nạp / rút / phí
-  assetType String?
+  assetType     String?
   /// FPT, BTCUSDT, SJL1L10, VND/USDT (tiền mặt đầu kỳ)
-  symbol    String?
-  quantity  Decimal?  @db.Decimal(30, 10)
+  symbol        String?
+  quantity      Decimal?              @db.Decimal(30, 10)
   /// Giá mỗi đơn vị theo đồng tiền của giao dịch
-  price     Decimal?  @db.Decimal(30, 10)
+  price         Decimal?              @db.Decimal(30, 10)
   /// Số tiền với nạp / rút / cổ tức / phí
-  amount    Decimal?  @db.Decimal(30, 10)
-  fee       Decimal   @default(0) @db.Decimal(30, 10)
-  tax       Decimal   @default(0) @db.Decimal(30, 10)
+  amount        Decimal?              @db.Decimal(30, 10)
+  fee           Decimal               @default(0) @db.Decimal(30, 10)
+  tax           Decimal               @default(0) @db.Decimal(30, 10)
   /// VND | USDT
-  currency  String
+  currency      String
   /// Số VND cho 1 USDT lúc giao dịch, nếu người dùng nhập
-  fxRate    Decimal?  @db.Decimal(30, 10)
-  note      String?
+  fxRate        Decimal?              @db.Decimal(30, 10)
+  note          String?
   /// Danh mục / tài khoản chứa giao dịch (sổ được kiểm tra riêng cho từng danh mục)
-  portfolioId String?
-  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id])
+  portfolioId   String?
+  portfolio     Portfolio?            @relation(fields: [portfolioId], references: [id])
   /// manual | migration | csv
-  source    String    @default("manual")
+  source        String                @default("manual")
   importBatchId String?
-  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  revisions TransactionRevision[]
+  importBatch   ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  deletedAt     DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  revisions     TransactionRevision[]
   /// Nhật ký quyết định (FREE-08), tuỳ chọn: lý do (plan | dca | price_level | thesis_changed | rebalance | need_cash | news | tip)
-  reason    String?
+  reason        String?
   /// Cảm xúc lúc quyết định: calm | confident | unsure | anxious | fomo | fear | greedy
-  emotion   String?
+  emotion       String?
   /// Kế hoạch người dùng gắn giao dịch vào (cùng tài sản); null = giao dịch không theo kế hoạch nào
-  planId    String?
-  plan      InvestmentPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planId        String?
+  plan          InvestmentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
   @@index([importBatchId])
@@ -321,35 +322,35 @@ model TransactionRevision {
 
 /// Kế hoạch đầu tư cho một tài sản (đang giữ hoặc đang theo dõi): người dùng tự đặt, AI chỉ hỗ trợ viết nháp
 model InvestmentPlan {
-  id             String         @id @default(cuid())
-  userId         String
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// stock | crypto | gold
-  assetType      String
-  symbol         String
+  assetType       String
+  symbol          String
   /// Luận điểm: vì sao mua / nắm giữ
-  thesis         String
+  thesis          String
   /// Dự định nắm giữ bao lâu, vd "1–3 năm"
-  horizon        String?
+  horizon         String?
   /// Điều kiện cho thấy luận điểm sai / cần xem lại hoặc bán
-  exitConditions String
+  exitConditions  String
   /// Mốc chốt lời / cắt lỗ theo đơn vị giá gốc (VND/cp, USDT/coin, VND/lượng giá mua vào)
-  targetPrice    Float?
-  stopPrice      Float?
+  targetPrice     Float?
+  stopPrice       Float?
   /// Chu kỳ xem lại (ngày) để tự đặt ngày xem lại tiếp theo
   reviewEveryDays Int?
-  nextReviewAt   DateTime       @db.Date
+  nextReviewAt    DateTime      @db.Date
   /// active | closed
-  status         String         @default("active")
-  closedReason   String?
-  closedAt       DateTime?
+  status          String        @default("active")
+  closedReason    String?
+  closedAt        DateTime?
   /// Ngày xem lại đã nhắc gần nhất, để không nhắc trùng
-  remindedFor    DateTime?      @db.Date
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  versions       PlanVersion[]
-  reviews        PlanReview[]
-  transactions   Transaction[]
+  remindedFor     DateTime?     @db.Date
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  versions        PlanVersion[]
+  reviews         PlanReview[]
+  transactions    Transaction[]
 
   @@index([userId, status])
   @@index([status, nextReviewAt])
@@ -592,19 +593,19 @@ model BriefRun {
 
 /// Sự kiện đo hành vi (từ điển: src/analytics/events.ts). Không lưu nội dung chat, ghi chú, email hay giá trị danh mục.
 model AnalyticsEvent {
-  id         String   @id @default(cuid())
-  name       String
+  id        String   @id @default(cuid())
+  name      String
   /// Người dùng đã đăng nhập; null với khách (dùng anonId)
-  userId     String?
+  userId    String?
   /// Mã ngẫu nhiên của trình duyệt khách, không gắn với danh tính
-  anonId     String?
+  anonId    String?
   /// userId hoặc "anon:<anonId>" — dùng cho khoá chống trùng
-  actor      String
+  actor     String
   /// true khi phát từ danh mục mẫu (/demo), tách khỏi số liệu thật
-  sample     Boolean  @default(false)
-  props      Json     @default("{}")
-  dedupeKey  String?
-  createdAt  DateTime @default(now())
+  sample    Boolean  @default(false)
+  props     Json     @default("{}")
+  dedupeKey String?
+  createdAt DateTime @default(now())
 
   @@unique([actor, dedupeKey])
   @@index([name, createdAt])
@@ -800,4 +801,57 @@ model PortfolioAlertRule {
 
   @@unique([userId, kind])
   @@index([enabled])
+}
+
+/// Soi lời khuyên: tin "hô mã" người dùng dán vào, lời khuyên bóc tách, phiếu kiểm chứng, quyết định và kết quả chấm lại.
+/// Kế hoạch / cảnh báo tạo từ phiếu chỉ lưu id (không khoá ngoại) để xoá chúng không bị chặn.
+model TipCheck {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Tin gốc (tối đa 4.000 ký tự)
+  text             String
+  /// Tên nguồn do người dùng ghi, vd "Nhóm VIP anh T"; thống kê theo nguồn gộp theo chữ thường
+  sourceName       String?
+  /// zalo | telegram | facebook | broker | friend | other
+  sourceKind       String?
+  /// stock | crypto
+  assetType        String
+  /// HPG, BTCUSDT
+  symbol           String
+  /// Lời khuyên bóc tách: direction, targetPrice, stopPrice, horizonDays, reasons, promises, citesSource, candidates
+  claims           Json
+  /// Số tiền giả định (VND) người dùng nhập; null = app tự giả định
+  amountVnd        Float?
+  /// Giá lúc soi theo đơn vị gốc (VND/cp, USDT/coin)
+  priceAtCheck     Float?
+  priceSource      String?
+  /// VNINDEX | BTC
+  benchmark        String?
+  benchmarkAtCheck Float?
+  /// Mức nóng 0–100 và từng phần cộng điểm (kèm số liệu lúc soi)
+  score            Int?
+  scoreParts       Json?
+  /// Với riêng bạn: tỷ trọng, lỗ nếu cắt lỗ, đang giữ, kế hoạch, tiền mặt
+  personal         Json?
+  /// Phần đọc dữ liệu: dataSays, missing, unverifiable, verdict, questions, sources, trạng thái AI
+  report           Json?
+  /// extracted | analyzed
+  status           String    @default("extracted")
+  /// ignore | watch | plan | practice
+  decision         String?
+  decidedAt        DateTime?
+  /// Mua thật mã này trong 7 ngày sau khi soi (tự phát hiện từ sổ)
+  boughtAt         DateTime?
+  planId           String?
+  priceAlertId     String?
+  conversationId   String?
+  /// Kết quả chấm lại sau 30 / 90 ngày
+  review30         Json?
+  review90         Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
