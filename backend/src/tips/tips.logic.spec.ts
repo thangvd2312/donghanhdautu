@@ -10,6 +10,8 @@ import {
   missingFromClaims,
   normalizeTipPrice,
   personalImpact,
+  reviewOutcome,
+  sourceStats,
   type PersonalInput,
   withoutPeriodCounts,
 } from './tips.logic';
@@ -346,5 +348,111 @@ describe('đối chiếu số trong phần "Dữ liệu nói gì"', () => {
   it('số "tỷ" trong câu khớp số theo đơn vị tỷ của báo cáo; EPS và số sai vẫn được đối chiếu như cũ', () => {
     expect(check('Doanh thu 2025 đạt 55.158,9 tỷ, lãi ròng 6.424,5 tỷ, EPS 1.004 đồng.')).toEqual([]);
     expect(check('Lãi ròng 7.000 tỷ.')).toEqual(['7.000 tỷ']);
+  });
+});
+
+describe('chấm lại sau 30 / 90 ngày', () => {
+  const r = (o: Partial<Parameters<typeof reviewOutcome>[0]> & { price: number }) =>
+    reviewOutcome({
+      assetType: 'stock',
+      claims: { direction: 'buy', targetPrice: null, stopPrice: null },
+      priceAtCheck: 20_000,
+      ...o,
+    });
+
+  it('mua: tăng ≥ 5% là đúng, giảm ≥ 5% là sai, ở giữa là chưa rõ', () => {
+    expect(r({ price: 21_000 })).toEqual({ changePct: 5, hitTarget: false, hitStop: false, outcome: 'right' });
+    expect(r({ price: 19_000 }).outcome).toBe('wrong');
+    expect(r({ price: 20_800 }).outcome).toBe('unclear');
+  });
+
+  it('chạm mục tiêu / cắt lỗ quyết định kết quả dù biên độ nhỏ; cắt lỗ thắng', () => {
+    const claims = { direction: 'buy' as const, targetPrice: 20_500, stopPrice: 19_800 };
+    expect(r({ claims, price: 20_600 })).toMatchObject({ hitTarget: true, outcome: 'right' });
+    expect(r({ claims, price: 19_700 })).toMatchObject({ hitStop: true, outcome: 'wrong' });
+  });
+
+  it('bán: giá giảm là đúng hướng; coin dùng ngưỡng 10%; "giữ" luôn chưa rõ', () => {
+    expect(r({ claims: { direction: 'sell', targetPrice: null, stopPrice: null }, price: 18_000 }).outcome).toBe(
+      'right',
+    );
+    expect(r({ assetType: 'crypto', price: 21_500 }).outcome).toBe('unclear');
+    expect(r({ assetType: 'crypto', price: 22_000 }).outcome).toBe('right');
+    expect(r({ claims: { direction: 'hold', targetPrice: null, stopPrice: null }, price: 30_000 }).outcome).toBe(
+      'unclear',
+    );
+  });
+});
+
+describe('thống kê theo nguồn', () => {
+  const review = (
+    outcome: 'right' | 'wrong' | 'unclear',
+    changePct: number | null,
+    benchmarkChangePct: number | null = 0,
+  ) => ({
+    at: '',
+    price: changePct === null ? null : 1,
+    changePct,
+    benchmarkChangePct,
+    hitTarget: false,
+    hitStop: false,
+    outcome,
+  });
+  it('gộp theo tên không phân biệt hoa thường / khoảng trắng; lấy lần chấm gần nhất; tính theo hướng tip', () => {
+    const stats = sourceStats([
+      {
+        sourceName: 'Nhóm  VIP',
+        claims: { direction: 'buy' },
+        review30: review('wrong', -8, 2),
+        review90: null,
+        boughtAt: '2026-10-01',
+      },
+      {
+        sourceName: 'nhóm vip',
+        claims: { direction: 'buy' },
+        review30: review('wrong', -2),
+        review90: review('right', 12, 4),
+        boughtAt: null,
+      },
+      { sourceName: 'Nhóm VIP', claims: { direction: 'sell' }, review30: null, review90: null, boughtAt: null },
+      {
+        sourceName: null,
+        claims: { direction: 'sell' },
+        review30: review('right', -10, -2),
+        review90: null,
+        boughtAt: null,
+      },
+      {
+        sourceName: ' ',
+        claims: { direction: 'buy' },
+        review30: review('unclear', null, null),
+        review90: null,
+        boughtAt: null,
+      },
+    ]);
+    expect(stats).toEqual([
+      {
+        name: 'Nhóm VIP',
+        tips: 3,
+        reviewed: 2,
+        right: 1,
+        wrong: 1,
+        unclear: 0,
+        avgMovePct: 2,
+        avgVsBenchmarkPct: -1,
+        bought: 1,
+      },
+      {
+        name: null,
+        tips: 2,
+        reviewed: 1,
+        right: 1,
+        wrong: 0,
+        unclear: 0,
+        avgMovePct: 10,
+        avgVsBenchmarkPct: 8,
+        bought: 0,
+      },
+    ]);
   });
 });

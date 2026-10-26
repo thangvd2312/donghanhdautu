@@ -263,7 +263,7 @@ function ReviewRow({ label, r, tip }: { label: string; r: TipReviewResult; tip: 
       </Typography>
       <Chip size="small" label={OUTCOME_LABEL[r.outcome]} sx={{ color, fontWeight: 700 }} variant="outlined" />
       <Typography variant="body2" className="num">
-        {fmtPct(r.changePct)} ({fmtPrice(r.price, tip.currency)})
+        {r.changePct === null ? 'Không lấy được giá' : `${fmtPct(r.changePct)} (${fmtPrice(r.price, tip.currency)})`}
         {r.benchmarkChangePct !== null && ` · ${tip.benchmark === 'BTC' ? 'BTC' : 'VN-Index'} ${fmtPct(r.benchmarkChangePct)}`}
       </Typography>
     </Stack>

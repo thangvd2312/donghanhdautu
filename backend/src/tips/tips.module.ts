@@ -7,11 +7,13 @@ import { PlansModule } from '../plans/plans.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { WatchlistModule } from '../watchlist/watchlist.module';
 import { TipsController } from './tips.controller';
+import { TipReviewService } from './tip-review.service';
 import { TipsService } from './tips.service';
 
 @Module({
   imports: [MarketModule, PortfolioModule, PlansModule, AlertsModule, AdvisorModule, NewsModule, WatchlistModule],
   controllers: [TipsController],
-  providers: [TipsService],
+  providers: [TipsService, TipReviewService],
+  exports: [TipReviewService],
 })
 export class TipsModule {}

@@ -14,6 +14,7 @@ import { JournalService } from '../journal/journal.service';
 import { HistoryService } from '../portfolio/history.service';
 import { PortfolioAlertsRunner } from '../portfolio-alerts/portfolio-alerts.runner';
 import { JobRunner } from '../runtime/job-runner';
+import { TipReviewService } from '../tips/tip-review.service';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -34,6 +35,7 @@ const HOUR = 60 * MIN;
  * | history.recordDaily     | 23:50 hằng ngày         | HistoryService.recordDaily           |
  * | portfolioAlerts.intraday| 9:00–14:30 mỗi 30 phút, thứ 2-6 | PortfolioAlertsRunner.runAll (tập trung, lệch tỷ trọng) |
  * | portfolioAlerts.daily   | 15:20 hằng ngày         | PortfolioAlertsRunner.runAll (cả giảm từ đỉnh) |
+ * | tips.review             | 15:30 hằng ngày         | TipReviewService.runDue (chấm lại lời khuyên sau 30 / 90 ngày) |
  * | analytics.purge         | 3:30 hằng ngày          | AnalyticsService.purge               |
  * | market-cache.purge      | phút 17 mỗi giờ         | MarketDataCache.purgeExpiredJob      |
  * | alerts.prices           | mỗi 60 giây             | AlertsService.checkPrices            |
@@ -56,6 +58,7 @@ export class ScheduledJobs {
     private readonly cache: MarketDataCache,
     private readonly alerts: AlertsService,
     private readonly macro: MacroService,
+    private readonly tips: TipReviewService,
   ) {}
 
   @Cron('30 8 * * 1-5', { timeZone: VN_TZ })
@@ -108,6 +111,12 @@ export class ScheduledJobs {
   @Cron('20 15 * * *', { timeZone: VN_TZ })
   portfolioAlertsDaily() {
     return this.jobs.run('portfolioAlerts.daily', () => this.portfolioAlerts.runAll({ drawdown: true }));
+  }
+
+  /** Sau phiên (giá đóng cửa đã chốt), cả cuối tuần cho coin: chấm lại lời khuyên đã soi đủ 30 / 90 ngày */
+  @Cron('30 15 * * *', { timeZone: VN_TZ })
+  tipsReview() {
+    return this.jobs.run('tips.review', () => this.tips.runDue());
   }
 
   @Cron('30 3 * * *', { timeZone: VN_TZ })

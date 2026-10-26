@@ -7,7 +7,9 @@ import type {
   TipHotLevel,
   TipPersonal,
   TipPlanDraft,
+  TipReviewResult,
   TipScorePart,
+  TipSourceStat,
 } from '@dautu/contracts';
 
 /** Tin gốc tối đa bao nhiêu ký tự */
@@ -310,4 +312,90 @@ export function billionSectionsInVnd(data: unknown): unknown[] {
   };
   walk(data);
   return out;
+}
+
+/** Chấm lại sau bao nhiêu ngày kể từ lúc soi */
+export const REVIEW_DAYS = [30, 90] as const;
+/** Quá hạn chấm bao nhiêu ngày mà vẫn không có giá thì ghi "không có giá" */
+export const REVIEW_GIVE_UP_DAYS = 7;
+
+/** Dấu của lời khuyên: bán = kỳ vọng giá giảm; còn lại (mua, giữ, không rõ) = kỳ vọng giá không giảm */
+const directionSign = (d: TipClaims['direction']) => (d === 'sell' ? -1 : 1);
+
+/**
+ * Chấm một lời khuyên: đúng = giá đi theo hướng tip ≥ 5% (coin ≥ 10%) hoặc chạm mục tiêu; sai = đi ngược ≥ 5% (coin ≥
+ * 10%) hoặc chạm cắt lỗ; còn lại chưa rõ. "Giữ" không có hướng rõ ràng nên luôn là chưa rõ. So bằng giá lúc chấm.
+ */
+export function reviewOutcome(i: {
+  assetType: TipAssetType;
+  claims: Pick<TipClaims, 'direction' | 'targetPrice' | 'stopPrice'>;
+  priceAtCheck: number;
+  price: number;
+}): Pick<TipReviewResult, 'changePct' | 'hitTarget' | 'hitStop' | 'outcome'> {
+  const changePct = round(((i.price - i.priceAtCheck) / i.priceAtCheck) * 100);
+  const sign = directionSign(i.claims.direction);
+  const { targetPrice: t, stopPrice: s } = i.claims;
+  const hitTarget = t !== null && (sign > 0 ? i.price >= t : i.price <= t);
+  const hitStop = s !== null && (sign > 0 ? i.price <= s : i.price >= s);
+  const k = i.assetType === 'crypto' ? 10 : 5;
+  const move = sign * changePct;
+  const outcome =
+    i.claims.direction === 'hold'
+      ? 'unclear'
+      : hitStop || move <= -k
+        ? 'wrong'
+        : hitTarget || move >= k
+          ? 'right'
+          : 'unclear';
+  return { changePct, hitTarget, hitStop, outcome };
+}
+
+/**
+ * Thống kê theo nguồn (gộp theo tên chữ thường, bỏ khoảng trắng thừa). Kết quả lấy lần chấm gần nhất (90 ngày, chưa có
+ * thì 30 ngày). `rows` xếp mới nhất trước: tên hiển thị là cách người dùng ghi lần gần nhất.
+ */
+export function sourceStats(
+  rows: {
+    sourceName: string | null;
+    claims: Pick<TipClaims, 'direction'>;
+    review30: TipReviewResult | null;
+    review90: TipReviewResult | null;
+    boughtAt: Date | string | null;
+  }[],
+): TipSourceStat[] {
+  const groups = new Map<string, TipSourceStat & { moves: number[]; vs: number[] }>();
+  for (const r of rows) {
+    const name = r.sourceName?.replace(/\s+/g, ' ').trim() || null;
+    const key = name?.toLowerCase() ?? '';
+    let g = groups.get(key);
+    if (!g) {
+      g = {
+        name,
+        tips: 0,
+        reviewed: 0,
+        right: 0,
+        wrong: 0,
+        unclear: 0,
+        avgMovePct: null,
+        avgVsBenchmarkPct: null,
+        bought: 0,
+        moves: [],
+        vs: [],
+      };
+      groups.set(key, g);
+    }
+    g.tips++;
+    if (r.boughtAt) g.bought++;
+    const review = r.review90 ?? r.review30;
+    if (!review || review.changePct === null) continue;
+    g.reviewed++;
+    g[review.outcome]++;
+    const sign = directionSign(r.claims.direction);
+    g.moves.push(sign * review.changePct);
+    if (review.benchmarkChangePct !== null) g.vs.push(sign * (review.changePct - review.benchmarkChangePct));
+  }
+  const avg = (a: number[]) => (a.length ? round(a.reduce((x, y) => x + y, 0) / a.length) : null);
+  return [...groups.values()]
+    .map(({ moves, vs, ...g }) => ({ ...g, avgMovePct: avg(moves), avgVsBenchmarkPct: avg(vs) }))
+    .sort((a, b) => b.tips - a.tips || (a.name === null ? 1 : b.name === null ? -1 : 0));
 }

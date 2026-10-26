@@ -201,6 +201,59 @@ async function main() {
       },
     },
   });
+  // Phiếu cũ đã chấm 30 ngày: audit bảng "Theo nguồn" và kết quả chấm lại
+  await prisma.tipCheck.create({
+    data: {
+      userId: user.id,
+      text: 'FPT target 150 trong tháng, vào ngay kẻo lỡ tàu!',
+      sourceName: 'Nhóm Zalo VIP',
+      sourceKind: 'zalo',
+      assetType: 'stock',
+      symbol: 'FPT',
+      status: 'analyzed',
+      claims: {
+        direction: 'buy',
+        targetPrice: 150_000,
+        stopPrice: null,
+        horizonDays: 30,
+        reasons: [],
+        promises: [],
+        citesSource: false,
+        candidates: [{ assetType: 'stock', symbol: 'FPT', displayName: 'FPT' }],
+        extractedBy: 'ai',
+      },
+      priceAtCheck: 120_000,
+      priceSource: 'Vietcap',
+      benchmark: 'VNINDEX',
+      benchmarkAtCheck: 1_280,
+      score: 65,
+      scoreParts: [{ key: 'urgency', label: 'Lời lẽ hối thúc', points: 10, detail: '"vào ngay", "lỡ tàu"' }],
+      report: {
+        ai: 'off',
+        aiMessage: null,
+        dataSays: [],
+        missing: ['Không có điểm cắt lỗ'],
+        unverifiable: [],
+        verdict: null,
+        questions: [],
+        news: [],
+        droppedPoints: 0,
+        facts: [{ label: 'Giá lúc soi', value: '120.000 ₫', source: 'Vietcap' }],
+      },
+      decision: 'ignore',
+      decidedAt: new Date(Date.now() - 40 * 86_400_000),
+      review30: {
+        at: new Date(Date.now() - 10 * 86_400_000).toISOString(),
+        price: 108_000,
+        changePct: -10,
+        benchmarkChangePct: 1.5,
+        hitTarget: false,
+        hitStop: false,
+        outcome: 'wrong',
+      },
+      createdAt: new Date(Date.now() - 40 * 86_400_000),
+    },
+  });
   await prisma.$disconnect();
   process.stdout.write(jwt.sign({ sub: user.id, email }, process.env.JWT_SECRET, { expiresIn: '1d' }));
 }

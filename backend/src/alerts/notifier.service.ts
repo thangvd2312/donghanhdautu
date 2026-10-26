@@ -15,7 +15,8 @@ export interface NotificationInput {
     | 'event'
     | 'portfolio_health'
     | 'journal_monthly'
-    | 'crypto_brief';
+    | 'crypto_brief'
+    | 'tip_review';
   severity: 'info' | 'warning' | 'critical';
   title: string;
   body: string;

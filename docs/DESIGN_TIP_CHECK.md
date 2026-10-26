@@ -191,3 +191,9 @@ Migration chỉ thêm bảng; không đụng dữ liệu cũ. Xoá tài khoản 
 3. Định nghĩa đúng / sai sau 30 ngày: ±5% cổ phiếu, ±10% coin, hoặc chạm mục tiêu / cắt lỗ — đồng ý?
 4. Tên: **Soi lời khuyên** (tính năng) và **Sổ lời khuyên** (lịch sử); phương án khác: "Soi phím", "Kiểm tin hô mã".
 5. Vị trí: menu Thêm + thẻ trên Hôm nay + gợi ý trên Cố vấn; không đổi thanh đáy — đồng ý?
+
+## 14. Giới hạn đã biết (sau triển khai)
+
+- Chấm lại dùng giá đóng cửa gốc: nếu giữa lúc soi và lúc chấm có chia tách / cổ tức bằng cổ phiếu / thưởng, giá giảm theo tỷ lệ và kết quả bị nghiêng về "sai". Bản sau: điều chỉnh giá lúc soi theo sự kiện quyền (dữ liệu đã có ở lịch sự kiện).
+- "Chạm mục tiêu / cắt lỗ" chỉ so giá lúc chấm, chưa xét đỉnh / đáy trong kỳ.
+- Lớp đối chiếu số có thể bỏ nhầm ý đúng khi số làm tròn khác dữ liệu (vd giá coin 101,71 so với 101,7085): lệch theo hướng an toàn (bỏ ý, không giữ số sai).

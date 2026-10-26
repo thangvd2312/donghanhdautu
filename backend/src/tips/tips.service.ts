@@ -23,6 +23,8 @@ import type {
   TipPersonal,
   TipPlanDraft,
   TipReport,
+  TipReviewResult,
+  TipSourceStat,
 } from '@dautu/contracts';
 import { AdvisorToolData } from '../advisor/tool-data';
 import { VerifierService } from '../advisor/verifier.service';
@@ -52,6 +54,7 @@ import {
   missingFromClaims,
   normalizeTipPrice,
   personalImpact,
+  sourceStats,
   TIP_DAILY_LIMIT,
   billionSectionsInVnd,
   withoutPeriodCounts,
@@ -657,6 +660,24 @@ export class TipsService {
       items: page.map((r) => toTipListItem(r, this.assets.priceNative(r.assetType, r.symbol).value)),
       nextCursor: rows.length > limit ? page[page.length - 1].id : null,
     };
+  }
+
+  /** Thống kê theo nguồn trên mọi phiếu đã soi của người dùng (dữ liệu nhỏ: tối đa vài trăm phiếu / người) */
+  async sources(userId: string): Promise<TipSourceStat[]> {
+    const rows = await this.prisma.tipCheck.findMany({
+      where: { userId, status: 'analyzed' },
+      orderBy: { createdAt: 'desc' },
+      select: { sourceName: true, claims: true, review30: true, review90: true, boughtAt: true },
+      take: 2000,
+    });
+    return sourceStats(
+      rows.map((r) => ({
+        ...r,
+        claims: r.claims as unknown as TipClaims,
+        review30: r.review30 as unknown as TipReviewResult | null,
+        review90: r.review90 as unknown as TipReviewResult | null,
+      })),
+    );
   }
 
   async get(userId: string, id: string): Promise<TipCheck> {

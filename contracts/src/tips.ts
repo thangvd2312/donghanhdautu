@@ -95,8 +95,9 @@ export interface TipReport {
 
 export interface TipReviewResult {
   at: string
-  price: number
-  changePct: number
+  /** null: không lấy được giá quá 7 ngày sau hạn chấm (vd huỷ niêm yết) */
+  price: number | null
+  changePct: number | null
   benchmarkChangePct: number | null
   hitTarget: boolean
   hitStop: boolean
@@ -195,6 +196,23 @@ export interface TipDecisionRequest {
   dropPct?: number
   /** Viết kế hoạch: kế hoạch vừa lưu */
   planId?: string
+}
+
+/** GET /tips/sources: lời khuyên theo nguồn (kết quả lấy lần chấm gần nhất: 90 ngày, chưa có thì 30 ngày) */
+export interface TipSourceStat {
+  /** Tên nguồn như người dùng ghi lần gần nhất; null = các lời khuyên không ghi nguồn */
+  name: string | null
+  tips: number
+  reviewed: number
+  right: number
+  wrong: number
+  unclear: number
+  /** Trung bình % thay đổi giá theo hướng của lời khuyên (dương = đi đúng hướng), trên các lời khuyên đã chấm */
+  avgMovePct: number | null
+  /** Trung bình phần hơn / kém tham chiếu (VN-Index hoặc BTC) theo hướng của lời khuyên */
+  avgVsBenchmarkPct: number | null
+  /** Số lần người dùng mua theo trong 7 ngày sau khi soi */
+  bought: number
 }
 
 /** GET /tips/:id/plan-draft: form kế hoạch điền sẵn từ phiếu */

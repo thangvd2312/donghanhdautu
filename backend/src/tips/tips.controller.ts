@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import type { OkResponse, TipCheck, TipConversation, TipListPage, TipPlanDraft } from '@dautu/contracts';
+import type { OkResponse, TipCheck, TipConversation, TipListPage, TipPlanDraft, TipSourceStat } from '@dautu/contracts';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -14,6 +14,11 @@ export class TipsController {
   @Get()
   list(@CurrentUser() user: AuthUser, @Query() q: TipListQuery): Promise<TipListPage> {
     return this.tips.list(user.id, q);
+  }
+
+  @Get('sources')
+  sources(@CurrentUser() user: AuthUser): Promise<TipSourceStat[]> {
+    return this.tips.sources(user.id);
   }
 
   @Post()

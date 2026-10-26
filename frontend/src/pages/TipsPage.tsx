@@ -8,13 +8,14 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import { listTips } from '../api/tips'
+import { listTips, listTipSources } from '../api/tips'
 import AssetAvatar from '../components/AssetAvatar'
+import SourceStats from '../components/tips/SourceStats'
 import TipComposer from '../components/tips/TipComposer'
 import { Panel } from '../components/ui'
 import { changeColor, fmtPct, timeAgo } from '../lib/format'
 import { DECISION_LABEL, DIRECTION_LABEL, HOT, OUTCOME_LABEL } from '../lib/tips'
-import type { TipListItem } from '../lib/types'
+import type { TipListItem, TipSourceStat } from '../lib/types'
 
 export default function TipsPage() {
   const nav = useNavigate()
@@ -22,6 +23,7 @@ export default function TipsPage() {
   const [cursor, setCursor] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loadingMore, setLoadingMore] = useState(false)
+  const [sources, setSources] = useState<TipSourceStat[]>([])
 
   useEffect(() => {
     document.title = 'Soi lời khuyên · Đồng Hành Đầu Tư'
@@ -39,6 +41,8 @@ export default function TipsPage() {
   }, [])
   useEffect(() => {
     void load()
+    // Thống kê nguồn là phần phụ: lỗi thì chỉ ẩn khối này
+    listTipSources().then(setSources, () => setSources([]))
   }, [load])
 
   const more = async () => {
@@ -83,6 +87,8 @@ export default function TipsPage() {
           </Box>
         )}
       </Panel>
+
+      <SourceStats stats={sources} />
     </Stack>
   )
 }
