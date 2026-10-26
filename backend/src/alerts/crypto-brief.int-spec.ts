@@ -35,6 +35,7 @@ const cryptoMarket = {
     }),
   global: () => Promise.reject(new Error('CoinGecko down')),
   weekChange: (pair: string) => Promise.resolve(pair === 'SOLUSDT' ? 12.5 : null),
+  hourChange: (pair: string) => Promise.resolve(pair === 'SOLUSDT' ? 0.8 : null),
 } as unknown as CryptoMarketProvider;
 const portfolio = {
   valuation: () =>
@@ -93,9 +94,9 @@ describe('bản tin coin (PostgreSQL)', () => {
     });
     await prisma.watchItem.create({ data: { userId: u.id, assetType: 'crypto', symbol: 'ETHUSDT' } });
 
-    const n = await service.generate(u.id, 'crypto_evening');
+    const n = await service.generate(u.id, false, '2026-10-26T15');
     expect(n?.kind).toBe('crypto_brief');
-    expect(n?.title).toMatch(/^Bản tin coin tối \d\d\/\d\d: SOL tăng mạnh/);
+    expect(n?.title).toBe('Bản tin coin 15:00 26/10: SOL tăng mạnh, thị trường đang sợ hãi');
     expect(seen!.feature).toBe('brief_crypto');
     const ctx = JSON.parse(seen!.user) as {
       yourCoins: Record<string, unknown>[];
@@ -107,6 +108,7 @@ describe('bản tin coin (PostgreSQL)', () => {
         coin: 'SOL',
         status: 'đang giữ',
         priceUsdt: 180,
+        change1hPct: 0.8,
         change24hPct: 4.5,
         change7dPct: 12.5,
         pnlPct: -35,
@@ -125,7 +127,7 @@ describe('bản tin coin (PostgreSQL)', () => {
   it('không giữ / theo dõi coin nào: không viết, không gọi AI; xếp việc chỉ cho người bật bản tin coin', async () => {
     const none = await testUser(prisma, 'cb-none');
     seen = null;
-    expect(await service.generate(none.id, 'crypto_morning')).toBeNull();
+    expect(await service.generate(none.id)).toBeNull();
     expect(seen).toBeNull();
 
     const on = await testUser(prisma, 'cb-on');
@@ -149,8 +151,10 @@ describe('bản tin coin (PostgreSQL)', () => {
       });
       await prisma.watchItem.create({ data: { userId: user.id, assetType: 'crypto', symbol: 'BTCUSDT' } });
     }
-    await service.runAll('crypto_morning');
-    const queued = (queue.enqueue.mock.calls.at(-1) as unknown as [string, string, string[]])[2];
+    await service.runAll();
+    const [kind, period, queued] = queue.enqueue.mock.calls.at(-1) as unknown as [string, string, string[]];
+    expect(kind).toBe('crypto');
+    expect(period).toMatch(/^\d{4}-\d\d-\d\dT\d\d$/);
     expect(queued).toContain(on.id);
     expect(queued).not.toContain(off.id);
     expect(queued).not.toContain(none.id);

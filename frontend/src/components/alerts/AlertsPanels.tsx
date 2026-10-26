@@ -168,8 +168,8 @@ export function NotificationSettingsPanel() {
           control={<Switch checked={profile.cryptoBrief} onChange={(_, v) => void toggle('cryptoBrief', v)} />}
           label={
             <Setting
-              title="Bản tin coin · 8:00 và 20:00"
-              desc="Coin bạn giữ / theo dõi, tâm lý thị trường, tin Coin68, CoinDesk, Cointelegraph, Binance — cả cuối tuần"
+              title="Bản tin coin · mỗi giờ"
+              desc="Coin bạn giữ / theo dõi, biến động 1 giờ / 24 giờ / 7 ngày, tâm lý thị trường, tin Coin68, CoinDesk, Cointelegraph, Binance — cả cuối tuần"
             />
           }
         />

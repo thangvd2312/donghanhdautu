@@ -27,8 +27,7 @@ const HOUR = 60 * MIN;
  * | briefs.morning          | 8:30 thứ 2-6            | BriefsService.morning (xếp hàng đợi) |
  * | briefs.closing          | 15:10 thứ 2-6           | BriefsService.closing (xếp hàng đợi) |
  * | briefs.weekly           | 9:00 thứ 7              | WeeklyBriefService.runAll            |
- * | briefs.cryptoMorning    | 8:00 hằng ngày          | CryptoBriefService.runAll (xếp hàng đợi) |
- * | briefs.cryptoEvening    | 20:00 hằng ngày         | CryptoBriefService.runAll (xếp hàng đợi) |
+ * | briefs.crypto           | đầu mỗi giờ, hằng ngày  | CryptoBriefService.runAll (xếp hàng đợi) |
  * | plans.remindDue         | 8:00 hằng ngày          | PlanReminderService.remindDue        |
  * | journal.monthlyDigest   | 9:00 ngày 1 hằng tháng  | JournalService.monthlyDigest         |
  * | events.remind           | 8:00, 17:00 hằng ngày   | EventsService.remindDaily            |
@@ -74,15 +73,10 @@ export class ScheduledJobs {
     return this.jobs.run('briefs.weekly', () => this.weekly.runAll());
   }
 
-  /** Coin giao dịch 24/7: bản tin coin chạy cả thứ 7, chủ nhật */
-  @Cron('0 8 * * *', { timeZone: VN_TZ })
-  briefsCryptoMorning() {
-    return this.jobs.run('briefs.cryptoMorning', () => this.cryptoBriefs.runAll('crypto_morning'));
-  }
-
-  @Cron('0 20 * * *', { timeZone: VN_TZ })
-  briefsCryptoEvening() {
-    return this.jobs.run('briefs.cryptoEvening', () => this.cryptoBriefs.runAll('crypto_evening'));
+  /** Coin giao dịch 24/7: bản tin coin mỗi giờ, cả thứ 7, chủ nhật */
+  @Cron('0 * * * *', { timeZone: VN_TZ })
+  briefsCrypto() {
+    return this.jobs.run('briefs.crypto', () => this.cryptoBriefs.runAll());
   }
 
   @Cron('0 8 * * *', { timeZone: VN_TZ })

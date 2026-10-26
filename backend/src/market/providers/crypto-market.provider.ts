@@ -13,6 +13,7 @@ const POLICIES = {
   fearGreed: { freshMs: HOUR, staleMs: 24 * HOUR, source: 'alternative.me' },
   global: { freshMs: 10 * MIN, staleMs: 6 * HOUR, source: 'CoinGecko' },
   week: { freshMs: 30 * MIN, staleMs: 24 * HOUR, source: 'Binance' },
+  hour: { freshMs: 4 * MIN, staleMs: 30 * MIN, source: 'Binance' },
 } satisfies Record<string, CachePolicy>;
 
 export interface FearGreed {
@@ -88,6 +89,14 @@ export function weekChangePct(closes: number[]): number | null {
   return base > 0 ? (last / base - 1) * 100 : null;
 }
 
+/** % thay đổi khoảng 1 giờ từ nến 5 phút: giá hiện tại so với giá đóng cửa nến cách đây 12 nến */
+export function hourChangePct(closes: number[]): number | null {
+  if (closes.length < 13) return null;
+  const base = closes[closes.length - 13];
+  const last = closes[closes.length - 1];
+  return base > 0 ? (last / base - 1) * 100 : null;
+}
+
 /** Số liệu thị trường coin chung cho bản tin coin (giữ trong bộ nhớ đệm dùng chung web + worker) */
 @Injectable()
 export class CryptoMarketProvider {
@@ -104,6 +113,14 @@ export class CryptoMarketProvider {
     return this.cache.get('crypto:v1:global', POLICIES.global, async () =>
       parseCryptoGlobal(await getJson(GLOBAL_URL)),
     );
+  }
+
+  /** % thay đổi khoảng 1 giờ của một cặp (BTCUSDT) — cho bản tin coin hằng giờ */
+  hourChange(pair: string): Promise<number | null> {
+    return this.cache.get(`crypto:v1:hour:${pair}`, POLICIES.hour, async () => {
+      const rows = await getJson(`https://api.binance.com/api/v3/klines?symbol=${pair}&interval=5m&limit=13`);
+      return hourChangePct(Array.isArray(rows) ? rows.map((k) => Number((k as unknown[])[4])) : []);
+    });
   }
 
   /** % thay đổi 7 ngày của một cặp (BTCUSDT) */

@@ -1,5 +1,5 @@
 import type { CryptoNewsItem } from '../news/crypto-news';
-import { selectCryptoNews } from './crypto-brief.service';
+import { cryptoPeriod, selectCryptoNews } from './crypto-brief.service';
 
 const NOW = Date.parse('2026-10-26T12:00:00Z');
 const at = (hoursAgo: number) => new Date(NOW - hoursAgo * 3600_000).toISOString();
@@ -27,7 +27,7 @@ describe('chọn tin cho bản tin coin', () => {
       item('Solana C'),
       item('Solana D'),
       item('Fed meeting'),
-      item('Solana old', { publishedAt: at(30) }),
+      item('Solana old', { publishedAt: at(4) }),
     ];
     const n = selectCryptoNews(items, coins, NOW);
     expect(n.byCoin.map((x) => x.title)).toEqual(['Solana A', 'Solana B', 'Solana C']);
@@ -49,5 +49,12 @@ describe('chọn tin cho bản tin coin', () => {
     expect(n.officialNotices).toEqual([expect.objectContaining({ type: 'delisting', coins: ['EPIC'] })]);
     expect(n.newListings.map((x) => x.title)).toEqual(['New pair XYZ']);
     expect(n.general).toEqual([]);
+  });
+});
+
+describe('kỳ bản tin hằng giờ', () => {
+  it('theo giờ VN, kể cả qua nửa đêm UTC', () => {
+    expect(cryptoPeriod(new Date('2026-10-26T08:05:00Z'))).toBe('2026-10-26T15');
+    expect(cryptoPeriod(new Date('2026-10-26T17:30:00Z'))).toBe('2026-10-27T00');
   });
 });

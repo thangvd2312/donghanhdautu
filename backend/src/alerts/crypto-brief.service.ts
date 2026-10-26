@@ -17,12 +17,16 @@ import { BriefContent, BriefRunService } from './brief-run.service';
 import { LlmService } from './llm.service';
 import { writeChecked } from './number-check';
 
-export type CryptoBriefKind = 'crypto_morning' | 'crypto_evening';
+const LABEL = 'Bản tin coin';
 
-const LABEL: Record<CryptoBriefKind, string> = {
-  crypto_morning: 'Bản tin coin sáng',
-  crypto_evening: 'Bản tin coin tối',
-};
+/** Kỳ của bản tin hằng giờ theo giờ VN: "2026-10-26T15" (mỗi người một bản tin mỗi kỳ) */
+export function cryptoPeriod(d = new Date()) {
+  const hour = new Intl.DateTimeFormat('en-GB', { timeZone: VN_TZ, hour: '2-digit', hour12: false }).format(d);
+  return `${vnDateKey(d)}T${hour.padStart(2, '0').replace('24', '00')}`;
+}
+
+/** "2026-10-26T15" → "15:00 26/10" */
+const periodLabel = (period: string) => `${period.slice(11, 13)}:00 ${period.slice(8, 10)}/${period.slice(5, 7)}`;
 
 const BRIEF_SCHEMA = {
   type: 'object',
@@ -31,8 +35,8 @@ const BRIEF_SCHEMA = {
   additionalProperties: false,
 };
 
-/** Tin trong chừng này giờ gần nhất (giữa hai bản tin 8:00 và 20:00 là 12 giờ) */
-const NEWS_WINDOW_MS = 14 * 3600_000;
+/** Tin trong chừng này giờ gần nhất: bản tin mỗi giờ, lấy rộng hơn một chút để không sót tin đăng muộn */
+const NEWS_WINDOW_MS = 3 * 3600_000;
 /** Thông báo của Binance về coin của người dùng: còn hiệu lực lâu hơn tin thường */
 const NOTICE_WINDOW_MS = 7 * 24 * 3600_000;
 /** BTC, ETH luôn có trong bản tin làm mốc so sánh thị trường */
@@ -44,6 +48,7 @@ const round = (v: number | null | undefined, d = 2) =>
 export interface CoinFacts {
   pair: string;
   priceUsdt: number | null;
+  change1hPct: number | null;
   change24hPct: number | null;
   change7dPct: number | null;
 }
@@ -90,7 +95,7 @@ export function selectCryptoNews(items: CryptoNewsItem[], coins: UserCoin[], now
 }
 
 /**
- * Bản tin coin 8:00 và 20:00 mỗi ngày, cả cuối tuần (coin giao dịch 24/7), cho người đang giữ hoặc theo dõi coin.
+ * Bản tin coin mỗi giờ, cả cuối tuần (coin giao dịch 24/7), cho người đang giữ hoặc theo dõi coin.
  * Như bản tin sáng / chiều: lưu thành cuộc trò chuyện với cố vấn để hỏi tiếp, số liệu được đối chiếu trước khi gửi.
  */
 @Injectable()
@@ -108,13 +113,11 @@ export class CryptoBriefService {
     private runs: BriefRunService,
     private queue: BriefQueueService,
   ) {
-    for (const kind of ['crypto_morning', 'crypto_evening'] as const) {
-      queue.register(kind, (userId, day) => this.generate(userId, kind, false, day));
-    }
+    queue.register('crypto', (userId, period) => this.generate(userId, false, period));
   }
 
-  /** 8:00 và 20:00 mỗi ngày giờ VN (worker/scheduled-jobs.ts) */
-  async runAll(kind: CryptoBriefKind) {
+  /** Đầu mỗi giờ (worker/scheduled-jobs.ts) */
+  async runAll() {
     if (!this.llm.enabled) return;
     const wanting = new Set(
       (await this.prisma.investorProfile.findMany({ where: { cryptoBrief: true }, select: { userId: true } })).map(
@@ -122,22 +125,23 @@ export class CryptoBriefService {
       ),
     );
     const users = (await this.audience.withCoins()).filter((u) => wanting.has(u.id));
-    this.log.log(`${LABEL[kind]}: xếp việc cho ${users.length} người dùng`);
+    const period = cryptoPeriod();
+    this.log.log(`${LABEL} ${period}: xếp việc cho ${users.length} người dùng`);
     await this.queue.enqueue(
-      kind,
-      vnDateKey(),
+      'crypto',
+      period,
       users.map((u) => u.id),
     );
   }
 
-  /** Tạo bản tin cho một người. `force` = bỏ qua chống trùng trong ngày (nút "Gửi thử") */
-  generate(userId: string, kind: CryptoBriefKind, force = false, day = vnDateKey()) {
-    const key = `brief:${kind}:${day}${force ? `:${Date.now()}` : ''}`;
-    return this.runs.run(userId, key, () => this.build(userId, kind));
+  /** Tạo bản tin cho một người. `force` = bỏ qua chống trùng trong kỳ (nút "Gửi thử") */
+  generate(userId: string, force = false, period = cryptoPeriod()) {
+    const key = `brief:crypto:${period}${force ? `:${Date.now()}` : ''}`;
+    return this.runs.run(userId, key, () => this.build(userId, period));
   }
 
-  private async build(userId: string, kind: CryptoBriefKind): Promise<BriefContent | null> {
-    const context = await this.context(userId, kind);
+  private async build(userId: string, period: string): Promise<BriefContent | null> {
+    const context = await this.context(userId);
     // Không còn giữ / theo dõi coin nào: không có gì để viết
     if (!context) return null;
     const { result, unmatched } = await writeChecked(context, (feedback) =>
@@ -153,12 +157,11 @@ export class CryptoBriefService {
       }),
     );
     if (!result?.markdown) throw new Error('AI không trả về bản tin coin');
-    if (unmatched.length) this.log.warn(`${LABEL[kind]} (${userId}): số chưa đối chiếu được: ${unmatched.join(', ')}`);
+    if (unmatched.length) this.log.warn(`${LABEL} (${userId}): số chưa đối chiếu được: ${unmatched.join(', ')}`);
     const caution = unmatched.length
       ? `\n\n> Lưu ý: chưa đối chiếu được các con số sau với dữ liệu thị trường / danh mục đã dùng: ${unmatched.join(', ')}. Hãy kiểm tra lại trước khi dựa vào.`
       : '';
-    const [, mm, dd] = vnDateKey().split('-');
-    const title = `${LABEL[kind]} ${dd}/${mm}`;
+    const title = `${LABEL} ${periodLabel(period)}`;
     return {
       title,
       prompt: `[Thời điểm hiện tại: ${nowVn()}]\n${title}`,
@@ -167,12 +170,12 @@ export class CryptoBriefService {
         kind: 'crypto_brief',
         severity: 'info',
         title: `${title}: ${result.headline}`.slice(0, 180),
-        body: `${LABEL[kind]} đã sẵn sàng. Bấm "Xem bản tin" để đọc chi tiết và hỏi thêm cố vấn ngay trong đó.`,
+        body: `${LABEL} đã sẵn sàng. Bấm "Xem bản tin" để đọc chi tiết và hỏi thêm cố vấn ngay trong đó.`,
       },
     };
   }
 
-  private async context(userId: string, kind: CryptoBriefKind) {
+  private async context(userId: string) {
     const [me] = await this.audience.withCoins([userId]);
     if (!me?.coins.length) return null;
     await this.market.ensureFresh();
@@ -194,7 +197,7 @@ export class CryptoBriefService {
         ]),
     );
     return {
-      briefType: kind === 'crypto_morning' ? 'Bản tin coin buổi sáng' : 'Bản tin coin buổi tối',
+      briefType: 'Bản tin coin hằng giờ (người đọc nhận mỗi giờ: tập trung vào điều mới so với giờ trước)',
       now: nowVn(),
       investor: profile
         ? {
@@ -227,7 +230,7 @@ export class CryptoBriefService {
         fearGreedIndex: fearGreed && fearGreedView(fearGreed),
         btcDominance: global && globalView(global),
         usdtVnd: this.market.snapshot().usdt?.mid ?? null,
-        note: 'priceUsdt tính bằng USDT. change24hPct = thay đổi 24 giờ; change7dPct = thay đổi 7 ngày. pnlPct = lãi/lỗ so với giá vốn; null khi chưa có giá (không phải hoà vốn). exceedsYourMaxLoss = true nghĩa là đã lỗ vượt mức lỗ tối đa người dùng chấp nhận.',
+        note: 'priceUsdt tính bằng USDT. change1hPct = thay đổi khoảng 1 giờ qua; change24hPct = thay đổi 24 giờ; change7dPct = thay đổi 7 ngày. pnlPct = lãi/lỗ so với giá vốn; null khi chưa có giá (không phải hoà vốn). exceedsYourMaxLoss = true nghĩa là đã lỗ vượt mức lỗ tối đa người dùng chấp nhận.',
       },
       news: selectCryptoNews(items, me.coins, Date.now()),
     };
@@ -238,6 +241,7 @@ export class CryptoBriefService {
     return {
       pair,
       priceUsdt: q ? q.price : null,
+      change1hPct: round(await this.cryptoMarket.hourChange(pair).catch(() => null)),
       change24hPct: q ? round(q.changePct) : null,
       change7dPct: round(await this.cryptoMarket.weekChange(pair).catch(() => null)),
     };

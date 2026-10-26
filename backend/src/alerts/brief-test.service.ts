@@ -38,14 +38,7 @@ export class BriefTestService {
       return w;
     }
     if (kind === 'crypto') {
-      // Sáng hay tối theo giờ VN lúc gửi thử
-      const evening =
-        Number(
-          new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', hour12: false }).format(
-            new Date(),
-          ),
-        ) >= 14;
-      const c = await this.cryptoBriefs.generate(userId, evening ? 'crypto_evening' : 'crypto_morning', true);
+      const c = await this.cryptoBriefs.generate(userId, true);
       if (!c) throw new BadRequestException('Bạn chưa giữ hoặc theo dõi coin nào để làm bản tin coin');
       return c;
     }
