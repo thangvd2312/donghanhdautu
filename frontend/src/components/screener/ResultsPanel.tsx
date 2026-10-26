@@ -64,6 +64,9 @@ export default function ResultsPanel({
           {/vietcap/i.test(res.universeNote) ? '' : ` · Nguồn ${res.source}`}
           {res.asOf && fmtClock(res.asOf) ? ` · cập nhật ${fmtClock(res.asOf)}` : ''}
         </Typography>
+        <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.25 }}>
+          % thay đổi, P/E, P/B là số của phiên gần nhất; màn So sánh tính P/E, P/B theo giá hiện tại nên có thể lệch nhẹ.
+        </Typography>
         {res.missingNote && (
           <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.25 }}>
             {res.missingNote}

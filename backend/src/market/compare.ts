@@ -102,6 +102,17 @@ function datedCloses(candles: Candle[]): DatedClose[] {
 }
 
 /**
+ * % thay đổi của phiên gần nhất trước `today`, từ nến ngày. Dùng trước giờ mở phiên: bảng giá khi đó trả 0% (giá tham
+ * chiếu mới = giá đóng cửa hôm trước), trong khi Bộ lọc vẫn hiện % của phiên gần nhất.
+ */
+export function lastSessionChangePct(candles: Candle[], today: string): number | null {
+  const closes = datedCloses(candles).filter((c) => c.date < today);
+  if (closes.length < 2) return null;
+  const [prev, last] = closes.slice(-2);
+  return prev.close > 0 ? Math.round((last.close / prev.close - 1) * 10000) / 100 : null;
+}
+
+/**
  * Hiệu suất giá (%) so với phiên đóng cửa cuối cùng. Mốc 1m/3m/6m/1y: phiên gần nhất trước hoặc đúng ngày lùi lại theo lịch;
  * null khi mã chưa có giá từ mốc đó (niêm yết muộn). YTD: so với đóng cửa phiên cuối của năm trước, null nếu chưa có.
  */

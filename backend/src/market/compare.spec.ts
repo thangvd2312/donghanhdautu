@@ -8,6 +8,7 @@ import {
   MetricInput,
   parseCompareRange,
   parseCompareSymbols,
+  lastSessionChangePct,
   periodReturns,
   shiftMonths,
   StatsRow,
@@ -56,6 +57,14 @@ describe('shiftMonths', () => {
     expect(shiftMonths('2026-03-31', -1)).toBe('2026-02-28');
     expect(shiftMonths('2026-01-15', -3)).toBe('2025-10-15');
     expect(shiftMonths('2026-10-21', -12)).toBe('2025-10-21');
+  });
+});
+
+describe('lastSessionChangePct', () => {
+  it('trước giờ mở phiên thứ 2: % của phiên thứ 6 (khớp Bộ lọc), bỏ qua nến của hôm nay (QA-c-07)', () => {
+    const c = [candle('2026-10-22', 100), candle('2026-10-23', 102), candle('2026-10-26', 110)];
+    expect(lastSessionChangePct(c, '2026-10-26')).toBe(2);
+    expect(lastSessionChangePct(c.slice(0, 1), '2026-10-26')).toBeNull();
   });
 });
 

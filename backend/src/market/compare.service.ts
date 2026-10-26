@@ -7,6 +7,7 @@ import {
   buildNotes,
   COMPARE_RANGES,
   CompareInputError,
+  lastSessionChangePct,
   extractMetrics,
   MetricKey,
   MetricValue,
@@ -26,7 +27,7 @@ import {
   VietcapSymbolsAdapter,
 } from './providers/vietcap';
 import type { Candle } from './providers/vietcap';
-import { vnDateKey } from './types';
+import { vnClock, vnDateKey } from './types';
 
 /** Đủ cho hiệu suất 1 năm và YTD; dùng cùng số phiên với trang chi tiết để dùng chung cache nến */
 const HISTORY_SESSIONS = 400;
@@ -67,13 +68,20 @@ export class CompareService {
       this.ownership(userId, symbols),
     ]);
 
+    // Trước giờ mở phiên (hoặc cuối tuần) bảng giá trả 0%: lấy % của phiên gần nhất như Bộ lọc
+    const clock = vnClock();
+    const beforeSession = clock.weekday === 0 || clock.weekday === 6 || clock.minutes < 9 * 60;
+    const today = vnDateKey();
     const stocks: CompareStock[] = loaded.map((d, i) => ({
       symbol: d.symbol,
       name: asText(d.company?.name) ?? (infos[i].name || null),
       sector: asText(d.company?.sector),
       kind: d.kind,
       price: d.quote?.price ?? null,
-      changePct: d.quote?.changePct ?? null,
+      changePct:
+        beforeSession && !d.quote?.changePct
+          ? (lastSessionChangePct(d.candles ?? [], today) ?? d.quote?.changePct ?? null)
+          : (d.quote?.changePct ?? null),
       marketCapBn: d.company && Number.isFinite(d.company.marketCapBn) ? d.company.marketCapBn : null,
       returns: periodReturns(d.candles ?? []),
       held: owned.held.has(d.symbol),

@@ -6,6 +6,7 @@ import {
   inWindow,
   lastBuyDay,
   remindAt,
+  reminderAnchor,
   reminderDedupeKey,
   reminderDue,
   reminderMessage,
@@ -142,7 +143,7 @@ describe('buildCalendar', () => {
     expect(by['FPT:cash:p']).toMatchObject({ upcoming: false, remindAt: null });
   });
 
-  it('đại hội đã qua GDKHQ nhưng chưa họp vẫn là sắp tới', () => {
+  it('đại hội đã qua GDKHQ nhưng chưa họp vẫn là sắp tới, và được nhắc theo ngày họp (QA-c-08)', () => {
     const agm = ev({
       id: 'a',
       eventCode: 'AGME',
@@ -150,7 +151,12 @@ describe('buildCalendar', () => {
       issueDate: '2026-10-30T00:00:00',
     });
     const [i] = buildCalendar({ ...base, events: [agm], settings: on });
-    expect(i).toMatchObject({ kind: 'agm', upcoming: true, remindAt: null });
+    expect(i).toMatchObject({ kind: 'agm', upcoming: true, remindAt: '2026-10-29' });
+    expect(reminderAnchor(i, '2026-10-21')).toBe('2026-10-30');
+    expect(reminderAnchor(i, '2026-10-10')).toBe('2026-10-15');
+    // Khoá nhắc ngày họp tách khỏi khoá nhắc GDKHQ: không bị coi là "đổi ngày"
+    expect(reminderDedupeKey(i, '2026-10-30')).toBe(`event:${i.symbol}:${i.sourceId}:hop:2026-10-30`);
+    expect(reminderDedupeKey(i, '2026-10-15')).toBe(`event:${i.symbol}:${i.sourceId}:2026-10-15`);
   });
 });
 
@@ -159,6 +165,9 @@ describe('nhắc trước', () => {
     expect(reminderDue({ exDate: '2026-10-23' }, '2026-10-23', '2026-10-22', 1)).toBe(true);
     expect(reminderDue({ exDate: '2026-10-23' }, '2026-10-23', '2026-10-21', 1)).toBe(false);
     expect(reminderDue({ exDate: '2026-10-23' }, '2026-10-23', '2026-10-20', 3)).toBe(true);
+    // Nhắc trước 2 phiên: GDKHQ thứ 6 → nhắc từ thứ 4
+    expect(reminderDue({ exDate: '2026-10-23' }, '2026-10-23', '2026-10-21', 2)).toBe(true);
+    expect(reminderDue({ exDate: '2026-10-23' }, '2026-10-23', '2026-10-20', 2)).toBe(false);
     expect(reminderDue({ exDate: '2026-10-23' }, '2026-10-23', '2026-10-19', 3)).toBe(false);
     // công bố muộn: hôm nay đã cách 2 ngày với daysBefore 3 → vào cửa sổ ngay
     expect(reminderDue({ exDate: '2026-10-23' }, '2026-10-23', '2026-10-21', 3)).toBe(true);
@@ -195,7 +204,7 @@ describe('nhắc trước', () => {
   });
 
   it('đổi ngày → khoá nhắc mới; cùng ngày → cùng khoá', () => {
-    const e = { symbol: 'FPT', sourceId: 'e1' };
+    const e = { symbol: 'FPT', sourceId: 'e1', exDate: null };
     expect(reminderDedupeKey(e, '2026-10-23')).toBe('event:FPT:e1:2026-10-23');
     expect(reminderDedupeKey(e, '2026-10-23')).toBe(reminderDedupeKey(e, '2026-10-23'));
     expect(reminderDedupeKey(e, '2026-10-27')).not.toBe(reminderDedupeKey(e, '2026-10-23'));

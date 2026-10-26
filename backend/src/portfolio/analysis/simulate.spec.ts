@@ -143,6 +143,11 @@ describe('simulate', () => {
       expect(() => simulate(portfolio(), { stock: -90, crypto: 200, symbols: { FPT: -90 } })).not.toThrow();
     });
 
+    it('cùng một coin viết hai cách với hai mức khác nhau → 400, cùng mức thì nhận (QA-d-06)', () => {
+      expect(() => simulate(portfolio(), { symbols: { btcusdt: 10, BTC: 50 } })).toThrow(/hai mức khác nhau/);
+      expect(() => simulate(portfolio(), { symbols: { btcusdt: 50, BTC: 50 } })).not.toThrow();
+    });
+
     it('mã ghi đè không có trong danh mục → 400 tiếng Việt', () => {
       expect(() => simulate(portfolio(), { symbols: { HPG: -5 } })).toThrow(/không có trong danh mục/);
     });

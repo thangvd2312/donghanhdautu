@@ -14,6 +14,7 @@ import {
   reminderDue,
   reminderKeyPrefix,
   reminderMessage,
+  meetingKeyPrefix,
 } from './calendar';
 import type { CalendarEvent, EventRange, ReminderSettings } from './calendar';
 
@@ -115,14 +116,20 @@ export class EventsService {
       if (!mine) continue;
       const items = buildCalendar({ events: source.events, ...mine, today, range: 'week', settings });
       for (const e of items) {
-        const anchor = reminderAnchor(e);
+        const anchor = reminderAnchor(e, today);
         if (!anchor || settings.mutedSymbols.includes(e.symbol) || !reminderDue(e, anchor, today, settings.daysBefore))
           continue;
         const dedupeKey = reminderDedupeKey(e, anchor);
         // Nguồn đổi ngày: lần nhắc theo ngày cũ được thu hồi, lần nhắc mới nói rõ đã đổi ngày
-        const prefix = reminderKeyPrefix(e);
+        const prefix = reminderKeyPrefix(e, anchor);
+        const meetingKeys = meetingKeyPrefix(e);
         const stale = await this.prisma.notification.findMany({
-          where: { userId: row.userId, dedupeKey: { startsWith: prefix, not: dedupeKey } },
+          where: {
+            userId: row.userId,
+            dedupeKey: { startsWith: prefix, not: dedupeKey },
+            // Lần nhắc theo GDKHQ không thu hồi lần nhắc ngày họp (và ngược lại: tiền tố ngày họp đã riêng)
+            ...(prefix !== meetingKeys && { NOT: { dedupeKey: { startsWith: meetingKeys } } }),
+          },
           select: { id: true, dedupeKey: true },
           orderBy: { createdAt: 'asc' },
         });
@@ -174,7 +181,8 @@ export class EventsService {
   }
 
   private toSettings(row: { enabled: boolean; daysBefore: number; mutedSymbols: string[] }): ReminderSettings {
-    return { enabled: row.enabled, daysBefore: row.daysBefore === 3 ? 3 : 1, mutedSymbols: row.mutedSymbols };
+    const daysBefore = row.daysBefore === 2 || row.daysBefore === 3 ? row.daysBefore : 1;
+    return { enabled: row.enabled, daysBefore, mutedSymbols: row.mutedSymbols };
   }
 
   /**

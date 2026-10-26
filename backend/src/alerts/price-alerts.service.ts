@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { OkResponse, PriceAlert, PriceAlertListItem } from '@dautu/contracts';
 import { MarketService } from '../market/market.service';
 import { nativePrice } from '../market/native-price';
@@ -42,7 +42,8 @@ export class PriceAlertsService {
   }
 
   async remove(userId: string, id: string): Promise<OkResponse> {
-    await this.prisma.priceAlert.deleteMany({ where: { id, userId } });
+    const { count } = await this.prisma.priceAlert.deleteMany({ where: { id, userId } });
+    if (!count) throw new NotFoundException('Không tìm thấy cảnh báo giá');
     return { ok: true };
   }
 

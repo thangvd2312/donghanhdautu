@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router-dom'
 import AssetAvatar from '../AssetAvatar'
 import { PriceStatusChip } from '../DataStatus'
+import { priceSourceText } from '../../lib/priceSource'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../../lib/format'
 import { holdingPath, vndActualText, type HoldingTradeType } from '../../lib/portfolio'
 import type { HoldingRow } from '../../lib/types'
@@ -92,11 +93,14 @@ export default function HoldingsTable({ holdings, showPortfolios, onTrade }: Hol
                   {h.assetType === 'cash' ? (
                     '—'
                   ) : h.currency === 'USDT' && h.priceVnd !== null ? (
-                    <Tooltip title={`≈ ${fmtVnd(h.priceVnd)}`}>
+                    <Tooltip title={`≈ ${fmtVnd(h.priceVnd)} · ${priceSourceText(h.price)}`}>
                       <span>{fmtNum(h.priceNative, 2)} USDT</span>
                     </Tooltip>
                   ) : (
-                    fmtVnd(h.priceVnd)
+                    // Giá mới cũng xem được nguồn và giờ khi rê chuột
+                    <Tooltip title={priceSourceText(h.price)}>
+                      <span>{fmtVnd(h.priceVnd)}</span>
+                    </Tooltip>
                   )}
                   <PriceStatusChip price={h.price} />
                 </TableCell>

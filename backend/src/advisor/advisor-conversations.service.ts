@@ -36,7 +36,8 @@ export class AdvisorConversationsService {
   }
 
   async deleteConversation(userId: string, id: string): Promise<OkResponse> {
-    await this.prisma.conversation.deleteMany({ where: { id, userId } });
+    const { count } = await this.prisma.conversation.deleteMany({ where: { id, userId } });
+    if (!count) throw new NotFoundException('Không tìm thấy cuộc trò chuyện');
     return { ok: true };
   }
 

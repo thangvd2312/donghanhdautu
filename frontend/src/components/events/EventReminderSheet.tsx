@@ -47,7 +47,7 @@ export default function EventReminderSheet({
 
         <Box>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.75 }} id="remind-days-label">
-            Nhắc trước ngày GDKHQ
+            Nhắc trước ngày GDKHQ (đại hội đã qua GDKHQ: trước ngày họp)
           </Typography>
           <ToggleButtonGroup
             exclusive
@@ -56,10 +56,13 @@ export default function EventReminderSheet({
             disabled={!reminders.enabled}
             value={reminders.daysBefore}
             aria-labelledby="remind-days-label"
-            onChange={(_, v: 1 | 3 | null) => v && onChange({ daysBefore: v })}
+            onChange={(_, v: 1 | 2 | 3 | null) => v && onChange({ daysBefore: v })}
           >
             <ToggleButton value={1} sx={{ minHeight: 44 }}>
               1 ngày
+            </ToggleButton>
+            <ToggleButton value={2} sx={{ minHeight: 44 }}>
+              2 ngày
             </ToggleButton>
             <ToggleButton value={3} sx={{ minHeight: 44 }}>
               3 ngày

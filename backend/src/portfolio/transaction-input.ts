@@ -13,10 +13,20 @@ const MIN_TX_DATE = '1990-01-01';
 
 const dec = (v: number | undefined | null) => (v === undefined || v === null ? null : new Prisma.Decimal(String(v)));
 
+/**
+ * Bảng giá Binance (websocket mọi cặp USDT) đã đủ lớn mà không có cặp này thì mã không có thật. Bảng còn ít cặp (mới
+ * khởi động, mất kết nối) thì không kết luận được — vẫn cho ghi. Chỉ kiểm tra khi thêm vị thế (mua / số dư đầu kỳ):
+ * coin đã bị Binance gỡ vẫn bán / ghi được.
+ */
+export const MIN_COMPLETE_BINANCE_PAIRS = 200;
+export function knownCoin(quotes: ReadonlyMap<string, unknown>, pair: string) {
+  return quotes.size < MIN_COMPLETE_BINANCE_PAIRS || quotes.has(pair);
+}
+
 /** Chuẩn hoá đầu vào theo loại giao dịch; mã tài sản được kiểm tra với nguồn giá */
 export async function normalizeTransaction(
   dto: TransactionDto,
-  market: Pick<MarketService, 'assertStock' | 'goldQuotes'>,
+  market: Pick<MarketService, 'assertStock' | 'goldQuotes'> & { binance: { quotes: ReadonlyMap<string, unknown> } },
 ) {
   const today = vnDateKey();
   if (!isDateKey(dto.date)) throw new BadRequestException('Ngày giao dịch không hợp lệ');
@@ -95,7 +105,12 @@ export async function normalizeTransaction(
   let symbol = (dto.symbol ?? '').trim().toUpperCase();
   if (!symbol) throw new BadRequestException('Chọn mã tài sản');
   if (dto.assetType === 'stock') symbol = (await market.assertStock(symbol)).symbol;
-  if (dto.assetType === 'crypto') symbol = normalizeCrypto(symbol);
+  if (dto.assetType === 'crypto') {
+    symbol = normalizeCrypto(symbol);
+    if ((dto.type === 'buy' || dto.type === 'opening') && !knownCoin(market.binance.quotes, symbol)) {
+      throw new NotFoundException(`Không có cặp ${symbol} trên Binance`);
+    }
+  }
   if (dto.assetType === 'gold' && !market.goldQuotes().some((g) => g.code === symbol)) {
     if (!market.goldQuotes().length) throw new ServiceUnavailableException(GOLD_SOURCE_DOWN);
     throw new NotFoundException(`Không có loại vàng ${symbol}`);

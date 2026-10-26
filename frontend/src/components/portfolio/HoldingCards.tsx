@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AssetAvatar from '../AssetAvatar'
-import { PriceStatusChip } from '../DataStatus'
+import { PriceSourceLine, PriceStatusChip } from '../DataStatus'
 import { ChangePill, Stat } from '../ui'
 import { changeColor, fmtNum, fmtPct, fmtVnd, fmtVndShort } from '../../lib/format'
 import { holdingPath, vndActualText, type HoldingTradeType } from '../../lib/portfolio'
@@ -43,9 +43,13 @@ export default function HoldingCards({
               <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
                 <AssetAvatar assetType={h.assetType} symbol={h.symbol} size={40} />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography sx={{ fontWeight: 700 }} noWrap>
-                    {h.displayName}
-                  </Typography>
+                  <Stack direction="row" sx={{ alignItems: 'center', minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 700 }} noWrap>
+                      {h.displayName}
+                    </Typography>
+                    {/* Giá cũ / thiếu giá: hiện ngay ở danh sách, không chỉ trong bảng chi tiết */}
+                    {!cash && <PriceStatusChip price={h.price} />}
+                  </Stack>
                   <Typography variant="caption" color="text.secondary" component="div" noWrap className="num">
                     {cash
                       ? h.typeLabel
@@ -97,6 +101,11 @@ export default function HoldingCards({
               </Box>
               <PriceStatusChip price={sheet.price} />
             </Stack>
+            {sheet.assetType !== 'cash' && (
+              <Box sx={{ mt: 1 }}>
+                <PriceSourceLine price={sheet.price} />
+              </Box>
+            )}
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, mt: 2 }}>
               <Stat label="Giá trị" value={fmtVnd(sheet.marketValue ?? sheet.costValue)} size="sm" />
               {sheet.assetType !== 'cash' && (

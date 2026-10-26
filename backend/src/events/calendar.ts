@@ -107,10 +107,14 @@ export function inWindow(
   return [e.exDate, e.recordDate, e.payoutDate, e.meetingDate].some((d) => d !== null && d >= from && d <= to);
 }
 
-/** Ngày dùng để nhắc: GDKHQ (đại hội không có GDKHQ thì dùng ngày họp) */
-export function reminderAnchor(e: Pick<CalendarEvent, 'kind' | 'exDate' | 'meetingDate'>) {
-  if (e.exDate) return e.exDate;
-  return e.kind === 'agm' || e.kind === 'egm' ? e.meetingDate : null;
+/**
+ * Ngày dùng để nhắc: GDKHQ. Đại hội không có GDKHQ, hoặc GDKHQ đã qua mà buổi họp còn ở phía trước: ngày họp
+ * (người đã chốt quyền dự họp vẫn cần được nhắc trước buổi họp).
+ */
+export function reminderAnchor(e: Pick<CalendarEvent, 'kind' | 'exDate' | 'meetingDate'>, today?: string) {
+  const meeting = e.kind === 'agm' || e.kind === 'egm' ? e.meetingDate : null;
+  if (e.exDate && meeting && today && e.exDate <= today && meeting > today) return meeting;
+  return e.exDate ?? meeting;
 }
 
 /**
@@ -141,21 +145,31 @@ export function remindAt(
   s: ReminderSettings,
   today: string,
 ) {
-  const anchor = reminderAnchor(e);
+  const anchor = reminderAnchor(e, today);
   if (!s.enabled || !anchor || s.mutedSymbols.includes(e.symbol)) return null;
   const w = reminderWindow(anchor, anchor === e.exDate, s.daysBefore);
   if (today > w.last) return null;
   return w.first > today ? w.first : today;
 }
 
+type KeyEvent = Pick<CalendarEvent, 'symbol' | 'sourceId' | 'exDate'>;
+
 /** Một lần nhắc theo (mã, sự kiện, ngày): đổi ngày → khoá mới, nên không bao giờ nhắc lại theo ngày cũ */
-export function reminderDedupeKey(e: Pick<CalendarEvent, 'symbol' | 'sourceId'>, anchor: string) {
-  return `${reminderKeyPrefix(e)}${anchor}`;
+export function reminderDedupeKey(e: KeyEvent, anchor: string) {
+  return `${reminderKeyPrefix(e, anchor)}${anchor}`;
 }
 
-/** Tiền tố chung của mọi lần nhắc cùng một sự kiện (mọi ngày) — để thu hồi lần nhắc theo ngày cũ khi nguồn đổi ngày */
-export function reminderKeyPrefix(e: Pick<CalendarEvent, 'symbol' | 'sourceId'>) {
-  return `event:${e.symbol}:${e.sourceId}:`;
+/** Tiền tố khoá của lần nhắc ngày họp khi sự kiện có GDKHQ — không lẫn với lần nhắc theo GDKHQ */
+export const meetingKeyPrefix = (e: Pick<CalendarEvent, 'symbol' | 'sourceId'>) =>
+  `event:${e.symbol}:${e.sourceId}:hop:`;
+
+/**
+ * Tiền tố chung của mọi lần nhắc cùng một sự kiện và cùng loại mốc (mọi ngày) — để thu hồi lần nhắc theo ngày cũ khi
+ * nguồn đổi ngày. Nhắc theo GDKHQ giữ khoá cũ; nhắc ngày họp của sự kiện có GDKHQ thêm `hop:` (họp không phải ngày
+ * GDKHQ bị đổi).
+ */
+export function reminderKeyPrefix(e: KeyEvent, anchor: string) {
+  return e.exDate && anchor !== e.exDate ? meetingKeyPrefix(e) : `event:${e.symbol}:${e.sourceId}:`;
 }
 
 interface CalendarInput {

@@ -38,7 +38,7 @@ export interface CalendarEvent {
 
 export interface ReminderSettings {
   enabled: boolean
-  daysBefore: 1 | 3
+  daysBefore: 1 | 2 | 3
   mutedSymbols: string[]
 }
 

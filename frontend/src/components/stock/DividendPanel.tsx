@@ -72,7 +72,14 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
         )}
         <KV
           k="Tỷ suất cổ tức theo giá hiện tại"
-          v={d.trailingYieldPct === null ? '—' : `${fmtNum(d.trailingYieldPct, 1)}%`}
+          // Không trả tiền mặt 12 tháng (đã có giá) là 0% thật — cùng cách hiển thị với màn So sánh
+          v={
+            d.trailingYieldPct !== null
+              ? `${fmtNum(d.trailingYieldPct, 1)}%`
+              : d.trailingCashPerShare === 0 && d.price
+                ? `${fmtNum(0, 1)}%`
+                : '—'
+          }
         />
       </Stack>
       {d.items.length ? (

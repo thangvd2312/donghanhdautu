@@ -67,11 +67,19 @@ function validate(rows: SimInputRow[], shocks: Shocks): Map<string, number> {
   }
   const held = new Set(rows.filter((r) => r.assetType === 'stock' || r.assetType === 'crypto').map(rowKey));
   const out = new Map<string, number>();
+  const spelledAs = new Map<string, string>();
   for (const [symbol, pct] of entries) {
     assertPct(`Mã ${symbol}`, pct);
     const key = overrideKey(symbol);
     if (!held.has(key))
       throw new BadRequestException(`Mã ${symbol} không có trong danh mục (chỉ ghi đè được cổ phiếu và coin đang giữ)`);
+    // Cùng một mã viết hai cách (btcusdt và BTC) với hai mức khác nhau: báo lỗi thay vì âm thầm lấy mức sau
+    if (out.has(key) && out.get(key) !== pct) {
+      throw new BadRequestException(
+        `Mã ${key} được đặt hai mức khác nhau (${spelledAs.get(key)} và ${symbol}) — chỉ giữ một mức cho mỗi mã`,
+      );
+    }
+    spelledAs.set(key, symbol);
     out.set(key, pct);
   }
   return out;
