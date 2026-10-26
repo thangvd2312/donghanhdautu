@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron, Interval } from '@nestjs/schedule';
 import { AlertsService } from '../alerts/alerts.service';
 import { BriefsService } from '../alerts/briefs.service';
+import { CryptoBriefService } from '../alerts/crypto-brief.service';
 import { WeeklyBriefService } from '../alerts/weekly.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { EventsService } from '../events/events.service';
@@ -26,6 +27,8 @@ const HOUR = 60 * MIN;
  * | briefs.morning          | 8:30 thứ 2-6            | BriefsService.morning (xếp hàng đợi) |
  * | briefs.closing          | 15:10 thứ 2-6           | BriefsService.closing (xếp hàng đợi) |
  * | briefs.weekly           | 9:00 thứ 7              | WeeklyBriefService.runAll            |
+ * | briefs.cryptoMorning    | 8:00 hằng ngày          | CryptoBriefService.runAll (xếp hàng đợi) |
+ * | briefs.cryptoEvening    | 20:00 hằng ngày         | CryptoBriefService.runAll (xếp hàng đợi) |
  * | plans.remindDue         | 8:00 hằng ngày          | PlanReminderService.remindDue        |
  * | journal.monthlyDigest   | 9:00 ngày 1 hằng tháng  | JournalService.monthlyDigest         |
  * | events.remind           | 8:00, 17:00 hằng ngày   | EventsService.remindDaily            |
@@ -44,6 +47,7 @@ export class ScheduledJobs {
     private readonly jobs: JobRunner,
     private readonly briefs: BriefsService,
     private readonly weekly: WeeklyBriefService,
+    private readonly cryptoBriefs: CryptoBriefService,
     private readonly plans: PlanReminderService,
     private readonly journal: JournalService,
     private readonly events: EventsService,
@@ -68,6 +72,17 @@ export class ScheduledJobs {
   @Cron('0 9 * * 6', { timeZone: VN_TZ })
   briefsWeekly() {
     return this.jobs.run('briefs.weekly', () => this.weekly.runAll());
+  }
+
+  /** Coin giao dịch 24/7: bản tin coin chạy cả thứ 7, chủ nhật */
+  @Cron('0 8 * * *', { timeZone: VN_TZ })
+  briefsCryptoMorning() {
+    return this.jobs.run('briefs.cryptoMorning', () => this.cryptoBriefs.runAll('crypto_morning'));
+  }
+
+  @Cron('0 20 * * *', { timeZone: VN_TZ })
+  briefsCryptoEvening() {
+    return this.jobs.run('briefs.cryptoEvening', () => this.cryptoBriefs.runAll('crypto_evening'));
   }
 
   @Cron('0 8 * * *', { timeZone: VN_TZ })

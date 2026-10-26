@@ -4,7 +4,7 @@ import { AiUsageService } from '../ai/ai-usage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { shutdownGraceMs, waitWhileBusy } from '../runtime/wait';
 
-type BriefJobKind = 'morning' | 'closing' | 'weekly';
+export type BriefJobKind = 'morning' | 'closing' | 'weekly' | 'crypto_morning' | 'crypto_evening';
 /** Trả về khác null khi đã gửi; null khi không có gì để gửi hoặc kỳ này đã có bản tin */
 type BriefHandler = (userId: string, day: string) => Promise<unknown>;
 
@@ -14,11 +14,13 @@ const num = (v: string | undefined, d: number) => (v !== undefined && v !== '' &
 const BRIEF_CONCURRENCY = num(process.env.BRIEF_CONCURRENCY, 3);
 /** Việc "running" lâu hơn mức này coi như tiến trình đã chết, đưa lại vào hàng đợi */
 export const STALE_JOB_MS = 15 * 60_000;
-/** Bản tin quá hạn thì bỏ, không gửi muộn: sáng/chiều sau 6 giờ, tuần sau 2 ngày */
+/** Bản tin quá hạn thì bỏ, không gửi muộn: sáng/chiều (cả bản tin coin) sau 6 giờ, tuần sau 2 ngày */
 const EXPIRES_MS: Record<BriefJobKind, number> = {
   morning: 6 * 3600_000,
   closing: 6 * 3600_000,
   weekly: 48 * 3600_000,
+  crypto_morning: 6 * 3600_000,
+  crypto_evening: 6 * 3600_000,
 };
 /** Chạm ngân sách AI: hoãn việc lại chừng này rồi thử tiếp, không tính là một lần thử */
 const BUDGET_DEFER_MS = 30 * 60_000;

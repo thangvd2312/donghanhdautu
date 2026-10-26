@@ -5,7 +5,9 @@ import { CompareService } from './compare.service';
 import { MarketController } from './market.controller';
 import { MarketGateway } from './market.gateway';
 import { MarketService } from './market.service';
+import { MarketCacheModule } from './cache/market-cache.module';
 import { BinanceProvider } from './providers/binance.provider';
+import { CryptoMarketProvider } from './providers/crypto-market.provider';
 import { GoldFxProvider } from './providers/gold-fx.provider';
 import { VietcapModule } from './providers/vietcap';
 import { VndirectProvider } from './providers/vndirect.provider';
@@ -13,7 +15,7 @@ import { StockResearchService } from './stock-research.service';
 import { TrackedSymbolResolver } from './tracked-symbol.resolver';
 
 @Module({
-  imports: [AuthModule, VietcapModule, RuntimeModule],
+  imports: [AuthModule, VietcapModule, RuntimeModule, MarketCacheModule],
   controllers: [MarketController],
   providers: [
     MarketService,
@@ -22,9 +24,18 @@ import { TrackedSymbolResolver } from './tracked-symbol.resolver';
     MarketGateway,
     VndirectProvider,
     BinanceProvider,
+    CryptoMarketProvider,
     GoldFxProvider,
     TrackedSymbolResolver,
   ],
-  exports: [MarketService, StockResearchService, MarketGateway, VietcapModule, VndirectProvider, TrackedSymbolResolver],
+  exports: [
+    MarketService,
+    StockResearchService,
+    MarketGateway,
+    VietcapModule,
+    VndirectProvider,
+    TrackedSymbolResolver,
+    CryptoMarketProvider,
+  ],
 })
 export class MarketModule {}

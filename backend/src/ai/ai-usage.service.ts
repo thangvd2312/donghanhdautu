@@ -10,6 +10,7 @@ export type AiFeature =
   | 'brief_morning'
   | 'brief_closing'
   | 'brief_weekly'
+  | 'brief_crypto'
   | 'alert'
   | 'news_tag'
   | 'plan_draft'

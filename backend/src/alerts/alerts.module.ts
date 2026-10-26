@@ -11,6 +11,8 @@ import { BriefRunService } from './brief-run.service';
 import { BriefTestService } from './brief-test.service';
 import { BriefsController } from './briefs.controller';
 import { BriefsService } from './briefs.service';
+import { CryptoBriefService } from './crypto-brief.service';
+import { CryptoNewsAlerts } from './crypto-news-alerts.service';
 import { HoldingMoveAlerts } from './holding-move-alerts.service';
 import { LlmService } from './llm.service';
 import { MacroAlerts } from './macro-alerts.service';
@@ -35,8 +37,10 @@ import { WeeklyBriefService } from './weekly.service';
     PriceAlertsService,
     HoldingMoveAlerts,
     NewsAlerts,
+    CryptoNewsAlerts,
     MacroAlerts,
     BriefsService,
+    CryptoBriefService,
     BriefTestService,
     BriefRunService,
     BriefQueueService,
@@ -47,6 +51,14 @@ import { WeeklyBriefService } from './weekly.service';
     NotificationInboxService,
     NotificationRelayService,
   ],
-  exports: [LlmService, NotifierService, AlertsService, BriefsService, WeeklyBriefService, BriefQueueService],
+  exports: [
+    LlmService,
+    NotifierService,
+    AlertsService,
+    BriefsService,
+    CryptoBriefService,
+    WeeklyBriefService,
+    BriefQueueService,
+  ],
 })
 export class AlertsModule {}

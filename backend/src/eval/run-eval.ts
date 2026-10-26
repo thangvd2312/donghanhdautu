@@ -135,6 +135,7 @@ async function prepareUser(prisma: PrismaService) {
       macroAlerts: false,
       morningBrief: false,
       closingBrief: false,
+      cryptoBrief: false,
     },
     update: { ...scored, answers: ANSWERS },
   });

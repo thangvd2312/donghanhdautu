@@ -113,25 +113,25 @@ export function PriceAlertsPanel() {
   )
 }
 
-/** Bật/tắt bản tin sáng, tổng kết phiên, tổng kết tuần, tin vĩ mô; gửi thử bản tin ngay */
+/** Bật/tắt bản tin sáng, tổng kết phiên, tổng kết tuần, bản tin coin, tin vĩ mô; gửi thử bản tin ngay */
 export function NotificationSettingsPanel() {
   const { me, refresh } = useAuth()
   const nav = useNavigate()
   const profile = me?.profile
-  const [sending, setSending] = useState<'' | 'morning' | 'closing' | 'weekly'>('')
+  const [sending, setSending] = useState<'' | 'morning' | 'closing' | 'weekly' | 'crypto'>('')
   const [error, setError] = useState('')
 
   if (!profile) return null
 
   const toggle = async (
-    key: keyof Pick<InvestorProfile, 'morningBrief' | 'closingBrief' | 'weeklyBrief' | 'macroAlerts'>,
+    key: keyof Pick<InvestorProfile, 'morningBrief' | 'closingBrief' | 'weeklyBrief' | 'cryptoBrief' | 'macroAlerts'>,
     v: boolean,
   ) => {
     await updateProfileSettings({ [key]: v })
     await refresh()
   }
 
-  const sendNow = async (kind: 'morning' | 'closing' | 'weekly') => {
+  const sendNow = async (kind: 'morning' | 'closing' | 'weekly' | 'crypto') => {
     setError('')
     setSending(kind)
     try {
@@ -165,6 +165,15 @@ export function NotificationSettingsPanel() {
           }
         />
         <FormControlLabel
+          control={<Switch checked={profile.cryptoBrief} onChange={(_, v) => void toggle('cryptoBrief', v)} />}
+          label={
+            <Setting
+              title="Bản tin coin · 8:00 và 20:00"
+              desc="Coin bạn giữ / theo dõi, tâm lý thị trường, tin Coin68, CoinDesk, Cointelegraph, Binance — cả cuối tuần"
+            />
+          }
+        />
+        <FormControlLabel
           control={<Switch checked={profile.macroAlerts} onChange={(_, v) => void toggle('macroAlerts', v)} />}
           label={
             <Setting
@@ -184,6 +193,9 @@ export function NotificationSettingsPanel() {
         </Button>
         <Button size="small" variant="outlined" disabled={!!sending} onClick={() => void sendNow('weekly')}>
           {sending === 'weekly' ? 'Đang viết bản tin…' : 'Gửi thử tổng kết tuần'}
+        </Button>
+        <Button size="small" variant="outlined" disabled={!!sending} onClick={() => void sendNow('crypto')}>
+          {sending === 'crypto' ? 'Đang viết bản tin…' : 'Gửi thử bản tin coin'}
         </Button>
       </Stack>
       {error && (

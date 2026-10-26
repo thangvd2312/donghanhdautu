@@ -10,6 +10,7 @@ export const KINDS = [
   'event',
   'portfolio_health',
   'journal_monthly',
+  'crypto_brief',
 ] as const;
 export type Kind = (typeof KINDS)[number];
 
@@ -18,11 +19,12 @@ export const KIND_LABEL: Record<Kind, string> = {
   price_move: 'Biến động mạnh của tài sản đang giữ',
   plan_review: 'Nhắc xem lại kế hoạch',
   brief: 'Bản tin sáng / cuối phiên / tổng kết tuần',
-  news: 'Tin về mã đang giữ',
+  news: 'Tin về mã đang giữ / theo dõi (cổ phiếu, coin) và thông báo của Binance',
   macro: 'Tin vĩ mô quan trọng',
   event: 'Sự kiện quyền sắp tới: cổ tức, quyền mua, đại hội',
   portfolio_health: 'Tình trạng danh mục',
   journal_monthly: 'Tổng kết nhật ký quyết định hằng tháng',
+  crypto_brief: 'Bản tin coin 8:00 và 20:00 (cả cuối tuần)',
 };
 
 /** Mặc định khi mới kết nối: chỉ những tin cần hành động; người dùng tự bật thêm */
@@ -38,6 +40,8 @@ export const DEFAULT_KINDS: Record<Kind, boolean> = {
   portfolio_health: false,
   // Lời mời xem tổng kết tháng (nhật ký quyết định): luôn có trong app, gửi ra ngoài khi người dùng tự bật
   journal_monthly: false,
+  // Như bản tin sáng / chiều: luôn có trong app, gửi ra ngoài khi người dùng tự bật
+  crypto_brief: false,
 };
 
 /** Tối đa số tin / giờ gửi cho một người */
@@ -112,13 +116,14 @@ export function retryAt(now: Date, attempts: number) {
 const GENERIC_TITLE: Record<string, string> = {
   brief: 'Bản tin mới của bạn đã sẵn sàng',
   price_move: 'Một tài sản bạn đang giữ biến động mạnh',
-  news: 'Có tin mới liên quan tới mã bạn đang giữ',
+  news: 'Có tin mới liên quan tới mã bạn đang giữ hoặc theo dõi',
   macro: 'Có tin vĩ mô quan trọng',
   plan_review: 'Đến hạn xem lại một kế hoạch đầu tư',
   price_target: 'Giá đã chạm mốc bạn đặt',
   event: 'Sắp có sự kiện quyền của mã bạn quan tâm',
   portfolio_health: 'Danh mục của bạn có điểm cần xem lại',
   journal_monthly: 'Tổng kết thói quen đầu tư tháng trước đã sẵn sàng',
+  crypto_brief: 'Bản tin coin mới của bạn đã sẵn sàng',
 };
 
 function escapeHtml(s: string) {

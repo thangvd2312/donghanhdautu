@@ -13,6 +13,8 @@ export interface InvestorProfile {
   morningBrief: boolean
   closingBrief: boolean
   weeklyBrief: boolean
+  /** Bản tin coin 8:00 và 20:00 mỗi ngày (khi đang giữ / theo dõi coin) */
+  cryptoBrief: boolean
   macroAlerts: boolean
 }
 
@@ -75,5 +77,6 @@ export interface ProfileSettingsRequest {
   morningBrief?: boolean
   closingBrief?: boolean
   weeklyBrief?: boolean
+  cryptoBrief?: boolean
   macroAlerts?: boolean
 }

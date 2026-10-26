@@ -5,6 +5,8 @@ export interface NewsFeed {
   url: string;
   source: string;
   category: string;
+  /** Nguồn ghi link tương đối ("/bai-viet/"): ghép với địa chỉ này */
+  baseUrl?: string;
 }
 
 export const FEEDS: readonly NewsFeed[] = [
@@ -44,6 +46,8 @@ function toIso(d?: string) {
   return Number.isNaN(t) ? new Date().toISOString() : new Date(t).toISOString();
 }
 
+const absolute = (link: string, base?: string) => (base && link.startsWith('/') ? `${base}${link}` : link);
+
 /** RSS XML of one feed → news items (items without title or link are dropped). */
 export function parseFeed(xml: string, feed: NewsFeed): NewsItem[] {
   const doc = parser.parse(xml) as { rss?: { channel?: { item?: RssItem | RssItem[] } } };
@@ -53,7 +57,7 @@ export function parseFeed(xml: string, feed: NewsFeed): NewsItem[] {
     .filter((i) => i.title && i.link)
     .map((i) => ({
       title: clean(String(i.title)),
-      url: String(i.link).trim(),
+      url: absolute(String(i.link).trim(), feed.baseUrl),
       summary: clean(String(i.description ?? '')).slice(0, 400),
       source: feed.source,
       category: feed.category,

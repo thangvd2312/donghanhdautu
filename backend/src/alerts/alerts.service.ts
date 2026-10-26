@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MarketService } from '../market/market.service';
+import { CryptoNewsAlerts } from './crypto-news-alerts.service';
 import { HoldingMoveAlerts } from './holding-move-alerts.service';
 import { MacroAlerts } from './macro-alerts.service';
 import { NewsAlerts } from './news-alerts.service';
@@ -10,7 +11,7 @@ import { PriceAlertsService } from './price-alerts.service';
  * Entry points for the worker's alert crons. Each scan is single-flight inside the process and delegates to the
  * alert source that owns the rule:
  *  - prices: holdings moving past the user's threshold, user-set price targets, USD / USDT moves
- *  - news: news on held tickers (AI-tagged), important macro / geopolitical news
+ *  - news: news on held tickers (AI-tagged), important macro / geopolitical news, coin news and Binance notices
  */
 @Injectable()
 export class AlertsService {
@@ -24,6 +25,7 @@ export class AlertsService {
     private priceTargets: PriceAlertsService,
     private newsAlerts: NewsAlerts,
     private macroAlerts: MacroAlerts,
+    private cryptoNews: CryptoNewsAlerts,
   ) {}
 
   /** Mỗi phút (worker/scheduled-jobs.ts): giá biến động mạnh, chạm mốc đã đặt, tỷ giá */
@@ -42,7 +44,7 @@ export class AlertsService {
     }
   }
 
-  /** Mỗi 10 phút (worker/scheduled-jobs.ts): tin về mã đang nắm giữ và tin vĩ mô quan trọng */
+  /** Mỗi 10 phút (worker/scheduled-jobs.ts): tin về mã đang nắm giữ, tin vĩ mô quan trọng, tin coin */
   async checkNews() {
     if (this.running.news) return;
     this.running.news = true;
@@ -50,6 +52,12 @@ export class AlertsService {
       const tags = await this.tagger.tagRecent(24);
       await this.newsAlerts.check(tags);
       await this.macroAlerts.checkNews(tags);
+    } catch (e) {
+      this.log.error(e);
+    }
+    // Tin coin không cần AI gắn nhãn: chạy cả khi phần trên lỗi
+    try {
+      await this.cryptoNews.check();
     } catch (e) {
       this.log.error(e);
     } finally {

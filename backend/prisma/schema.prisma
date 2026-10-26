@@ -67,6 +67,8 @@ model InvestorProfile {
   closingBrief      Boolean @default(true)
   /// Tổng kết tuần, sáng thứ 7
   weeklyBrief       Boolean @default(true)
+  /// Bản tin coin 8:00 và 20:00 mỗi ngày (cả cuối tuần), chỉ gửi khi đang giữ / theo dõi coin
+  cryptoBrief       Boolean @default(true)
   /// Cảnh báo tin vĩ mô quan trọng, biến động tỷ giá
   macroAlerts       Boolean @default(true)
   updatedAt       DateTime @updatedAt
@@ -654,7 +656,7 @@ model AiRequest {
 model BriefJob {
   id          String    @id @default(cuid())
   userId      String
-  /// morning | closing | weekly
+  /// morning | closing | weekly | crypto_morning | crypto_evening
   kind        String
   /// Ngày của kỳ (giờ VN) — chạy lại / thử lại vẫn tạo bản tin cho đúng kỳ này
   day         String

@@ -11,5 +11,6 @@ export class ProfileSettingsDto implements ProfileSettingsRequest {
   @IsOptional() @IsBoolean() morningBrief?: boolean;
   @IsOptional() @IsBoolean() closingBrief?: boolean;
   @IsOptional() @IsBoolean() weeklyBrief?: boolean;
+  @IsOptional() @IsBoolean() cryptoBrief?: boolean;
   @IsOptional() @IsBoolean() macroAlerts?: boolean;
 }

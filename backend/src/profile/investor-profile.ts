@@ -17,6 +17,7 @@ export function toInvestorProfile(row: InvestorProfileRow): InvestorProfile {
     morningBrief: row.morningBrief,
     closingBrief: row.closingBrief,
     weeklyBrief: row.weeklyBrief,
+    cryptoBrief: row.cryptoBrief,
     macroAlerts: row.macroAlerts,
   };
 }

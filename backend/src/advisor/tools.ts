@@ -3,6 +3,9 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { MacroService } from '../macro/macro.service';
 import { MarketService } from '../market/market.service';
+import { CryptoMarketProvider } from '../market/providers/crypto-market.provider';
+import { searchCryptoNews } from '../news/crypto-news';
+import { CryptoNewsService } from '../news/crypto-news.service';
 import { NewsService } from '../news/news.service';
 import { classifySource } from './source-tiers';
 import { AdvisorToolData } from './tool-data';
@@ -34,6 +37,8 @@ export class AdvisorTools {
     private news: NewsService,
     private web: WebService,
     private macro: MacroService,
+    private cryptoNews: CryptoNewsService,
+    private cryptoMarket: CryptoMarketProvider,
   ) {
     this.defs = {
       get_my_portfolio: {
@@ -134,6 +139,49 @@ export class AdvisorTools {
         label: (i) => (typeof i.query === 'string' && i.query ? `Đọc tin về "${i.query}"` : 'Đọc tin mới nhất'),
         run: async (i: z.infer<typeof NewsInput>) =>
           (await this.news.search(i.query, 12)).map((n) => ({ ...n, sourceTier: classifySource(n.url).tier })),
+      },
+      get_crypto_news: {
+        tool: {
+          name: 'get_crypto_news',
+          description:
+            'Tin coin mới nhất: Coin68 (tiếng Việt), CoinDesk và Cointelegraph (tiếng Anh), Binance News (tin chính thức trên Binance Square, đã gắn mã coin) và thông báo chính thức của Binance (niêm yết mới, huỷ niêm yết, bảo trì / nâng cấp mạng — trường notice). Truyền query là mã coin ("BTC", "ETH") để lấy tin về coin đó, hoặc từ khoá; bỏ trống để lấy tin mới nhất. Tin tiếng Anh thì tóm tắt lại bằng tiếng Việt. Mỗi tin có link để trích dẫn.',
+          input_schema: {
+            type: 'object',
+            properties: { query: { type: 'string', description: 'Ví dụ "BTC", "SOL" hoặc "ETF"' } },
+          },
+        },
+        schema: NewsInput,
+        label: (i) =>
+          typeof i.query === 'string' && i.query ? `Đọc tin coin về "${i.query}"` : 'Đọc tin coin mới nhất',
+        run: async (i: z.infer<typeof NewsInput>) =>
+          searchCryptoNews(await this.cryptoNews.all(), i.query, 12).map((n) => ({
+            title: n.title,
+            url: n.url,
+            summary: n.summary,
+            source: n.source,
+            publishedAt: n.publishedAt,
+            language: n.lang,
+            coins: n.coins,
+            notice: n.notice ?? null,
+            sourceTier: classifySource(n.url).tier,
+          })),
+      },
+      get_crypto_sentiment: {
+        tool: {
+          name: 'get_crypto_sentiment',
+          description:
+            'Tâm lý và cấu trúc thị trường coin chung: chỉ số Sợ hãi & Tham lam (alternative.me, 0–100, kèm giá trị hôm trước) và tỷ lệ chiếm lĩnh của BTC, thay đổi tổng vốn hoá 24 giờ (CoinGecko). Đây là tâm lý chung, không phải tín hiệu mua / bán. Giá và % 24 giờ của từng coin lấy từ bảng giá.',
+          input_schema: { type: 'object', properties: {} },
+        },
+        schema: Empty,
+        label: () => 'Xem tâm lý thị trường coin',
+        run: async () => {
+          const [fearGreed, global] = await Promise.all([
+            this.cryptoMarket.fearGreed().catch(() => null),
+            this.cryptoMarket.global().catch(() => null),
+          ]);
+          return { fearGreed: fearGreed ?? 'chưa lấy được', global: global ?? 'chưa lấy được' };
+        },
       },
       get_macro_data: {
         tool: {
