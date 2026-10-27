@@ -148,8 +148,8 @@ export default function ResultsPanel({
 
       {items.length > 0 && !loadedAll && (
         <Box sx={{ textAlign: 'center' }}>
-          <Button variant="outlined" size="large" onClick={onLoadMore} disabled={loadingMore} sx={{ minHeight: 48, minWidth: 160 }}>
-            {loadingMore ? 'Đang tải…' : 'Tải thêm'}
+          <Button variant="outlined" size="large" onClick={onLoadMore} loading={loadingMore} sx={{ minHeight: 48, minWidth: 160 }}>
+            Tải thêm
           </Button>
           {moreFailed && (
             <Typography variant="caption" color="error" component="div" role="alert" sx={{ mt: 0.5 }}>

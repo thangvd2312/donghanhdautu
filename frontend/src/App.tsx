@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BootSplash, PageSkeleton } from './components/layout/PageLoading'
 import { useAuth } from './lib/auth-context'
 import { onboardingSkipped, safeNext } from './lib/nav'
 import { track } from './lib/track'
@@ -10,11 +11,9 @@ const DemoPage = lazy(() => import('./pages/DemoPage'))
 const AuthedRoutes = lazy(() => import('./AuthedRoutes'))
 
 /** Chỗ giữ trong lúc tải chunk của trang */
-const page = (el: ReactNode) => (
-  <Suspense fallback={<div className="grid min-h-[40vh] place-items-center text-muted">Đang tải…</div>}>{el}</Suspense>
-)
+const page = (el: ReactNode) => <Suspense fallback={<PageSkeleton />}>{el}</Suspense>
 
-const loadingScreen = <div className="grid h-screen place-items-center text-muted">Đang tải…</div>
+const loadingScreen = <BootSplash />
 
 export default function App() {
   const { me, loading } = useAuth()

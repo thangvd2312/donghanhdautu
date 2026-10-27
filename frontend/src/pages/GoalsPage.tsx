@@ -13,11 +13,12 @@ import { listGoals } from '../api/goals'
 import GoalCard from '../components/goals/GoalCard'
 import GoalEditor from '../components/goals/GoalEditor'
 import { useResource } from '../hooks/useResource'
+import { qk } from '../lib/query'
 import type { Goal } from '../lib/types'
 
 /** Mục tiêu tài chính: tiến độ từ tài sản được gán, độ lệch tỷ trọng, mô phỏng theo giả định */
 export default function GoalsPage() {
-  const { data, error, reload: load } = useResource(listGoals)
+  const { data, error, reload: load } = useResource(listGoals, { key: qk.goals })
   const [editing, setEditing] = useState<Goal | 'new' | null>(null)
 
   return (

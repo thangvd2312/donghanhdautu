@@ -13,18 +13,20 @@ import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { deleteConversation, getConversation } from '../api/advisor'
 import AdvisorWelcome from '../components/advisor/AdvisorWelcome'
 import Composer from '../components/advisor/Composer'
 import ConversationList from '../components/advisor/ConversationList'
+import ConversationSkeleton from '../components/advisor/ConversationSkeleton'
 import Message from '../components/advisor/Message'
 import { useAdvisorConversations } from '../hooks/useAdvisorConversations'
 import { useChatScroll } from '../hooks/useChatScroll'
 import { type ChatMsg as Msg } from '../lib/chat'
 import { useChat } from '../lib/chat-context'
-import type { AdvisorFeedbackReason } from '../lib/types'
+import type { AdvisorConversation, AdvisorFeedbackReason } from '../lib/types'
 import { useIsMobile } from '../lib/useIsMobile'
 
 export default function AdvisorPage() {
@@ -32,6 +34,7 @@ export default function AdvisorPage() {
   const [params, setParams] = useSearchParams()
   const nav = useNavigate()
   const chat = useChat()
+  const queryClient = useQueryClient()
   const mobile = useIsMobile()
   const [historyOpen, setHistoryOpen] = useState(false)
   const { convs, enabled, reload: loadConvs } = useAdvisorConversations()
@@ -67,15 +70,27 @@ export default function AdvisorPage() {
     if (!id && active?.busy && active.conversationId) nav(`/advisor/${active.conversationId}`, { replace: true })
   }, [id, active?.busy, active?.conversationId, nav])
 
+  // Cuộc trò chuyện đang tải tin nhắn: hiện skeleton thay vì màn chào. Đã mở trước đó thì hiện ngay bản trong cache
+  // rồi luôn tải lại (có thể vừa hỏi thêm / báo sai ở đó) để cập nhật
+  const [loadingId, setLoadingId] = useState<string | null>(null)
   useEffect(() => {
     if (!id) {
       setLoaded([])
       return
     }
     if (showingActive) return
-    getConversation(id)
-      .then((c) => setLoaded(c.messages))
-      .catch(() => nav('/advisor'))
+    const cached = queryClient.getQueryData<AdvisorConversation>(['advisor', 'conversation', id])
+    setLoaded(cached?.messages ?? [])
+    setLoadingId(cached ? null : id)
+    let alive = true
+    queryClient
+      .fetchQuery({ queryKey: ['advisor', 'conversation', id], queryFn: () => getConversation(id), staleTime: 0 })
+      .then((c) => alive && setLoaded(c.messages))
+      .catch(() => alive && nav('/advisor'))
+      .finally(() => alive && setLoadingId(null))
+    return () => {
+      alive = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
@@ -203,7 +218,9 @@ export default function AdvisorPage() {
                     . Đợi trả lời xong rồi hỏi tiếp nhé.
                   </Alert>
                 )}
-                {messages.length === 0 ? (
+                {loadingId === id && messages.length === 0 ? (
+                  <ConversationSkeleton />
+                ) : messages.length === 0 ? (
                   <AdvisorWelcome busy={!!active?.busy} onPick={send} />
                 ) : (
                   <Stack spacing={3}>

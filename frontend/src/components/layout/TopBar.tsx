@@ -12,6 +12,7 @@ import Toolbar from '@mui/material/Toolbar'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router-dom'
+import { prefetchRoute } from '../../lib/prefetch'
 import { Logo } from '../ui'
 import { LiveDot, ThemeToggle, UserMenu } from './HeaderControls'
 import { NAV } from './navConfig'
@@ -57,6 +58,8 @@ export default function TopBar({ mobile, current, pageTitle, chatBusy, onSearch 
                   value={n.to}
                   component={RouterLink}
                   to={n.to}
+                  onMouseEnter={() => prefetchRoute(n.to)}
+                  onFocus={() => prefetchRoute(n.to)}
                   sx={{ minHeight: 56 }}
                   label={
                     <Badge color="primary" variant="dot" invisible={!(n.to === '/advisor' && chatBusy)}>

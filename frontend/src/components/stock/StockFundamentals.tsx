@@ -15,7 +15,7 @@ import ValuationPanel from './ValuationPanel'
  */
 export default function StockFundamentals({ symbol }: { symbol: string }) {
   const fetchData = useCallback(() => getStockFundamentals(symbol), [symbol])
-  const { data: d, error } = useResource(fetchData)
+  const { data: d, error } = useResource(fetchData, { key: ['stock', symbol, 'fundamentals'] })
   const failed = !!error
 
   if (failed) {

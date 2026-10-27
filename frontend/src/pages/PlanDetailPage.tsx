@@ -30,7 +30,7 @@ import { planAdvisorQuestion } from '../lib/plans'
 export default function PlanDetailPage() {
   const { id = '' } = useParams()
   const fetchPlan = useCallback(() => getPlan(id), [id])
-  const { data: p, error, reload: load } = useResource(fetchPlan, { keepData: true })
+  const { data: p, error, reload: load } = useResource(fetchPlan, { key: ['plans', id], keepData: true })
   const [editing, setEditing] = useState(false)
 
   if (error) return <Alert severity="error">{error}</Alert>

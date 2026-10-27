@@ -4,6 +4,7 @@ import BottomNavigation from '@mui/material/BottomNavigation'
 import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import Paper from '@mui/material/Paper'
 import { useNavigate } from 'react-router-dom'
+import { prefetchRoute } from '../../lib/prefetch'
 import { BOTTOM, BOTTOM_NAV_HEIGHT } from './navConfig'
 
 /** Thanh điều hướng đáy trên điện thoại: 4 trang chính + "Thêm" (mở bảng MoreSheet) */
@@ -35,6 +36,8 @@ export default function BottomNav({ value, chatBusy, onMore }: { value: string |
             key={n.to}
             value={n.to}
             label={n.label}
+            onTouchStart={() => prefetchRoute(n.to)}
+            onMouseEnter={() => prefetchRoute(n.to)}
             icon={
               <Badge color="primary" variant="dot" invisible={!(n.to === '/advisor' && chatBusy)}>
                 <n.Icon />

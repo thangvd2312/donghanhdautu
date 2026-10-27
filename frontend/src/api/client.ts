@@ -12,8 +12,31 @@ export function setToken(token: string | null) {
   try {
     if (token) localStorage.setItem(TOKEN_KEY, token)
     else localStorage.removeItem(TOKEN_KEY)
+    // Đổi / bỏ phiên: thông tin người dùng đã lưu không còn đúng
+    localStorage.removeItem(ME_KEY)
   } catch {
     // Trình duyệt chặn storage: phiên chỉ tồn tại tới khi tải lại trang
+  }
+}
+
+const ME_KEY = 'dautu_me'
+
+/** Thông tin người dùng của lần mở trước: mở app hiện ngay giao diện, không phải chờ /auth/me */
+export function getCachedMe<T>(): T | null {
+  try {
+    const raw = localStorage.getItem(ME_KEY)
+    return raw ? (JSON.parse(raw) as T) : null
+  } catch {
+    return null
+  }
+}
+
+export function setCachedMe(me: unknown) {
+  try {
+    if (me) localStorage.setItem(ME_KEY, JSON.stringify(me))
+    else localStorage.removeItem(ME_KEY)
+  } catch {
+    // Không lưu được: lần mở sau chờ /auth/me như cũ
   }
 }
 

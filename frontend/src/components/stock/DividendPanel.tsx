@@ -35,7 +35,7 @@ function EventsLink({ symbol }: { symbol: string }) {
 /** Lịch sử trả cổ tức tiền mặt / cổ phiếu của một mã, kèm tỷ suất cổ tức 12 tháng theo giá hiện tại */
 export default function DividendPanel({ symbol }: { symbol: string }) {
   const fetchData = useCallback(() => getStockDividends(symbol), [symbol])
-  const { data: d, error } = useResource(fetchData)
+  const { data: d, error } = useResource(fetchData, { key: ['stock', symbol, 'dividends'] })
   const failed = !!error
   const [all, setAll] = useState(false)
 

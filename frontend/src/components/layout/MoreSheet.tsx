@@ -12,6 +12,7 @@ import Stack from '@mui/material/Stack'
 import { useColorScheme } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
 import { useNavigate } from 'react-router-dom'
+import { prefetchRoute } from '../../lib/prefetch'
 import { useAuth } from '../../lib/auth-context'
 import { DISCLAIMER, MORE } from './navConfig'
 
@@ -44,7 +45,7 @@ export default function MoreSheet({ onClose }: { onClose: () => void }) {
       <Divider />
       <List disablePadding>
         {MORE.map((n) => (
-          <ListItemButton key={n.to} onClick={() => go(n.to)} sx={{ py: 1.5 }}>
+          <ListItemButton key={n.to} onClick={() => go(n.to)} onTouchStart={() => prefetchRoute(n.to)} sx={{ py: 1.5 }}>
             <ListItemIcon>
               <n.Icon />
             </ListItemIcon>

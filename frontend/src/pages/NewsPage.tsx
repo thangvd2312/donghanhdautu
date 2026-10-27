@@ -148,8 +148,8 @@ export default function NewsPage() {
           )}
 
           {hasMore && (
-            <Button variant="outlined" onClick={loadMore} disabled={loadingMore || loading} sx={{ alignSelf: 'center' }}>
-              {loadingMore ? 'Đang tải…' : 'Xem thêm tin'}
+            <Button variant="outlined" onClick={loadMore} loading={loadingMore} disabled={loading} sx={{ alignSelf: 'center' }}>
+              Xem thêm tin
             </Button>
           )}
         </Stack>

@@ -81,8 +81,8 @@ export default function TipsPage() {
         {items?.map((t) => <TipRow key={t.id} t={t} />)}
         {cursor && (
           <Box sx={{ p: 1.5, textAlign: 'center' }}>
-            <Button onClick={() => void more()} disabled={loadingMore} sx={{ minHeight: 44 }}>
-              {loadingMore ? 'Đang tải…' : 'Xem thêm'}
+            <Button onClick={() => void more()} loading={loadingMore} sx={{ minHeight: 44 }}>
+              Xem thêm
             </Button>
           </Box>
         )}

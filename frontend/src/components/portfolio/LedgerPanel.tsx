@@ -15,6 +15,7 @@ import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
+import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -248,10 +249,21 @@ export default function LedgerPanel({
             </TableBody>
           </Table>
         </TableContainer>
-      ) : (
+      ) : txs ? (
         <Typography color="text.secondary" sx={{ p: 3 }}>
-          {txs ? 'Chưa có giao dịch nào. Ghi lần mua/bán đầu tiên, nhập từ file CSV, hoặc khai báo tài sản bạn đang có.' : 'Đang tải…'}
+          Chưa có giao dịch nào. Ghi lần mua/bán đầu tiên, nhập từ file CSV, hoặc khai báo tài sản bạn đang có.
         </Typography>
+      ) : (
+        <Stack aria-busy="true" aria-label="Đang tải sổ giao dịch" sx={{ px: 2, py: 1 }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Stack key={i} direction="row" spacing={2} sx={{ py: 1.25, alignItems: 'center' }}>
+              <Skeleton variant="text" width={72} />
+              <Skeleton variant="rounded" width={44} height={22} />
+              <Skeleton variant="text" sx={{ flex: 1 }} />
+              <Skeleton variant="text" width={90} />
+            </Stack>
+          ))}
+        </Stack>
       )}
 
       <TransactionDialog

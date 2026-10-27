@@ -49,8 +49,8 @@ export default function TradeHistory() {
       ))}
       {next && (
         <Box sx={{ p: 1.5 }}>
-          <Button fullWidth variant="outlined" disabled={busy} onClick={() => fetchPage(next)} sx={{ minHeight: 44 }}>
-            {busy ? 'Đang tải…' : 'Xem thêm'}
+          <Button fullWidth variant="outlined" loading={busy} onClick={() => fetchPage(next)} sx={{ minHeight: 44 }}>
+            Xem thêm
           </Button>
         </Box>
       )}

@@ -1,11 +1,13 @@
 import CssBaseline from '@mui/material/CssBaseline'
 import { ThemeProvider } from '@mui/material/styles'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './lib/auth'
 import { getToken } from './api/client'
+import { queryClient } from './lib/query'
 import { theme } from './theme'
 
 // Có token thì nhiều khả năng đã đăng nhập: nạp chunk vỏ app song song với /auth/me thay vì đợi nó xong mới bắt đầu tải
@@ -15,11 +17,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme} defaultMode="light">
       <CssBaseline enableColorScheme />
-      <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>,
 )

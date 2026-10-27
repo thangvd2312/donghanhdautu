@@ -1,43 +1,68 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/layout/Layout'
+import { PageSkeleton } from './components/layout/PageLoading'
 import { ChatProvider } from './lib/chat'
 import { MarketProvider } from './lib/market'
 import HomePage from './pages/HomePage'
+import { lazyPage, pageLoaders, preloadPage } from './pages/loaders'
 
 // Nhánh đã đăng nhập: vỏ app (Layout, socket.io, trang chủ) nằm chung một chunk, chỉ tải khi có phiên đăng nhập —
 // khách ở /login, /register, /demo không phải tải phần này.
 // Mỗi trang một chunk, tải khi mở: trang đăng nhập / trang chủ không phải tải biểu đồ, markdown… của trang khác
-const AdvisorPage = lazy(() => import('./pages/AdvisorPage'))
-const TipsPage = lazy(() => import('./pages/TipsPage'))
-const TipDetailPage = lazy(() => import('./pages/TipDetailPage'))
-const ComparePage = lazy(() => import('./pages/ComparePage'))
-const CryptoPage = lazy(() => import('./pages/CryptoPage'))
-const EventsPage = lazy(() => import('./pages/EventsPage'))
-const IncomePage = lazy(() => import('./pages/IncomePage'))
-const GoalsPage = lazy(() => import('./pages/GoalsPage'))
-const MarketPage = lazy(() => import('./pages/MarketPage'))
-const NewsPage = lazy(() => import('./pages/NewsPage'))
-const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
-const PlanDetailPage = lazy(() => import('./pages/PlanDetailPage'))
-const PlansPage = lazy(() => import('./pages/PlansPage'))
-const JournalPage = lazy(() => import('./pages/JournalPage'))
-const SimulatePage = lazy(() => import('./pages/SimulatePage'))
-const RebalancePage = lazy(() => import('./pages/RebalancePage'))
-const ScreenerPage = lazy(() => import('./pages/ScreenerPage'))
-const PortfolioPage = lazy(() => import('./pages/PortfolioPage'))
-const PracticePage = lazy(() => import('./pages/PracticePage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const ReportsPage = lazy(() => import('./pages/ReportsPage'))
-const PortfolioAlertsPage = lazy(() => import('./pages/PortfolioAlertsPage'))
-const StockPage = lazy(() => import('./pages/StockPage'))
+const AdvisorPage = lazyPage(pageLoaders.AdvisorPage)
+const TipsPage = lazyPage(pageLoaders.TipsPage)
+const TipDetailPage = lazyPage(pageLoaders.TipDetailPage)
+const ComparePage = lazyPage(pageLoaders.ComparePage)
+const CryptoPage = lazyPage(pageLoaders.CryptoPage)
+const EventsPage = lazyPage(pageLoaders.EventsPage)
+const IncomePage = lazyPage(pageLoaders.IncomePage)
+const GoalsPage = lazyPage(pageLoaders.GoalsPage)
+const MarketPage = lazyPage(pageLoaders.MarketPage)
+const NewsPage = lazyPage(pageLoaders.NewsPage)
+const OnboardingPage = lazyPage(pageLoaders.OnboardingPage)
+const PlanDetailPage = lazyPage(pageLoaders.PlanDetailPage)
+const PlansPage = lazyPage(pageLoaders.PlansPage)
+const JournalPage = lazyPage(pageLoaders.JournalPage)
+const SimulatePage = lazyPage(pageLoaders.SimulatePage)
+const RebalancePage = lazyPage(pageLoaders.RebalancePage)
+const ScreenerPage = lazyPage(pageLoaders.ScreenerPage)
+const PortfolioPage = lazyPage(pageLoaders.PortfolioPage)
+const PracticePage = lazyPage(pageLoaders.PracticePage)
+const SettingsPage = lazyPage(pageLoaders.SettingsPage)
+const ReportsPage = lazyPage(pageLoaders.ReportsPage)
+const PortfolioAlertsPage = lazyPage(pageLoaders.PortfolioAlertsPage)
+const StockPage = lazyPage(pageLoaders.StockPage)
 
 /** Chỗ giữ trong lúc tải chunk của trang (thanh điều hướng vẫn giữ nguyên) */
-const page = (el: ReactNode) => (
-  <Suspense fallback={<div className="grid min-h-[40vh] place-items-center text-muted">Đang tải…</div>}>{el}</Suspense>
-)
+const page = (el: ReactNode) => <Suspense fallback={<PageSkeleton />}>{el}</Suspense>
+
+/** Lúc trình duyệt rảnh sau khi mở app: tải trước code mọi trang, lần lượt từng trang để không tranh băng thông */
+function usePrefetchPages() {
+  useEffect(() => {
+    // Safari cũ chưa có requestIdleCallback
+    const hasIdle = typeof (window.requestIdleCallback as unknown) === 'function'
+    const idle = (cb: () => void) => (hasIdle ? window.requestIdleCallback(cb, { timeout: 4000 }) : setTimeout(cb, 2000))
+    let cancelled = false
+    const t = window.setTimeout(
+      () =>
+        idle(async () => {
+          for (const load of Object.values(pageLoaders)) {
+            if (cancelled) return
+            await preloadPage(load).catch(() => {})
+          }
+        }),
+      1500,
+    )
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [])
+}
 
 export default function AuthedRoutes() {
+  usePrefetchPages()
   return (
     <MarketProvider>
       <ChatProvider>

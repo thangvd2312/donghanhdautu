@@ -14,6 +14,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import PlanEditor from '../components/plans/PlanEditor'
 import { listPlans } from '../api/plans'
 import { useResource } from '../hooks/useResource'
+import { qk } from '../lib/query'
 import { changeColor, fmtDate, fmtPct, fmtPrice } from '../lib/format'
 import type { PlanListItem } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
@@ -25,7 +26,7 @@ export default function PlansPage() {
   const nav = useNavigate()
   const [creating, setCreating] = useState(false)
 
-  const { data: plans, error } = useResource(listPlans)
+  const { data: plans, error } = useResource(listPlans, { key: qk.plans })
 
   const active = (plans ?? [])
     .filter((p) => p.status === 'active')

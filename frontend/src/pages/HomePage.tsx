@@ -17,6 +17,7 @@ import UpcomingEvents from '../components/events/UpcomingEvents'
 import WatchlistPanel from '../components/watchlist/WatchlistPanel'
 import { getHomeFeed, getHomeReview, getHomeToday } from '../api/home'
 import { useResource } from '../hooks/useResource'
+import { qk } from '../lib/query'
 import { useAuth } from '../lib/auth-context'
 import { timeAgo } from '../lib/format'
 import type { HomeFeed } from '../lib/types'
@@ -41,9 +42,9 @@ function BlockError({ what, onRetry }: { what: string; onRetry: () => void }) {
 
 export default function HomePage() {
   const { me } = useAuth()
-  const today = useResource(getHomeToday, { refreshMs: 15000 })
-  const review = useResource(getHomeReview, { refreshMs: 60000 })
-  const feed = useResource(getHomeFeed, { refreshMs: 5 * 60000 })
+  const today = useResource(getHomeToday, { key: qk.homeToday, refreshMs: 15000 })
+  const review = useResource(getHomeReview, { key: qk.homeReview, refreshMs: 60000 })
+  const feed = useResource(getHomeFeed, { key: qk.homeFeed, refreshMs: 5 * 60000 })
   const dateLabel = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })
 
   return (

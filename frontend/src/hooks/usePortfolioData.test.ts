@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getPerformance, getPortfolio, listPortfolios, listTransactions } from '../api/portfolio'
 import type { Performance, Portfolio, Transaction } from '../lib/types'
 import { deferred, type Deferred } from '../test/deferred'
+import { queryWrapper } from '../test/query'
 import { usePortfolioData } from './usePortfolioData'
 
 vi.mock('../api/portfolio', () => ({
@@ -74,25 +75,34 @@ afterEach(() => {
 
 describe('usePortfolioData — phản hồi về không theo thứ tự (REV-01)', () => {
   it('A → B, B trả trước A: vị thế, hiệu suất và sổ cuối cùng đều thuộc B', async () => {
-    const { result, rerender } = renderHook(({ id }) => usePortfolioData(id), { initialProps: { id: 'A' } })
+    const { result, rerender } = renderHook(({ id }) => usePortfolioData(id), { initialProps: { id: 'A' }, wrapper: queryWrapper() })
     rerender({ id: 'B' })
     await answer('B', 'B')
     await answer('A', 'A')
     expect(shown(result)).toEqual({ p: 'B', perf: 'B', txs: 'B' })
   })
 
-  it('A → B → A, phản hồi đảo thứ tự: chỉ lượt chọn A mới nhất được áp dụng', async () => {
-    const { result, rerender } = renderHook(({ id }) => usePortfolioData(id), { initialProps: { id: 'A' } })
+  it('A → B → A: quay lại A dùng chung request A đang chờ, B về sau không ghi đè A', async () => {
+    const { result, rerender } = renderHook(({ id }) => usePortfolioData(id), { initialProps: { id: 'A' }, wrapper: queryWrapper() })
     rerender({ id: 'B' })
     rerender({ id: 'A' })
-    await answer('A', 'A mới', 1)
+    expect(calls.filter((c) => c.kind === 'p' && c.id === 'A')).toHaveLength(1)
+    await answer('A', 'A')
     await answer('B', 'B')
-    await answer('A', 'A cũ', 0)
-    expect(shown(result)).toEqual({ p: 'A mới', perf: 'A mới', txs: 'A mới' })
+    expect(shown(result)).toEqual({ p: 'A', perf: 'A', txs: 'A' })
+  })
+
+  it('quay lại danh mục đã xem: hiện ngay dữ liệu đã cache, không chờ tải lại', async () => {
+    const { result, rerender } = renderHook(({ id }) => usePortfolioData(id), { initialProps: { id: 'A' }, wrapper: queryWrapper() })
+    await answer('A', 'A')
+    rerender({ id: 'B' })
+    await answer('B', 'B')
+    rerender({ id: 'A' })
+    expect(shown(result)).toEqual({ p: 'A', perf: 'A', txs: 'A' })
   })
 
   it('lỗi của danh mục cũ về muộn không xoá dữ liệu danh mục mới', async () => {
-    const { result, rerender } = renderHook(({ id }) => usePortfolioData(id), { initialProps: { id: 'A' } })
+    const { result, rerender } = renderHook(({ id }) => usePortfolioData(id), { initialProps: { id: 'A' }, wrapper: queryWrapper() })
     rerender({ id: 'B' })
     await answer('B', 'B')
     await fail('A')
@@ -107,7 +117,7 @@ describe('usePortfolioData — phản hồi về không theo thứ tự (REV-01)
         renders.push({ id, p: r.p, perf: r.perf, txs: r.txs })
         return r
       },
-      { initialProps: { id: 'A' } },
+      { initialProps: { id: 'A' }, wrapper: queryWrapper() },
     )
     await answer('A', 'A')
     rerender({ id: 'B' })
@@ -118,7 +128,7 @@ describe('usePortfolioData — phản hồi về không theo thứ tự (REV-01)
 
   it('request tự tải lại (15 giây) gửi trước khi ghi giao dịch không ghi đè dữ liệu sau khi ghi', async () => {
     vi.useFakeTimers()
-    const { result } = renderHook(() => usePortfolioData('A'))
+    const { result } = renderHook(() => usePortfolioData('A'), { wrapper: queryWrapper() })
     await answer('A', 'đầu')
     await act(async () => {
       await vi.advanceTimersByTimeAsync(15_000)
@@ -137,7 +147,7 @@ describe('usePortfolioData — phản hồi về không theo thứ tự (REV-01)
   })
 
   it('hai lần tải lại sổ liên tiếp về đảo thứ tự: giữ sổ của lần mới nhất', async () => {
-    const { result } = renderHook(() => usePortfolioData('A'))
+    const { result } = renderHook(() => usePortfolioData('A'), { wrapper: queryWrapper() })
     await answer('A', 'đầu')
     act(() => result.current.changed())
     act(() => result.current.changed())
@@ -151,7 +161,7 @@ describe('usePortfolioData — phản hồi về không theo thứ tự (REV-01)
   })
 
   it('lỗi khi tải lại không xoá sổ đang hiển thị', async () => {
-    const { result } = renderHook(() => usePortfolioData('A'))
+    const { result } = renderHook(() => usePortfolioData('A'), { wrapper: queryWrapper() })
     await answer('A', 'đầu')
     act(() => result.current.changed())
     await act(async () => {

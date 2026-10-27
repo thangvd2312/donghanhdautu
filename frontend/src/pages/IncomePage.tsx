@@ -16,6 +16,7 @@ import SummaryCard from '../components/income/SummaryCard'
 import TransactionDialog from '../components/portfolio/TransactionDialog'
 import { useIncome } from '../hooks/useIncome'
 import { useResource } from '../hooks/useResource'
+import { qk } from '../lib/query'
 import { listPortfolios } from '../api/portfolio'
 import { fmtClock, todayVN } from '../lib/events'
 import { currentMonth, dividendPreset, monthAnchorId, parsePast, PAST_OPTIONS, splitSections } from '../lib/income'
@@ -35,7 +36,7 @@ export default function IncomePage() {
   const { data, loading, failed, retry, refresh } = useIncome(past)
   const [selected, setSelected] = useState<string | null>(currentMonth(today))
   const [pickedEmpty, setPickedEmpty] = useState<string | null>(null)
-  const { data: accountList } = useResource(listPortfolios)
+  const { data: accountList } = useResource(listPortfolios, { key: qk.accounts })
   const accounts = useMemo(() => accountList ?? [], [accountList])
   const [preset, setPreset] = useState<TxPreset | null>(null)
   const [dismissing, setDismissing] = useState<IncomeExpectedItem | null>(null)
