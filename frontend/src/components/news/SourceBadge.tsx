@@ -1,11 +1,14 @@
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import { useState } from 'react'
 
 interface SourceStyle {
   /** Tên hiển thị gọn */
   name: string
-  /** Chữ trong ô vuông (1–2 ký tự) */
+  /** Biểu tượng chính thức của nguồn (favicon / apple-touch-icon, tải về public/sources, 32–64px) */
+  logo?: string
+  /** Chữ trong ô vuông khi không có / lỗi logo (1–2 ký tự) */
   mark: string
   bg: string
   fg: string
@@ -14,17 +17,24 @@ interface SourceStyle {
 }
 
 /**
- * Mỗi nguồn một ô vuông nhỏ màu thương hiệu + chữ viết tắt: cùng kích thước cho mọi nguồn (logo chữ của báo thì dài
- * ngắn khác nhau, nguồn coin không có logo), không tải ảnh từ trang ngoài.
+ * Mỗi nguồn một ô vuông cùng cỡ: biểu tượng vuông chính thức của trang (không dùng logo chữ dài ngắn khác nhau), phục
+ * vụ từ chính app nên không gọi trang ngoài khi người dùng xem. Nguồn chưa có biểu tượng: chữ viết tắt trên màu.
  */
 const SOURCES: Record<string, SourceStyle> = {
-  CafeF: { name: 'CafeF', mark: 'F', bg: '#c8102e', fg: '#fff' },
-  VnExpress: { name: 'VnExpress', mark: 'V', bg: '#9f224e', fg: '#fff' },
-  Coin68: { name: 'Coin68', mark: '68', bg: '#0f766e', fg: '#fff' },
-  CoinDesk: { name: 'CoinDesk', mark: 'CD', bg: '#ffd200', fg: '#111' },
-  Cointelegraph: { name: 'Cointelegraph', mark: 'CT', bg: '#1a1a1a', fg: '#fabf2c' },
-  'Binance News': { name: 'Binance News', mark: 'B', bg: '#f0b90b', fg: '#181a20' },
-  'Binance — thông báo chính thức': { name: 'Binance', mark: 'B', bg: '#f0b90b', fg: '#181a20', official: true },
+  CafeF: { name: 'CafeF', logo: '/sources/cafef.png', mark: 'F', bg: '#c8102e', fg: '#fff' },
+  VnExpress: { name: 'VnExpress', logo: '/sources/vnexpress.png', mark: 'V', bg: '#9f224e', fg: '#fff' },
+  Coin68: { name: 'Coin68', logo: '/sources/coin68.png', mark: '68', bg: '#0f766e', fg: '#fff' },
+  CoinDesk: { name: 'CoinDesk', logo: '/sources/coindesk.png', mark: 'CD', bg: '#ffd200', fg: '#111' },
+  Cointelegraph: { name: 'Cointelegraph', logo: '/sources/cointelegraph.png', mark: 'CT', bg: '#1a1a1a', fg: '#fabf2c' },
+  'Binance News': { name: 'Binance News', logo: '/sources/binance.png', mark: 'B', bg: '#f0b90b', fg: '#181a20' },
+  'Binance — thông báo chính thức': {
+    name: 'Binance',
+    logo: '/sources/binance.png',
+    mark: 'B',
+    bg: '#f0b90b',
+    fg: '#181a20',
+    official: true,
+  },
 }
 
 const FALLBACK = ['#1d4ed8', '#7c3aed', '#0f766e', '#b45309', '#be185d', '#475569']
@@ -36,18 +46,37 @@ function sourceStyle(source: string): SourceStyle {
   return { name: source, mark: source.charAt(0).toUpperCase(), bg: FALLBACK[hash % FALLBACK.length], fg: '#fff' }
 }
 
-/** Ô vuông màu nguồn + tên nguồn (+ "Chính thức" với thông báo của sàn) */
+const ICON = { width: 20, height: 20, flexShrink: 0, borderRadius: '5px' } as const
+
+/** Biểu tượng nguồn + tên nguồn (+ "Chính thức" với thông báo của sàn) */
 export default function SourceBadge({ source }: { source: string }) {
   const s = sourceStyle(source)
+  const [broken, setBroken] = useState(false)
   return (
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0 }} title={source}>
+      {s.logo && !broken ? (
+        <Box
+          component="img"
+          src={s.logo}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setBroken(true)}
+          sx={{
+            ...ICON,
+            display: 'block',
+            objectFit: 'cover',
+            // Viền mảnh: biểu tượng nền trắng (Coin68) vẫn có khung trên nền sáng
+            outline: '1px solid',
+            outlineColor: 'divider',
+            outlineOffset: '-1px',
+          }}
+        />
+      ) : (
       <Box
         aria-hidden
         sx={{
-          width: 20,
-          height: 20,
-          flexShrink: 0,
-          borderRadius: '6px',
+          ...ICON,
           bgcolor: s.bg,
           color: s.fg,
           display: 'grid',
@@ -60,6 +89,7 @@ export default function SourceBadge({ source }: { source: string }) {
       >
         {s.mark}
       </Box>
+      )}
       <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', whiteSpace: 'nowrap' }}>
         {s.name}
       </Typography>
