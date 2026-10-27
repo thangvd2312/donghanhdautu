@@ -12,6 +12,7 @@ const hit = (title: string, publishedAt: string): NewsHit => ({
   category: 'Vĩ mô',
   publishedAt,
   kind: 'stock',
+  lang: 'vi',
   tickers: [],
 })
 

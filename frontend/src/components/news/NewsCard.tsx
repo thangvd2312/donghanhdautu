@@ -9,8 +9,8 @@ import { Link as RouterLink } from 'react-router-dom'
 import { timeAgo } from '../../lib/format'
 import { advisorLink } from '../../lib/news'
 import type { NewsHit } from '../../lib/types'
-import SourceLogo from '../SourceLogo'
 import Highlight from './Highlight'
+import SourceBadge from './SourceBadge'
 
 const clamp = (lines: number) => ({
   display: '-webkit-box',
@@ -19,17 +19,36 @@ const clamp = (lines: number) => ({
   overflow: 'hidden',
 })
 
+const tagSx = {
+  px: 0.6,
+  borderRadius: 1,
+  border: 1,
+  borderColor: 'divider',
+  fontSize: 10.5,
+  fontWeight: 700,
+  lineHeight: '16px',
+  color: 'text.secondary',
+  letterSpacing: 0.3,
+} as const
+
 /** Dòng nguồn · chủ đề · thời gian + mã liên quan (mã trùng từ khoá được tô) */
 function Meta({ n, terms }: { n: NewsHit; terms: string[] }) {
   const hit = (t: string) => terms.includes(t.toLowerCase())
   // Mã khớp từ khoá lên đầu: tin khớp nhờ mã thứ 6 vẫn thấy được vì sao khớp
   const tickers = [...n.tickers.filter(hit), ...n.tickers.filter((t) => !hit(t))].slice(0, 4)
+  // Tin coin chủ đề luôn là "Coin" (trùng với tab đang xem): bỏ cho gọn
+  const detail = [n.kind === 'coin' ? null : n.category, timeAgo(n.publishedAt)].filter(Boolean).join(' · ')
   return (
     <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-      <SourceLogo source={n.source} />
-      <Typography variant="caption" color="text.secondary">
-        {n.category} · {timeAgo(n.publishedAt)}
+      <SourceBadge source={n.source} />
+      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+        · {detail}
       </Typography>
+      {n.lang === 'en' && (
+        <Box component="span" title="Bài tiếng Anh" sx={tagSx}>
+          EN
+        </Box>
+      )}
       {tickers.map((t) => (
         <Chip
           key={t}

@@ -72,28 +72,31 @@ export default function NewsFilterBar({ text, onText, filters, onChange, facets,
           />
         ))}
       </Tabs>
-      <ScrollRow>
-        <Chip
-          label="Mọi chủ đề"
-          size="small"
-          color={filters.category ? 'default' : 'primary'}
-          variant={filters.category ? 'outlined' : 'filled'}
-          onClick={() => onChange({ category: null })}
-        />
-        {categories.map((c) => {
-          const on = filters.category === c.value
-          return (
-            <Chip
-              key={c.value}
-              size="small"
-              label={`${c.value} · ${c.count}`}
-              color={on ? 'primary' : 'default'}
-              variant={on ? 'filled' : 'outlined'}
-              onClick={() => onChange({ category: on ? null : c.value })}
-            />
-          )
-        })}
-      </ScrollRow>
+      {/* Chỉ một chủ đề (vd tab Coin): hàng chọn chủ đề không có gì để chọn */}
+      {(categories.length > 1 || filters.category) && (
+        <ScrollRow>
+          <Chip
+            label="Mọi chủ đề"
+            size="small"
+            color={filters.category ? 'default' : 'primary'}
+            variant={filters.category ? 'outlined' : 'filled'}
+            onClick={() => onChange({ category: null })}
+          />
+          {categories.map((c) => {
+            const on = filters.category === c.value
+            return (
+              <Chip
+                key={c.value}
+                size="small"
+                label={`${c.value} · ${c.count}`}
+                color={on ? 'primary' : 'default'}
+                variant={on ? 'filled' : 'outlined'}
+                onClick={() => onChange({ category: on ? null : c.value })}
+              />
+            )
+          })}
+        </ScrollRow>
+      )}
       <Stack direction="row" spacing={1}>
         <TextField
           select

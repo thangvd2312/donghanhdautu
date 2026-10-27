@@ -20,6 +20,8 @@ export interface TextPart {
 
 export interface NewsHit extends NewsItem {
   kind: NewsKind
+  /** Ngôn ngữ bài (tin coin quốc tế là tiếng Anh) */
+  lang: 'vi' | 'en'
   /** Mã cổ phiếu / coin gắn với tin (nếu đã nhận ra) */
   tickers: string[]
   /** Tiêu đề chia đoạn khớp / không khớp; chỉ có khi tìm theo từ khoá và tiêu đề có chỗ khớp */

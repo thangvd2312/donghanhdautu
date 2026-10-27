@@ -223,6 +223,7 @@ export function toHit(doc: NewsDoc, hl?: Record<string, string[]>): NewsHit {
     category: doc.category,
     publishedAt: doc.publishedAt,
     kind: doc.kind,
+    lang: doc.lang,
     tickers: doc.tickers,
   };
   if (!hl) return hit;

@@ -26,6 +26,7 @@ const page = (tag: string, offset: number, total: number, n = 20): NewsSearchRes
     category: 'Vĩ mô',
     publishedAt: '2026-10-27T01:00:00Z',
     kind: 'stock' as const,
+    lang: 'vi' as const,
     tickers: [],
   })),
   total,
