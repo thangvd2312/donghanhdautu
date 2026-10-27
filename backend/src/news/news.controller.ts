@@ -1,15 +1,24 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import type { NewsItem } from '@dautu/contracts';
+import type { NewsSearchResult } from '@dautu/contracts';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { NewsService } from './news.service';
+import { NewsSearchQuery } from './dto/news-search-query.dto';
+import { NewsSearchService } from './search/news-search.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('news')
 export class NewsController {
-  constructor(private news: NewsService) {}
+  constructor(private search: NewsSearchService) {}
 
   @Get()
-  list(@Query('q') q?: string): Promise<NewsItem[]> {
-    return this.news.search(q, 40);
+  list(@Query() q: NewsSearchQuery): Promise<NewsSearchResult> {
+    return this.search.search({
+      q: q.q || undefined,
+      kind: q.kind,
+      category: q.category || undefined,
+      source: q.source || undefined,
+      days: q.days,
+      offset: q.offset ?? 0,
+      limit: q.limit ?? 20,
+    });
   }
 }

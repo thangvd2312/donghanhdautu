@@ -13,7 +13,7 @@ Web xem giá realtime (cổ phiếu VN, vàng, crypto, tỷ giá) cho nhà đầ
 Yêu cầu: Node 22+, Docker.
 
 ```bash
-# 1. Database
+# 1. Database (+ OpenSearch cho tìm tin, tuỳ chọn: thêm --profile search, rồi OPENSEARCH_URL=http://localhost:9201)
 docker compose up -d
 
 # 2. Backend (http://localhost:3000)
@@ -52,6 +52,12 @@ Push lên `main` → GitHub Actions build, unit test (backend + frontend), test 
 - Domain `dautu.thangvu.io.vn` đi qua Cloudflare Tunnel (`cloudflared` trên server) → `http://localhost:4200`.
 - Đối soát sổ giao dịch với bảng `Holding` (không sửa dữ liệu, thoát mã 1 nếu lệch): `cd ~/apps/dautu/backend && node --env-file=../.env dist/portfolio/reconcile.js`.
 - Giá vàng và tỷ giá USDT/VND không có nguồn lịch sử: app tự lưu mỗi ngày (bảng `PriceDaily`, 23:50 và sau mỗi lần khởi động).
+
+### Bật tìm tin bằng OpenSearch
+
+1. Tạo domain trên Amazon OpenSearch Service (OpenSearch 2.x), bật fine-grained access control với master user, cho phép IP của server truy cập.
+2. Thêm vào `.env` trên server: `OPENSEARCH_URL=https://<endpoint>`, `OPENSEARCH_USERNAME`, `OPENSEARCH_PASSWORD`, rồi `pm2 restart ecosystem.config.cjs --update-env`.
+3. Worker tự tạo index `dautu-news-v1` và nạp toàn bộ kho tin từ bảng `NewsArticle` trong PostgreSQL ở lượt kế tiếp (log `Đã tạo index`). Chưa cấu hình hoặc OpenSearch lỗi thì trang Tin tức tìm toàn văn trên PostgreSQL, vẫn đủ 180 ngày và vẫn tô sáng.
 
 ### Bật thông báo Telegram
 

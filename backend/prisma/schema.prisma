@@ -201,6 +201,36 @@ model NewsTag {
   @@index([publishedAt])
 }
 
+/// Kho tin (chứng khoán / vĩ mô từ RSS báo Việt, tin coin), giữ 180 ngày. Là kho gốc của tìm tin: OpenSearch dựng lại
+/// từ đây, và khi OpenSearch lỗi thì tìm toàn văn ngay trên bảng này (cột searchVector).
+model NewsArticle {
+  url          String                   @id
+  title        String
+  summary      String
+  source       String
+  category     String
+  /// stock | coin
+  kind         String
+  /// vi | en
+  lang         String
+  /// Mã cổ phiếu / coin gắn với tin, chữ hoa
+  tickers      String[]
+  /// 0 = thường; 1–5 = mức quan trọng với nhà đầu tư cá nhân (macroScore của bộ gắn nhãn tin)
+  importance   Int                      @default(0)
+  publishedAt  DateTime
+  /// Tiêu đề + mã (trọng số A) và tóm tắt (B), đã bỏ dấu, cấu hình 'simple'; app ghi cùng lúc với nội dung
+  searchVector Unsupported("tsvector")?
+  firstSeenAt  DateTime                 @default(now())
+  /// Lần nội dung đổi gần nhất
+  updatedAt    DateTime
+  /// Lần đưa sang OpenSearch gần nhất; null hoặc cũ hơn updatedAt = cần đưa lại
+  indexedAt    DateTime?
+
+  @@index([publishedAt])
+  @@index([kind, publishedAt])
+  @@index([searchVector], type: Gin)
+}
+
 /// Số liệu vĩ mô tham chiếu lấy trực tiếp từ nguồn chính thức (NHNN, Fed…), có kiểm tra hợp lệ
 model MacroFact {
   key           String   @id

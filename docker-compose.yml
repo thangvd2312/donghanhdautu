@@ -20,6 +20,26 @@ services:
       timeout: 5s
       retries: 20
 
+  # Tìm kiếm tin tức — chỉ dùng khi phát triển local: `docker compose --profile search up -d`.
+  # Server dùng Amazon OpenSearch Service (OPENSEARCH_URL trong .env), không chạy container này.
+  opensearch:
+    image: opensearchproject/opensearch:2.19.2
+    container_name: dautu-opensearch
+    profiles: [search]
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "127.0.0.1:${OPENSEARCH_PORT:-9201}:9200"
+    volumes:
+      - dautu-os:/usr/share/opensearch/data
+
 volumes:
   dautu-pg:
     name: dautuchungkhoan_dautu-pg # tên cố định (giữ đúng volume local cũ), không phụ thuộc tên thư mục
+  dautu-os:
+    name: dautu-opensearch-data

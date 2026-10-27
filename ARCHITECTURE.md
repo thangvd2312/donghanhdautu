@@ -81,12 +81,29 @@ StockResearchService / CompareService ─ ghép adapter + cache thành chi tiế
 - **`MarketDataCache`** (`market/cache`): đệm hai tầng cho dữ liệu không realtime. L1 LRU trong process, L2 bảng `MarketCache` trong PostgreSQL (sống qua deploy). Đọc read-through có single-flight; nguồn lỗi hoặc mạch đang mở thì trả bản cũ trong `staleMs`; lỗi DB không làm hỏng lần đọc. Chính sách và phiên bản khoá theo miền ở `vietcap-cache-policy.ts` (đổi hình dạng dữ liệu thì tăng số phiên bản). Job `market-cache.purge` dọn dòng hết hạn.
 - Nguồn lỗi thì giữ dữ liệu cũ và gắn nhãn (`stale`, `fallback`, `missing`); tính năng cảnh báo bỏ qua thay vì suy ra từ giá thiếu.
 
+### Tìm tin (`backend/src/news/search`)
+
+```
+NewsService (RSS báo Việt) + CryptoNewsService (tin coin) + bảng NewsTag (mã, mức quan trọng)
+  └─ NewsDocsService.current() ─ gộp thành NewsDoc (kind stock | coin, tickers, importance)
+       └─ worker: NewsIndexerService ─ news.index (20 giây sau khi chạy, rồi mỗi 5 phút)
+            ├─ NewsArticleRepository.upsert ─ bảng NewsArticle (kho gốc, 180 ngày, cột searchVector + GIN)
+            └─ đưa tin có indexedAt null / cũ hơn updatedAt sang OpenSearch (_bulk), đánh dấu indexedAt
+web: NewsSearchService ─ GET /api/news: OpenSearch; chưa cấu hình / lỗi → tìm toàn văn trên NewsArticle (cùng hình dạng kết quả)
+```
+
+- **`NewsArticle` là kho gốc**, OpenSearch chỉ là chỉ mục dựng lại được. Mỗi tin đã sang OpenSearch được đánh dấu `indexedAt` (chỉ khi tin chưa đổi thêm từ lúc đọc), nên OpenSearch lỗi một lúc thì lượt sau đưa bù. Index chưa có (lần đầu, đổi tên index khi đổi mapping, bị xoá) thì worker tạo lại rồi nạp lại toàn bộ kho từ DB, tối đa 10.000 tin mỗi lượt. `news.purge` (3:40) xoá tin quá 180 ngày ở cả hai nơi.
+- **OpenSearch**: server dùng Amazon OpenSearch Service (`OPENSEARCH_URL` + master user của fine-grained access control); local dùng container `docker compose --profile search up -d` (cổng 9201). Không đặt `OPENSEARCH_URL` thì chỉ tìm trên PostgreSQL. Mỗi trường chữ có hai bản: giữ dấu (`vi_exact`) và `.fold` bỏ dấu (`asciifolding`, cả `đ → d`); khớp đúng dấu và khớp cụm ở tiêu đề được cộng điểm. Lọc loại tin / chủ đề / nguồn nằm ở `post_filter`, mỗi bộ đếm bỏ đúng bộ lọc của nó.
+- **Tìm toàn văn PostgreSQL** (dự phòng): `searchVector` do app ghi cùng lúc với nội dung (`setweight` tiêu đề + mã = A, tóm tắt = B), từ chữ đã bỏ dấu bằng `foldVi` với cấu hình `simple` — không cần từ điển tiếng Việt hay extension `unaccent` (âm tiết tiếng Việt cách nhau bằng khoảng trắng). Câu tìm chỉ giữ chữ / số rồi mới đưa vào `to_tsquery`; xếp theo `ts_rank` + điểm cộng khi tiêu đề có nguyên cụm, giảm một nửa sau mỗi 7 ngày. OpenSearch lỗi thì web ghi log và tìm trên PostgreSQL 60 giây rồi mới thử lại.
+- Cột thời gian Prisma là `timestamp` chứa giờ UTC còn phiên PostgreSQL chạy giờ Việt Nam: SQL viết tay dùng `now() AT TIME ZONE 'UTC'`, không dùng `now()` trần.
+- **Tô sáng**: OpenSearch đánh dấu chỗ khớp bằng ký tự vùng dùng riêng (`news-highlight.ts`), PostgreSQL thì app tự tìm chỗ khớp trọn từ (`termRanges`); cả hai đổi thành `TextPart[]` (`{ text, hit }`) nên frontend không bao giờ render HTML từ server. Các từ khớp liền nhau gộp thành một đoạn.
+
 ## 6. Việc nền
 
 - **`JobRunner`** (`runtime/job-runner.ts`): mỗi lượt giành **khoá tư vấn PostgreSQL** theo tên việc (`pg_try_advisory_xact_lock`, gắn với một giao dịch nên tự nhả khi commit / kết nối chết). Hai worker (hoặc worker cũ + mới lúc `pm2 reload`) không bao giờ chạy trùng một việc; ai không giành được thì bỏ lượt. Có hạn tối đa mỗi lượt, và chờ việc đang chạy khi tắt (`WORKER_SHUTDOWN_GRACE_MS`, mặc định 25 giây).
 - **Heartbeat** (`runtime/heartbeat.service.ts`): worker ghi bảng `WorkerHeartbeat` mỗi 30 giây; quá 90 giây là chết. `GET /api/health` trả `worker` từ đây; bước deploy chạy `worker-check-cli` để chắc worker **mới** đã sống (khởi động sau mốc reload, nhịp còn mới).
 - Hàng đợi bản tin (`BriefQueueService`: `UPDATE … FOR UPDATE SKIP LOCKED`, việc `running` của process đã chết được đưa lại hàng đợi) và gửi Telegram / Web Push không cần khoá `JobRunner`: mỗi tin được nhận bằng cập nhật có điều kiện (`pending → sending`).
-- Mọi việc định kỳ: xem bảng ở đầu `worker/scheduled-jobs.ts` (bản tin sáng / chiều / tuần, nhắc kế hoạch, tổng kết nhật ký tháng, nhắc sự kiện, ghi giá cuối ngày, cảnh báo danh mục, dọn analytics và cache, cảnh báo giá mỗi phút, tin mỗi 10 phút, macro mỗi 2 giờ).
+- Mọi việc định kỳ: xem bảng ở đầu `worker/scheduled-jobs.ts` (bản tin sáng / chiều / tuần, nhắc kế hoạch, tổng kết nhật ký tháng, nhắc sự kiện, ghi giá cuối ngày, cảnh báo danh mục, dọn analytics và cache, cảnh báo giá mỗi phút, tin mỗi 10 phút, lưu tin vào kho + OpenSearch mỗi 5 phút, macro mỗi 2 giờ).
 
 ## 7. Kiểm thử và database
 
@@ -95,6 +112,7 @@ StockResearchService / CompareService ─ ghép adapter + cache thành chi tiế
 | Unit | `cd backend && npx jest` | `*.spec.ts` | không DB, không mạng; Prisma / market giả |
 | Tích hợp | `TEST_DATABASE_URL=…/dautu_test npm run test:int` | `*.int-spec.ts` | PostgreSQL thật, DB tên kết thúc `_test` (code từ chối DB khác) |
 | Hành vi frontend | `npm test` trong `frontend/` (Vitest, jsdom) | `frontend/src/**/*.test.ts` | không backend: `api/` giả lập bằng `vi.mock`, phản hồi hoàn tất theo thứ tự test chọn |
+| Kho tin + tìm tin | `npm run test:int -- src/news` (thêm `OPENSEARCH_TEST_URL=http://localhost:9201` để chạy cả phần OpenSearch) | `news-search.int-spec.ts` | PostgreSQL `dautu_test`; OpenSearch thật (index tạm, xoá khi xong), không có biến thì bỏ qua phần đó |
 | E2E giao diện | `npx playwright test` trong `frontend/` | `frontend/e2e/*.spec.ts` | web + worker chạy trên DB **`dautu_e2e`**, seed bằng `npm run seed:e2e` (script từ chối DB không kết thúc `_e2e`) |
 
 - `dautu_test` chỉ dành cho integration test: `test:int` xoá và tạo dữ liệu ở đó, nên **không chạy web / worker trên `dautu_test`** (tranh hàng đợi, test chập chờn). Server cho e2e luôn dùng `dautu_e2e`.

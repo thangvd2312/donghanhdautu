@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, Interval } from '@nestjs/schedule';
+import { Cron, Interval, Timeout } from '@nestjs/schedule';
 import { AlertsService } from '../alerts/alerts.service';
 import { BriefsService } from '../alerts/briefs.service';
 import { CryptoBriefService } from '../alerts/crypto-brief.service';
@@ -8,6 +8,7 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import { EventsService } from '../events/events.service';
 import { MacroService } from '../macro/macro.service';
 import { MarketDataCache } from '../market/cache/market-data-cache';
+import { NewsIndexerService } from '../news/search/news-indexer.service';
 import { VN_TZ } from '../market/types';
 import { PlanReminderService } from '../plans/plan-reminder.service';
 import { JournalService } from '../journal/journal.service';
@@ -41,6 +42,8 @@ const HOUR = 60 * MIN;
  * | alerts.prices           | mỗi 60 giây             | AlertsService.checkPrices            |
  * | alerts.news             | mỗi 10 phút             | AlertsService.checkNews              |
  * | macro.refresh           | mỗi 2 giờ               | MacroService.refresh                 |
+ * | news.index              | 20 giây sau khi worker chạy, rồi mỗi 5 phút | NewsIndexerService.sync (lưu tin vào DB, đưa tin mới / đã đổi sang OpenSearch) |
+ * | news.purge              | 3:40 hằng ngày          | NewsIndexerService.purge (xoá tin quá 180 ngày ở DB và OpenSearch) |
  */
 @Injectable()
 export class ScheduledJobs {
@@ -59,6 +62,7 @@ export class ScheduledJobs {
     private readonly alerts: AlertsService,
     private readonly macro: MacroService,
     private readonly tips: TipReviewService,
+    private readonly newsIndexer: NewsIndexerService,
   ) {}
 
   @Cron('30 8 * * 1-5', { timeZone: VN_TZ })
@@ -142,5 +146,21 @@ export class ScheduledJobs {
   @Interval(2 * HOUR)
   macroRefresh() {
     return this.jobs.run('macro.refresh', () => this.macro.refresh());
+  }
+
+  @Interval(5 * MIN)
+  newsIndex() {
+    return this.jobs.run('news.index', () => this.newsIndexer.sync(), { quiet: true });
+  }
+
+  /** Kho tin là nguồn của trang Tin tức: không chờ 5 phút sau khi worker khởi động (deploy, lần chạy đầu) */
+  @Timeout(20_000)
+  newsIndexOnBoot() {
+    return this.newsIndex();
+  }
+
+  @Cron('40 3 * * *', { timeZone: VN_TZ })
+  newsPurge() {
+    return this.jobs.run('news.purge', () => this.newsIndexer.purge());
   }
 }
