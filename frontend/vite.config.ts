@@ -43,6 +43,8 @@ function vendorChunk(id: string, ctx: { getModuleInfo: GetModuleInfo }) {
 
 export default defineConfig({
   plugins: [react()],
+  // Mã của lần build: cache dữ liệu lưu trên máy bị bỏ khi deploy bản mới (cấu trúc dữ liệu có thể đã đổi)
+  define: { __BUILD_ID__: JSON.stringify(Date.now().toString(36)) },
   build: {
     rollupOptions: {
       output: {

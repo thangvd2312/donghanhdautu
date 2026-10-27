@@ -10,6 +10,7 @@ import { useIsMobile } from '../../lib/useIsMobile'
 import BottomNav from './BottomNav'
 import { BOTTOM, BOTTOM_NAV_HEIGHT, DISCLAIMER, matches, MORE, NAV } from './navConfig'
 import Toast from './Toast'
+import UpdatePrompt from './UpdatePrompt'
 import TopBar from './TopBar'
 
 const SearchDialog = lazy(() => import('../SearchDialog'))
@@ -99,6 +100,7 @@ export default function Layout() {
         </Suspense>
       )}
       <Toast />
+      <UpdatePrompt />
     </Box>
   )
 }

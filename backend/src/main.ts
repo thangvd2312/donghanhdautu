@@ -63,7 +63,14 @@ function serveFrontend(app: NestExpressApplication, webDist: string) {
   });
   // File trong assets/ có hash trong tên nên cache vĩnh viễn được
   app.useStaticAssets(join(webDist, 'assets'), { prefix: '/assets', immutable: true, maxAge: '1y' });
-  app.useStaticAssets(webDist, { index: false, maxAge: '1h' });
+  app.useStaticAssets(webDist, {
+    index: false,
+    maxAge: '1h',
+    // Service worker phải luôn kiểm bản mới (kể cả qua cache của Cloudflare), nếu không bản deploy mới tới chậm vài giờ
+    setHeaders: (res: Response, path: string) => {
+      if (path.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');
+    },
+  });
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();

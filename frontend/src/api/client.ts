@@ -1,4 +1,6 @@
 const TOKEN_KEY = 'dautu_token'
+/** Cache dữ liệu TanStack Query lưu trên máy (lib/query) */
+export const CACHE_STORAGE_KEY = 'dautu_cache'
 
 export function getToken(): string | null {
   try {
@@ -12,8 +14,9 @@ export function setToken(token: string | null) {
   try {
     if (token) localStorage.setItem(TOKEN_KEY, token)
     else localStorage.removeItem(TOKEN_KEY)
-    // Đổi / bỏ phiên: thông tin người dùng đã lưu không còn đúng
+    // Đổi / bỏ phiên: thông tin người dùng và dữ liệu đã lưu trên máy không còn đúng / không được để lại
     localStorage.removeItem(ME_KEY)
+    localStorage.removeItem(CACHE_STORAGE_KEY)
   } catch {
     // Trình duyệt chặn storage: phiên chỉ tồn tại tới khi tải lại trang
   }
