@@ -2,7 +2,9 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type {
   AdvisorConversation,
+  AdvisorConversationList,
   AdvisorConversationSummary,
+  ConversationBriefKind,
   AdvisorFeedbackReason,
   AdvisorMessage,
   OkResponse,
@@ -25,14 +27,25 @@ export class AdvisorConversationsService {
     private analytics: AnalyticsService,
   ) {}
 
-  async listConversations(userId: string): Promise<AdvisorConversationSummary[]> {
-    const rows = await this.prisma.conversation.findMany({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-      select: { id: true, title: true, updatedAt: true },
-      take: 50,
-    });
-    return rows.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() }));
+  /** Câu hỏi của người dùng và bản tin tự động lấy riêng, mỗi loại một giới hạn: bản tin coin mỗi giờ không đẩy mất câu hỏi */
+  async listConversations(userId: string): Promise<AdvisorConversationList> {
+    const select = { id: true, title: true, brief: true, headline: true, createdAt: true, updatedAt: true };
+    const [chats, briefs] = await Promise.all([
+      this.prisma.conversation.findMany({
+        where: { userId, brief: null },
+        orderBy: { updatedAt: 'desc' },
+        select,
+        take: 100,
+      }),
+      // Bản tin xếp theo lúc gửi, hỏi thêm trong bản tin cũ không đẩy nó lên đầu
+      this.prisma.conversation.findMany({
+        where: { userId, brief: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        select,
+        take: 120,
+      }),
+    ]);
+    return { chats: chats.map(summary), briefs: briefs.map(summary) };
   }
 
   async deleteConversation(userId: string, id: string): Promise<OkResponse> {
@@ -151,4 +164,22 @@ export class AdvisorConversationsService {
     this.log.warn(`Người dùng báo câu trả lời ${answerId} (${reason})${data.note ? `: ${data.note}` : ''}`);
     return { ok: true };
   }
+}
+
+function summary(c: {
+  id: string;
+  title: string;
+  brief: string | null;
+  headline: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): AdvisorConversationSummary {
+  return {
+    id: c.id,
+    title: c.title,
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
+    ...(c.brief ? { brief: c.brief as ConversationBriefKind } : {}),
+    ...(c.headline ? { headline: c.headline } : {}),
+  };
 }

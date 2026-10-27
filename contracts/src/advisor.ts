@@ -24,11 +24,23 @@ export interface AdvisorStatus {
   enabled: boolean
 }
 
-/** GET /advisor/conversations */
+export type ConversationBriefKind = 'morning' | 'closing' | 'weekly' | 'crypto'
+
 export interface AdvisorConversationSummary {
   id: string
   title: string
+  createdAt: string
   updatedAt: string
+  /** Bản tin tự động (sáng / cuối phiên / tuần / coin); không có = cuộc trò chuyện người dùng tự hỏi */
+  brief?: ConversationBriefKind
+  /** Câu tóm tắt của bản tin (AI viết), hiện thay cho tiêu đề lặp lại */
+  headline?: string
+}
+
+/** GET /advisor/conversations: tách riêng để bản tin mỗi giờ không đẩy mất các câu người dùng tự hỏi */
+export interface AdvisorConversationList {
+  chats: AdvisorConversationSummary[]
+  briefs: AdvisorConversationSummary[]
 }
 
 /** Một lượt hiển thị của cuộc trò chuyện: lượt hỏi của người dùng, hoặc khối trả lời của cố vấn */

@@ -110,6 +110,10 @@ model Conversation {
   userId    String
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
+  /// Bản tin tự động: morning | closing | weekly | crypto; null = cuộc trò chuyện người dùng tự hỏi
+  brief     String?
+  /// Câu tóm tắt của bản tin (AI viết), hiện trong danh sách thay cho tiêu đề lặp lại
+  headline  String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   messages  ChatMessage[]

@@ -162,6 +162,7 @@ export class WeeklyBriefService {
       title,
       prompt: title,
       body,
+      headline,
       notification: {
         kind: 'brief',
         severity: 'info',

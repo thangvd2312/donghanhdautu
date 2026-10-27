@@ -107,6 +107,7 @@ export class BriefsService {
       title,
       prompt: `[Thời điểm hiện tại: ${nowVn()}]\n${title}`,
       body: result.markdown + caution,
+      headline: result.headline,
       notification: {
         kind: 'brief',
         severity: 'info',

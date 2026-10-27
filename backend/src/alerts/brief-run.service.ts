@@ -13,6 +13,8 @@ export interface BriefContent {
   prompt: string;
   /** Nội dung bản tin (markdown) */
   body: string;
+  /** Câu tóm tắt (AI viết), hiện trong danh sách cuộc trò chuyện */
+  headline: string;
   notification: Omit<NotificationInput, 'dedupeKey' | 'link'>;
 }
 
@@ -67,6 +69,9 @@ export class BriefRunService {
           data: {
             userId,
             title: content.title,
+            // key: brief:<kind>:… — tách bản tin khỏi các câu người dùng tự hỏi trong danh sách
+            brief: key.split(':')[1],
+            headline: content.headline.slice(0, 200) || null,
             messages: {
               create: [
                 { role: 'user', content: [{ type: 'text', text: content.prompt }] },

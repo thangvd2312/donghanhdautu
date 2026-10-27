@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import type { AdvisorConversation, AdvisorConversationSummary, AdvisorStatus, OkResponse } from '@dautu/contracts';
+import type { AdvisorConversation, AdvisorConversationList, AdvisorStatus, OkResponse } from '@dautu/contracts';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,7 +23,7 @@ export class AdvisorController {
   }
 
   @Get('conversations')
-  list(@CurrentUser() user: AuthUser): Promise<AdvisorConversationSummary[]> {
+  list(@CurrentUser() user: AuthUser): Promise<AdvisorConversationList> {
     return this.conversations.listConversations(user.id);
   }
 

@@ -15,6 +15,7 @@ const content = (): BriefContent => ({
   title: 'Tổng kết tuần 24/10',
   prompt: 'Tổng kết tuần 24/10',
   body: '| bảng |',
+  headline: 'ổn',
   notification: { kind: 'brief', severity: 'info', title: 'Tổng kết tuần 24/10: ổn', body: 'Đã sẵn sàng' },
 });
 const counts = async (userId: string) => ({
@@ -32,6 +33,15 @@ describe('bản tin mỗi kỳ một lần (PostgreSQL)', () => {
     await Promise.all([runs.run(u.id, KEY, build), runs.run(u.id, KEY, build), runs.run(u.id, KEY, build)]);
     expect(build).toHaveBeenCalledTimes(1);
     expect(await counts(u.id)).toEqual({ conversations: 1, notifications: 1 });
+  });
+
+  it('cuộc trò chuyện của bản tin ghi loại bản tin và câu tóm tắt', async () => {
+    const u = await testUser(prisma, 'brief-kind');
+    await runs.run(u.id, KEY, () => Promise.resolve(content()));
+    expect(await prisma.conversation.findFirst({ where: { userId: u.id } })).toMatchObject({
+      brief: 'weekly',
+      headline: 'ổn',
+    });
   });
 
   it('chạy lại sau khi đã xong không tạo thêm', async () => {
