@@ -12,14 +12,14 @@ import { Link as RouterLink } from 'react-router-dom'
 import type { Plan } from '../lib/types'
 import AssetAvatar from './AssetAvatar'
 import PlanButton from './plans/PlanButton'
-import { ChangePill, QuickAction, ScrollRow } from './ui'
+import { ChangePill, QuickAction } from './ui'
 import WatchButton from './watchlist/WatchButton'
 
 const ask = (text: string) => `/advisor?q=${encodeURIComponent(text)}`
 
 /**
  * Đầu trang của một mã: nhận diện → giá → hành động.
- * Một nút chính (hỏi cố vấn), ba hành động nhanh dạng icon, các câu hỏi gợi ý cuộn ngang —
+ * Hành động nhanh dạng icon cạnh giá, bên dưới là hàng cố vấn: một nút chính + câu hỏi gợi ý tự xuống dòng —
  * thay cho 6 nút chữ xếp chồng trên điện thoại.
  */
 export default function AssetHero({
@@ -56,7 +56,11 @@ export default function AssetHero({
 }) {
   return (
     <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 2, md: 4 }} sx={{ justifyContent: 'space-between' }}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={{ xs: 2, md: 4 }}
+        sx={{ justifyContent: 'space-between', alignItems: { md: 'flex-start' } }}
+      >
         <Box sx={{ minWidth: 0 }}>
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
             <AssetAvatar assetType={assetType} symbol={symbol} size={44} />
@@ -81,39 +85,47 @@ export default function AssetHero({
           {extra && <Box sx={{ mt: 0.75 }}>{extra}</Box>}
         </Box>
 
-        <Stack spacing={1.5} sx={{ width: { md: 380 }, flexShrink: 0 }}>
-          <Stack direction="row" spacing={0.5}>
-            <QuickAction icon={<NotificationsActiveOutlined />} label="Cảnh báo giá" onClick={onAlert} />
-            <WatchButton tile assetType={assetType} symbol={watchSymbol} />
-            {compareSymbol && (
-              <QuickAction
-                icon={<CompareArrowsOutlined />}
-                label="So sánh"
-                to={`/compare?symbols=${encodeURIComponent(compareSymbol)}`}
-                state={{ pick: true }}
-              />
-            )}
-            <PlanButton tile assetType={assetType} symbol={watchSymbol} label={symbol} />
-          </Stack>
-          <Button
-            variant="contained"
-            size="large"
-            fullWidth
-            startIcon={<AutoAwesomeOutlined />}
-            component={RouterLink}
-            to={ask(askText)}
-            sx={{ borderRadius: 99 }}
-          >
-            Hỏi cố vấn về {symbol}
-          </Button>
-          {suggestions.length > 0 && (
-            <ScrollRow>
-              {suggestions.map((s) => (
-                <Chip key={s.label} label={s.label} variant="outlined" clickable component={RouterLink} to={ask(s.text)} />
-              ))}
-            </ScrollRow>
+        <Stack direction="row" spacing={0.5} sx={{ width: { md: 380 }, flexShrink: 0 }}>
+          <QuickAction icon={<NotificationsActiveOutlined />} label="Cảnh báo giá" onClick={onAlert} />
+          <WatchButton tile assetType={assetType} symbol={watchSymbol} />
+          {compareSymbol && (
+            <QuickAction
+              icon={<CompareArrowsOutlined />}
+              label="So sánh"
+              to={`/compare?symbols=${encodeURIComponent(compareSymbol)}`}
+              state={{ pick: true }}
+            />
           )}
+          <PlanButton tile assetType={assetType} symbol={watchSymbol} label={symbol} />
         </Stack>
+      </Stack>
+
+      {/* Hàng cố vấn trải hết chiều ngang: nút chính + câu hỏi gợi ý xuống dòng khi hết chỗ, không bị cắt */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={{ xs: 1.5, md: 2 }}
+        sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider', alignItems: { md: 'center' } }}
+      >
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<AutoAwesomeOutlined />}
+          component={RouterLink}
+          to={ask(askText)}
+          sx={{ borderRadius: 99, flexShrink: 0, width: { xs: '100%', md: 'auto' }, px: { md: 3 } }}
+        >
+          Hỏi cố vấn về {symbol}
+        </Button>
+        {suggestions.length > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 0 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+              Hỏi nhanh:
+            </Typography>
+            {suggestions.map((s) => (
+              <Chip key={s.label} label={s.label} variant="outlined" clickable component={RouterLink} to={ask(s.text)} />
+            ))}
+          </Box>
+        )}
       </Stack>
     </Paper>
   )
