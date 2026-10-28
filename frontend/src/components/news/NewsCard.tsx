@@ -67,7 +67,22 @@ function Meta({ n, terms }: { n: NewsHit; terms: string[] }) {
 export function NewsRow({ n, terms }: { n: NewsHit; terms: string[] }) {
   const searching = terms.length > 0
   return (
-    <Box component="article" sx={{ py: 1.75 }} data-testid="news-row">
+    <Box
+      component="article"
+      data-testid="news-row"
+      sx={{
+        py: 1.75,
+        // Desktop: cả dòng sáng lên khi rê chuột, nút hỏi cố vấn chỉ nổi màu ở tin đang rê (đỡ một cột link xanh)
+        mx: { sm: -2.5 },
+        px: { sm: 2.5 },
+        transition: 'background-color .15s',
+        '@media (hover: hover)': {
+          '&:hover': { bgcolor: 'action.hover' },
+          '& .news-ask': { color: 'text.secondary' },
+          '&:hover .news-ask, & .news-ask:focus-visible': { color: 'primary.main' },
+        },
+      }}
+    >
       <Meta n={n} terms={terms} />
       <Link
         href={n.url}
@@ -75,7 +90,7 @@ export function NewsRow({ n, terms }: { n: NewsHit; terms: string[] }) {
         rel="noreferrer"
         underline="hover"
         color="text.primary"
-        sx={{ display: 'block', mt: 0.75, fontWeight: 600, fontSize: 15.5, lineHeight: 1.4 }}
+        sx={{ display: 'block', mt: 0.75, fontWeight: 600, fontSize: { xs: 15.5, md: 16.5 }, lineHeight: 1.4 }}
       >
         <Highlight parts={n.titleParts} text={n.title} />
       </Link>
@@ -88,6 +103,7 @@ export function NewsRow({ n, terms }: { n: NewsHit; terms: string[] }) {
         size="small"
         component={RouterLink}
         to={advisorLink(n)}
+        className="news-ask"
         startIcon={<AutoAwesomeOutlined sx={{ fontSize: '16px !important' }} />}
         sx={{ mt: 0.5, ml: -0.75, fontSize: 12.5 }}
       >

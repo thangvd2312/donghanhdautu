@@ -265,14 +265,19 @@ export function InfoTip({ children, label = 'Giải thích' }: { children: React
   )
 }
 
-/** Hàng gợi ý cuộn ngang (một dòng) — thay cho nhiều nút xếp chồng trên điện thoại */
+/**
+ * Hàng gợi ý cuộn ngang (một dòng) — thay cho nhiều nút xếp chồng trên điện thoại. Từ md xuống dòng: chuột không vuốt
+ * ngang được và thanh cuộn bị ẩn, cuộn ngang thì phần bị cắt không với tới được.
+ */
 export function ScrollRow({ children }: { children: ReactNode }) {
   return (
     <Stack
       direction="row"
       spacing={1}
+      useFlexGap
       sx={{
-        overflowX: 'auto',
+        overflowX: { xs: 'auto', md: 'visible' },
+        flexWrap: { md: 'wrap' },
         scrollbarWidth: 'none',
         '&::-webkit-scrollbar': { display: 'none' },
         '& > *': { flexShrink: 0 },
