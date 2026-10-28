@@ -2,7 +2,7 @@
 
 ## Cách dùng
 
-Trong **Danh mục → Tài sản đang nắm giữ**, bấm biểu tượng mic. Bấm **Bấm để nói**, nói tiếng Việt rồi dừng. Chữ hiện ngay trong ô nội dung; có thể sửa hoặc gõ/dán thay thế. Bấm **Phân tích tài sản**, kiểm tra từng dòng (số hiện theo kiểu Việt Nam: `50.000.000`, `0,05`; mỗi dòng có **Tổng vốn** = số lượng × giá vốn để soát lỗi đơn vị), bổ sung chỗ thiếu — dòng chữ cam ở chân màn hình đưa tới tài sản còn thiếu — hoặc **Thêm tài sản AI bỏ sót**, chọn danh mục và ngày bắt đầu theo dõi. Bấm **Xem trước khi lưu**, kiểm tra tác động trước/sau, rồi **Xác nhận nhập**.
+Trong **Danh mục**, chạm nút mic nổi (kiểu nút home ảo: kéo đi đâu cũng được, thả ra tự bám mép trái/phải và nhớ vị trí, mờ đi sau vài giây không dùng). Bấm **Bấm để nói**, nói tiếng Việt rồi dừng. Chữ hiện ngay trong ô nội dung; có thể sửa hoặc gõ/dán thay thế. Bấm **Phân tích tài sản**, kiểm tra từng dòng (số hiện theo kiểu Việt Nam: `50.000.000`, `0,05`; mỗi dòng có **Tổng vốn** = số lượng × giá vốn để soát lỗi đơn vị), bổ sung chỗ thiếu — dòng chữ cam ở chân màn hình đưa tới tài sản còn thiếu — hoặc **Thêm tài sản AI bỏ sót**, chọn danh mục và ngày bắt đầu theo dõi. Bấm **Xem trước khi lưu**, kiểm tra tác động trước/sau, rồi **Xác nhận nhập**.
 
 Ví dụ: “Tôi đang có 100 cổ phiếu FPT, giá vốn 100 nghìn một cổ, và 50 triệu tiền mặt.” Có thể khai báo nhiều loại trong một câu: cổ phiếu, crypto, vàng, tiền mặt VND. Không dùng luồng này để ra lệnh mua/bán hoặc thay số dư đã có. Những dòng được xác nhận sẽ cộng thêm số dư đầu kỳ; có thể hoàn tác theo đợt trong **Sổ giao dịch → Nhập CSV**.
 
