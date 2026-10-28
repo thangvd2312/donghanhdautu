@@ -1,0 +1,6 @@
+simulation: holding-voice
+routing: path
+mocks:
+  - name: holding-llm
+    routeKey: llm
+    path: postman/mocks/holding-llm/config.yaml

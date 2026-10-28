@@ -14,10 +14,11 @@ export type AiFeature =
   | 'alert'
   | 'news_tag'
   | 'plan_draft'
+  | 'holding_draft'
   | 'tip_extract'
   | 'tip_check'
   | 'eval';
-type AiRequestKind = 'chat' | 'brief_test' | 'plan_draft' | 'tip_check';
+type AiRequestKind = 'chat' | 'brief_test' | 'plan_draft' | 'tip_check' | 'holding_draft';
 
 /** Lượt "đang chạy" quá thời gian này coi như đã chết (tiến trình khởi động lại giữa chừng), không chặn lượt mới */
 const RUNNING_STALE_MS = 10 * 60_000;
@@ -43,6 +44,7 @@ export class AiUsageService {
     chat: num(process.env.AI_CHAT_DAILY_LIMIT, 40),
     brief_test: num(process.env.AI_BRIEF_TEST_DAILY_LIMIT, 3),
     plan_draft: num(process.env.AI_PLAN_DRAFT_DAILY_LIMIT, 20),
+    holding_draft: num(process.env.AI_HOLDING_DRAFT_DAILY_LIMIT, 20),
     tip_check: num(process.env.AI_TIP_CHECK_DAILY_LIMIT, 20),
   };
   /** Ngân sách chung mỗi ngày (USD) cho phần chi phí tính được; 0 = không giới hạn */
@@ -113,6 +115,7 @@ export class AiUsageService {
           chat: 'câu hỏi cho cố vấn',
           brief_test: 'lượt gửi thử bản tin',
           plan_draft: 'bản nháp kế hoạch',
+          holding_draft: 'lượt phân tích tài sản',
           tip_check: 'lượt soi lời khuyên',
         }[kind];
         throw new AiQuotaError(

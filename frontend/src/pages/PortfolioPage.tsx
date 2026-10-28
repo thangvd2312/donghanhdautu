@@ -1,4 +1,5 @@
 import AddIcon from '@mui/icons-material/Add'
+import MicOutlined from '@mui/icons-material/MicOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -18,6 +19,7 @@ import HoldingsTable from '../components/portfolio/HoldingsTable'
 import PortfolioSummary from '../components/portfolio/PortfolioSummary'
 import PortfolioSwitcher from '../components/portfolio/PortfolioSwitcher'
 import TransactionDialog from '../components/portfolio/TransactionDialog'
+import VoiceHoldingsDialog from '../components/portfolio/VoiceHoldingsDialog'
 import { InfoTip, Panel } from '../components/ui'
 import { usePortfolioData } from '../hooks/usePortfolioData'
 import { fmtNum } from '../lib/format'
@@ -28,6 +30,7 @@ import { useIsMobile } from '../lib/useIsMobile'
 
 export default function PortfolioPage() {
   const [declaring, setDeclaring] = useState(false)
+  const [voiceOpen, setVoiceOpen] = useState(false)
   const [preset, setPreset] = useState<TxPreset | null>(null)
   // Danh mục đang xem nằm trên URL (?p=…) để tải lại / chia sẻ link vẫn đúng chỗ; trống = tất cả
   const [params, setParams] = useSearchParams()
@@ -69,7 +72,12 @@ export default function PortfolioPage() {
         noPadding
         action={
           !declaring && (
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+              {/* Icon-only on phones so the three actions stay on one line */}
+              <Button aria-label="Nhập tài sản bằng giọng nói" title="Nhập tài sản bằng giọng nói" startIcon={mobile ? undefined : <MicOutlined />} onClick={() => setVoiceOpen(true)}
+                sx={{ minHeight: 44, minWidth: 44, borderRadius: 99, px: mobile ? 0 : 1.5, bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)', '&:hover': { bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)' } }}>
+                {mobile ? <MicOutlined /> : 'Nhập bằng mic'}
+              </Button>
               <Button size="small" onClick={() => setDeclaring(true)}>
                 {mobile ? 'Khai báo' : 'Khai báo tài sản đang có'}
               </Button>
@@ -140,6 +148,7 @@ export default function PortfolioPage() {
         accounts={accounts}
         defaultPortfolioId={pf || undefined}
       />
+      {voiceOpen && <VoiceHoldingsDialog accounts={accounts} defaultPortfolioId={pf || undefined} onClose={() => setVoiceOpen(false)} onSaved={changed} />}
     </Stack>
   )
 }

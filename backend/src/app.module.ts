@@ -30,6 +30,7 @@ import { ReportsModule } from './reports/reports.module';
 import { ScreenerModule } from './screener/screener.module';
 import { TipsModule } from './tips/tips.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
+import { HoldingDraftsModule } from './holding-drafts/holding-drafts.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     NewsModule,
     ProfileModule,
     PortfolioModule,
+    HoldingDraftsModule,
     AnalysisModule,
     DividendsModule,
     WatchlistModule,
