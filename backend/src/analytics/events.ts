@@ -97,6 +97,12 @@ export const EVENTS = {
     props: { inBrief: 'true khi hỏi trong cuộc trò chuyện của bản tin' },
     dedupe: 'Không chống trùng: mỗi câu hỏi một sự kiện',
   },
+  advisor_off_topic: {
+    source: 'server',
+    description: 'Câu hỏi cho cố vấn bị bộ lọc chủ đề từ chối vì ngoài đầu tư / tiết kiệm (không ghi nội dung)',
+    props: {},
+    dedupe: 'Không chống trùng: mỗi câu bị từ chối một sự kiện',
+  },
   plan_created: {
     source: 'server',
     description: 'Lưu một kế hoạch đầu tư mới',

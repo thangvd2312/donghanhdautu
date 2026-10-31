@@ -6,6 +6,7 @@ import { estimateCost, PRICE_VERSION, UsageLike } from './pricing';
 
 export type AiFeature =
   | 'chat'
+  | 'scope_check'
   | 'verifier'
   | 'brief_morning'
   | 'brief_closing'

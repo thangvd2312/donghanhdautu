@@ -7,6 +7,7 @@ import { PortfolioModule } from '../portfolio/portfolio.module';
 import { AdvisorConversationsService } from './advisor-conversations.service';
 import { AdvisorController } from './advisor.controller';
 import { AdvisorService } from './advisor.service';
+import { ScopeGuardService } from './scope.service';
 import { AdvisorToolData } from './tool-data';
 import { AdvisorTools } from './tools';
 import { VerifierService } from './verifier.service';
@@ -22,6 +23,7 @@ import { WebService } from './web.service';
     AdvisorToolData,
     WebService,
     VerifierService,
+    ScopeGuardService,
     LlmService,
   ],
   exports: [AdvisorService, AdvisorToolData, VerifierService],

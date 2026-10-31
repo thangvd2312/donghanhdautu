@@ -10,6 +10,8 @@ import { MAX_HISTORY_CHARS } from '../ai/history';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { testPrisma, testUser } from '../test-utils/test-db';
 import { AdvisorEvent, AdvisorService } from './advisor.service';
+import { OFF_TOPIC_REPLY } from './scope.service';
+import type { ScopeCheck, ScopeGuardService } from './scope.service';
 import type { AdvisorTools } from './tools';
 import type { VerifierService } from './verifier.service';
 
@@ -45,7 +47,14 @@ const answer = (text: string, extra: Partial<Reply> = {}): Reply =>
     ...extra,
   }) as unknown as Reply;
 
-function advisor(model: ReturnType<typeof fakeModel>) {
+const inScope: ScopeCheck = { offTopic: false, reason: null };
+
+const later = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 50));
+
+function advisor(
+  model: ReturnType<typeof fakeModel>,
+  scope: (message: string) => ScopeCheck | Promise<ScopeCheck> = () => inScope,
+) {
   const s = new AdvisorService(
     config,
     prisma,
@@ -53,6 +62,7 @@ function advisor(model: ReturnType<typeof fakeModel>) {
     { verify: () => Promise.reject(new Error('không dùng')) } as unknown as VerifierService,
     new AnalyticsService(prisma),
     aiUsage,
+    { check: (message: string) => Promise.resolve(scope(message)) } as unknown as ScopeGuardService,
   );
   Object.assign(s, { client: model.client, model: 'claude-opus-5-5' });
   return s;
@@ -157,6 +167,67 @@ describe('chat cố vấn (PostgreSQL, model giả)', () => {
       content: [{ type: 'tool_result', tool_use_id: 'tu_1', is_error: true }],
     });
     expect(sent[3].role).toBe('user');
+  });
+
+  it('câu ngoài phạm vi (bộ lọc xong sau model): bỏ câu trả lời của model, chỉ lưu lời từ chối; lượt sau lịch sử hợp lệ', async () => {
+    const u = await testUser(prisma, 'chat-off-topic');
+    const m = fakeModel([
+      () => Promise.resolve(answer('Bài thơ: Em ơi…')),
+      () => Promise.resolve(answer('HPG: chờ thêm.')),
+    ]);
+    const s = advisor(m, (q) => (q.includes('thơ') ? later({ offTopic: true, reason: 'Viết thơ' }) : inScope));
+
+    const events = await ask(s, u.id, 'Viết giúp tôi bài thơ tình');
+    expect(events.filter((e) => e.type === 'text')).toEqual([{ type: 'text', text: OFF_TOPIC_REPLY }]);
+    const done = events.at(-1);
+    expect(done).toMatchObject({ type: 'done', answerId: expect.any(String) as string });
+    expect(await running(u.id)).toBe(0);
+    const conv = events.find((e) => e.type === 'conversation') as { id: string };
+    const saved = await prisma.chatMessage.findMany({ where: { conversationId: conv.id }, orderBy: { seq: 'asc' } });
+    expect(saved.map((x) => x.role)).toEqual(['user', 'assistant']);
+    expect(saved[1]).toMatchObject({
+      id: (done as { answerId: string }).answerId,
+      content: [{ type: 'text', text: OFF_TOPIC_REPLY }],
+      meta: { offTopic: { reason: 'Viết thơ' } },
+    });
+    expect(await prisma.analyticsEvent.count({ where: { userId: u.id, name: 'advisor_off_topic' } })).toBe(1);
+
+    // Hỏi tiếp câu đầu tư trong cùng cuộc trò chuyện: model nhận lượt hỏi + lời từ chối trước đó, không có bài thơ
+    expect((await ask(s, u.id, 'HPG có nên mua?', conv.id)).at(-1)).toMatchObject({ type: 'done' });
+    const sent = m.sent.at(-1)!;
+    expect(sent.map((x) => x.role)).toEqual(['user', 'assistant', 'user']);
+    expect(sent[1]).toMatchObject({ content: [{ type: 'text', text: OFF_TOPIC_REPLY }] });
+  });
+
+  it('câu ngoài phạm vi (bộ lọc xong trước): huỷ lượt đang gọi model, ghi usage "aborted"', async () => {
+    const u = await testUser(prisma, 'chat-off-topic-abort');
+    const m = fakeModel([
+      (signal) =>
+        new Promise((_, reject) => signal.addEventListener('abort', () => reject(new Error('Request was aborted.')))),
+    ]);
+    const events = await ask(
+      advisor(m, () => ({ offTopic: true, reason: 'Nấu ăn' })),
+      u.id,
+      'Công thức phở bò',
+    );
+    expect(events.filter((e) => e.type === 'text')).toEqual([{ type: 'text', text: OFF_TOPIC_REPLY }]);
+    expect(events.at(-1)).toMatchObject({ type: 'done' });
+    expect((await usage(u.id)).map((x) => x.outcome)).toEqual(['aborted']);
+    expect(await running(u.id)).toBe(0);
+  });
+
+  it('bộ lọc trả lời chậm hơn model nhưng trong phạm vi: câu trả lời vẫn lưu và báo xong bình thường', async () => {
+    const u = await testUser(prisma, 'chat-scope-slow');
+    const m = fakeModel([() => Promise.resolve(answer('FPT: nắm giữ.'))]);
+    const events = await ask(
+      advisor(m, () => later(inScope)),
+      u.id,
+      'FPT thế nào?',
+    );
+    const done = events.at(-1) as { type: string; answerId: string };
+    expect(done.type).toBe('done');
+    const reply = await prisma.chatMessage.findUnique({ where: { id: done.answerId } });
+    expect(reply).toMatchObject({ role: 'assistant', content: [{ type: 'text', text: 'FPT: nắm giữ.' }] });
   });
 
   it('hội thoại quá dài: mời mở cuộc trò chuyện mới, không gọi model', async () => {

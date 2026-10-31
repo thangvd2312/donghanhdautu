@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { stripEmoji } from '../common/text';
 import { ADVISOR_SYSTEM_PROMPT } from './prompt';
 import { searchLabel, sourcesOf, sourcesOfToolResult } from './advisor-messages';
+import { OFF_TOPIC_REPLY, recentContext, ScopeGuardService } from './scope.service';
 import { AdvisorTools } from './tools';
 import { Evidence, VerifierService } from './verifier.service';
 import type { Verification } from './verifier.service';
@@ -35,6 +36,7 @@ export class AdvisorService {
     private verifier: VerifierService,
     private analytics: AnalyticsService,
     private aiUsage: AiUsageService,
+    private scope: ScopeGuardService,
   ) {
     this.client = createAnthropicClient();
     this.model = config.get<string>('LLM_MODEL_ADVISOR') || config.get<string>('LLM_MODEL') || 'claude-opus-5-5';
@@ -119,30 +121,77 @@ export class AdvisorService {
       messages.push({ role: 'user', content: missing });
     }
 
+    const scopeCheck = this.scope.check(message, recentContext(stored), userId);
+
     const userContent: Anthropic.Beta.BetaContentBlockParam[] = [
       { type: 'text', text: `[Thời điểm hiện tại: ${nowVn()}]\n${message}` },
     ];
     await this.save(conv.id, 'user', userContent, true);
     messages.push({ role: 'user', content: userContent });
 
+    // Bộ lọc chủ đề chạy song song với model cố vấn để không cộng thêm độ trễ: sự kiện được giữ lại và chưa lưu
+    // câu trả lời nào tới khi bộ lọc xong; câu ngoài đầu tư / tiết kiệm thì huỷ lượt, trả lời từ chối cố định
+    const turn = new AbortController();
+    signal.addEventListener('abort', () => turn.abort(), { once: true });
+    const held: AdvisorEvent[] = [];
+    let open = false;
+    const ready = scopeCheck.then((s) => {
+      if (s.offTopic) turn.abort();
+      else {
+        open = true;
+        for (const e of held.splice(0)) emit(e);
+      }
+      return s;
+    });
     const ctx: TurnContext = {
       convId: conv.id,
       userId,
       messages,
-      emit,
-      signal,
+      emit: (e) => (open ? emit(e) : held.push(e)),
+      signal: turn.signal,
+      ready,
       evidence: [],
       answer: [],
       lastAssistantId: null,
       firstAssistantId: null,
     };
-    if (!(await this.runTurns(ctx, MAX_TURNS))) return;
+    const ok = await this.runTurns(ctx, MAX_TURNS);
+    const scope = await ready;
+    if (scope.offTopic) {
+      if (!signal.aborted) await this.declineOffTopic(conv.id, userId, scope.reason, emit);
+      return;
+    }
+    if (!ok) return;
 
     // Lớp kiểm tra: đối chiếu câu trả lời với chính dữ liệu cố vấn đã dùng
     await this.verifyAndCorrect(ctx);
 
     await this.prisma.conversation.update({ where: { id: conv.id }, data: { updatedAt: new Date() } });
     emit({ type: 'done', answerId: ctx.firstAssistantId });
+  }
+
+  /**
+   * Câu ngoài phạm vi: lưu lời từ chối như một câu trả lời — lịch sử vẫn xen kẽ user/assistant hợp lệ cho lượt sau,
+   * và người dùng bấm "Báo sai" được nếu bị chặn nhầm. meta.offTopic để xem lại các lần chặn.
+   */
+  private async declineOffTopic(
+    convId: string,
+    userId: string,
+    reason: string | null,
+    emit: (e: AdvisorEvent) => void,
+  ) {
+    const saved = await this.prisma.chatMessage.create({
+      data: {
+        conversationId: convId,
+        role: 'assistant',
+        content: [{ type: 'text', text: OFF_TOPIC_REPLY }],
+        meta: { offTopic: { reason } },
+      },
+    });
+    emit({ type: 'text', text: OFF_TOPIC_REPLY });
+    await this.prisma.conversation.update({ where: { id: convId }, data: { updatedAt: new Date() } });
+    await this.analytics.track('advisor_off_topic', { userId });
+    emit({ type: 'done', answerId: saved.id });
   }
 
   /** Đo câu hỏi (không ghi nội dung); hỏi trong cuộc trò chuyện của bản tin = hỏi tiếp bản tin */
@@ -296,6 +345,9 @@ export class AdvisorService {
         return false;
       }
 
+      // Chưa có kết quả bộ lọc chủ đề thì chưa lưu; bị huỷ vì ngoài phạm vi thì bỏ câu trả lời này
+      await ctx.ready;
+      if (signal.aborted) return false;
       const savedAssistant = await this.save(convIdForSave, 'assistant', response.content, true);
       ctx.lastAssistantId = savedAssistant.id;
       ctx.firstAssistantId ??= savedAssistant.id;
@@ -341,6 +393,8 @@ interface TurnContext {
   messages: Anthropic.Beta.BetaMessageParam[];
   emit: (e: AdvisorEvent) => void;
   signal: AbortSignal;
+  /** Xong khi bộ lọc chủ đề có kết quả — chờ trước khi lưu câu trả lời đầu tiên */
+  ready: Promise<unknown>;
   /** Dữ liệu công cụ trả về trong lượt này — dùng để đối chiếu câu trả lời */
   evidence: Evidence[];
   /** Phần chữ cố vấn đã viết trong lượt này */

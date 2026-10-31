@@ -196,6 +196,9 @@ async function runCase(
       detail: ok ? '' : `đã gọi: ${tools.join(', ') || 'không có'}`,
     });
   }
+  if (c.noTools) {
+    checks.push({ name: 'không gọi công cụ', ok: !tools.length, detail: tools.join(', ') });
+  }
   for (const m of c.mustMatch ?? []) {
     const ok = new RegExp(m.re, 'i').test(answer);
     checks.push({ name: m.why, ok, detail: ok ? '' : `không thấy /${m.re}/` });
