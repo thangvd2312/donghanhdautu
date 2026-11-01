@@ -19,7 +19,7 @@ import { writeChecked } from './number-check';
 
 const LABEL = 'Bản tin coin';
 
-/** Kỳ của bản tin hằng giờ theo giờ VN: "2026-10-26T15" (mỗi người một bản tin mỗi kỳ) */
+/** Kỳ của bản tin theo giờ VN lúc chạy: "2026-10-26T16" (mỗi người một bản tin mỗi kỳ) */
 export function cryptoPeriod(d = new Date()) {
   const hour = new Intl.DateTimeFormat('en-GB', { timeZone: VN_TZ, hour: '2-digit', hour12: false }).format(d);
   return `${vnDateKey(d)}T${hour.padStart(2, '0').replace('24', '00')}`;
@@ -35,8 +35,8 @@ const BRIEF_SCHEMA = {
   additionalProperties: false,
 };
 
-/** Tin trong chừng này giờ gần nhất: bản tin mỗi giờ, lấy rộng hơn một chút để không sót tin đăng muộn */
-const NEWS_WINDOW_MS = 3 * 3600_000;
+/** Tin trong chừng này giờ gần nhất: bản tin 4 giờ một lần, lấy rộng hơn một chút để không sót tin đăng muộn */
+const NEWS_WINDOW_MS = 5 * 3600_000;
 /** Thông báo của Binance về coin của người dùng: còn hiệu lực lâu hơn tin thường */
 const NOTICE_WINDOW_MS = 7 * 24 * 3600_000;
 /** BTC, ETH luôn có trong bản tin làm mốc so sánh thị trường */
@@ -48,7 +48,7 @@ const round = (v: number | null | undefined, d = 2) =>
 export interface CoinFacts {
   pair: string;
   priceUsdt: number | null;
-  change1hPct: number | null;
+  change4hPct: number | null;
   change24hPct: number | null;
   change7dPct: number | null;
 }
@@ -95,7 +95,7 @@ export function selectCryptoNews(items: CryptoNewsItem[], coins: UserCoin[], now
 }
 
 /**
- * Bản tin coin mỗi giờ, cả cuối tuần (coin giao dịch 24/7), cho người đang giữ hoặc theo dõi coin.
+ * Bản tin coin 4 giờ một lần, cả cuối tuần (coin giao dịch 24/7), cho người đang giữ hoặc theo dõi coin.
  * Như bản tin sáng / chiều: lưu thành cuộc trò chuyện với cố vấn để hỏi tiếp, số liệu được đối chiếu trước khi gửi.
  */
 @Injectable()
@@ -116,7 +116,7 @@ export class CryptoBriefService {
     queue.register('crypto', (userId, period) => this.generate(userId, false, period));
   }
 
-  /** Đầu mỗi giờ (worker/scheduled-jobs.ts) */
+  /** 0, 4, 8, 12, 16, 20 giờ VN (worker/scheduled-jobs.ts) */
   async runAll() {
     if (!this.llm.enabled) return;
     const wanting = new Set(
@@ -198,7 +198,7 @@ export class CryptoBriefService {
         ]),
     );
     return {
-      briefType: 'Bản tin coin hằng giờ (người đọc nhận mỗi giờ: tập trung vào điều mới so với giờ trước)',
+      briefType: 'Bản tin coin 4 giờ một lần (người đọc nhận 6 bản mỗi ngày: tập trung vào điều mới so với bản trước)',
       now: nowVn(),
       investor: profile
         ? {
@@ -226,12 +226,13 @@ export class CryptoBriefService {
         };
       }),
       market: {
-        source: 'Binance (giá, 24 giờ, 7 ngày), alternative.me (Sợ hãi & Tham lam), CoinGecko (tỷ lệ chiếm lĩnh BTC)',
+        source:
+          'Binance (giá, 4 giờ, 24 giờ, 7 ngày), alternative.me (Sợ hãi & Tham lam), CoinGecko (tỷ lệ chiếm lĩnh BTC)',
         reference: REFERENCE_COINS.map((p) => ({ coin: p.replace(/USDT$/, ''), ...facts.get(p) })),
         fearGreedIndex: fearGreed && fearGreedView(fearGreed),
         btcDominance: global && globalView(global),
         usdtVnd: this.market.snapshot().usdt?.mid ?? null,
-        note: 'priceUsdt tính bằng USDT. change1hPct = thay đổi khoảng 1 giờ qua; change24hPct = thay đổi 24 giờ; change7dPct = thay đổi 7 ngày. pnlPct = lãi/lỗ so với giá vốn; null khi chưa có giá (không phải hoà vốn). exceedsYourMaxLoss = true nghĩa là đã lỗ vượt mức lỗ tối đa người dùng chấp nhận.',
+        note: 'priceUsdt tính bằng USDT. change4hPct = thay đổi khoảng 4 giờ qua; change24hPct = thay đổi 24 giờ; change7dPct = thay đổi 7 ngày. pnlPct = lãi/lỗ so với giá vốn; null khi chưa có giá (không phải hoà vốn). exceedsYourMaxLoss = true nghĩa là đã lỗ vượt mức lỗ tối đa người dùng chấp nhận.',
       },
       news: selectCryptoNews(items, me.coins, Date.now()),
     };
@@ -242,7 +243,7 @@ export class CryptoBriefService {
     return {
       pair,
       priceUsdt: q ? q.price : null,
-      change1hPct: round(await this.cryptoMarket.hourChange(pair).catch(() => null)),
+      change4hPct: round(await this.cryptoMarket.fourHourChange(pair).catch(() => null)),
       change24hPct: q ? round(q.changePct) : null,
       change7dPct: round(await this.cryptoMarket.weekChange(pair).catch(() => null)),
     };

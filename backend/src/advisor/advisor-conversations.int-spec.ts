@@ -14,7 +14,7 @@ const service = new AdvisorConversationsService(
 afterAll(() => prisma.$disconnect());
 
 describe('danh sách cuộc trò chuyện (PostgreSQL)', () => {
-  it('bản tin mỗi giờ không đẩy mất câu người dùng tự hỏi; bản tin xếp theo lúc gửi', async () => {
+  it('bản tin coin nhiều không đẩy mất câu người dùng tự hỏi; bản tin xếp theo lúc gửi', async () => {
     const u = await testUser(prisma, 'conv-list');
     const own = await prisma.conversation.create({
       data: { userId: u.id, title: 'Có nên mua thêm HPG?', createdAt: new Date('2026-10-20T03:00:00Z') },

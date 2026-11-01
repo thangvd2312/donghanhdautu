@@ -1,4 +1,4 @@
-import { hourChangePct, parseCryptoGlobal, parseFearGreed, weekChangePct } from './crypto-market.provider';
+import { fourHourChangePct, parseCryptoGlobal, parseFearGreed, weekChangePct } from './crypto-market.provider';
 
 describe('chỉ số Sợ hãi & Tham lam', () => {
   it('giá trị hôm nay, hôm trước, nhãn tiếng Việt', () => {
@@ -47,9 +47,9 @@ describe('% 7 ngày', () => {
   });
 });
 
-describe('% 1 giờ', () => {
-  it('giá hiện tại so với nến 5 phút cách đây 12 nến; thiếu nến → null', () => {
-    expect(hourChangePct([100, ...Array<number>(11).fill(101), 102])).toBeCloseTo(2);
-    expect(hourChangePct([1, 2])).toBeNull();
+describe('% 4 giờ', () => {
+  it('giá hiện tại so với nến 5 phút cách đây 48 nến; thiếu nến → null', () => {
+    expect(fourHourChangePct([999, 100, ...Array<number>(47).fill(101), 102])).toBeCloseTo(2);
+    expect(fourHourChangePct([100, ...Array<number>(47).fill(101)])).toBeNull();
   });
 });

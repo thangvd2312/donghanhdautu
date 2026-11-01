@@ -25,7 +25,7 @@ export const KIND_LABEL: Record<Kind, string> = {
   event: 'Sự kiện quyền sắp tới: cổ tức, quyền mua, đại hội',
   portfolio_health: 'Tình trạng danh mục',
   journal_monthly: 'Tổng kết nhật ký quyết định hằng tháng',
-  crypto_brief: 'Bản tin coin mỗi giờ (cả cuối tuần)',
+  crypto_brief: 'Bản tin coin 4 giờ một lần (cả cuối tuần)',
   tip_review: 'Kết quả lời khuyên đã soi sau 30 / 90 ngày',
 };
 

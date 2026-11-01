@@ -13,7 +13,7 @@ const POLICIES = {
   fearGreed: { freshMs: HOUR, staleMs: 24 * HOUR, source: 'alternative.me' },
   global: { freshMs: 10 * MIN, staleMs: 6 * HOUR, source: 'CoinGecko' },
   week: { freshMs: 30 * MIN, staleMs: 24 * HOUR, source: 'Binance' },
-  hour: { freshMs: 4 * MIN, staleMs: 30 * MIN, source: 'Binance' },
+  fourHour: { freshMs: 4 * MIN, staleMs: 30 * MIN, source: 'Binance' },
 } satisfies Record<string, CachePolicy>;
 
 export interface FearGreed {
@@ -89,10 +89,10 @@ export function weekChangePct(closes: number[]): number | null {
   return base > 0 ? (last / base - 1) * 100 : null;
 }
 
-/** % thay đổi khoảng 1 giờ từ nến 5 phút: giá hiện tại so với giá đóng cửa nến cách đây 12 nến */
-export function hourChangePct(closes: number[]): number | null {
-  if (closes.length < 13) return null;
-  const base = closes[closes.length - 13];
+/** % thay đổi khoảng 4 giờ từ nến 5 phút: giá hiện tại so với giá đóng cửa nến cách đây 48 nến */
+export function fourHourChangePct(closes: number[]): number | null {
+  if (closes.length < 49) return null;
+  const base = closes[closes.length - 49];
   const last = closes[closes.length - 1];
   return base > 0 ? (last / base - 1) * 100 : null;
 }
@@ -115,11 +115,11 @@ export class CryptoMarketProvider {
     );
   }
 
-  /** % thay đổi khoảng 1 giờ của một cặp (BTCUSDT) — cho bản tin coin hằng giờ */
-  hourChange(pair: string): Promise<number | null> {
-    return this.cache.get(`crypto:v1:hour:${pair}`, POLICIES.hour, async () => {
-      const rows = await getJson(`https://api.binance.com/api/v3/klines?symbol=${pair}&interval=5m&limit=13`);
-      return hourChangePct(Array.isArray(rows) ? rows.map((k) => Number((k as unknown[])[4])) : []);
+  /** % thay đổi khoảng 4 giờ của một cặp (BTCUSDT) — cho bản tin coin 4 giờ một lần */
+  fourHourChange(pair: string): Promise<number | null> {
+    return this.cache.get(`crypto:v1:4h:${pair}`, POLICIES.fourHour, async () => {
+      const rows = await getJson(`https://api.binance.com/api/v3/klines?symbol=${pair}&interval=5m&limit=49`);
+      return fourHourChangePct(Array.isArray(rows) ? rows.map((k) => Number((k as unknown[])[4])) : []);
     });
   }
 

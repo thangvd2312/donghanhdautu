@@ -37,7 +37,7 @@ interface ConversationListProps {
 
 /**
  * Danh sách cuộc trò chuyện: cột trái trên desktop, ngăn kéo "Lịch sử" trên điện thoại.
- * Hai tab: câu người dùng tự hỏi và bản tin tự động (bản tin coin mỗi giờ nhiều, để chung sẽ lấn hết).
+ * Hai tab: câu người dùng tự hỏi và bản tin tự động (bản tin coin 6 bản mỗi ngày, để chung sẽ lấn hết).
  */
 export default function ConversationList({ convs, activeId, onSelect, onRemove }: ConversationListProps) {
   const [tab, setTab] = useState<TabKey>('chats')

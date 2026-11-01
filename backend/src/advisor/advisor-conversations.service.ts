@@ -27,7 +27,7 @@ export class AdvisorConversationsService {
     private analytics: AnalyticsService,
   ) {}
 
-  /** Câu hỏi của người dùng và bản tin tự động lấy riêng, mỗi loại một giới hạn: bản tin coin mỗi giờ không đẩy mất câu hỏi */
+  /** Câu hỏi của người dùng và bản tin tự động lấy riêng, mỗi loại một giới hạn: bản tin coin (6 bản mỗi ngày) không đẩy mất câu hỏi */
   async listConversations(userId: string): Promise<AdvisorConversationList> {
     const select = { id: true, title: true, brief: true, headline: true, createdAt: true, updatedAt: true };
     const [chats, briefs] = await Promise.all([

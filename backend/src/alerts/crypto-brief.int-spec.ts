@@ -35,7 +35,7 @@ const cryptoMarket = {
     }),
   global: () => Promise.reject(new Error('CoinGecko down')),
   weekChange: (pair: string) => Promise.resolve(pair === 'SOLUSDT' ? 12.5 : null),
-  hourChange: (pair: string) => Promise.resolve(pair === 'SOLUSDT' ? 0.8 : null),
+  fourHourChange: (pair: string) => Promise.resolve(pair === 'SOLUSDT' ? 0.8 : null),
 } as unknown as CryptoMarketProvider;
 const portfolio = {
   valuation: () =>
@@ -108,7 +108,7 @@ describe('bản tin coin (PostgreSQL)', () => {
         coin: 'SOL',
         status: 'đang giữ',
         priceUsdt: 180,
-        change1hPct: 0.8,
+        change4hPct: 0.8,
         change24hPct: 4.5,
         change7dPct: 12.5,
         pnlPct: -35,

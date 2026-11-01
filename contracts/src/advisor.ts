@@ -37,7 +37,7 @@ export interface AdvisorConversationSummary {
   headline?: string
 }
 
-/** GET /advisor/conversations: tách riêng để bản tin mỗi giờ không đẩy mất các câu người dùng tự hỏi */
+/** GET /advisor/conversations: tách riêng để bản tin coin (6 bản mỗi ngày) không đẩy mất các câu người dùng tự hỏi */
 export interface AdvisorConversationList {
   chats: AdvisorConversationSummary[]
   briefs: AdvisorConversationSummary[]

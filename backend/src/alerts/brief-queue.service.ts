@@ -14,12 +14,12 @@ const num = (v: string | undefined, d: number) => (v !== undefined && v !== '' &
 const BRIEF_CONCURRENCY = num(process.env.BRIEF_CONCURRENCY, 3);
 /** Việc "running" lâu hơn mức này coi như tiến trình đã chết, đưa lại vào hàng đợi */
 export const STALE_JOB_MS = 15 * 60_000;
-/** Bản tin quá hạn thì bỏ, không gửi muộn: sáng/chiều sau 6 giờ, tuần sau 2 ngày, coin (mỗi giờ) sau 50 phút */
+/** Bản tin quá hạn thì bỏ, không gửi muộn: sáng/chiều sau 6 giờ, tuần sau 2 ngày, coin (4 giờ một lần) sau 3 giờ */
 const EXPIRES_MS: Record<BriefJobKind, number> = {
   morning: 6 * 3600_000,
   closing: 6 * 3600_000,
   weekly: 48 * 3600_000,
-  crypto: 50 * 60_000,
+  crypto: 3 * 3600_000,
 };
 /** Chạm ngân sách AI: hoãn việc lại chừng này rồi thử tiếp, không tính là một lần thử */
 const BUDGET_DEFER_MS = 30 * 60_000;

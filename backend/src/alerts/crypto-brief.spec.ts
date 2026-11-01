@@ -27,7 +27,7 @@ describe('chọn tin cho bản tin coin', () => {
       item('Solana C'),
       item('Solana D'),
       item('Fed meeting'),
-      item('Solana old', { publishedAt: at(4) }),
+      item('Solana old', { publishedAt: at(6) }),
     ];
     const n = selectCryptoNews(items, coins, NOW);
     expect(n.byCoin.map((x) => x.title)).toEqual(['Solana A', 'Solana B', 'Solana C']);
@@ -52,9 +52,9 @@ describe('chọn tin cho bản tin coin', () => {
   });
 });
 
-describe('kỳ bản tin hằng giờ', () => {
+describe('kỳ bản tin coin', () => {
   it('theo giờ VN, kể cả qua nửa đêm UTC', () => {
-    expect(cryptoPeriod(new Date('2026-10-26T08:05:00Z'))).toBe('2026-10-26T15');
+    expect(cryptoPeriod(new Date('2026-10-26T09:05:00Z'))).toBe('2026-10-26T16');
     expect(cryptoPeriod(new Date('2026-10-26T17:30:00Z'))).toBe('2026-10-27T00');
   });
 });
