@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router-dom'
 import { NewsRow, ReviewList, TodayBlock } from '../components/home/HomeBlocks'
 import { Panel } from '../components/ui'
+import DeploymentHomeCard from '../components/deployment/DeploymentHomeCard'
 import UpcomingEvents from '../components/events/UpcomingEvents'
 import WatchlistPanel from '../components/watchlist/WatchlistPanel'
 import { getHomeFeed, getHomeReview, getHomeToday } from '../api/home'
@@ -93,6 +94,8 @@ export default function HomePage() {
         </Grid>
       </Grid>
 
+      <DeploymentHomeCard />
+
       <TipPrompt />
 
       <UpcomingEvents />
@@ -147,6 +150,9 @@ function GettingStarted() {
       <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
         <Button variant="contained" component={RouterLink} to="/portfolio">
           Nhập danh mục
+        </Button>
+        <Button variant="outlined" component={RouterLink} to="/deployment">
+          Chưa biết mua gì? Lập kế hoạch giải ngân
         </Button>
         <Button
           variant="outlined"

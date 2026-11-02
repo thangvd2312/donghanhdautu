@@ -51,7 +51,8 @@ export default function TransactionDialog({
 }: {
   open: boolean
   onClose: () => void
-  onSaved: () => void
+  /** Giao dịch vừa lưu (thêm mới hoặc sửa) */
+  onSaved: (tx?: Transaction) => void
   editing?: Transaction | null
   preset?: TxPreset | null
   /** Danh mục của người dùng; có từ 2 trở lên thì hiện ô chọn */
@@ -94,7 +95,7 @@ export default function TransactionDialog({
     setAssetType((t?.assetType && t.assetType !== 'cash' ? t.assetType : preset?.assetType) ?? 'stock')
     setSymbol(t?.symbol && t.assetType !== 'cash' ? t.symbol.replace(/USDT$/, '') : (preset?.symbol?.replace(/USDT$/, '') ?? ''))
     setQuantity(t?.quantity != null ? String(t.quantity) : preset?.quantity != null ? String(preset.quantity) : '')
-    setPrice(t?.price != null ? String(t.price) : '')
+    setPrice(t?.price != null ? String(t.price) : preset?.price != null ? String(preset.price) : '')
     setAmount(t?.amount != null ? String(t.amount) : preset?.amount != null ? String(preset.amount) : '')
     setFee(t?.fee ? String(t.fee) : '')
     setTax(t?.tax ? String(t.tax) : preset?.tax ? String(preset.tax) : '')
@@ -102,7 +103,7 @@ export default function TransactionDialog({
     setFxRate(t?.fxRate != null ? String(t.fxRate) : '')
     setNote(t?.note ?? preset?.note ?? '')
     setEmotion(t?.emotion ?? null)
-    setReason(t?.reason ?? null)
+    setReason(t?.reason ?? preset?.reason ?? null)
     setPlanId(t ? t.planId : undefined)
     setPortfolioId(
       t?.portfolioId ?? preset?.portfolioId ?? defaultPortfolioId ?? accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? '',
@@ -182,9 +183,8 @@ export default function TransactionDialog({
     const { body } = built
     setBusy(true)
     try {
-      if (editing) await updateTransaction(editing.id, body)
-      else await createTransaction(body)
-      onSaved()
+      const saved = editing ? await updateTransaction(editing.id, body) : await createTransaction(body)
+      onSaved(saved)
       onClose()
     } catch (e) {
       setError((e as Error).message)

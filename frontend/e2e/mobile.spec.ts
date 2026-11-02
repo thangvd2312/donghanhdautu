@@ -180,6 +180,51 @@ const scenarios: Scenario[] = [
       await p.waitForTimeout(800)
     },
   },
+  {
+    name: 'deployment-preview',
+    path: '/deployment?new=1',
+    act: async (p) => {
+      // Kế hoạch giải ngân: chọn 100 tr → kết quả (hoặc thông báo lỗi) từ backend thật; mở phần chỉnh tỷ trọng
+      await p.getByTestId('dp-amount').waitFor({ timeout: 25_000 })
+      await click(p, '100 tr')
+      await p.getByTestId('dp-result').or(p.getByTestId('dp-error')).first().waitFor({ timeout: 25_000 })
+      await click(p, 'Chỉnh tỷ trọng')
+    },
+  },
+  {
+    name: 'deployment-saved',
+    path: '/deployment?new=1',
+    act: async (p) => {
+      // Lưu kế hoạch (thay kế hoạch cũ nếu có) → màn theo dõi các đợt
+      await p.getByTestId('dp-amount').waitFor({ timeout: 25_000 })
+      await click(p, '50 tr')
+      await p.getByTestId('dp-save').waitFor({ timeout: 25_000 })
+      await expect(p.getByTestId('dp-save')).toBeEnabled({ timeout: 25_000 })
+      await p.getByTestId('dp-save').click()
+      const replace = p.getByRole('button', { name: 'Lưu kế hoạch mới' })
+      if (await replace.isVisible({ timeout: 1500 }).catch(() => false)) await replace.click()
+      await p.getByTestId('dp-active').waitFor({ timeout: 25_000 })
+      await p.waitForTimeout(600)
+    },
+  },
+  {
+    name: 'deployment-details',
+    path: '/deployment',
+    act: async (p) => {
+      await p.getByTestId('dp-active').waitFor({ timeout: 25_000 })
+      await click(p, 'Tỷ trọng và lý do')
+      await p.getByTestId('dp-rationale').waitFor({ timeout: 10_000 })
+    },
+  },
+  {
+    name: 'deployment-skip-dialog',
+    path: '/deployment',
+    act: async (p) => {
+      await p.getByTestId('dp-active').waitFor({ timeout: 25_000 })
+      await click(p, 'Bỏ qua')
+      await p.getByRole('dialog').waitFor()
+    },
+  },
   { name: 'screener', path: '/screener' },
   { name: 'screener-picker', path: '/screener', act: (p) => click(p, 'Tự chọn điều kiện') },
   {

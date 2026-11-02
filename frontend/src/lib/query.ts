@@ -32,6 +32,8 @@ export const qk = {
   conversations: ['advisor', 'conversations'],
   goals: ['goals'],
   plans: ['plans'],
+  deployment: ['deployment', 'active'],
+  deploymentSetup: ['deployment', 'setup'],
 } as const
 
 function storage(): Storage | undefined {

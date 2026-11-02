@@ -10,7 +10,7 @@ import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import PlanEditor from '../components/plans/PlanEditor'
 import { listPlans } from '../api/plans'
 import { useResource } from '../hooks/useResource'
@@ -24,7 +24,9 @@ import { ChangePill } from '../components/ui'
 /** Danh sách kế hoạch: đang theo dõi (ưu tiên cái đến hạn / chạm mốc) và đã kết thúc */
 export default function PlansPage() {
   const nav = useNavigate()
-  const [creating, setCreating] = useState(false)
+  // ?new=1: mở sẵn form tạo kế hoạch (vd từ phần cổ phiếu tự chọn của Kế hoạch giải ngân)
+  const [params] = useSearchParams()
+  const [creating, setCreating] = useState(params.get('new') === '1')
 
   const { data: plans, error } = useResource(listPlans, { key: qk.plans })
 

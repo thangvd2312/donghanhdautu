@@ -1,6 +1,7 @@
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined'
 import BalanceOutlined from '@mui/icons-material/BalanceOutlined'
 import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined'
+import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined'
 import EventOutlined from '@mui/icons-material/EventOutlined'
 import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined'
 import FilterAltOutlined from '@mui/icons-material/FilterAltOutlined'
@@ -48,6 +49,7 @@ export const BOTTOM: NavItemWithIcon[] = [
 /** Bảng "Thêm" trên điện thoại */
 export const MORE: NavItemWithIcon[] = [
   { to: '/market', label: 'Bảng giá', Icon: ShowChartOutlined },
+  { to: '/deployment', label: 'Kế hoạch giải ngân', Icon: DonutSmallOutlined },
   { to: '/tips', label: 'Soi lời khuyên', Icon: FactCheckOutlined },
   { to: '/goals', label: 'Mục tiêu tài chính', Icon: SavingsOutlined },
   { to: '/journal', label: 'Nhật ký quyết định', Icon: MenuBookOutlined },

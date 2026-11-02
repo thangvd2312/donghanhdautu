@@ -26,9 +26,13 @@ export interface TxPreset {
   /** Điền sẵn (vd từ gợi ý sự kiện quyền): ngày, số lượng, số tiền, thuế, ghi chú */
   date?: string
   quantity?: number
+  /** Giá theo đơn vị của form (cổ phiếu ₫/cp, vàng ₫/lượng; coin là USDT nên không điền sẵn) */
+  price?: number
   amount?: number
   tax?: number
   note?: string
+  /** Lý do trong nhật ký quyết định (vd mua theo Kế hoạch giải ngân) */
+  reason?: JournalReason
 }
 
 /** Giá trị người dùng nhập trong form giao dịch (số đều là chuỗi như trong ô nhập) kèm các cờ suy ra từ loại giao dịch */

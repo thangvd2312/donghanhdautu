@@ -43,8 +43,8 @@ export const addHolding = (body: HoldingInput) => post<unknown>('/portfolio/hold
 
 /** Thân yêu cầu tạo / sửa giao dịch: trường thay đổi theo loại giao dịch nên dựng ở form */
 export type TransactionInput = Record<string, unknown>
-export const createTransaction = (body: TransactionInput) => post<unknown>('/portfolio/transactions', body)
-export const updateTransaction = (id: string, body: TransactionInput) => put<unknown>(`/portfolio/transactions/${id}`, body)
+export const createTransaction = (body: TransactionInput) => post<Transaction>('/portfolio/transactions', body)
+export const updateTransaction = (id: string, body: TransactionInput) => put<Transaction>(`/portfolio/transactions/${id}`, body)
 export const deleteTransaction = (id: string) => del<unknown>(`/portfolio/transactions/${id}`)
 export const listTransactionRevisions = (id: string) => api<TransactionRevision[]>(`/portfolio/transactions/${id}/revisions`)
 

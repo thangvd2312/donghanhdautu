@@ -15,6 +15,7 @@ const TipsPage = lazyPage(pageLoaders.TipsPage)
 const TipDetailPage = lazyPage(pageLoaders.TipDetailPage)
 const ComparePage = lazyPage(pageLoaders.ComparePage)
 const CryptoPage = lazyPage(pageLoaders.CryptoPage)
+const DeploymentPage = lazyPage(pageLoaders.DeploymentPage)
 const EventsPage = lazyPage(pageLoaders.EventsPage)
 const IncomePage = lazyPage(pageLoaders.IncomePage)
 const GoalsPage = lazyPage(pageLoaders.GoalsPage)
@@ -78,6 +79,7 @@ export default function AuthedRoutes() {
             <Route path="/crypto/:symbol" element={page(<CryptoPage />)} />
             <Route path="/screener" element={page(<ScreenerPage />)} />
             <Route path="/simulate" element={page(<SimulatePage />)} />
+            <Route path="/deployment" element={page(<DeploymentPage />)} />
             <Route path="/rebalance" element={page(<RebalancePage />)} />
             <Route path="/compare" element={page(<ComparePage />)} />
             <Route path="/news" element={page(<NewsPage />)} />

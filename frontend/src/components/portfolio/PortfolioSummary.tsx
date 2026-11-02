@@ -117,6 +117,9 @@ export default function PortfolioSummary({ p, perf, accounts, portfolioId: pf }:
             Cảnh báo danh mục: nhắc khi tập trung, lệch tỷ trọng, giảm từ đỉnh
           </Link>
         )}
+        <Link component={RouterLink} to="/deployment" variant="body2" sx={{ display: 'block', mt: 0.5 }}>
+          Có tiền mới? Lập kế hoạch giải ngân: mua gì, bao nhiêu, mấy đợt
+        </Link>
       </Box>
     </Paper>
   )

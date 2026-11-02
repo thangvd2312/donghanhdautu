@@ -10,6 +10,7 @@ export const pageLoaders = {
   TipDetailPage: () => import('./TipDetailPage'),
   ComparePage: () => import('./ComparePage'),
   CryptoPage: () => import('./CryptoPage'),
+  DeploymentPage: () => import('./DeploymentPage'),
   EventsPage: () => import('./EventsPage'),
   IncomePage: () => import('./IncomePage'),
   GoalsPage: () => import('./GoalsPage'),

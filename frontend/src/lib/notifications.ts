@@ -13,4 +13,5 @@ export const KIND_LABEL: Record<string, string> = {
   journal_monthly: 'Nhật ký',
   crypto_brief: 'Bản tin coin',
   tip_review: 'Soi lời khuyên',
+  deployment: 'Kế hoạch giải ngân',
 }
