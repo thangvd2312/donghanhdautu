@@ -48,7 +48,7 @@ export class PortfolioAlertsService {
   ) {}
 
   async settings(userId: string): Promise<PortfolioAlertSettings> {
-    const [list, profile, goals] = await Promise.all([
+    const [list, profile, goals, deployment] = await Promise.all([
       this.store.configs(userId),
       this.prisma.investorProfile.findUnique({ where: { userId }, select: { riskType: true } }),
       this.prisma.goal.findMany({
@@ -57,6 +57,11 @@ export class PortfolioAlertsService {
         orderBy: { targetDate: 'asc' },
         take: 5,
       }),
+      this.prisma.deploymentPlan.findFirst({
+        where: { userId, status: { in: ['active', 'done'] } },
+        orderBy: { createdAt: 'desc' },
+        select: { targetMix: true },
+      }),
     ]);
     const rules = await Promise.all(
       list.map(async ({ kind, row, config }) =>
@@ -64,6 +69,20 @@ export class PortfolioAlertsService {
       ),
     );
     const suggestions: TargetSuggestion[] = [];
+    if (deployment) {
+      // 5 phần của kế hoạch giải ngân → 4 nhóm của cảnh báo: ETF + tự chọn = cổ phiếu, tiền gửi = tiền mặt
+      const m = deployment.targetMix as Record<string, number>;
+      suggestions.push({
+        source: 'deployment',
+        label: 'Theo kế hoạch giải ngân',
+        targets: {
+          stock: (m.etf ?? 0) + (m.picks ?? 0),
+          crypto: m.crypto ?? 0,
+          gold: m.gold ?? 0,
+          cash: m.savings ?? 0,
+        },
+      });
+    }
     const ref = profile ? referenceTargets(profile.riskType) : null;
     if (profile && ref) {
       suggestions.push({

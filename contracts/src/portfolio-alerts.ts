@@ -44,8 +44,8 @@ export interface PortfolioAlertLimits {
 
 /** Gợi ý tỷ trọng mục tiêu cho quy tắc lệch tỷ trọng */
 export interface TargetSuggestion {
-  /** profile | goal */
-  source: 'profile' | 'goal'
+  /** profile | goal | deployment (kế hoạch giải ngân đang chạy) */
+  source: 'profile' | 'goal' | 'deployment'
   label: string
   targets: GroupTargets
 }

@@ -39,6 +39,7 @@ model User {
   paperAccount        PaperAccount?
   portfolioAlertRules PortfolioAlertRule[]
   tipChecks           TipCheck[]
+  deploymentPlans     DeploymentPlan[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -888,4 +889,76 @@ model TipCheck {
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+}
+
+/// Kế hoạch giải ngân (docs/DESIGN_INVEST_PLAN.md): có X tiền thì chia vào đâu, mua gì, mấy đợt. Mỗi người một kế hoạch
+/// đang chạy; lưu kế hoạch mới thì kế hoạch cũ chuyển sang cancelled.
+model DeploymentPlan {
+  id                String           @id @default(cuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolioId       String?
+  /// VND: một lần, hoặc mỗi tháng khi mode = monthly
+  amount            Float
+  /// one_time | monthly
+  mode              String
+  /// short | medium | long (đã suy từ needBy nếu có)
+  horizon           String
+  needBy            DateTime?        @db.Date
+  /// Yêu cầu đã chốt (DeploymentRequest: quỹ dự phòng, nợ, số đợt, ETF, tỷ trọng tự chỉnh), kèm ngày khai
+  inputs            Json
+  /// Tỷ trọng 5 phần đang dùng, và gợi ý theo hồ sơ lúc lập
+  targetMix         Json
+  suggestedMix      Json
+  /// Kết quả lúc lập (DeploymentPreview không kèm các đợt): phần, kịch bản xấu, điều chỉnh, ghi chú
+  snapshot          Json
+  /// Lời giải thích của AI (bước 4); null = dùng câu mẫu của quy tắc
+  rationale         Json?
+  /// active | done | cancelled
+  status            String           @default("active")
+  nextReviewAt      DateTime         @db.Date
+  /// Ngày xem lại đã nhắc gần nhất, để không nhắc trùng
+  remindedReviewFor DateTime?        @db.Date
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  steps             DeploymentStep[]
+
+  @@index([userId, status])
+  @@index([status, nextReviewAt])
+}
+
+/// Một đợt của kế hoạch giải ngân: trả nợ, quỹ dự phòng, hoặc mua một sản phẩm
+model DeploymentStep {
+  id            String         @id @default(cuid())
+  planId        String
+  plan          DeploymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// Thứ tự trong kế hoạch (theo ngày, cùng ngày: lớp an toàn rồi 5 phần)
+  seq           Int
+  dueDate       DateTime       @db.Date
+  /// savings | gold | etf | picks | crypto | debt | emergency
+  kind          String
+  /// stock | gold | crypto | cash; null = trả nợ
+  assetType     String?
+  /// E1VFVN30, mã vàng, BTCUSDT, VND; null = trả nợ / tự chọn chưa có mã
+  symbol        String?
+  label         String
+  /// VND
+  amount        Float
+  tranche       Int
+  tranches      Int
+  /// Giá lúc lập (VND/đơn vị) và số lượng ước tính
+  price         Float?
+  quantity      Float?
+  hint          String?
+  /// pending | done | skipped
+  status        String         @default("pending")
+  skipReason    String?
+  /// Giao dịch đã ghi sổ cho đợt này (không ràng buộc khoá ngoại: xoá giao dịch không làm mất lịch sử đợt)
+  transactionId String?
+  doneAt        DateTime?
+  /// Đã nhắc đến hạn (ngày nhắc), để không nhắc trùng
+  remindedAt    DateTime?
+
+  @@index([planId])
+  @@index([status, dueDate])
 }

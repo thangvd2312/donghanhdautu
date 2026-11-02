@@ -115,6 +115,18 @@ export const EVENTS = {
     props: { decision: 'keep | adjust | close' },
     dedupe: 'Không chống trùng',
   },
+  deployment_saved: {
+    source: 'server',
+    description: 'Lưu một kế hoạch giải ngân',
+    props: { mode: 'one_time | monthly', steps: 'số đợt', overridden: 'true khi tự chỉnh tỷ trọng' },
+    dedupe: 'Không chống trùng',
+  },
+  deployment_completed: {
+    source: 'server',
+    description: 'Kế hoạch giải ngân không còn đợt chưa làm (đã mua / bỏ qua hết)',
+    props: { steps: 'số đợt' },
+    dedupe: 'Không chống trùng',
+  },
   tip_checked: {
     source: 'server',
     description: 'Soi xong một lời khuyên (phiếu đã phân tích)',

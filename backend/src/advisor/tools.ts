@@ -1,8 +1,10 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
+import { DeploymentPlansService } from '../deployment/deployment-plans.service';
 import { MacroService } from '../macro/macro.service';
 import { MarketService } from '../market/market.service';
+import { vnDateKey } from '../market/types';
 import { CryptoMarketProvider } from '../market/providers/crypto-market.provider';
 import { searchCryptoNews } from '../news/crypto-news';
 import { CryptoNewsService } from '../news/crypto-news.service';
@@ -39,6 +41,7 @@ export class AdvisorTools {
     private macro: MacroService,
     private cryptoNews: CryptoNewsService,
     private cryptoMarket: CryptoMarketProvider,
+    private deployment: DeploymentPlansService,
   ) {
     this.defs = {
       get_my_portfolio: {
@@ -51,6 +54,17 @@ export class AdvisorTools {
         schema: Empty,
         label: () => 'Xem hồ sơ & danh mục của bạn',
         run: (_: never, userId: string) => this.data.myPortfolio(userId),
+      },
+      get_my_invest_plan: {
+        tool: {
+          name: 'get_my_invest_plan',
+          description:
+            'Kế hoạch giải ngân đang chạy của người dùng (do quy tắc của app tính theo hồ sơ): số tiền, tỷ trọng mục tiêu 5 phần (tiền gửi, vàng, ETF, cổ phiếu tự chọn, crypto) và gợi ý gốc, các điều chỉnh theo hồ sơ, lớp an toàn (nợ, quỹ dự phòng), sản phẩm và cách mua từng phần, kịch bản xấu, tiến độ, các đợt sắp tới / đến hạn, ngày xem lại. plan = null nghĩa là chưa có kế hoạch.',
+          input_schema: { type: 'object', properties: {} },
+        },
+        schema: Empty,
+        label: () => 'Xem kế hoạch giải ngân của bạn',
+        run: (_: never, userId: string) => this.investPlan(userId),
       },
       get_market_overview: {
         tool: {
@@ -296,6 +310,51 @@ export class AdvisorTools {
     } catch (e) {
       return { ok: false, content: `Lỗi khi lấy dữ liệu: ${(e as Error).message}` };
     }
+  }
+
+  /** Kế hoạch giải ngân gọn cho AI: bỏ id và các trường chỉ dùng cho giao diện */
+  private async investPlan(userId: string) {
+    const v = await this.deployment.active(userId);
+    if (!v) return { plan: null, page: '/deployment' };
+    const p = v.plan;
+    const today = vnDateKey();
+    const pending = v.steps.filter((s) => s.status === 'pending');
+    return {
+      page: '/deployment',
+      status: v.status,
+      createdAt: v.createdAt.slice(0, 10),
+      amount: p.amount,
+      mode: p.mode,
+      horizon: p.horizon,
+      needBy: p.needBy,
+      profile: p.profile,
+      safety: p.safety.map((s) => ({ kind: s.kind, amount: s.amount, text: s.text })),
+      targetMixPct: p.mix,
+      suggestedMixPct: p.suggestedMix,
+      adjustments: p.adjustments.map((a) => a.text),
+      userOverrides: p.overrides,
+      warnings: p.warnings,
+      parts: p.parts.map((x) => ({
+        part: x.label,
+        targetPct: x.targetPct,
+        amount: x.amount,
+        instrument: x.instrument,
+        how: x.how,
+        note: x.note,
+      })),
+      worstCase: { declinePct: p.worstCase.dropPct, maxDrawdownPct: p.worstCase.limitPct, ok: p.worstCase.ok },
+      progress: v.progress,
+      dueNow: pending
+        .filter((s) => s.dueDate <= today)
+        .map((s) => ({ dueDate: s.dueDate, label: s.label, amount: s.amount })),
+      upcoming: pending
+        .filter((s) => s.dueDate > today)
+        .slice(0, 8)
+        .map((s) => ({ dueDate: s.dueDate, label: s.label, amount: s.amount })),
+      skipped: v.steps.filter((s) => s.status === 'skipped').map((s) => ({ label: s.label, reason: s.skipReason })),
+      nextReviewAt: v.nextReviewAt,
+      explanation: v.rationale?.summary ?? null,
+    };
   }
 
   label(name: string, input: unknown) {

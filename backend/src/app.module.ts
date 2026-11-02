@@ -9,6 +9,7 @@ import { HomeModule } from './home/home.module';
 import { JournalModule } from './journal/journal.module';
 import { PlansModule } from './plans/plans.module';
 import { DemoModule } from './demo/demo.module';
+import { DeploymentModule } from './deployment/deployment.module';
 import { EventsModule } from './events/events.module';
 import { GoalsModule } from './goals/goals.module';
 import { TelegramModule } from './telegram/telegram.module';
@@ -48,6 +49,7 @@ import { HoldingDraftsModule } from './holding-drafts/holding-drafts.module';
     PortfolioModule,
     HoldingDraftsModule,
     AnalysisModule,
+    DeploymentModule,
     DividendsModule,
     WatchlistModule,
     HomeModule,

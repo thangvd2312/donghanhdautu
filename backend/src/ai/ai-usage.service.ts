@@ -18,8 +18,9 @@ export type AiFeature =
   | 'holding_draft'
   | 'tip_extract'
   | 'tip_check'
+  | 'deployment_explain'
   | 'eval';
-type AiRequestKind = 'chat' | 'brief_test' | 'plan_draft' | 'tip_check' | 'holding_draft';
+type AiRequestKind = 'chat' | 'brief_test' | 'plan_draft' | 'tip_check' | 'holding_draft' | 'deployment_explain';
 
 /** Lượt "đang chạy" quá thời gian này coi như đã chết (tiến trình khởi động lại giữa chừng), không chặn lượt mới */
 const RUNNING_STALE_MS = 10 * 60_000;
@@ -47,6 +48,7 @@ export class AiUsageService {
     plan_draft: num(process.env.AI_PLAN_DRAFT_DAILY_LIMIT, 20),
     holding_draft: num(process.env.AI_HOLDING_DRAFT_DAILY_LIMIT, 20),
     tip_check: num(process.env.AI_TIP_CHECK_DAILY_LIMIT, 20),
+    deployment_explain: num(process.env.AI_DEPLOYMENT_EXPLAIN_DAILY_LIMIT, 10),
   };
   /** Ngân sách chung mỗi ngày (USD) cho phần chi phí tính được; 0 = không giới hạn */
   readonly dailyBudgetUsd = num(process.env.AI_DAILY_BUDGET_USD, 20);
@@ -118,6 +120,7 @@ export class AiUsageService {
           plan_draft: 'bản nháp kế hoạch',
           holding_draft: 'lượt phân tích tài sản',
           tip_check: 'lượt soi lời khuyên',
+          deployment_explain: 'lượt giải thích kế hoạch giải ngân',
         }[kind];
         throw new AiQuotaError(
           `Bạn đã dùng hết ${limit} ${what} của hôm nay. Lượt mới có lại từ 0 giờ đêm nay; dữ liệu danh mục vẫn dùng bình thường.`,

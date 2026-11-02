@@ -149,10 +149,26 @@ export const RISK_TYPE_LABEL: Record<string, string> = {
   aggressive: 'Mạo hiểm',
 };
 
-/** Tỷ trọng tham khảo theo kiểu nhà đầu tư — điểm xuất phát để cố vấn so sánh, không phải chân lý */
-export const REFERENCE_ALLOCATION: Record<string, Record<string, number>> = {
-  conservative: { 'tiền gửi/tiền mặt': 40, vàng: 25, 'cổ phiếu cơ bản tốt': 30, crypto: 0, 'dự phòng khác': 5 },
-  balanced: { 'tiền gửi/tiền mặt': 25, vàng: 15, 'cổ phiếu cơ bản tốt': 55, crypto: 5 },
-  growth: { 'tiền gửi/tiền mặt': 15, vàng: 10, 'cổ phiếu': 65, crypto: 10 },
-  aggressive: { 'tiền gửi/tiền mặt': 10, vàng: 5, 'cổ phiếu': 65, crypto: 20 },
-};
+/**
+ * Tỷ trọng mục tiêu theo kiểu nhà đầu tư (%), chủ sản phẩm duyệt 01/11/2026 (docs/DESIGN_INVEST_PLAN.md §3 bước 2).
+ * Nguồn duy nhất cho cả app: Kế hoạch giải ngân, mức tham khảo của cố vấn, "Cần xem lại" và gợi ý Cảnh báo danh mục.
+ * savings = tiền gửi / tiền mặt, etf = cổ phiếu lõi (ETF), picks = cổ phiếu tự chọn.
+ */
+export const TARGET_MIX: Record<string, { savings: number; gold: number; etf: number; picks: number; crypto: number }> =
+  {
+    conservative: { savings: 55, gold: 20, etf: 25, picks: 0, crypto: 0 },
+    balanced: { savings: 30, gold: 15, etf: 35, picks: 15, crypto: 5 },
+    growth: { savings: 15, gold: 10, etf: 45, picks: 20, crypto: 10 },
+    aggressive: { savings: 10, gold: 5, etf: 40, picks: 30, crypto: 15 },
+  };
+
+/**
+ * TARGET_MIX theo 4 nhóm tài sản của danh mục (cổ phiếu = ETF + tự chọn), khoá là nhãn tiếng Việt để cố vấn đọc được.
+ * Điểm xuất phát để so sánh, không phải chân lý.
+ */
+export const REFERENCE_ALLOCATION: Record<string, Record<string, number>> = Object.fromEntries(
+  Object.entries(TARGET_MIX).map(([type, m]) => [
+    type,
+    { 'tiền gửi/tiền mặt': m.savings, vàng: m.gold, 'cổ phiếu (ETF + tự chọn)': m.etf + m.picks, crypto: m.crypto },
+  ]),
+);

@@ -350,14 +350,14 @@ describe('reviewPoints', () => {
   });
 
   it('nhắc rủi ro tập trung và lệch phân bổ tham khảo', () => {
-    // FPT chiếm ~91%, cổ phiếu cao hơn nhiều mức tham khảo 55% của kiểu cân bằng
+    // FPT chiếm ~91%, cổ phiếu cao hơn nhiều mức tham khảo 50% (ETF 35 + tự chọn 15) của kiểu cân bằng
     const v = valuation([holding('1', 'stock', 'FPT', 1000, 100_000), holding('2', 'cash', 'VND', 10_000_000, 1)], {
       FPT: 100_000,
     });
     const points = reviewPoints(v, balanced, []);
     expect(points.find((p) => p.id === 'concentration:1')?.title).toContain('FPT');
     // Cổ phiếu chỉ có FPT nên mức tham khảo được gộp vào điểm tập trung
-    expect(points.find((p) => p.id === 'concentration:1')?.reason).toContain('Cân bằng là 55%');
+    expect(points.find((p) => p.id === 'concentration:1')?.reason).toContain('Cân bằng là 50%');
 
     // Nhiều mã nhỏ: không mã nào quá tập trung nhưng cả nhóm lệch mức tham khảo
     const spread = valuation(
@@ -371,7 +371,7 @@ describe('reviewPoints', () => {
       { FPT: 100_000, HPG: 100_000, VNM: 100_000, MWG: 100_000 },
     );
     const alloc = reviewPoints(spread, balanced, []).find((p) => p.id === 'allocation:stock');
-    expect(alloc?.title).toContain('55%');
+    expect(alloc?.title).toContain('50%');
     expect(alloc?.reason).toContain('Cân bằng');
   });
 

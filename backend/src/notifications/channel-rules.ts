@@ -12,6 +12,7 @@ export const KINDS = [
   'journal_monthly',
   'crypto_brief',
   'tip_review',
+  'deployment',
 ] as const;
 export type Kind = (typeof KINDS)[number];
 
@@ -27,6 +28,7 @@ export const KIND_LABEL: Record<Kind, string> = {
   journal_monthly: 'Tổng kết nhật ký quyết định hằng tháng',
   crypto_brief: 'Bản tin coin 4 giờ một lần (cả cuối tuần)',
   tip_review: 'Kết quả lời khuyên đã soi sau 30 / 90 ngày',
+  deployment: 'Đợt mua đến hạn và nhắc xem lại kế hoạch giải ngân',
 };
 
 /** Mặc định khi mới kết nối: chỉ những tin cần hành động; người dùng tự bật thêm */
@@ -46,6 +48,8 @@ export const DEFAULT_KINDS: Record<Kind, boolean> = {
   crypto_brief: false,
   // Kết quả chấm lại lời khuyên đã soi: luôn có trong app, gửi ra ngoài khi người dùng tự bật
   tip_review: false,
+  // Việc cần làm theo lịch người dùng tự lập: như nhắc xem lại kế hoạch
+  deployment: true,
 };
 
 /** Tối đa số tin / giờ gửi cho một người */
@@ -129,6 +133,7 @@ const GENERIC_TITLE: Record<string, string> = {
   journal_monthly: 'Tổng kết thói quen đầu tư tháng trước đã sẵn sàng',
   crypto_brief: 'Bản tin coin mới của bạn đã sẵn sàng',
   tip_review: 'Đã có kết quả của một lời khuyên bạn từng soi',
+  deployment: 'Đến đợt mua hoặc hạn xem lại kế hoạch giải ngân',
 };
 
 function escapeHtml(s: string) {
