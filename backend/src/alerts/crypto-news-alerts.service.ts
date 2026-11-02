@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { vnDateKey } from '../market/types';
 import { itemCoins } from '../news/crypto-news';
 import type { CryptoNewsItem } from '../news/crypto-news';
-import { CryptoNewsService } from '../news/crypto-news.service';
+import { NewsReviewService } from '../news/news-review.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertAudience } from './alert-audience.service';
 import type { CoinRecipient, UserCoin } from './alert-audience.service';
@@ -29,7 +29,7 @@ const newsKey = (base: string, url: string) => `cnews:${base}:${url}`;
 @Injectable()
 export class CryptoNewsAlerts {
   constructor(
-    private news: CryptoNewsService,
+    private news: NewsReviewService,
     private audience: AlertAudience,
     private notifier: NotifierService,
     private personal: PersonalAlertService,
@@ -37,7 +37,7 @@ export class CryptoNewsAlerts {
   ) {}
 
   async check(now = new Date()) {
-    const items = (await this.news.all()).filter(
+    const items = (await this.news.coinNews()).filter(
       (i) => Date.parse(i.publishedAt) > now.getTime() - (i.notice ? NOTICE_LOOKBACK_MS : LOOKBACK_MS),
     );
     if (!items.length) return;

@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { NewsItem } from '@dautu/contracts';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CryptoNewsService } from '../crypto-news.service';
 import type { CryptoNewsItem } from '../crypto-news';
-import { NewsService } from '../news.service';
+import { NewsReviewService } from '../news-review.service';
 import type { NewsDoc } from './news-index';
 
 /** Nhãn của bộ gắn nhãn tin (bảng NewsTag) */
@@ -50,19 +49,21 @@ export function toDocs(stock: NewsItem[], crypto: CryptoNewsItem[], tags: Map<st
   return [...byUrl.values()].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }
 
-/** Tin hiện có trên các nguồn (đã gộp, cache 5 phút ở NewsService / CryptoNewsService) kèm nhãn mã + mức quan trọng */
+/**
+ * Tin hiện có trên các nguồn (đã gộp, cache 5 phút ở NewsService / CryptoNewsService) mà AI đã giữ lại (có ảnh hưởng
+ * tới đầu tư), kèm nhãn mã + mức quan trọng
+ */
 @Injectable()
 export class NewsDocsService {
   constructor(
     private prisma: PrismaService,
-    private news: NewsService,
-    private cryptoNews: CryptoNewsService,
+    private review: NewsReviewService,
   ) {}
 
   async current(): Promise<NewsDoc[]> {
     const [stock, crypto] = await Promise.all([
-      this.news.all().catch((): NewsItem[] => []),
-      this.cryptoNews.all().catch((): CryptoNewsItem[] => []),
+      this.review.stockNews().catch((): NewsItem[] => []),
+      this.review.coinNews().catch((): CryptoNewsItem[] => []),
     ]);
     const rows = stock.length
       ? await this.prisma.newsTag.findMany({

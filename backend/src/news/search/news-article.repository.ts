@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { foldVi, queryTerms } from './news-highlight';
 import { FEATURED_MIN_IMPORTANCE } from './news-index';
 import type { NewsDoc, NewsSearchParams } from './news-index';
+import type { ReviewItem } from '../news-review';
 
 /**
  * Cột thời gian của Prisma là `timestamp` (không múi giờ) chứa giờ UTC, còn phiên PostgreSQL chạy giờ Việt Nam
@@ -114,6 +115,29 @@ export class NewsArticleRepository {
   /** Index OpenSearch mới (lần đầu, đổi mapping, bị xoá): đánh dấu mọi tin cần đưa lại */
   async resetIndexed(): Promise<number> {
     return this.prisma.$executeRaw`UPDATE "NewsArticle" SET "indexedAt" = NULL WHERE "indexedAt" IS NOT NULL`;
+  }
+
+  /** Tin trong kho chưa được AI chấm (lưu trước khi có bước lọc), mới nhất trước */
+  async unreviewed(limit: number): Promise<ReviewItem[]> {
+    const rows = await this.prisma.$queryRaw<(Omit<ReviewItem, 'publishedAt'> & { publishedAt: Date })[]>`
+      SELECT a.url, a.title, a.summary, a.source, a.category, a.kind, a."publishedAt"
+      FROM "NewsArticle" a LEFT JOIN "NewsTag" t ON t.url = a.url
+      WHERE t.relevant IS NULL
+      ORDER BY a."publishedAt" DESC LIMIT ${limit}`;
+    return rows.map((r) => ({
+      ...r,
+      kind: r.kind === 'coin' ? 'coin' : 'stock',
+      publishedAt: r.publishedAt.toISOString(),
+    }));
+  }
+
+  /** Xoá khỏi kho các tin AI đã loại; trả về link đã xoá (để xoá cả trên OpenSearch) */
+  async deleteRejected(): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ url: string }[]>`
+      DELETE FROM "NewsArticle" a USING "NewsTag" t
+      WHERE t.url = a.url AND t.relevant = false
+      RETURNING a.url`;
+    return rows.map((r) => r.url);
   }
 
   async purge(days: number): Promise<number> {

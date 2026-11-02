@@ -1,6 +1,6 @@
 import type { MarketGateway } from '../market/market.gateway';
 import type { CryptoNewsItem } from '../news/crypto-news';
-import type { CryptoNewsService } from '../news/crypto-news.service';
+import type { NewsReviewService } from '../news/news-review.service';
 import { testPrisma, testUser } from '../test-utils/test-db';
 import { AlertAudience } from './alert-audience.service';
 import { CryptoNewsAlerts, MAX_COIN_NEWS_PER_DAY } from './crypto-news-alerts.service';
@@ -35,7 +35,7 @@ function alerts(items: CryptoNewsItem[], userIds: string[]) {
     fire: (u: { id: string }, e: { kind: 'news'; dedupeKey: string; severity: 'info'; event: string }) =>
       notifier.send(u.id, { kind: e.kind, dedupeKey: e.dedupeKey, severity: e.severity, title: e.event, body: 'b' }),
   } as unknown as PersonalAlertService;
-  const news = { all: () => Promise.resolve(items) } as unknown as CryptoNewsService;
+  const news = { coinNews: () => Promise.resolve(items) } as unknown as NewsReviewService;
   return new CryptoNewsAlerts(news, audience, notifier, personal, prisma);
 }
 

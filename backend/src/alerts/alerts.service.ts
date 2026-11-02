@@ -4,7 +4,7 @@ import { CryptoNewsAlerts } from './crypto-news-alerts.service';
 import { HoldingMoveAlerts } from './holding-move-alerts.service';
 import { MacroAlerts } from './macro-alerts.service';
 import { NewsAlerts } from './news-alerts.service';
-import { NewsTaggerService } from './news-tagger.service';
+import { NewsReviewService } from '../news/news-review.service';
 import { PriceAlertsService } from './price-alerts.service';
 
 /**
@@ -20,7 +20,7 @@ export class AlertsService {
 
   constructor(
     private market: MarketService,
-    private tagger: NewsTaggerService,
+    private newsReview: NewsReviewService,
     private holdingMoves: HoldingMoveAlerts,
     private priceTargets: PriceAlertsService,
     private newsAlerts: NewsAlerts,
@@ -49,7 +49,7 @@ export class AlertsService {
     if (this.running.news) return;
     this.running.news = true;
     try {
-      const tags = await this.tagger.tagRecent(24);
+      const tags = await this.newsReview.tagRecent(24);
       await this.newsAlerts.check(tags);
       await this.macroAlerts.checkNews(tags);
     } catch (e) {

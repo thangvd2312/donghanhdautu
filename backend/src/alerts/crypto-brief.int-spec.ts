@@ -2,7 +2,7 @@ import type { MarketGateway } from '../market/market.gateway';
 import type { MarketService } from '../market/market.service';
 import type { CryptoMarketProvider } from '../market/providers/crypto-market.provider';
 import type { CryptoNewsItem } from '../news/crypto-news';
-import type { CryptoNewsService } from '../news/crypto-news.service';
+import type { NewsReviewService } from '../news/news-review.service';
 import type { PortfolioService } from '../portfolio/portfolio.service';
 import { testPrisma, testUser } from '../test-utils/test-db';
 import { AlertAudience } from './alert-audience.service';
@@ -44,7 +44,7 @@ const portfolio = {
     }),
 } as unknown as PortfolioService;
 const news = {
-  all: () =>
+  coinNews: () =>
     Promise.resolve<CryptoNewsItem[]>([
       {
         title: 'Solana upgrade ships',
@@ -57,7 +57,7 @@ const news = {
         coins: [],
       },
     ]),
-} as unknown as CryptoNewsService;
+} as unknown as NewsReviewService;
 
 let seen: { system: string; user: string; feature: string } | null = null;
 const llm = {

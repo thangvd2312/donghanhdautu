@@ -44,7 +44,7 @@ const HOUR = 60 * MIN;
  * | alerts.prices           | mỗi 60 giây             | AlertsService.checkPrices            |
  * | alerts.news             | mỗi 10 phút             | AlertsService.checkNews              |
  * | macro.refresh           | mỗi 2 giờ               | MacroService.refresh                 |
- * | news.index              | 20 giây sau khi worker chạy, rồi mỗi 5 phút | NewsIndexerService.sync (lưu tin vào DB, đưa tin mới / đã đổi sang OpenSearch) |
+ * | news.index              | 20 giây sau khi worker chạy, rồi mỗi 5 phút | NewsIndexerService.sync (AI lọc tin mới, lưu tin có ảnh hưởng tới đầu tư vào DB, chấm bù / xoá tin rác đã lưu, đưa tin mới / đã đổi sang OpenSearch) |
  * | news.purge              | 3:40 hằng ngày          | NewsIndexerService.purge (xoá tin quá 180 ngày ở DB và OpenSearch) |
  */
 @Injectable()

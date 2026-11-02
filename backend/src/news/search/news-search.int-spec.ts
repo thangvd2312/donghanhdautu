@@ -8,6 +8,7 @@ import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../../prisma/prisma.service';
 import { testPrisma } from '../../test-utils/test-db';
 import { NewsArticleRepository } from './news-article.repository';
+import type { NewsReviewService } from '../news-review.service';
 import type { NewsDocsService } from './news-docs.service';
 import type { NewsDoc } from './news-index';
 import { NewsIndexerService } from './news-indexer.service';
@@ -156,6 +157,8 @@ describe('Postgres full-text search (OpenSearch off)', () => {
     config({ OPENSEARCH_URL: OS_URL ?? '', OPENSEARCH_NEWS_INDEX: `dautu-news-test-${Date.now()}` }),
   );
   const docs = { current: () => Promise.resolve(DOCS) } as unknown as NewsDocsService;
+  // Không có AI: không lọc (tin trong DOCS coi như đã được giữ)
+  const review = { enabled: false, review: () => Promise.resolve() } as unknown as NewsReviewService;
   let indexer: NewsIndexerService;
   let search: NewsSearchService;
   const refresh = () => os.request('POST', `/${os.newsIndex}/_refresh`);
@@ -164,7 +167,7 @@ describe('Postgres full-text search (OpenSearch off)', () => {
 
   beforeAll(async () => {
     await clean();
-    indexer = new NewsIndexerService(os, docs, repo);
+    indexer = new NewsIndexerService(os, docs, repo, review);
     search = new NewsSearchService(os, repo);
     await prisma.$executeRaw`UPDATE "NewsArticle" SET "indexedAt" = "updatedAt"`; // tin không phải của test: bỏ qua
   });

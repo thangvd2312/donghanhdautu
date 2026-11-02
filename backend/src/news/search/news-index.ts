@@ -86,6 +86,11 @@ export function bulkBody(index: string, docs: NewsDoc[]): string {
     .join('');
 }
 
+/** Lệnh xoá hàng loạt khỏi index (tin bị loại sau khi đã lưu) */
+export function deleteBody(index: string, urls: string[]): string {
+  return urls.map((u) => `${JSON.stringify({ delete: { _index: index, _id: docId(u) } })}\n`).join('');
+}
+
 type Clause = Record<string, unknown>;
 
 const term = (field: string, value: string): Clause => ({ term: { [field]: value } });

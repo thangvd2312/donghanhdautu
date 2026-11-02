@@ -3,12 +3,11 @@ import { BRIEF_PROMPT } from '../advisor/prompt';
 import { MacroService } from '../macro/macro.service';
 import { MarketService } from '../market/market.service';
 import { VN_TZ, vnDateKey } from '../market/types';
-import { NewsService } from '../news/news.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
 import { LlmService } from './llm.service';
-import { NewsTaggerService } from './news-tagger.service';
+import { NewsReviewService } from '../news/news-review.service';
 import { BriefQueueService } from './brief-queue.service';
 import { writeChecked } from './number-check';
 import { BriefContent, BriefRunService } from './brief-run.service';
@@ -36,8 +35,7 @@ export class BriefsService {
     private prisma: PrismaService,
     private market: MarketService,
     private portfolio: PortfolioService,
-    private news: NewsService,
-    private tagger: NewsTaggerService,
+    private newsReview: NewsReviewService,
     private llm: LlmService,
     private runs: BriefRunService,
     private macro: MacroService,
@@ -122,10 +120,10 @@ export class BriefsService {
     const [profile, valuation, tags] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
       this.portfolio.valuation(userId),
-      this.tagger.tagRecent(kind === 'morning' ? 18 : 10),
+      this.newsReview.tagRecent(kind === 'morning' ? 18 : 10),
     ]);
     const snap = this.market.snapshot();
-    const items = await this.news.all();
+    const items = await this.newsReview.stockNews();
     const byUrl = new Map(items.map((i) => [i.url, i]));
     const heldStocks = [...new Set(valuation.holdings.filter((h) => h.assetType === 'stock').map((h) => h.symbol))];
 
@@ -138,7 +136,7 @@ export class BriefsService {
       tags
         .filter((t) => {
           const item = byUrl.get(t.url);
-          return item && this.tagger.relatesTo(t, item, ticker);
+          return item && this.newsReview.relatesTo(t, item, ticker);
         })
         .slice(0, 3)
         .map((t) => ({ ticker, title: t.title, url: t.url, impact: t.impact })),

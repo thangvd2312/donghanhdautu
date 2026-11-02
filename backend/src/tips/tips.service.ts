@@ -39,7 +39,7 @@ import { MarketService } from '../market/market.service';
 import { TrackedSymbolResolver } from '../market/tracked-symbol.resolver';
 import { vnDateKey } from '../market/types';
 import { searchCryptoNews } from '../news/crypto-news';
-import { CryptoNewsService } from '../news/crypto-news.service';
+import { NewsReviewService } from '../news/news-review.service';
 import { PlanAssetsService } from '../plans/plan-assets.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -110,7 +110,7 @@ export class TipsService {
     private aiUsage: AiUsageService,
     private toolData: AdvisorToolData,
     private verifier: VerifierService,
-    private cryptoNews: CryptoNewsService,
+    private newsReview: NewsReviewService,
     private watchlist: WatchlistService,
     private priceAlerts: PriceAlertsService,
     private analytics: AnalyticsService,
@@ -400,7 +400,7 @@ export class TipsService {
     try {
       if (assetType === 'stock') {
         const rows = await this.prisma.newsTag.findMany({
-          where: { tickers: { has: symbol }, publishedAt: { gte: since } },
+          where: { tickers: { has: symbol }, relevant: true, publishedAt: { gte: since } },
           orderBy: { publishedAt: 'desc' },
           take: 10,
         });
@@ -411,7 +411,7 @@ export class TipsService {
           impact: r.impact,
         }));
       }
-      const items = searchCryptoNews(await this.cryptoNews.all(), symbol.replace(/USDT$/, ''), 20);
+      const items = searchCryptoNews(await this.newsReview.coinNews(), symbol.replace(/USDT$/, ''), 20);
       return items
         .filter((n) => new Date(n.publishedAt) >= since)
         .slice(0, 10)

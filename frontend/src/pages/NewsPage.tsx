@@ -70,7 +70,8 @@ export default function NewsPage() {
       <Box sx={{ mb: 2, gridColumn: { md: '1 / -1' } }}>
         <Typography variant="h5">Tin tức tài chính</Typography>
         <Typography variant="body2" color="text.secondary">
-          CafeF, VnExpress, Coin68, CoinDesk, Binance… cập nhật 5 phút/lần, tìm lại được tin trong 180 ngày
+          CafeF, VnExpress, Coin68, CoinDesk, Binance… cập nhật 5 phút/lần. AI đọc từng tin, chỉ giữ tin có ảnh hưởng tới
+          đầu tư; tìm lại được tin trong 180 ngày
         </Typography>
       </Box>
 

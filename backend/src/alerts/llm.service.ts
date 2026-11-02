@@ -12,6 +12,32 @@ import { compatMode, createAnthropicClient } from '../common/anthropic';
 type LlmTier = 'brief' | 'fast';
 
 /**
+ * Object JSON trong câu trả lời của model: cả đoạn từ `{` đầu tới `}` cuối; không parse được (model in thêm chữ hoặc
+ * một object nữa sau đó, hay gặp ở chế độ tương thích) thì lấy object hoàn chỉnh đầu tiên. Không có thì null.
+ */
+export function parseJsonObject<T>(text: string): T | null {
+  const start = text.indexOf('{');
+  if (start < 0) return null;
+  try {
+    return JSON.parse(text.slice(start, text.lastIndexOf('}') + 1)) as T;
+  } catch {
+    // Tìm dấu } đóng object đầu tiên, bỏ qua ngoặc nằm trong chuỗi
+    let depth = 0;
+    let inString = false;
+    for (let i = start; i < text.length; i++) {
+      const c = text[i];
+      if (inString) {
+        if (c === '\\') i++;
+        else if (c === '"') inString = false;
+      } else if (c === '"') inString = true;
+      else if (c === '{') depth++;
+      else if (c === '}' && --depth === 0) return JSON.parse(text.slice(start, i + 1)) as T;
+    }
+    throw new Error('Câu trả lời của model không có object JSON hoàn chỉnh');
+  }
+}
+
+/**
  * Gọi LLM cho các tác vụ nền (soạn thông báo, đọc tin, viết bản tin) và nhận về JSON.
  * Luôn dùng stream vì một số router trả định dạng OpenAI cho request không stream.
  * Ở chế độ tương thích (router bên thứ ba) không dùng structured outputs mà yêu cầu JSON qua prompt.
@@ -83,8 +109,7 @@ export class LlmService {
       });
       if (res.stop_reason === 'refusal') return null;
       const text = res.content.find((b): b is Anthropic.TextBlock => b.type === 'text')?.text;
-      const json = text?.match(/\{[\s\S]*\}/)?.[0];
-      return json ? (JSON.parse(json) as T) : null;
+      return text ? parseJsonObject<T>(text) : null;
     } catch (e) {
       void this.usage?.record({
         feature: opts.feature,

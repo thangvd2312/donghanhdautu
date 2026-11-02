@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { HomeFeed } from '@dautu/contracts';
-import { NewsService } from '../news/news.service';
+import { NewsReviewService } from '../news/news-review.service';
 import type { NewsItem } from '../news/news.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { selectFeedNews } from './feed-news';
@@ -15,7 +15,7 @@ const NEWS_HOURS = 48;
 export class HomeFeedService {
   constructor(
     private prisma: PrismaService,
-    private news: NewsService,
+    private news: NewsReviewService,
   ) {}
 
   /** Bản tin mới nhất + tin về các mã đang nắm giữ / theo dõi + tin vĩ mô quan trọng */
@@ -28,7 +28,7 @@ export class HomeFeedService {
       }),
       this.prisma.holding.findMany({ where: { userId, assetType: 'stock' }, select: { symbol: true } }),
       this.prisma.watchItem.findMany({ where: { userId, assetType: 'stock' }, select: { symbol: true } }),
-      this.news.all().catch((): NewsItem[] => []),
+      this.news.stockNews().catch((): NewsItem[] => []),
     ]);
     const held = new Set(holdings.map((h) => h.symbol));
     const tickers = [...new Set([...held, ...watch.map((w) => w.symbol)])];

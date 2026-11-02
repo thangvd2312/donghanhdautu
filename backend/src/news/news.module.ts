@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { LlmService } from '../alerts/llm.service';
 import { NewsController } from './news.controller';
 import { CryptoNewsService } from './crypto-news.service';
+import { NewsReviewService } from './news-review.service';
 import { NewsService } from './news.service';
 import { NewsArticleRepository } from './search/news-article.repository';
 import { NewsDocsService } from './search/news-docs.service';
@@ -11,14 +13,16 @@ import { OpenSearchClient } from './search/opensearch.client';
 @Module({
   controllers: [NewsController],
   providers: [
+    LlmService,
     NewsService,
     CryptoNewsService,
+    NewsReviewService,
     OpenSearchClient,
     NewsArticleRepository,
     NewsDocsService,
     NewsSearchService,
     NewsIndexerService,
   ],
-  exports: [NewsService, CryptoNewsService, NewsIndexerService],
+  exports: [NewsService, CryptoNewsService, NewsReviewService, NewsIndexerService],
 })
 export class NewsModule {}

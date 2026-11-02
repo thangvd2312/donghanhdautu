@@ -17,7 +17,6 @@ import { HoldingMoveAlerts } from './holding-move-alerts.service';
 import { LlmService } from './llm.service';
 import { MacroAlerts } from './macro-alerts.service';
 import { NewsAlerts } from './news-alerts.service';
-import { NewsTaggerService } from './news-tagger.service';
 import { NotificationInboxService } from './notification-inbox.service';
 import { NotificationRelayService } from './notification-relay.service';
 import { NotificationsController } from './notifications.controller';
@@ -46,7 +45,6 @@ import { WeeklyBriefService } from './weekly.service';
     BriefQueueService,
     WeeklyBriefService,
     LlmService,
-    NewsTaggerService,
     NotifierService,
     NotificationInboxService,
     NotificationRelayService,

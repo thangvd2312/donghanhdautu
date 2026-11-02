@@ -30,6 +30,9 @@ export const CRYPTO_FEEDS: readonly (NewsFeed & { lang: 'vi' | 'en' })[] = [
   { url: 'https://cointelegraph.com/rss', source: 'Cointelegraph', category: 'Coin', lang: 'en' },
 ];
 
+/** Nguồn của thông báo chính thức Binance (luôn giữ, không qua bước AI lọc tin) */
+export const BINANCE_NOTICE_SOURCE = 'Binance — thông báo chính thức';
+
 /** Tối đa 20 tin mỗi trang (lớn hơn nguồn trả 400) */
 export const BINANCE_NEWS_PAGES = 3;
 export const binanceNewsUrl = (page: number) =>
@@ -175,7 +178,7 @@ export function parseBinanceNotices(json: unknown, catalog: keyof typeof BINANCE
       title,
       url: `https://www.binance.com/en/support/announcement/detail/${code}`,
       summary: '',
-      source: 'Binance — thông báo chính thức',
+      source: BINANCE_NOTICE_SOURCE,
       category: 'Coin',
       publishedAt,
       lang: 'en',

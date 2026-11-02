@@ -4,7 +4,7 @@ import { mentionsCompany } from '../alerts/aliases';
 import { dayChange, reviewPoints } from '../home/today';
 import { MarketService } from '../market/market.service';
 import type { AssetType } from '../market/market.service';
-import { NewsService } from '../news/news.service';
+import { NewsReviewService } from '../news/news-review.service';
 import type { NewsItem } from '../news/news.service';
 import { valuePortfolio } from '../portfolio/valuation';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,7 +19,7 @@ export class DemoService {
 
   constructor(
     private market: MarketService,
-    private news: NewsService,
+    private news: NewsReviewService,
     private prisma: PrismaService,
   ) {}
 
@@ -104,7 +104,9 @@ export class DemoService {
   /** Tin 48 giờ qua về các mã trong danh mục mẫu (dùng nhãn AI đã lưu, không gọi AI) */
   private async relatedNews(tickers: string[]): Promise<DemoNews[]> {
     const since = Date.now() - 48 * 3600_000;
-    const items = (await this.news.all().catch((): NewsItem[] => [])).filter((n) => Date.parse(n.publishedAt) > since);
+    const items = (await this.news.stockNews().catch((): NewsItem[] => [])).filter(
+      (n) => Date.parse(n.publishedAt) > since,
+    );
     const tags = new Map(
       (await this.prisma.newsTag.findMany({ where: { url: { in: items.map((n) => n.url) } } })).map((t) => [t.url, t]),
     );

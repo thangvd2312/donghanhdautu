@@ -7,8 +7,8 @@ import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { CryptoMarketProvider } from '../market/providers/crypto-market.provider';
 import { searchCryptoNews } from '../news/crypto-news';
-import { CryptoNewsService } from '../news/crypto-news.service';
-import { NewsService } from '../news/news.service';
+import { searchNews } from '../news/news-feeds';
+import { NewsReviewService } from '../news/news-review.service';
 import { classifySource } from './source-tiers';
 import { AdvisorToolData } from './tool-data';
 import { hostOf } from './tool-format';
@@ -36,10 +36,9 @@ export class AdvisorTools {
   constructor(
     private data: AdvisorToolData,
     private market: MarketService,
-    private news: NewsService,
+    private news: NewsReviewService,
     private web: WebService,
     private macro: MacroService,
-    private cryptoNews: CryptoNewsService,
     private cryptoMarket: CryptoMarketProvider,
     private deployment: DeploymentPlansService,
   ) {
@@ -143,7 +142,7 @@ export class AdvisorTools {
         tool: {
           name: 'get_news',
           description:
-            'Tin tức tài chính mới nhất từ CafeF và VnExpress (chứng khoán, doanh nghiệp, vĩ mô, ngân hàng, hàng hoá). Truyền query (mã cổ phiếu hoặc từ khoá tiếng Việt) để lọc; bỏ trống để lấy tin mới nhất. Mỗi tin có link để trích dẫn.',
+            'Tin tức tài chính mới nhất từ CafeF và VnExpress (chứng khoán, doanh nghiệp, vĩ mô, ngân hàng, hàng hoá), chỉ gồm tin đã được lọc là có ảnh hưởng tới đầu tư. Truyền query (mã cổ phiếu hoặc từ khoá tiếng Việt) để lọc; bỏ trống để lấy tin mới nhất. Mỗi tin có link để trích dẫn.',
           input_schema: {
             type: 'object',
             properties: { query: { type: 'string', description: 'Ví dụ "HPG thép" hoặc "lãi suất"' } },
@@ -152,7 +151,10 @@ export class AdvisorTools {
         schema: NewsInput,
         label: (i) => (typeof i.query === 'string' && i.query ? `Đọc tin về "${i.query}"` : 'Đọc tin mới nhất'),
         run: async (i: z.infer<typeof NewsInput>) =>
-          (await this.news.search(i.query, 12)).map((n) => ({ ...n, sourceTier: classifySource(n.url).tier })),
+          searchNews(await this.news.stockNews(), i.query, 12).map((n) => ({
+            ...n,
+            sourceTier: classifySource(n.url).tier,
+          })),
       },
       get_crypto_news: {
         tool: {
@@ -168,7 +170,7 @@ export class AdvisorTools {
         label: (i) =>
           typeof i.query === 'string' && i.query ? `Đọc tin coin về "${i.query}"` : 'Đọc tin coin mới nhất',
         run: async (i: z.infer<typeof NewsInput>) =>
-          searchCryptoNews(await this.cryptoNews.all(), i.query, 12).map((n) => ({
+          searchCryptoNews(await this.news.coinNews(), i.query, 12).map((n) => ({
             title: n.title,
             url: n.url,
             summary: n.summary,

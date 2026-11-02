@@ -7,7 +7,7 @@ import type { PriceAlertsService } from '../alerts/price-alerts.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
 import type { MarketService } from '../market/market.service';
 import type { TrackedSymbolResolver } from '../market/tracked-symbol.resolver';
-import type { CryptoNewsService } from '../news/crypto-news.service';
+import type { NewsReviewService } from '../news/news-review.service';
 import type { PlanAssetsService } from '../plans/plan-assets.service';
 import type { PortfolioService } from '../portfolio/portfolio.service';
 import { testPrisma, testUser } from '../test-utils/test-db';
@@ -65,7 +65,7 @@ const toolData = {
 const verifier = {
   verify: () => Promise.resolve({ status: 'verified', issues: [], discarded: 0, checkedAt: '' }),
 } as unknown as VerifierService;
-const cryptoNews = { all: () => Promise.resolve([]) } as unknown as CryptoNewsService;
+const cryptoNews = { coinNews: () => Promise.resolve([]) } as unknown as NewsReviewService;
 const priceAlerts = {
   create: async (userId: string, dto: { assetType: string; symbol: string; direction: string; targetPrice: number }) =>
     prisma.priceAlert.create({ data: { ...dto, userId } }),

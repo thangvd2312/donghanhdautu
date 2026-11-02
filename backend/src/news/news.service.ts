@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { NewsItem } from '@dautu/contracts';
-import { FEEDS, parseFeed, searchNews } from './news-feeds';
+import { FEEDS, parseFeed } from './news-feeds';
 import type { NewsFeed } from './news-feeds';
 
 export type { NewsItem };
 
-/** RSS news aggregator: all feeds merged and cached for 5 minutes, single-flight refresh. */
+/**
+ * RSS news aggregator: all feeds merged and cached for 5 minutes, single-flight refresh. Raw feed, junk included: app
+ * features read news through NewsReviewService (only articles the AI review kept).
+ */
 @Injectable()
 export class NewsService {
   private log = new Logger(NewsService.name);
@@ -38,9 +41,5 @@ export class NewsService {
       signal: AbortSignal.timeout(15000),
     });
     return parseFeed(await r.text(), feed);
-  }
-
-  async search(query?: string, limit = 15): Promise<NewsItem[]> {
-    return searchNews(await this.all(), query, limit);
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
-import { NewsService } from '../news/news.service';
+import { NewsReviewService } from '../news/news-review.service';
 import type { NewsItem } from '../news/news.service';
 import { addDays } from '../plans/plan-rules';
 import { reviewPoints } from '../home/today';
@@ -47,7 +47,7 @@ export class WeeklyBriefService {
     private market: MarketService,
     private history: HistoryService,
     private portfolio: PortfolioService,
-    private news: NewsService,
+    private news: NewsReviewService,
     private llm: LlmService,
     private runs: BriefRunService,
     private queue: BriefQueueService,
@@ -181,7 +181,9 @@ export class WeeklyBriefService {
     const tickers = [...new Set(holdings.map((h) => h.symbol))];
     if (!tickers.length) return [];
     const since = Date.now() - 7 * 86_400_000;
-    const items = (await this.news.all().catch((): NewsItem[] => [])).filter((n) => Date.parse(n.publishedAt) > since);
+    const items = (await this.news.stockNews().catch((): NewsItem[] => [])).filter(
+      (n) => Date.parse(n.publishedAt) > since,
+    );
     const tags = new Map(
       (await this.prisma.newsTag.findMany({ where: { url: { in: items.map((n) => n.url) } } })).map((t) => [t.url, t]),
     );

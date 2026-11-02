@@ -189,14 +189,18 @@ model PriceAlert {
   @@index([userId])
 }
 
-/// Kết quả AI đọc tin: bài nói về mã nào, có phải tin vĩ mô quan trọng không
+/// Kết quả AI đọc tin (mỗi bài một lần): có đáng đưa vào app không, bài nói về mã nào, có phải tin vĩ mô quan trọng không
 model NewsTag {
   url         String   @id
   title       String
+  /// stock | coin
+  kind        String   @default("stock")
+  /// AI lọc tin: true = có ảnh hưởng tới đầu tư (được đưa vào app), false = bị loại, null = chưa chấm
+  relevant    Boolean?
   tickers     String[]
   /// 0 = không phải tin vĩ mô; 1–5 = mức quan trọng với nhà đầu tư cá nhân
   macroScore  Int      @default(0)
-  /// lai_suat | ty_gia | chinh_sach | thue | vang | thi_truong | khac
+  /// lai_suat | ty_gia | chinh_sach | thue | vang | dia_chinh_tri | thuong_mai | nang_luong | thi_truong | doanh_nghiep | khac
   topic       String?
   /// Một câu tóm tắt tác động
   impact      String?
@@ -206,7 +210,7 @@ model NewsTag {
   @@index([publishedAt])
 }
 
-/// Kho tin (chứng khoán / vĩ mô từ RSS báo Việt, tin coin), giữ 180 ngày. Là kho gốc của tìm tin: OpenSearch dựng lại
+/// Kho tin (chứng khoán / vĩ mô từ RSS báo Việt, tin coin), giữ 180 ngày; chỉ chứa tin AI đã xác nhận có ảnh hưởng tới đầu tư. Là kho gốc của tìm tin: OpenSearch dựng lại
 /// từ đây, và khi OpenSearch lỗi thì tìm toàn văn ngay trên bảng này (cột searchVector).
 model NewsArticle {
   url          String                   @id

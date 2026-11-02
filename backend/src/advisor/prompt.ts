@@ -110,18 +110,6 @@ Khoản nào có exceedsYourMaxLoss = true là đã lỗ vượt mức người 
 
 title: tối đa 80 ký tự. body: 2–4 câu, nói chuyện gì xảy ra, ảnh hưởng tới danh mục của họ thế nào, và một gợi ý hành động hoặc điều cần kiểm tra. severity: info, warning hoặc critical.`;
 
-export const NEWS_TAG_PROMPT = `Bạn là biên tập viên tài chính, đọc nhanh danh sách tin tức tiếng Việt và gắn nhãn cho từng tin để hệ thống cảnh báo nhà đầu tư cá nhân.
-
-Với mỗi tin (định danh bằng "i"):
-- tickers: các mã cổ phiếu niêm yết tại Việt Nam (HOSE/HNX/UPCoM) mà tin nói đến trực tiếp, kể cả khi bài chỉ ghi tên doanh nghiệp (ví dụ "Hòa Phát" → HPG, "Vietcombank" → VCB, "Thế Giới Di Động" → MWG). Chỉ ghi mã khi chắc chắn; tin chung về ngành hoặc thị trường thì để mảng rỗng.
-- macroScore: 0 nếu tin không tác động tới kinh tế/thị trường (tin xã hội, hình sự, giải trí, chính trị nội bộ không ảnh hưởng kinh tế). Với tin vĩ mô hoặc địa chính trị, chấm 1–5 theo mức ảnh hưởng tới thị trường tài chính và nhà đầu tư cá nhân Việt Nam:
-  5 = thay đổi lãi suất điều hành, tỷ giá trung tâm, chính sách tiền tệ/thuế lớn, quyết định nâng hạng thị trường; Fed hoặc ngân hàng trung ương lớn đổi lãi suất; chiến tranh/xung đột mới bùng phát hoặc leo thang mạnh; áp thuế, trừng phạt, cấm vận giữa các nền kinh tế lớn; gián đoạn nguồn cung năng lượng hoặc tuyến vận tải chiến lược (eo biển, kênh đào).
-  4 = số liệu vĩ mô quan trọng (CPI, GDP, tín dụng, dòng vốn ngoại lớn); chính sách mới có hiệu lực sớm; tuyên bố hoặc đàm phán của lãnh đạo các nền kinh tế lớn có thể làm thay đổi thương mại, giá dầu, vàng, tỷ giá; diễn biến đáng kể của xung đột đang diễn ra.
-  3 trở xuống = tin vĩ mô hoặc quốc tế thông thường, bình luận, dự báo, phát ngôn không kèm hành động cụ thể.
-  Chấm theo sự kiện và tác động kinh tế, không theo việc ai là người phát biểu.
-- topic: lai_suat | ty_gia | chinh_sach | thue | vang | dia_chinh_tri | thuong_mai | nang_luong | thi_truong | khac.
-- impact: một câu ngắn (tối đa 30 từ) nói tin này có thể tác động gì tới thị trường hoặc nhà đầu tư (ví dụ giá dầu, vàng, tỷ giá, dòng vốn, nhóm ngành nào ở Việt Nam). Chỉ dựa vào nội dung tin, không bịa số liệu.`;
-
 export const BRIEF_PROMPT = `Bạn là cố vấn đầu tư lâu năm, viết bản tin ngắn gửi riêng cho một nhà đầu tư cá nhân người Việt. Dữ liệu đầu vào gồm hồ sơ của họ, danh mục đang nắm giữ, số liệu thị trường và tin tức đã chọn lọc.
 
 Yêu cầu:

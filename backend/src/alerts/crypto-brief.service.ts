@@ -6,7 +6,7 @@ import type { CryptoGlobal, FearGreed } from '../market/providers/crypto-market.
 import { VN_TZ, vnDateKey } from '../market/types';
 import { itemCoins } from '../news/crypto-news';
 import type { CryptoNewsItem } from '../news/crypto-news';
-import { CryptoNewsService } from '../news/crypto-news.service';
+import { NewsReviewService } from '../news/news-review.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
@@ -107,7 +107,7 @@ export class CryptoBriefService {
     private market: MarketService,
     private cryptoMarket: CryptoMarketProvider,
     private portfolio: PortfolioService,
-    private news: CryptoNewsService,
+    private news: NewsReviewService,
     private audience: AlertAudience,
     private llm: LlmService,
     private runs: BriefRunService,
@@ -184,7 +184,7 @@ export class CryptoBriefService {
       this.portfolio.valuation(userId),
       this.cryptoMarket.fearGreed().catch(() => null),
       this.cryptoMarket.global().catch(() => null),
-      this.news.all(),
+      this.news.coinNews(),
     ]);
     const profile = me.profile;
     const pairs = [...new Set([...me.coins.map((c) => c.pair), ...REFERENCE_COINS])];

@@ -1,8 +1,7 @@
 import type { NewsTag } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
-import { NewsService } from '../news/news.service';
 import { AlertAudience } from './alert-audience.service';
-import { NewsTaggerService } from './news-tagger.service';
+import { NewsReviewService } from '../news/news-review.service';
 import { NotifierService } from './notifier.service';
 import { PersonalAlertService } from './personal-alert.service';
 
@@ -10,8 +9,7 @@ import { PersonalAlertService } from './personal-alert.service';
 @Injectable()
 export class NewsAlerts {
   constructor(
-    private news: NewsService,
-    private tagger: NewsTaggerService,
+    private newsReview: NewsReviewService,
     private audience: AlertAudience,
     private notifier: NotifierService,
     private personal: PersonalAlertService,
@@ -19,12 +17,12 @@ export class NewsAlerts {
 
   async check(tags: NewsTag[]) {
     const since = Date.now() - 6 * 3600_000;
-    const items = (await this.news.all()).filter((n) => Date.parse(n.publishedAt) > since);
+    const items = (await this.newsReview.stockNews()).filter((n) => Date.parse(n.publishedAt) > since);
     const tagByUrl = new Map(tags.map((t) => [t.url, t]));
     for (const user of await this.audience.withHoldings()) {
       const tickers = [...new Set(user.holdings.filter((h) => h.assetType === 'stock').map((h) => h.symbol))];
       for (const item of items) {
-        const hit = tickers.filter((t) => this.tagger.relatesTo(tagByUrl.get(item.url), item, t));
+        const hit = tickers.filter((t) => this.newsReview.relatesTo(tagByUrl.get(item.url), item, t));
         if (!hit.length) continue;
         const dedupeKey = `news:${item.url}`;
         if (await this.notifier.exists(user.id, dedupeKey)) continue;
