@@ -8,7 +8,6 @@ import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogTitle from '@mui/material/DialogTitle'
 import Drawer from '@mui/material/Drawer'
-import Grid from '@mui/material/Grid'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -22,6 +21,7 @@ import Composer from '../components/advisor/Composer'
 import ConversationList from '../components/advisor/ConversationList'
 import ConversationSkeleton from '../components/advisor/ConversationSkeleton'
 import Message from '../components/advisor/Message'
+import { PageHeader } from '../components/page'
 import { useAdvisorConversations } from '../hooks/useAdvisorConversations'
 import { useChatScroll } from '../hooks/useChatScroll'
 import { type ChatMsg as Msg } from '../lib/chat'
@@ -139,31 +139,38 @@ export default function AdvisorPage() {
   )
 
   return (
-    <Grid
-      container
-      spacing={2.5}
-      sx={{
-        // Điện thoại: khung chat vừa màn hình (trừ thanh trên, thanh đáy, vùng an toàn) để ô nhập luôn hiện
-        height: {
-          xs: 'calc(100dvh - 148px - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
-          md: 'calc(100vh - 170px)',
-        },
-        minHeight: { md: 540 },
-      }}
-    >
-      <Grid size={{ xs: 12, md: 3 }} sx={{ display: { xs: 'none', md: 'block' }, height: '100%' }}>
-        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-            <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => nav('/advisor')}>
-              Cuộc trò chuyện mới
-            </Button>
-          </Box>
-          {conversationList}
-        </Paper>
-      </Grid>
+    <Stack spacing={2.5}>
+      {/* Desktop có đầu trang gọn; điện thoại thanh trên đã có tên trang nên bỏ để khung chat cao hết cỡ */}
+      {!mobile && (
+        <PageHeader
+          title="Cố vấn"
+          description="Hỏi về danh mục, thị trường hay một mã cụ thể. Mọi nhận định đều kèm nguồn và dữ liệu thật."
+        />
+      )}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px minmax(0, 1fr)' },
+          gap: { xs: 0, md: 2.5 },
+          // Điện thoại: khung chat vừa màn hình (trừ thanh trên, thanh đáy, vùng an toàn) để ô nhập luôn hiện
+          height: {
+            xs: 'calc(100dvh - 148px - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+            md: 'calc(100vh - 230px)',
+          },
+          minHeight: { md: 520 },
+        }}
+      >
+      <Paper sx={{ display: { xs: 'none', md: 'flex' }, height: '100%', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+        <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+          <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => nav('/advisor')} sx={{ borderRadius: 99 }}>
+            Cuộc trò chuyện mới
+          </Button>
+        </Box>
+        {conversationList}
+      </Paper>
 
-      <Grid size={{ xs: 12, md: 9 }} sx={{ height: '100%' }}>
-        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: { md: 540 } }}>
+      <Box sx={{ height: '100%', minHeight: 0, minWidth: 0 }}>
+        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {mobile && (
             <Stack
               direction="row"
@@ -241,7 +248,8 @@ export default function AdvisorPage() {
             busyElsewhere={busyElsewhere}
           />
         </Paper>
-      </Grid>
+      </Box>
+      </Box>
 
       <Drawer
         anchor="bottom"
@@ -266,7 +274,7 @@ export default function AdvisorPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Grid>
+    </Stack>
   )
 }
 

@@ -10,7 +10,10 @@ export default function FilterRow({ children }: { children: ReactNode }) {
         direction="row"
         spacing={1}
         sx={{
-          overflowX: 'auto',
+          overflowX: { xs: 'auto', md: 'visible' },
+          // Desktop: cột phụ hẹp nên chip xuống dòng thay vì cuộn ngang
+          flexWrap: { md: 'wrap' },
+          rowGap: { md: 1 },
           scrollbarWidth: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
           '& > *': { flexShrink: 0 },

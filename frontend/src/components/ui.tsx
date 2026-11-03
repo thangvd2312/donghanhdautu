@@ -37,11 +37,13 @@ export function Panel({
           useFlexGap
           spacing={1.5}
           sx={{
-            px: 2,
-            py: 1.5,
+            px: { xs: 2, md: 2.5 },
+            pt: { xs: 1.75, md: 2 },
+            // Có thân đệm: tiêu đề liền khối với nội dung, không kẻ ngang. Bảng / danh sách sát mép: giữ đường kẻ
+            pb: noPadding ? 1.5 : 0,
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: 1,
+            borderBottom: noPadding ? 1 : 0,
             borderColor: 'divider',
             // Màn hình hẹp: nút hành động xuống dòng dưới tiêu đề thay vì bị bóp méo
             flexWrap: 'wrap',
@@ -50,7 +52,7 @@ export function Panel({
         >
           <Box sx={{ minWidth: 0, flex: '1 1 200px' }}>
             {title && (
-              <Typography variant="subtitle2" sx={{ fontSize: 15 }}>
+              <Typography variant="subtitle2" component="h2" sx={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.005em' }}>
                 {title}
                 {/* Điện thoại: phụ đề dài thu vào ⓘ để màn hình bớt chữ */}
                 {longSub && (
@@ -74,7 +76,7 @@ export function Panel({
           {action}
         </Stack>
       )}
-      <Box sx={noPadding ? undefined : { p: 2 }}>{children}</Box>
+      <Box sx={noPadding ? undefined : { p: { xs: 2, md: 2.5 }, pt: title || action ? { xs: 1.5, md: 1.75 } : undefined }}>{children}</Box>
     </Paper>
   )
 }
@@ -281,8 +283,9 @@ export function ScrollRow({ children }: { children: ReactNode }) {
         scrollbarWidth: 'none',
         '&::-webkit-scrollbar': { display: 'none' },
         '& > *': { flexShrink: 0 },
-        mx: { xs: -2, md: 0 },
-        px: { xs: 2, md: 0 },
+        // Tràn ra sát mép màn hình trên điện thoại: bằng đúng lề trang (Container px 12px), không hơn để không tràn ngang
+        mx: { xs: -1.5, md: 0 },
+        px: { xs: 1.5, md: 0 },
       }}
     >
       {children}

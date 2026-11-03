@@ -14,6 +14,7 @@ import { MetricBlocks, MetricTable, ReturnsGrid, StockCard, SymbolBar } from '..
 import SearchDialog from '../components/SearchDialog'
 import ComparePrompt from '../components/compare/ComparePrompt'
 import CompareSkeleton from '../components/compare/CompareSkeleton'
+import { PageHeader } from '../components/page'
 import { Panel } from '../components/ui'
 import { COMPARE_RANGES, DEFAULT_RANGE, fmtClock, MAX_COMPARE, parseRange, parseSymbols, reconcileSlots, sameSlots } from '../lib/compare'
 import { fmtDate } from '../lib/format'
@@ -102,15 +103,12 @@ export default function ComparePage() {
   const rangePhrase = COMPARE_RANGES.find((r) => r.value === range)?.phrase ?? ''
 
   return (
-    <Stack spacing={1.75} sx={{ maxWidth: 960, mx: 'auto' }}>
-      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-        <Typography component="h1" sx={{ fontWeight: 800, fontSize: 26, lineHeight: 1.25 }}>
-          So sánh cổ phiếu
-        </Typography>
-      </Box>
-      <Typography variant="caption" color="text.secondary">
-        Đặt 2–4 mã cạnh nhau bằng số liệu cùng kỳ để hiểu mỗi doanh nghiệp khác nhau ở đâu.
-      </Typography>
+    <Stack spacing={2.5}>
+      <PageHeader
+        eyebrow="Công cụ"
+        title="So sánh cổ phiếu"
+        description="Đặt 2–4 mã cạnh nhau bằng số liệu cùng kỳ để hiểu mỗi doanh nghiệp khác nhau ở đâu."
+      />
 
       <SymbolBar symbols={symbols} slots={slots} invalid={invalid} onRemove={remove} onAdd={() => setPickerOpen(true)} />
 
@@ -138,7 +136,7 @@ export default function ComparePage() {
       {symbols.length >= 2 && !failure && !showData && <CompareSkeleton count={symbols.length} />}
 
       {showData && data && (
-        <Stack spacing={1.75} sx={{ opacity: stale ? 0.55 : 1, transition: 'opacity .15s' }} aria-busy={stale}>
+        <Stack spacing={2.5} sx={{ opacity: stale ? 0.55 : 1, transition: 'opacity .15s' }} aria-busy={stale}>
           <Box
             sx={{
               display: 'grid',

@@ -27,7 +27,7 @@ export default function Composer({ value, onChange, onSend, onStop, busyHere, bu
         e.preventDefault()
         onSend(value)
       }}
-      sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}
+      sx={{ p: { xs: 1.5, md: 2 }, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
     >
       <Stack direction="row" spacing={1} sx={{ maxWidth: 820, mx: 'auto', alignItems: 'flex-end' }}>
         <TextField

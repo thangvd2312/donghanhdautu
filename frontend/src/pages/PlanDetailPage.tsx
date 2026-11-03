@@ -6,9 +6,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
-import Grid from '@mui/material/Grid'
 import Link from '@mui/material/Link'
-import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -22,6 +20,7 @@ import RelatedTransactionsPanel from '../components/plans/RelatedTransactionsPan
 import ReviewForm from '../components/plans/ReviewForm'
 import ReviewLogPanel from '../components/plans/ReviewLogPanel'
 import VersionsPanel from '../components/plans/VersionsPanel'
+import { PageGrid, PageHeader, StatTiles } from '../components/page'
 import { KV, Panel } from '../components/ui'
 import { useResource } from '../hooks/useResource'
 import { fmtDate, fmtPrice } from '../lib/format'
@@ -38,16 +37,20 @@ export default function PlanDetailPage() {
 
   const askAdvisor = planAdvisorQuestion(p)
 
+  const active = p.status === 'active'
+
   return (
     <Stack spacing={2.5}>
-      <Box>
-        <Link component={RouterLink} to="/plans" variant="body2" underline="hover">
-          ← Kế hoạch
-        </Link>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mt: 1 }}>
-          <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={44} />
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 800, fontSize: 22, lineHeight: 1.2 }} noWrap>
+      <Link component={RouterLink} to="/plans" variant="body2" underline="hover" sx={{ alignSelf: 'flex-start' }}>
+        ← Kế hoạch
+      </Link>
+      <PageHeader
+        eyebrow="Hành động"
+        titleOnMobile
+        title={
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+            <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={44} />
+            <Box component="span" sx={{ minWidth: 0 }}>
               {p.link ? (
                 <Link component={RouterLink} to={p.link} underline="hover" color="inherit">
                   {p.displayName}
@@ -55,66 +58,57 @@ export default function PlanDetailPage() {
               ) : (
                 p.displayName
               )}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" component="div" noWrap>
-              <Box component="span" sx={{ color: p.status === 'active' ? 'primary.main' : 'text.secondary', fontWeight: 600 }}>
-                {p.status === 'active' ? 'Đang theo dõi' : 'Đã kết thúc'}
-              </Box>
-              {` · lập ${fmtDate(p.createdAt)}`}
-              {p.versions.length > 0 && ` · sửa ${p.versions.length} lần`}
-            </Typography>
-          </Box>
-          {p.status === 'active' && (
-            <Button variant="outlined" startIcon={<EditOutlined />} onClick={() => setEditing(true)} sx={{ borderRadius: 99, flexShrink: 0 }}>
+            </Box>
+          </Stack>
+        }
+        description={
+          <>
+            <Box
+              component="span"
+              sx={{
+                color: active ? 'primary.main' : 'text.secondary',
+                fontWeight: 600,
+              }}
+            >
+              {active ? 'Đang theo dõi' : 'Đã kết thúc'}
+            </Box>
+            {` · lập ${fmtDate(p.createdAt)}`}
+            {p.versions.length > 0 && ` · sửa ${p.versions.length} lần`}
+          </>
+        }
+        actions={
+          active && (
+            <Button variant="outlined" startIcon={<EditOutlined />} onClick={() => setEditing(true)} sx={{ borderRadius: 99 }}>
               Sửa
             </Button>
-          )}
-        </Stack>
-      </Box>
+          )
+        }
+      />
 
-      {p.signals.length > 0 && (
-        <Paper sx={{ p: 1.5 }}>
-          <Stack spacing={1}>
-            {p.signals.map((s) => (
-              <Stack key={s.kind} direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-                {s.kind === 'stop' ? (
-                  <ErrorOutlined color="error" sx={{ fontSize: 20 }} />
-                ) : (
-                  <WarningAmberOutlined color="warning" sx={{ fontSize: 20 }} />
-                )}
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {s.message}
-                </Typography>
-              </Stack>
-            ))}
-          </Stack>
-        </Paper>
-      )}
+      <StatTiles
+        items={[
+          {
+            label: 'Mốc chốt lời',
+            value: fmtPrice(p.targetPrice, p.currency),
+            color: p.targetPrice != null ? 'price.up' : undefined,
+          },
+          {
+            label: 'Mốc cắt lỗ',
+            value: fmtPrice(p.stopPrice, p.currency),
+            color: p.stopPrice != null ? 'price.down' : undefined,
+          },
+          {
+            label: 'Xem lại',
+            value: active ? fmtDate(p.nextReviewAt) : '—',
+            hint: active && p.reviewEveryDays ? `mỗi ${p.reviewEveryDays} ngày` : undefined,
+          },
+          { label: 'Dự định nắm giữ', value: p.horizon ?? '—' },
+        ]}
+      />
 
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Panel title="Kế hoạch của bạn">
-            <Typography variant="caption" color="text.secondary">
-              Vì sao tôi mua / nắm giữ
-            </Typography>
-            <Typography sx={{ whiteSpace: 'pre-line', mb: 2 }}>{p.thesis}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Điều kiện để xem lại hoặc bán
-            </Typography>
-            <Typography sx={{ whiteSpace: 'pre-line', mb: 2 }}>{p.exitConditions}</Typography>
-            <Divider sx={{ mb: 1 }} />
-            <KV k="Dự định nắm giữ" v={p.horizon ?? '—'} />
-            <KV k="Mốc chốt lời" v={fmtPrice(p.targetPrice, p.currency)} />
-            <KV k="Mốc cắt lỗ" v={fmtPrice(p.stopPrice, p.currency)} />
-            <KV
-              k="Xem lại"
-              v={p.status === 'active' ? `${fmtDate(p.nextReviewAt)}${p.reviewEveryDays ? ` (mỗi ${p.reviewEveryDays} ngày)` : ''}` : '—'}
-            />
-            {p.closedReason && <KV k="Lý do kết thúc" v={p.closedReason} />}
-          </Panel>
-        </Grid>
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Stack spacing={2.5}>
+      <PageGrid
+        aside={
+          <>
             <CurrentDataPanel p={p} />
             <Panel title="Nhận định của AI" subtitle="Cố vấn xem từng điều kiện bạn đặt đã xảy ra chưa — chỉ để tham khảo">
               <Button
@@ -128,22 +122,51 @@ export default function PlanDetailPage() {
                 Nhờ cố vấn đánh giá
               </Button>
             </Panel>
-          </Stack>
-        </Grid>
-      </Grid>
+          </>
+        }
+      >
+        {p.signals.length > 0 && (
+          <Panel>
+            <Stack spacing={1}>
+              {p.signals.map((s) => (
+                <Stack key={s.kind} direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+                  {s.kind === 'stop' ? (
+                    <ErrorOutlined color="error" sx={{ fontSize: 20 }} />
+                  ) : (
+                    <WarningAmberOutlined color="warning" sx={{ fontSize: 20 }} />
+                  )}
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {s.message}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          </Panel>
+        )}
 
-      {p.status === 'active' && <ReviewForm plan={p} onDone={() => void load()} />}
+        {active && <ReviewForm plan={p} onDone={() => void load()} />}
 
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <ReviewLogPanel p={p} />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <RelatedTransactionsPanel p={p} />
-        </Grid>
-      </Grid>
+        <Panel title="Kế hoạch của bạn">
+          <Typography variant="caption" color="text.secondary">
+            Vì sao tôi mua / nắm giữ
+          </Typography>
+          <Typography sx={{ whiteSpace: 'pre-line', mb: 2 }}>{p.thesis}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Điều kiện để xem lại hoặc bán
+          </Typography>
+          <Typography sx={{ whiteSpace: 'pre-line' }}>{p.exitConditions}</Typography>
+          {p.closedReason && (
+            <>
+              <Divider sx={{ my: 1.5 }} />
+              <KV k="Lý do kết thúc" v={p.closedReason} />
+            </>
+          )}
+        </Panel>
 
-      {p.versions.length > 0 && <VersionsPanel versions={p.versions} />}
+        <ReviewLogPanel p={p} />
+        <RelatedTransactionsPanel p={p} />
+        {p.versions.length > 0 && <VersionsPanel versions={p.versions} />}
+      </PageGrid>
 
       <PlanEditor open={editing} editing={p} onClose={() => setEditing(false)} onSaved={() => void load()} />
     </Stack>

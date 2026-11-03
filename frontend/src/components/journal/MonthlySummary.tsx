@@ -1,60 +1,61 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
-import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { fmtDate, fmtPct } from '../../lib/format'
 import { EMOTION_LABEL, monthTitle, REASON_LABEL } from '../../lib/journal'
 import { TX_LABEL } from '../../lib/tx'
 import type { JournalMonthSummary } from '../../lib/types'
+import { StatTiles } from '../page'
 import { Panel } from '../ui'
 
-export function MonthlySummary({ s }: { s: JournalMonthSummary }) {
+/** Bốn con số của tháng (đầu trang): lệnh, xem lại, ghi cảm xúc, ngoài kế hoạch; kèm so với tháng trước */
+export function MonthlyTiles({ s }: { s: JournalMonthSummary }) {
   const prev = s.previous && (s.previous.trades > 0 || s.previous.reviews > 0) ? s.previous : null
-  const maxEmotion = Math.max(1, ...s.emotions.map((e) => e.count))
+  const vs = (n?: number) => (n === undefined ? undefined : `Tháng trước: ${n}`)
+  const join = (...parts: (string | false | 0 | undefined)[]) => parts.filter(Boolean).join(' · ')
   return (
-    <Panel title={`Tổng kết ${monthTitle(s.month).toLowerCase()}`} data-testid="journal-summary">
-      <Grid container spacing={1.5}>
-        <Tile
-          label="Lệnh mua / bán"
-          value={s.trades}
-          sub={s.trades ? `${s.linked} gắn kế hoạch` : 'chưa có lệnh'}
-          prev={prev?.trades}
-        />
-        <Tile
-          label="Xem lại kế hoạch"
-          value={s.reviews}
-          sub={
+    <StatTiles
+      items={[
+        { label: 'Lệnh mua / bán', value: s.trades, hint: join(s.trades ? `${s.linked} gắn kế hoạch` : 'chưa có lệnh', vs(prev?.trades)) },
+        {
+          label: 'Xem lại kế hoạch',
+          value: s.reviews,
+          hint: join(
             s.reviews || s.decisions.edits
               ? // "đổi" chỉ đếm lần xem lại không giữ nguyên; sửa nội dung kế hoạch đếm riêng (không vượt số lần xem lại)
-                [s.reviews && `giữ ${s.kept} · đổi ${s.reviews - s.kept}`, s.decisions.edits && `sửa ${s.decisions.edits}`]
-                  .filter(Boolean)
-                  .join(' · ')
-              : 'chưa xem lại'
-          }
-          prev={prev?.reviews}
-        />
-        <Tile
-          label="Có ghi cảm xúc"
-          value={s.emotionTagged}
-          sub={s.emotionTagged ? `${s.pressured} lúc dễ bị cuốn theo` : 'chưa gắn nhãn'}
-          prev={prev?.emotionTagged}
-        />
-        <Tile
-          label="Lệnh ngoài kế hoạch"
-          value={s.unlinked}
-          sub={s.trades ? `trên ${s.trades} lệnh` : '—'}
-          prev={prev ? prev.trades - prev.linked : undefined}
-        />
-      </Grid>
+                join(s.reviews && `giữ ${s.kept} · đổi ${s.reviews - s.kept}`, s.decisions.edits && `sửa ${s.decisions.edits}`)
+              : 'chưa xem lại',
+            vs(prev?.reviews),
+          ),
+        },
+        {
+          label: 'Có ghi cảm xúc',
+          value: s.emotionTagged,
+          hint: join(s.emotionTagged ? `${s.pressured} lúc dễ bị cuốn theo` : 'chưa gắn nhãn', vs(prev?.emotionTagged)),
+        },
+        {
+          label: 'Lệnh ngoài kế hoạch',
+          value: s.unlinked,
+          hint: join(s.trades ? `trên ${s.trades} lệnh` : '—', vs(prev ? prev.trades - prev.linked : undefined)),
+        },
+      ]}
+    />
+  )
+}
 
+/** Nhìn lại tháng: cảm xúc, lý do hay gặp, nhận xét, các quyết định lúc dễ bị cuốn theo (cột phụ) */
+export function MonthlySummary({ s }: { s: JournalMonthSummary }) {
+  const maxEmotion = Math.max(1, ...s.emotions.map((e) => e.count))
+  return (
+    <Panel title={`Nhìn lại ${monthTitle(s.month).toLowerCase()}`} data-testid="journal-summary">
       {s.emotions.length > 0 && (
-        <Box sx={{ mt: 2.5 }}>
+        <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
             Bạn đã cảm thấy
           </Typography>
-          <Stack spacing={0.75} component="ul" sx={{ listStyle: 'none', p: 0, m: 0, maxWidth: 560 }} aria-label="Phân bố cảm xúc">
+          <Stack spacing={0.75} component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }} aria-label="Phân bố cảm xúc">
             {s.emotions.map((e) => (
               <Stack key={e.key} component="li" direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
                 <Typography variant="body2" sx={{ width: 104, flexShrink: 0 }} noWrap>
@@ -127,28 +128,3 @@ export function MonthlySummary({ s }: { s: JournalMonthSummary }) {
     </Panel>
   )
 }
-
-function Tile({ label, value, sub, prev }: { label: string; value: number; sub: string; prev?: number }) {
-  return (
-    <Grid size={{ xs: 6, md: 3 }}>
-      <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: 'action.hover', height: '100%' }}>
-        <Typography variant="caption" color="text.secondary" component="div" noWrap>
-          {label}
-        </Typography>
-        <Typography className="num" sx={{ fontWeight: 700, fontSize: 22, lineHeight: 1.3 }}>
-          {value}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" component="div">
-          {sub}
-        </Typography>
-        {prev !== undefined && (
-          <Typography variant="caption" color="text.secondary" component="div" sx={{ opacity: 0.8 }}>
-            Tháng trước: {prev}
-          </Typography>
-        )}
-      </Box>
-    </Grid>
-  )
-}
-
-// ---------- Dòng thời gian ----------

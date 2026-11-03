@@ -5,6 +5,7 @@ import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { PageHeader } from '../components/page'
 import PortfolioChips from '../components/analysis/PortfolioChips'
 import OptionsPanel from '../components/rebalance/OptionsPanel'
 import RebalanceResult from '../components/rebalance/RebalanceResult'
@@ -109,7 +110,10 @@ export default function RebalancePage() {
   const canFixWithCash = !sumOk && cashPct + diff >= 0
 
   const scrollToResult = () =>
-    resultRef.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+    resultRef.current?.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    })
 
   const retryBtn = (
     <Button size="small" color="inherit" onClick={retrySolve} sx={{ minHeight: 36 }}>
@@ -120,15 +124,12 @@ export default function RebalancePage() {
   const portfolioLink = pf ? `/portfolio?p=${encodeURIComponent(pf)}` : '/portfolio'
 
   return (
-    <Stack spacing={1.5} sx={{ maxWidth: 760, mx: 'auto' }}>
-      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-        <Typography component="h1" sx={{ fontWeight: 800, fontSize: 26, lineHeight: 1.25 }}>
-          Tái cân bằng
-        </Typography>
-      </Box>
-      <Typography variant="body2" color="text.secondary">
-        Đặt tỷ trọng bạn muốn cho từng tài sản, xem cần mua hoặc bán bao nhiêu để tiến gần mục tiêu. Chỉ là tính toán, không tạo giao dịch.
-      </Typography>
+    <Stack spacing={2.5}>
+      <PageHeader
+        eyebrow="Hành động"
+        title="Tái cân bằng"
+        description="Đặt tỷ trọng bạn muốn cho từng tài sản, xem cần mua hoặc bán bao nhiêu để tiến gần mục tiêu. Chỉ là tính toán, không tạo giao dịch."
+      />
 
       <PortfolioChips accounts={accounts} value={pf} onChange={setPf} />
 
@@ -138,87 +139,121 @@ export default function RebalancePage() {
           <Skeleton variant="rounded" height={220} />
         </Stack>
       ) : heldFailed ? (
-        <Alert severity="warning" variant="outlined" action={<Button size="small" color="inherit" onClick={() => retryHeld()} sx={{ minHeight: 36 }}>Thử lại</Button>}>
+        <Alert
+          severity="warning"
+          variant="outlined"
+          action={
+            <Button size="small" color="inherit" onClick={() => retryHeld()} sx={{ minHeight: 36 }}>
+              Thử lại
+            </Button>
+          }
+        >
           Chưa lấy được danh mục của bạn, bạn thử lại nhé.
         </Alert>
       ) : (
         <>
-          <SumBar
-            sumOk={sumOk}
-            diff={diff}
-            canFixWithCash={canFixWithCash}
-            onFixWithCash={fixWithCash}
-            showResultLink={sumOk && !!res && !headVisible}
-            onScrollToResult={scrollToResult}
-          />
-
-          <TargetsPanel
-            rows={rows}
-            targets={targets}
-            added={added}
-            mode={mode}
-            hasHoldings={hasHoldings}
-            onTarget={setTarget}
-            onKeepCurrent={() => edit(() => setTargets(keepCurrent(rows)))}
-            onSplitEvenly={() => edit(() => setTargets(splitEvenly(rows)))}
-            onRemoveStock={removeStock}
-            onAddStock={() => setPicking(true)}
-          />
-
-          <OptionsPanel
-            money={money}
-            mode={mode}
-            lots={lots}
-            fees={fees}
-            onMoney={(update) => edit(() => setMoney(update))}
-            onMode={(v) => edit(() => setMode(v))}
-            onLots={(v) => edit(() => setLots(v))}
-            onFees={(v) => edit(() => setFees(v))}
-          />
-
-          {error && (
-            <Alert
-              severity={error.bad ? 'info' : 'warning'}
-              variant="outlined"
-              role="alert"
-              data-testid="rb-error"
-              action={
-                error.gone ? (
-                  <Button size="small" color="inherit" onClick={() => setPf('')} sx={{ minHeight: 36 }}>
-                    Xem tất cả
-                  </Button>
-                ) : error.bad ? undefined : retryBtn
-              }
-            >
-              {error.bad ? error.message : 'Chưa tính được, bạn thử lại nhé.'}
-            </Alert>
-          )}
-
-          <Box ref={resultRef} sx={{ scrollMarginTop: { xs: 'calc(120px + env(safe-area-inset-top))', md: 128 } }}>
-            {!res ? (
-              error ? null : (
-                <ResultPlaceholder
-                  touched={touched}
-                  hasHoldings={hasHoldings}
-                  money={money}
-                  sumOk={sumOk}
-                  diff={diff}
-                  portfolioLink={portfolioLink}
-                />
-              )
-            ) : (
-              <RebalanceResult
-                res={res}
-                stale={stale}
-                loading={loading}
-                headRef={headRef}
-                notesOpen={notesOpen}
-                onToggleNotes={() => setNotesOpen((v) => !v)}
+          {/* Desktop: nhập mục tiêu bên trái, kết quả bên phải (cùng cuộn); điện thoại: một cột */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'minmax(0, 1fr)',
+                md: 'minmax(0, 1fr) minmax(0, 1fr)',
+              },
+              gap: { xs: 2.5, md: 3 },
+              alignItems: 'start',
+            }}
+          >
+            <Stack spacing={2.5} sx={{ minWidth: 0 }}>
+              <SumBar
+                sumOk={sumOk}
+                diff={diff}
+                canFixWithCash={canFixWithCash}
+                onFixWithCash={fixWithCash}
+                showResultLink={sumOk && !!res && !headVisible}
+                onScrollToResult={scrollToResult}
               />
-            )}
+
+              <TargetsPanel
+                rows={rows}
+                targets={targets}
+                added={added}
+                mode={mode}
+                hasHoldings={hasHoldings}
+                onTarget={setTarget}
+                onKeepCurrent={() => edit(() => setTargets(keepCurrent(rows)))}
+                onSplitEvenly={() => edit(() => setTargets(splitEvenly(rows)))}
+                onRemoveStock={removeStock}
+                onAddStock={() => setPicking(true)}
+              />
+
+              <OptionsPanel
+                money={money}
+                mode={mode}
+                lots={lots}
+                fees={fees}
+                onMoney={(update) => edit(() => setMoney(update))}
+                onMode={(v) => edit(() => setMode(v))}
+                onLots={(v) => edit(() => setLots(v))}
+                onFees={(v) => edit(() => setFees(v))}
+              />
+            </Stack>
+            <Stack spacing={2.5} sx={{ minWidth: 0 }}>
+              {error && (
+                <Alert
+                  severity={error.bad ? 'info' : 'warning'}
+                  variant="outlined"
+                  role="alert"
+                  data-testid="rb-error"
+                  action={
+                    error.gone ? (
+                      <Button size="small" color="inherit" onClick={() => setPf('')} sx={{ minHeight: 36 }}>
+                        Xem tất cả
+                      </Button>
+                    ) : error.bad ? undefined : (
+                      retryBtn
+                    )
+                  }
+                >
+                  {error.bad ? error.message : 'Chưa tính được, bạn thử lại nhé.'}
+                </Alert>
+              )}
+
+              <Box
+                ref={resultRef}
+                sx={{
+                  scrollMarginTop: {
+                    xs: 'calc(120px + env(safe-area-inset-top))',
+                    md: 128,
+                  },
+                }}
+              >
+                {!res ? (
+                  error ? null : (
+                    <ResultPlaceholder
+                      touched={touched}
+                      hasHoldings={hasHoldings}
+                      money={money}
+                      sumOk={sumOk}
+                      diff={diff}
+                      portfolioLink={portfolioLink}
+                    />
+                  )
+                ) : (
+                  <RebalanceResult
+                    res={res}
+                    stale={stale}
+                    loading={loading}
+                    headRef={headRef}
+                    notesOpen={notesOpen}
+                    onToggleNotes={() => setNotesOpen((v) => !v)}
+                  />
+                )}
+              </Box>
+            </Stack>
           </Box>
 
-          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', pt: 0.5, pb: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ pb: 1 }}>
             Chỉ là tính toán theo lựa chọn của bạn, không tạo giao dịch và không phải khuyến nghị mua bán.
             {res ? ` Giá tính đến ${fmtDate(res.asOf)}.` : ''}
           </Typography>

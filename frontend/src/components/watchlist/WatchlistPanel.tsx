@@ -1,22 +1,18 @@
 import AddIcon from '@mui/icons-material/Add'
 import Close from '@mui/icons-material/Close'
 import CompareArrowsOutlined from '@mui/icons-material/CompareArrowsOutlined'
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined'
 import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Divider from '@mui/material/Divider'
 import Collapse from '@mui/material/Collapse'
 import IconButton from '@mui/material/IconButton'
 import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
@@ -31,6 +27,7 @@ import type { WatchItem } from '../../lib/types'
 import { PriceStatusChip } from '../DataStatus'
 import PriceAlertDialog from '../alerts/PriceAlertDialog'
 import StockSearch from '../StockSearch'
+import { EmptyState } from '../page'
 import { Panel } from '../ui'
 import AssetAvatar from '../AssetAvatar'
 
@@ -99,66 +96,61 @@ export default function WatchlistPanel() {
         />
       </Collapse>
       {items.length ? (
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Tài sản</TableCell>
-                <TableCell align="right">Giá</TableCell>
-                <TableCell align="right">Hôm nay</TableCell>
-                <TableCell />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map((w) => (
-                <TableRow key={w.id} hover>
-                  <TableCell>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                      <AssetAvatar assetType={w.assetType} symbol={w.symbol} size={26} />
-                      <Box sx={{ minWidth: 0 }}>
-                        {w.link ? (
-                          <Link component={RouterLink} to={w.link} underline="hover" sx={{ fontWeight: 700 }}>
-                            {w.displayName}
-                          </Link>
-                        ) : (
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                            {w.displayName}
-                          </Typography>
-                        )}
-                        {w.held && <Chip label="Đang nắm giữ" size="small" sx={{ ml: 0.75, height: 20, fontSize: 11 }} />}
-                      </Box>
-                    </Stack>
-                  </TableCell>
-                  <TableCell align="right" className="num" sx={{ whiteSpace: 'nowrap' }}>
+        // Danh sách dòng (không dùng bảng) để vừa cột phụ 340px và điện thoại
+        <Stack divider={<Divider flexItem />}>
+          {items.map((w) => (
+            <Stack key={w.id} direction="row" spacing={1.25} sx={{ alignItems: 'center', px: { xs: 2, md: 2.5 }, py: 1.25 }}>
+              <AssetAvatar assetType={w.assetType} symbol={w.symbol} size={32} />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                {w.link ? (
+                  <Link component={RouterLink} to={w.link} underline="hover" noWrap sx={{ fontWeight: 700, display: 'block' }}>
+                    {w.displayName}
+                  </Link>
+                ) : (
+                  <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
+                    {w.displayName}
+                  </Typography>
+                )}
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" className="num" noWrap>
                     {w.currency === 'USDT' ? `${fmtNum(w.priceNative, 2)} USDT` : fmtVnd(w.priceNative)}
-                    <PriceStatusChip price={w.price} />
-                  </TableCell>
-                  <TableCell align="right" className="num" sx={{ color: changeColor(w.dayChangePct) }}>
-                    {fmtPct(w.dayChangePct)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                    <Tooltip title="Đặt cảnh báo giá">
-                      <IconButton size="small" onClick={() => setAlertFor(w)}>
-                        <NotificationsActiveOutlined fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Bỏ theo dõi">
-                      <IconButton size="small" onClick={() => void remove(w)}>
-                        <Close fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                  </Typography>
+                  <PriceStatusChip price={w.price} />
+                  {w.held && <Chip label="Đang nắm giữ" size="small" sx={{ height: 20, fontSize: 11 }} />}
+                </Stack>
+              </Box>
+              <Typography className="num" sx={{ color: changeColor(w.dayChangePct), fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap' }}>
+                {fmtPct(w.dayChangePct)}
+              </Typography>
+              <Stack direction="row" sx={{ flexShrink: 0, mr: -0.75 }}>
+                <Tooltip title="Đặt cảnh báo giá">
+                  <IconButton size="small" aria-label="Đặt cảnh báo giá" onClick={() => setAlertFor(w)}>
+                    <NotificationsActiveOutlined fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Bỏ theo dõi">
+                  <IconButton size="small" aria-label="Bỏ theo dõi" onClick={() => void remove(w)}>
+                    <Close fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Stack>
+          ))}
+        </Stack>
       ) : (
         !adding && (
-          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-            Chưa theo dõi mã nào. Thêm cổ phiếu, coin hoặc loại vàng bạn quan tâm để xem giá và đặt cảnh báo mà không cần
-            nhập vào danh mục.
-          </Typography>
+          <EmptyState
+            plain
+            Icon={VisibilityOutlined}
+            title="Chưa theo dõi mã nào"
+            action={
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setAdding(true)} sx={{ borderRadius: 99 }}>
+                Thêm mã theo dõi
+              </Button>
+            }
+          >
+            Thêm cổ phiếu, coin hoặc loại vàng bạn quan tâm để xem giá và đặt cảnh báo mà không cần nhập vào danh mục.
+          </EmptyState>
         )
       )}
       <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 2, py: 1 }}>

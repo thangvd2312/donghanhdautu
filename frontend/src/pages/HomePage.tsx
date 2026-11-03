@@ -4,7 +4,6 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
-import Grid from '@mui/material/Grid'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
@@ -12,6 +11,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router-dom'
 import { NewsRow, ReviewList, TodayBlock } from '../components/home/HomeBlocks'
+import { PageGrid, PageHeader } from '../components/page'
 import { Panel } from '../components/ui'
 import DeploymentHomeCard from '../components/deployment/DeploymentHomeCard'
 import UpcomingEvents from '../components/events/UpcomingEvents'
@@ -48,16 +48,22 @@ export default function HomePage() {
   const feed = useResource(getHomeFeed, { key: qk.homeFeed, refreshMs: 5 * 60000 })
   const dateLabel = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })
 
+  // Bản tin: cột phụ trên desktop, nằm sau "Cần xem lại" trên điện thoại (cột phụ xuống cuối trang)
+  const brief = (
+    <Panel title="Bản tin">
+      {feed.error && !feed.data ? (
+        <BlockError what="bản tin" onRetry={feed.reload} />
+      ) : !feed.data ? (
+        <Skeleton variant="rounded" height={80} />
+      ) : (
+        <BriefCard brief={feed.data.brief} />
+      )}
+    </Panel>
+  )
+
   return (
     <Stack spacing={2.5}>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
-          {dateLabel}
-        </Typography>
-        <Typography sx={{ fontWeight: 700, fontSize: { xs: 22, md: 26 }, lineHeight: 1.25, letterSpacing: '-0.015em' }}>
-          Chào {me?.name || 'bạn'}
-        </Typography>
-      </Box>
+      <PageHeader eyebrow={dateLabel} title={`Chào ${me?.name || 'bạn'}`} titleOnMobile />
 
       {today.error && !today.data ? (
         <BlockError what="tổng quan danh mục" onRetry={today.reload} />
@@ -69,54 +75,42 @@ export default function HomePage() {
         <GettingStarted />
       )}
 
-      {/* Việc đến hạn (đợt giải ngân) đặt ngay dưới tổng quan, trước các điểm cần xem lại */}
-      <DeploymentHomeCard />
+      <PageGrid
+        aside={
+          <>
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>{brief}</Box>
+            <UpcomingEvents />
+            <WatchlistPanel />
+          </>
+        }
+      >
+        {/* Việc cần làm trước: đợt giải ngân đến hạn, rồi các điểm cần xem lại */}
+        <DeploymentHomeCard />
 
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Panel title="Cần xem lại" subtitle="Những điểm đáng chú ý trong danh mục của bạn">
-            {review.error && !review.data ? (
-              <BlockError what="các điểm cần xem lại" onRetry={review.reload} />
-            ) : !review.data ? (
-              <Skeleton variant="rounded" height={120} />
-            ) : (
-              <ReviewList points={review.data} />
-            )}
-          </Panel>
-        </Grid>
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Panel title="Bản tin">
-            {feed.error && !feed.data ? (
-              <BlockError what="bản tin" onRetry={feed.reload} />
-            ) : !feed.data ? (
-              <Skeleton variant="rounded" height={80} />
-            ) : (
-              <BriefCard brief={feed.data.brief} />
-            )}
-          </Panel>
-        </Grid>
-      </Grid>
+        <Panel title="Cần xem lại" subtitle="Những điểm đáng chú ý trong danh mục của bạn">
+          {review.error && !review.data ? (
+            <BlockError what="các điểm cần xem lại" onRetry={review.reload} />
+          ) : !review.data ? (
+            <Skeleton variant="rounded" height={120} />
+          ) : (
+            <ReviewList points={review.data} />
+          )}
+        </Panel>
 
-      <TipPrompt />
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>{brief}</Box>
 
-      <UpcomingEvents />
+        <TipPrompt />
 
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Panel title="Tin về mã của bạn" subtitle="Cổ phiếu đang nắm giữ và đang theo dõi · 48 giờ qua">
-            {feed.error && !feed.data ? (
-              <BlockError what="tin tức" onRetry={feed.reload} />
-            ) : !feed.data ? (
-              <Skeleton variant="rounded" height={160} />
-            ) : (
-              <NewsList feed={feed.data} />
-            )}
-          </Panel>
-        </Grid>
-        <Grid size={{ xs: 12, md: 5 }}>
-          <WatchlistPanel />
-        </Grid>
-      </Grid>
+        <Panel title="Tin về mã của bạn" subtitle="Cổ phiếu đang nắm giữ và đang theo dõi · 48 giờ qua">
+          {feed.error && !feed.data ? (
+            <BlockError what="tin tức" onRetry={feed.reload} />
+          ) : !feed.data ? (
+            <Skeleton variant="rounded" height={160} />
+          ) : (
+            <NewsList feed={feed.data} />
+          )}
+        </Panel>
+      </PageGrid>
     </Stack>
   )
 }

@@ -1,3 +1,4 @@
+import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -12,6 +13,7 @@ import { listTips, listTipSources } from '../api/tips'
 import AssetAvatar from '../components/AssetAvatar'
 import SourceStats from '../components/tips/SourceStats'
 import TipComposer from '../components/tips/TipComposer'
+import { EmptyState, PageGrid, PageHeader, StatTiles } from '../components/page'
 import { Panel } from '../components/ui'
 import { changeColor, fmtPct, timeAgo } from '../lib/format'
 import { DECISION_LABEL, DIRECTION_LABEL, HOT, OUTCOME_LABEL } from '../lib/tips'
@@ -59,47 +61,74 @@ export default function TipsPage() {
     }
   }
 
+  const totals = sources.reduce(
+    (t, x) => ({ tips: t.tips + x.tips, reviewed: t.reviewed + x.reviewed, right: t.right + x.right, wrong: t.wrong + x.wrong }),
+    { tips: 0, reviewed: 0, right: 0, wrong: 0 },
+  )
+
   return (
-    <Stack spacing={2.5} sx={{ maxWidth: 760, mx: 'auto' }}>
-      <Typography variant="h5" component="h1">
-        Soi lời khuyên
-      </Typography>
-      <TipComposer onCreated={(t) => nav(`/tips/${t.id}`)} />
+    <Stack spacing={2.5}>
+      <PageHeader
+        eyebrow="Hành động"
+        title="Soi lời khuyên"
+        description="Nghe ai đó hô mã? Dán vào đây trước khi mua: app đặt lời khuyên cạnh dữ liệu thật, rồi chấm lại sau 30 / 90 ngày."
+      />
 
-      <Panel title="Sổ lời khuyên" subtitle="Mọi lời khuyên bạn đã soi, quyết định của bạn và kết quả sau 30 / 90 ngày" noPadding>
-        {error && (
-          <Alert severity="error" sx={{ m: 2 }} action={<Button color="inherit" size="small" onClick={() => void load()}>Thử lại</Button>}>
-            {error}
-          </Alert>
-        )}
-        {!items && !error && <Skeleton variant="rounded" height={120} sx={{ m: 2 }} />}
-        {items?.length === 0 && (
-          <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>
-            Chưa soi lời khuyên nào. Lần tới nghe ai đó hô mã, dán vào ô phía trên trước khi mua.
-          </Typography>
-        )}
-        {items?.map((t) => <TipRow key={t.id} t={t} />)}
-        {cursor && (
-          <Box sx={{ p: 1.5, textAlign: 'center' }}>
-            <Button onClick={() => void more()} loading={loadingMore} sx={{ minHeight: 44 }}>
-              Xem thêm
-            </Button>
-          </Box>
-        )}
-      </Panel>
+      {sources.length > 0 && (
+        <StatTiles
+          items={[
+            { label: 'Lời khuyên đã soi', value: totals.tips },
+            { label: 'Đã chấm lại', value: totals.reviewed, hint: 'đủ 30 ngày trở lên' },
+            { label: 'Đúng', value: totals.right, color: totals.right ? 'price.up' : undefined },
+            { label: 'Sai', value: totals.wrong, color: totals.wrong ? 'price.down' : undefined },
+          ]}
+        />
+      )}
 
-      <SourceStats stats={sources} />
+      <PageGrid asideFirst aside={<TipComposer onCreated={(t) => nav(`/tips/${t.id}`)} />}>
+        <SourceStats stats={sources} />
+
+        <Panel title="Sổ lời khuyên" subtitle="Mọi lời khuyên bạn đã soi, quyết định của bạn và kết quả sau 30 / 90 ngày" noPadding>
+          {error && (
+            <Alert
+              severity="error"
+              sx={{ m: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={() => void load()}>
+                  Thử lại
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
+          )}
+          {!items && !error && <Skeleton variant="rounded" height={120} sx={{ m: 2 }} />}
+          {items?.length === 0 && (
+            <EmptyState plain Icon={FactCheckOutlined} title="Chưa soi lời khuyên nào">
+              Lần tới nghe ai đó hô mã, dán vào ô soi trước khi mua.
+            </EmptyState>
+          )}
+          {items?.map((t, i) => <TipRow key={t.id} t={t} first={i === 0} />)}
+          {cursor && (
+            <Box sx={{ p: 1.5, textAlign: 'center' }}>
+              <Button onClick={() => void more()} loading={loadingMore} sx={{ minHeight: 44 }}>
+                Xem thêm
+              </Button>
+            </Box>
+          )}
+        </Panel>
+      </PageGrid>
     </Stack>
   )
 }
 
-function TipRow({ t }: { t: TipListItem }) {
+function TipRow({ t, first }: { t: TipListItem; first?: boolean }) {
   const review = t.review90 ?? t.review30
   return (
     <ButtonBase
       component={RouterLink}
       to={`/tips/${t.id}`}
-      sx={{ display: 'flex', width: '100%', textAlign: 'left', gap: 1.5, p: 2, borderTop: 1, borderColor: 'divider', alignItems: 'flex-start' }}
+      sx={{ display: 'flex', width: '100%', textAlign: 'left', gap: 1.5, p: 2, borderTop: first ? 0 : 1, borderColor: 'divider', alignItems: 'flex-start' }}
     >
       <AssetAvatar assetType={t.assetType} symbol={t.symbol} size={40} />
       <Box sx={{ flex: 1, minWidth: 0 }}>

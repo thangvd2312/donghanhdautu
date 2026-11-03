@@ -1,5 +1,4 @@
 import Alert from '@mui/material/Alert'
-import Grid from '@mui/material/Grid'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import { useCallback } from 'react'
@@ -27,27 +26,18 @@ export default function StockFundamentals({ symbol }: { symbol: string }) {
   }
   if (!d) {
     return (
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <Skeleton variant="rounded" height={420} />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <Skeleton variant="rounded" height={420} />
-        </Grid>
-      </Grid>
+      <Stack spacing={2.5}>
+        <Skeleton variant="rounded" height={420} />
+        <Skeleton variant="rounded" height={300} />
+      </Stack>
     )
   }
 
+  // Nằm trong cột chính của trang mã: các khối xếp dọc, dùng hết bề rộng cột
   return (
     <Stack spacing={2.5}>
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <ValuationPanel v={d.valuationHistory} />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <OwnershipPanel sh={d.majorShareholders} it={d.insiderTrades} />
-        </Grid>
-      </Grid>
+      <ValuationPanel v={d.valuationHistory} />
+      <OwnershipPanel sh={d.majorShareholders} it={d.insiderTrades} />
       <CashFlowPanel cf={d.cashFlow} />
       <BalanceSheetPanel bs={d.balanceSheet} />
     </Stack>

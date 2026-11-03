@@ -1,4 +1,5 @@
 import MoreVert from '@mui/icons-material/MoreVert'
+import SchoolOutlined from '@mui/icons-material/SchoolOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -15,6 +16,7 @@ import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { EmptyState, PageGrid, PageHeader } from '../components/page'
 import PracticeOrderSheet, { type OrderPreset } from '../components/practice/PracticeOrderSheet'
 import { PositionCard, RulesPanel, SummaryCard, VirtualBadge } from '../components/practice/PracticeParts'
 import PracticeIntro from '../components/practice/PracticeIntro'
@@ -49,86 +51,111 @@ export default function PracticePage() {
   }, [])
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: 760, mx: 'auto', pb: 2 }}>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-        <Typography variant="h5" component="h1" sx={{ flex: 1, minWidth: 0 }}>
-          Luyện tập
-        </Typography>
-        {!state && <VirtualBadge />}
+    <Stack spacing={2.5} sx={{ pb: 2 }}>
+      <PageHeader
+        eyebrow="Công cụ"
+        title="Luyện tập"
+        description="Tập đặt lệnh với tiền ảo, xem phí và thuế ảnh hưởng thế nào trước khi dùng tiền thật."
+        actions={
+          <>
+            {!state && <VirtualBadge />}
+            {state && (
+              <>
+                <IconButton
+                  aria-label="Tuỳ chọn tài khoản ảo"
+                  onClick={(e) => setMenu(e.currentTarget)}
+                  sx={{ width: 44, height: 44, mr: -1 }}
+                >
+                  <MoreVert />
+                </IconButton>
+                <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
+                  <MenuItem
+                    onClick={() => {
+                      setMenu(null)
+                      setResetOpen(true)
+                    }}
+                    sx={{ minHeight: 44 }}
+                  >
+                    <ListItemText primary="Đặt lại tài khoản ảo" />
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
+          </>
+        }
+      />
+
+      <PageGrid
+        asideFirst
+        aside={
+          state ? (
+            <>
+              <SummaryCard state={state} onBuy={() => setOrder({ side: 'buy' })} />
+              <RulesPanel rules={state.rules.length ? state.rules : FALLBACK_RULES} />
+            </>
+          ) : undefined
+        }
+      >
+        {error && (
+          <Alert
+            severity="error"
+            role="alert"
+            action={
+              <Button color="inherit" size="small" onClick={load}>
+                Thử lại
+              </Button>
+            }
+          >
+            {error}
+          </Alert>
+        )}
+        {started === null && !error && (
+          <Stack spacing={1.5} aria-busy="true" aria-label="Đang tải">
+            <Skeleton variant="rounded" height={190} />
+            <Skeleton variant="rounded" height={120} />
+          </Stack>
+        )}
+        {started === false && <PracticeIntro onStarted={apply} />}
         {state && (
           <>
-            <IconButton aria-label="Tuỳ chọn tài khoản ảo" onClick={(e) => setMenu(e.currentTarget)} sx={{ width: 44, height: 44, mr: -1 }}>
-              <MoreVert />
-            </IconButton>
-            <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
-              <MenuItem
-                onClick={() => {
-                  setMenu(null)
-                  setResetOpen(true)
-                }}
-                sx={{ minHeight: 44 }}
+            <Paper>
+              <Tabs
+                value={tab}
+                onChange={(_, v: 'pos' | 'hist') => setTab(v)}
+                variant="fullWidth"
+                sx={{ borderBottom: 1, borderColor: 'divider' }}
               >
-                <ListItemText primary="Đặt lại tài khoản ảo" />
-              </MenuItem>
-            </Menu>
+                <Tab value="pos" label={`Vị thế (${state.positions.length})`} sx={{ minHeight: 48 }} />
+                <Tab value="hist" label="Lịch sử lệnh" sx={{ minHeight: 48 }} />
+              </Tabs>
+              {tab === 'pos' ? (
+                state.positions.length ? (
+                  <Box data-testid="practice-positions">
+                    {state.positions.map((p) => (
+                      <PositionCard
+                        key={`${p.assetType}:${p.symbol}`}
+                        p={p}
+                        onTrade={(side) => setOrder({ side, assetType: p.assetType, symbol: baseSymbol(p.assetType, p.symbol) })}
+                      />
+                    ))}
+                  </Box>
+                ) : (
+                  <Box data-testid="practice-no-positions">
+                    <EmptyState plain Icon={SchoolOutlined} title="Chưa có vị thế nào">
+                      Bấm “Mua” để thử lệnh đầu tiên, không cần vội.
+                    </EmptyState>
+                  </Box>
+                )
+              ) : (
+                <TradeHistory key={state.totals.tradeCount + state.account.startedAt} />
+              )}
+            </Paper>
+            <Typography variant="caption" color="text.secondary">
+              Giá trị trên đây là tiền ảo, chỉ để học. Kết quả luyện tập không đảm bảo kết quả khi đầu tư thật và không phải khuyến nghị.
+            </Typography>
           </>
         )}
-      </Stack>
-
-      {error && (
-        <Alert
-          severity="error"
-          role="alert"
-          action={
-            <Button color="inherit" size="small" onClick={load}>
-              Thử lại
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
-      )}
-      {started === null && !error && (
-        <Stack spacing={1.5} aria-busy="true" aria-label="Đang tải">
-          <Skeleton variant="rounded" height={190} />
-          <Skeleton variant="rounded" height={120} />
-        </Stack>
-      )}
-      {started === false && <PracticeIntro onStarted={apply} />}
-      {state && (
-        <>
-          <SummaryCard state={state} onBuy={() => setOrder({ side: 'buy' })} />
-          <Paper>
-            <Tabs value={tab} onChange={(_, v: 'pos' | 'hist') => setTab(v)} variant="fullWidth" sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tab value="pos" label={`Vị thế (${state.positions.length})`} sx={{ minHeight: 48 }} />
-              <Tab value="hist" label="Lịch sử lệnh" sx={{ minHeight: 48 }} />
-            </Tabs>
-            {tab === 'pos' ? (
-              state.positions.length ? (
-                <Box data-testid="practice-positions">
-                  {state.positions.map((p) => (
-                    <PositionCard
-                      key={`${p.assetType}:${p.symbol}`}
-                      p={p}
-                      onTrade={(side) => setOrder({ side, assetType: p.assetType, symbol: baseSymbol(p.assetType, p.symbol) })}
-                    />
-                  ))}
-                </Box>
-              ) : (
-                <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }} data-testid="practice-no-positions">
-                  Chưa có vị thế nào. Bấm “Mua” để thử lệnh đầu tiên, không cần vội.
-                </Typography>
-              )
-            ) : (
-              <TradeHistory key={state.totals.tradeCount + state.account.startedAt} />
-            )}
-          </Paper>
-          <RulesPanel rules={state.rules.length ? state.rules : FALLBACK_RULES} />
-          <Typography variant="caption" color="text.secondary">
-            Giá trị trên đây là tiền ảo, chỉ để học. Kết quả luyện tập không đảm bảo kết quả khi đầu tư thật và không phải khuyến nghị.
-          </Typography>
-        </>
-      )}
+      </PageGrid>
 
       {state && order && (
         <PracticeOrderSheet

@@ -1,5 +1,6 @@
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import ChevronRight from '@mui/icons-material/ChevronRight'
+import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -14,8 +15,10 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router-dom'
+import { EmptyState, PageGrid, PageHeader } from '../components/page'
+import { ScrollRow } from '../components/ui'
 import { EntryRow } from '../components/journal/EntryRow'
-import { MonthlySummary } from '../components/journal/MonthlySummary'
+import { MonthlySummary, MonthlyTiles } from '../components/journal/MonthlySummary'
 import { TagSheet } from '../components/journal/TagSheet'
 import { getJournalMonth, getJournalSummary } from '../api/journal'
 import { currentMonth, dayTitle, EMOTION_LABEL, EMOTIONS, groupByDay, isMonth, monthTitle, shiftMonth } from '../lib/journal'
@@ -87,127 +90,114 @@ export default function JournalPage() {
 
   return (
     <Stack spacing={2.5}>
-      <Box>
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-          Nhật ký quyết định
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Mỗi lần mua, bán hay xem lại kế hoạch: vì sao, và lúc đó bạn thấy thế nào. Không có đúng sai, chỉ để bạn tự nhận ra
-          thói quen của mình.
-        </Typography>
-      </Box>
+      <PageHeader
+        eyebrow="Hành động"
+        title="Nhật ký quyết định"
+        description="Mỗi lần mua, bán hay xem lại kế hoạch: vì sao, và lúc đó bạn thấy thế nào. Không có đúng sai, chỉ để bạn tự nhận ra thói quen của mình."
+        actions={
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+            <IconButton aria-label="Tháng trước" onClick={() => set({ month: shiftMonth(month, -1) })} sx={{ width: 44, height: 44 }}>
+              <ChevronLeft />
+            </IconButton>
+            <Typography sx={{ fontWeight: 700, minWidth: 130, textAlign: 'center' }} aria-live="polite">
+              {monthTitle(month)}
+            </Typography>
+            <IconButton
+              aria-label="Tháng sau"
+              disabled={month >= thisMonth}
+              onClick={() => set({ month: shiftMonth(month, 1) === thisMonth ? null : shiftMonth(month, 1) })}
+              sx={{ width: 44, height: 44 }}
+            >
+              <ChevronRight />
+            </IconButton>
+          </Stack>
+        }
+      />
 
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center' }}>
-        <IconButton aria-label="Tháng trước" onClick={() => set({ month: shiftMonth(month, -1) })} sx={{ width: 44, height: 44 }}>
-          <ChevronLeft />
-        </IconButton>
-        <Typography sx={{ fontWeight: 700, minWidth: 140, textAlign: 'center' }} aria-live="polite">
-          {monthTitle(month)}
-        </Typography>
-        <IconButton
-          aria-label="Tháng sau"
-          disabled={month >= thisMonth}
-          onClick={() => set({ month: shiftMonth(month, 1) === thisMonth ? null : shiftMonth(month, 1) })}
-          sx={{ width: 44, height: 44 }}
-        >
-          <ChevronRight />
-        </IconButton>
+      {summary ? <MonthlyTiles s={summary} /> : <Skeleton variant="rounded" height={96} />}
+
+      {/* Bộ lọc: một hàng, điện thoại cuộn ngang */}
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' } }}>
+        <Box sx={{ flex: 1, minWidth: 0 }} role="group" aria-label="Lọc theo cảm xúc">
+          <ScrollRow>
+            <Chip
+              label="Mọi cảm xúc"
+              clickable
+              aria-pressed={!emotion}
+              color={!emotion ? 'primary' : 'default'}
+              variant={!emotion ? 'filled' : 'outlined'}
+              onClick={() => set({ emotion: null })}
+              sx={{ height: 36 }}
+            />
+            {EMOTIONS.map((e) => (
+              <Chip
+                key={e}
+                label={EMOTION_LABEL[e]}
+                clickable
+                aria-pressed={emotion === e}
+                color={emotion === e ? 'primary' : 'default'}
+                variant={emotion === e ? 'filled' : 'outlined'}
+                onClick={() => set({ emotion: emotion === e ? null : e })}
+                sx={{ height: 36 }}
+              />
+            ))}
+          </ScrollRow>
+        </Box>
+        {data && data.plans.length > 0 && (
+          <TextField
+            select
+            size="small"
+            label="Kế hoạch"
+            value={data.plans.some((p) => p.id === planId) ? planId : ''}
+            onChange={(e) => set({ plan: e.target.value || null })}
+            sx={{ minWidth: { sm: 200 } }}
+          >
+            <MenuItem value="">Mọi kế hoạch</MenuItem>
+            {data.plans.map((p) => (
+              <MenuItem key={p.id} value={p.id}>
+                {p.displayName}
+                {p.status === 'closed' ? ' (đã kết thúc)' : ''}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
       </Stack>
 
-      {summary ? <MonthlySummary s={summary} /> : <Skeleton variant="rounded" height={260} />}
-
-      <Stack spacing={1.5}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' } }}>
-          <Box sx={{ flex: 1, minWidth: 0 }} role="group" aria-label="Lọc theo cảm xúc">
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 1,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                '&::-webkit-scrollbar': { display: 'none' },
-                '& > *': { flexShrink: 0 },
-                // Điện thoại: hàng cuộn tràn ra đúng bằng lề trang (12px) để thấy còn chip phía sau
-                mx: { xs: -1.5, sm: 0 },
-                px: { xs: 1.5, sm: 0 },
-              }}
-            >
-              <Chip
-                label="Mọi cảm xúc"
-                clickable
-                aria-pressed={!emotion}
-                color={!emotion ? 'primary' : 'default'}
-                variant={!emotion ? 'filled' : 'outlined'}
-                onClick={() => set({ emotion: null })}
-              />
-              {EMOTIONS.map((e) => (
-                <Chip
-                  key={e}
-                  label={EMOTION_LABEL[e]}
-                  clickable
-                  aria-pressed={emotion === e}
-                  color={emotion === e ? 'primary' : 'default'}
-                  variant={emotion === e ? 'filled' : 'outlined'}
-                  onClick={() => set({ emotion: emotion === e ? null : e })}
-                />
-              ))}
-            </Box>
-          </Box>
-          {data && data.plans.length > 0 && (
-            <TextField
-              select
-              size="small"
-              label="Kế hoạch"
-              value={data.plans.some((p) => p.id === planId) ? planId : ''}
-              onChange={(e) => set({ plan: e.target.value || null })}
-              sx={{ minWidth: { sm: 200 } }}
-            >
-              <MenuItem value="">Mọi kế hoạch</MenuItem>
-              {data.plans.map((p) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.displayName}
-                  {p.status === 'closed' ? ' (đã kết thúc)' : ''}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-        </Stack>
-
+      <PageGrid aside={summary ? <MonthlySummary s={summary} /> : <Skeleton variant="rounded" height={260} />}>
         {error && <Alert severity="error">{error}</Alert>}
         {!data && !error && <Skeleton variant="rounded" height={240} />}
         {data && (
           <Paper data-testid="journal-timeline">
             {days.length === 0 ? (
-              <Box sx={{ p: 3 }}>
-                <Typography sx={{ fontWeight: 600 }}>
-                  {filtered
+              <EmptyState
+                plain
+                Icon={MenuBookOutlined}
+                title={
+                  filtered
                     ? `Không có quyết định nào${emotion ? ` lúc “${EMOTION_LABEL[emotion]}”` : ''}${planName ? ` của kế hoạch ${planName}` : ''} trong ${monthTitle(month).toLowerCase()}.`
-                    : `Chưa có quyết định nào trong ${monthTitle(month).toLowerCase()}.`}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Khi ghi lệnh mua / bán trong sổ giao dịch hoặc xem lại một kế hoạch, bạn có thể gắn cảm xúc và lý do. Nhật ký chỉ
-                  lấy từ những gì bạn tự ghi, không suy ra từ các cuộc trò chuyện với cố vấn.
-                </Typography>
-                <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap' }} useFlexGap>
-                  {filtered && (
-                    <Button variant="outlined" onClick={() => set({ emotion: null, plan: null })} sx={{ borderRadius: 99 }}>
-                      Bỏ lọc
+                    : `Chưa có quyết định nào trong ${monthTitle(month).toLowerCase()}.`
+                }
+                action={
+                  <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {filtered && (
+                      <Button variant="outlined" onClick={() => set({ emotion: null, plan: null })} sx={{ borderRadius: 99 }}>
+                        Bỏ lọc
+                      </Button>
+                    )}
+                    <Button variant="contained" component={RouterLink} to="/portfolio" sx={{ borderRadius: 99 }}>
+                      Mở sổ giao dịch
                     </Button>
-                  )}
-                  <Button variant="contained" component={RouterLink} to="/portfolio" sx={{ borderRadius: 99 }}>
-                    Mở sổ giao dịch
-                  </Button>
-                </Stack>
-              </Box>
+                  </Stack>
+                }
+              >
+                Khi ghi lệnh mua / bán trong sổ giao dịch hoặc xem lại một kế hoạch, bạn có thể gắn cảm xúc và lý do. Nhật ký chỉ lấy từ những gì
+                bạn tự ghi, không suy ra từ các cuộc trò chuyện với cố vấn.
+              </EmptyState>
             ) : (
               <Stack divider={<Divider flexItem />}>
                 {days.map((d) => (
                   <Box key={d.date} component="section" aria-label={dayTitle(d.date)}>
-                    <Typography
-                      variant="caption"
-                      component="h2"
-                      sx={{ px: 2, pt: 1.25, fontWeight: 700, color: 'text.secondary', display: 'block' }}
-                    >
+                    <Typography variant="caption" component="h2" sx={{ px: 2, pt: 1.25, fontWeight: 700, color: 'text.secondary', display: 'block' }}>
                       {dayTitle(d.date)}
                     </Typography>
                     <Stack divider={<Divider flexItem sx={{ ml: 8 }} />}>
@@ -226,7 +216,7 @@ export default function JournalPage() {
             )}
           </Paper>
         )}
-      </Stack>
+      </PageGrid>
 
       <TagSheet
         entry={tagging}

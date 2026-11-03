@@ -14,6 +14,7 @@ import ResultsPanel from '../components/screener/ResultsPanel'
 import type { ScreenerSheetState } from '../components/screener/sheetState'
 import SheetsHost from '../components/screener/SheetsHost'
 import StartPanel from '../components/screener/StartPanel'
+import { PageHeader } from '../components/page'
 import { useScreenRun } from '../hooks/useScreenRun'
 import { useScreenerMeta } from '../hooks/useScreenerMeta'
 import { DEFAULT_SORT, decodeState, encodeState, MAX_PICK, PRESETS, sameState } from '../lib/screener'
@@ -151,15 +152,12 @@ export default function ScreenerPage() {
   const loadedAll = !!res && (exhausted || res.items.length >= res.total)
 
   return (
-    <Stack spacing={1.75} sx={{ maxWidth: 960, mx: 'auto', pb: selecting && picked.length ? 12 : 0 }}>
-      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-        <Typography component="h1" sx={{ fontWeight: 800, fontSize: 26, lineHeight: 1.25 }}>
-          Lọc cổ phiếu
-        </Typography>
-      </Box>
-      <Typography variant="caption" color="text.secondary">
-        Thu hẹp danh sách theo tiêu chí bạn quan tâm, rồi đọc kỹ từng mã. Kết quả lọc chỉ để tìm hiểu thêm, không phải khuyến nghị mua hay bán.
-      </Typography>
+    <Stack spacing={2.5} sx={{ pb: selecting && picked.length ? 12 : 0 }}>
+      <PageHeader
+        eyebrow="Công cụ"
+        title="Lọc cổ phiếu"
+        description="Thu hẹp danh sách theo tiêu chí bạn quan tâm, rồi đọc kỹ từng mã. Kết quả lọc chỉ để tìm hiểu thêm, không phải khuyến nghị mua hay bán."
+      />
 
       {note && (
         <Alert severity="info" variant="outlined" onClose={() => setNote('')}>

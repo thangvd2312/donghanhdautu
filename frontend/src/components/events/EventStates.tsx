@@ -1,7 +1,7 @@
 import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
+import { EmptyState } from '../page'
 import type { ReactNode } from 'react'
 
 export function ListSkeleton() {
@@ -18,19 +18,18 @@ export function ListSkeleton() {
 
 export function EmptyBox({ title, children, actions }: { title: string; children?: ReactNode; actions?: ReactNode }) {
   return (
-    <Stack spacing={1.5} sx={{ alignItems: 'center', textAlign: 'center', py: 4, px: 2 }}>
-      <EventAvailableOutlined sx={{ fontSize: 44, color: 'text.disabled' }} aria-hidden />
-      <Typography sx={{ fontWeight: 700 }}>{title}</Typography>
-      {children && (
-        <Typography variant="body2" color="text.secondary" component="div">
-          {children}
-        </Typography>
-      )}
-      {actions && (
-        <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {actions}
-        </Stack>
-      )}
-    </Stack>
+    <EmptyState
+      Icon={EventAvailableOutlined}
+      title={title}
+      action={
+        actions ? (
+          <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {actions}
+          </Stack>
+        ) : undefined
+      }
+    >
+      {children}
+    </EmptyState>
   )
 }

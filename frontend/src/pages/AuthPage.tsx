@@ -1,3 +1,4 @@
+import CheckCircleOutlined from '@mui/icons-material/CheckCircleOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -72,46 +73,55 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+      {/* Cột thương hiệu navy: chỉ hiện trên desktop */}
       <Box
         sx={{
           display: { xs: 'none', md: 'flex' },
           flexDirection: 'column',
           justifyContent: 'space-between',
           p: 6,
-          bgcolor: 'primary.dark',
-          color: '#fff',
+          bgcolor: 'hero.bg',
+          color: 'hero.ink',
+          backgroundImage: 'radial-gradient(120% 80% at 100% 0%, rgba(201, 162, 75, 0.18) 0%, rgba(201, 162, 75, 0) 55%)',
         }}
       >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <Box sx={{ color: '#fff', '& rect': { fill: 'rgba(255,255,255,.15)' } }}>
+          <Box sx={{ color: 'hero.gold' }}>
             <Logo size={36} />
           </Box>
-          <Typography variant="h6" sx={{ color: '#fff' }}>
-            Đồng Hành Đầu Tư
-          </Typography>
+          <Typography sx={{ color: 'hero.ink', fontWeight: 700, fontSize: 18 }}>Đồng Hành Đầu Tư</Typography>
         </Stack>
-        <Box sx={{ maxWidth: 460 }}>
-          <Typography variant="h4" sx={{ color: '#fff', lineHeight: 1.25 }}>
+        <Box sx={{ maxWidth: 480 }}>
+          <Typography sx={{ color: 'hero.ink', fontSize: 32, fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.02em' }}>
             Bảng giá cổ phiếu, vàng, crypto — và một cố vấn biết rõ danh mục của bạn.
           </Typography>
-          <Stack spacing={1.5} sx={{ mt: 4, opacity: 0.85 }}>
-            <Typography>Giá realtime HOSE, HNX, UPCoM, SJC, DOJI, PNJ, Binance trong một màn hình.</Typography>
-            <Typography>Phân tích có số liệu và nguồn dẫn, tách bạch đầu tư dài hạn và lướt sóng.</Typography>
-            <Typography>Báo cho bạn khi tài sản đang giữ biến động mạnh hoặc có tin quan trọng.</Typography>
+          <Stack spacing={2} sx={{ mt: 4 }}>
+            {[
+              'Giá realtime HOSE, HNX, UPCoM, SJC, DOJI, PNJ, Binance trong một màn hình.',
+              'Phân tích có số liệu và nguồn dẫn, tách bạch đầu tư dài hạn và lướt sóng.',
+              'Báo cho bạn khi tài sản đang giữ biến động mạnh hoặc có tin quan trọng.',
+            ].map((t) => (
+              <Stack key={t} direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+                <CheckCircleOutlined sx={{ color: 'hero.gold', fontSize: 20, mt: '2px', flexShrink: 0 }} />
+                <Typography sx={{ color: 'hero.muted' }}>{t}</Typography>
+              </Stack>
+            ))}
           </Stack>
         </Box>
-        <Typography variant="caption" sx={{ opacity: 0.6 }}>
+        <Typography variant="caption" sx={{ color: 'hero.muted' }}>
           Phân tích mang tính tham khảo, không phải khuyến nghị đầu tư được cấp phép.
         </Typography>
       </Box>
 
       <Box sx={{ display: 'grid', placeItems: 'center', p: 3 }}>
-        <Paper sx={{ width: '100%', maxWidth: 420, p: { xs: 3, sm: 4 } }}>
+        <Paper sx={{ width: '100%', maxWidth: 440, p: { xs: 3, sm: 4 }, boxShadow: { md: 'none' }, border: { md: 0 } }}>
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 3, display: { md: 'none' } }}>
             <Logo size={28} />
             <Typography sx={{ fontWeight: 700 }}>Đồng Hành Đầu Tư</Typography>
           </Stack>
-          <Typography variant="h5">{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</Typography>
+          <Typography component="h1" sx={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.015em' }}>
+            {mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
+          </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
             {mode === 'login' ? 'Chào mừng bạn quay lại.' : 'Mất khoảng 2 phút, gồm cả bài khảo sát khẩu vị rủi ro.'}
           </Typography>
@@ -172,7 +182,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
               slotProps={{ htmlInput: { minLength: mode === 'register' ? 8 : undefined } }}
             />
             {error && <Alert severity="error">{error}</Alert>}
-            <Button type="submit" variant="contained" size="large" disabled={busy}>
+            <Button type="submit" variant="contained" size="large" disabled={busy} sx={{ borderRadius: 99 }}>
               {busy ? 'Đang xử lý…' : mode === 'login' ? 'Đăng nhập' : 'Đăng ký'}
             </Button>
           </Stack>

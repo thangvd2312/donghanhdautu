@@ -1,3 +1,4 @@
+import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -9,6 +10,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { PageGrid, PageHeader, EmptyState } from '../components/page'
 import NewsFilterBar, { NewsFilterSidebar } from '../components/news/NewsFilterBar'
 import { FeaturedNews, NewsRow } from '../components/news/NewsCard'
 import { useNewsSearch } from '../hooks/useNewsSearch'
@@ -18,7 +20,7 @@ import { useIsMobile } from '../lib/useIsMobile'
 
 function NewsList({ items, terms }: { items: NewsHit[]; terms: string[] }) {
   return (
-    <Paper variant="outlined" sx={{ px: { xs: 2, sm: 2.5 }, borderRadius: 2, overflow: 'hidden' }}>
+    <Paper sx={{ px: { xs: 2, sm: 2.5 }, overflow: 'hidden' }}>
       {items.map((n, i) => (
         <Fragment key={n.url}>
           {i > 0 && <Divider />}
@@ -56,25 +58,18 @@ export default function NewsPage() {
   const isMobile = useIsMobile()
 
   return (
-    // Desktop: cột tin + cột bộ lọc bên phải (dính theo khi cuộn)
-    <Box
-      sx={{
-        maxWidth: { xs: 860, md: 1180 },
-        mx: 'auto',
-        display: { md: 'grid' },
-        gridTemplateColumns: { md: 'minmax(0, 1fr) 280px' },
-        columnGap: { md: 3 },
-        alignItems: 'start',
-      }}
-    >
-      <Box sx={{ mb: 2, gridColumn: { md: '1 / -1' } }}>
-        <Typography variant="h5">Tin tức tài chính</Typography>
-        <Typography variant="body2" color="text.secondary">
-          CafeF, VnExpress, Coin68, CoinDesk, Binance… cập nhật 5 phút/lần. AI đọc từng tin, chỉ giữ tin có ảnh hưởng tới
-          đầu tư; tìm lại được tin trong 180 ngày
-        </Typography>
-      </Box>
-
+    <Stack spacing={2.5}>
+      <PageHeader
+        eyebrow="Thông tin"
+        title="Tin tức tài chính"
+        description="CafeF, VnExpress, Coin68, CoinDesk, Binance… cập nhật 5 phút/lần. AI đọc từng tin, chỉ giữ tin có ảnh hưởng tới đầu tư; tìm lại được tin trong 180 ngày"
+      />
+      {/* Desktop: bộ lọc ở cột phụ; điện thoại: hàng chip cuộn ngang nằm trong NewsFilterBar */}
+      <PageGrid
+        aside={
+          !isMobile && <NewsFilterSidebar filters={filters} onChange={update} facets={res?.facets ?? null} />
+        }
+      >
       <Box sx={{ minWidth: 0 }}>
         <NewsFilterBar
           text={text}
@@ -121,12 +116,9 @@ export default function NewsPage() {
             {res.featured && <FeaturedNews n={res.featured} />}
 
             {res.items.length === 0 && (
-              <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', borderRadius: 2 }}>
-                <Typography sx={{ fontWeight: 600 }}>Không có tin phù hợp</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Thử từ khoá ngắn hơn, bỏ bớt bộ lọc hoặc chọn khoảng thời gian dài hơn.
-                </Typography>
-                <Stack direction="row" spacing={1} sx={{ mt: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <EmptyState Icon={SearchOffOutlined} title="Không có tin phù hợp">
+                Thử từ khoá ngắn hơn, bỏ bớt bộ lọc hoặc chọn khoảng thời gian dài hơn.
+                <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 1.5, justifyContent: 'center', flexWrap: 'wrap', rowGap: 1 }}>
                   {res.facets.kind
                     .filter((k) => k.value !== shown.kind && k.count > 0)
                     .map((k) => (
@@ -140,7 +132,7 @@ export default function NewsPage() {
                     ))}
                   {filtered && <Button onClick={() => setParams({}, { replace: true })}>Xoá tìm kiếm và bộ lọc</Button>}
                 </Stack>
-              </Paper>
+              </EmptyState>
             )}
 
             {searching ? (
@@ -170,12 +162,7 @@ export default function NewsPage() {
         )}
       </Box>
 
-      {!isMobile && (
-        // Ô kéo dài hết cột tin để cột lọc dính được suốt trang
-        <Box sx={{ alignSelf: 'stretch' }}>
-          <NewsFilterSidebar filters={filters} onChange={update} facets={res?.facets ?? null} />
-        </Box>
-      )}
-    </Box>
+      </PageGrid>
+    </Stack>
   )
 }

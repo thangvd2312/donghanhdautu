@@ -87,7 +87,7 @@ export default function OnboardingPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', py: { xs: 3, md: 6 } }}>
-      <Container maxWidth="md">
+      <Container maxWidth="md" sx={{ maxWidth: { md: 760 } }}>
         <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 4 }}>
           <Logo size={28} />
           <Typography sx={{ fontWeight: 700 }}>Đồng Hành Đầu Tư</Typography>
@@ -120,7 +120,7 @@ export default function OnboardingPage() {
                     {step + 1}/{quiz.length}
                   </Typography>
                 </Stack>
-                <Typography variant="h6" sx={{ mt: 3 }}>
+                <Typography component="h1" sx={{ mt: 3, fontSize: { xs: 18, md: 22 }, fontWeight: 700, lineHeight: 1.35, letterSpacing: '-0.01em' }}>
                   {q.question}
                 </Typography>
                 {q.hint && (
@@ -142,6 +142,8 @@ export default function OnboardingPage() {
                           textAlign: 'left',
                           py: 1.5,
                           px: 2,
+                          minHeight: 52,
+                          borderRadius: '12px',
                           fontWeight: 500,
                           borderColor: selected ? undefined : 'divider',
                           bgcolor: selected ? 'action.selected' : undefined,
@@ -176,7 +178,7 @@ export default function OnboardingPage() {
               Kiểu nhà đầu tư của bạn
             </Typography>
             <Stack useFlexGap direction="row" spacing={2} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <Typography variant="h4" color="primary">
+              <Typography component="h1" color="primary" sx={{ fontSize: { xs: 28, md: 34 }, fontWeight: 700, letterSpacing: '-0.02em' }}>
                 {RISK_LABEL[profile.riskType]}
               </Typography>
               <Chip size="small" label={`Điểm chịu rủi ro ${profile.riskScore}/100`} />
@@ -189,7 +191,7 @@ export default function OnboardingPage() {
               </Alert>
             )}
             <Stack direction="row" sx={{ mt: 3, justifyContent: 'flex-end' }}>
-              <Button variant="contained" onClick={() => setStage(2)}>
+              <Button variant="contained" onClick={() => setStage(2)} sx={{ borderRadius: 99, px: 3 }}>
                 Tiếp tục
               </Button>
             </Stack>
@@ -198,7 +200,9 @@ export default function OnboardingPage() {
 
         {stage === 2 && (
           <Paper sx={{ p: { xs: 2.5, sm: 4 } }}>
-            <Typography variant="h6">Bạn đang nắm giữ những gì?</Typography>
+            <Typography component="h1" sx={{ fontSize: 20, fontWeight: 700 }}>
+              Bạn đang nắm giữ những gì?
+            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
               Nhập cổ phiếu, vàng, coin và tiền mặt. Cố vấn dựa vào đây để nhận xét danh mục và báo khi có biến động. Có
               thể bỏ qua và nhập sau ở trang Danh mục.
@@ -233,7 +237,7 @@ export default function OnboardingPage() {
             )}
             <Stack direction="row" spacing={1} sx={{ mt: 3, justifyContent: 'flex-end' }}>
               <Button onClick={() => setStage(1)}>Quay lại</Button>
-              <Button variant="contained" onClick={() => void finish()}>
+              <Button variant="contained" onClick={() => void finish()} sx={{ borderRadius: 99, px: 3 }}>
                 {portfolio?.holdings.length ? 'Hoàn tất' : 'Bỏ qua, nhập sau'}
               </Button>
             </Stack>

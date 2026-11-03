@@ -1,5 +1,4 @@
 import Alert from '@mui/material/Alert'
-import Grid from '@mui/material/Grid'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -9,6 +8,7 @@ import AssetHero from '../components/AssetHero'
 import PriceAlertDialog from '../components/alerts/PriceAlertDialog'
 import PriceChart from '../components/PriceChart'
 import TechnicalsPanel from '../components/TechnicalsPanel'
+import { PageGrid, StatTiles } from '../components/page'
 import { Panel } from '../components/ui'
 import { getCrypto, getCryptoHistory } from '../api/market'
 import { useAssetDetail } from '../hooks/useAssetDetail'
@@ -40,7 +40,7 @@ export default function CryptoPage() {
         color={changeColor(q?.changePct)}
         extra={
           q && (
-            <Typography variant="caption" color="text.secondary" className="num">
+            <Typography variant="caption" className="num" sx={{ color: 'hero.muted' }}>
               ≈ {fmtVnd(q.price * (snapshot?.usdt?.mid ?? d.usdtVnd))}
             </Typography>
           )
@@ -57,24 +57,33 @@ export default function CryptoPage() {
         onClose={() => setAlertOpen(false)}
         fixed={{ assetType: 'crypto', symbol: base, label: base, currentPrice: q?.price ?? null }}
       />
-      <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <Panel title="Biểu đồ giá" subtitle="Nến ngày">
-            {candles.length ? (
-              <PriceChart candles={candles} priceFormatter={fmtUsd} />
-            ) : (
-              <Typography color="text.secondary" sx={{ py: 10, textAlign: 'center' }}>
-                Không có dữ liệu
-              </Typography>
-            )}
-          </Panel>
-        </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <Panel title="Kỹ thuật" sx={{ height: '100%' }}>
+      {q && (
+        <StatTiles
+          items={[
+            { label: 'Cao 24h', value: fmtUsd(q.high) },
+            { label: 'Thấp 24h', value: fmtUsd(q.low) },
+            { label: 'Mở cửa 24h', value: fmtUsd(q.open24h) },
+            { label: 'KL 24h (USDT)', value: fmtUsd(q.quoteVolume) },
+          ]}
+        />
+      )}
+      <PageGrid
+        aside={
+          <Panel title="Kỹ thuật">
             <TechnicalsPanel t={d.technicals} priceFmt={(v) => fmtUsd(v)} />
           </Panel>
-        </Grid>
-      </Grid>
+        }
+      >
+        <Panel title="Biểu đồ giá" subtitle="Nến ngày">
+          {candles.length ? (
+            <PriceChart candles={candles} priceFormatter={fmtUsd} />
+          ) : (
+            <Typography color="text.secondary" sx={{ py: 10, textAlign: 'center' }}>
+              Không có dữ liệu
+            </Typography>
+          )}
+        </Panel>
+      </PageGrid>
     </Stack>
   )
 }

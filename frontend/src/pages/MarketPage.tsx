@@ -12,6 +12,7 @@ import CryptoBoard from '../components/market/CryptoBoard'
 import FxBoard from '../components/market/FxBoard'
 import GoldBoard from '../components/market/GoldBoard'
 import StockBoard from '../components/market/StockBoard'
+import { PageHeader } from '../components/page'
 import { ChangePill } from '../components/ui'
 import { changeColor, fmtNum, fmtPct, timeAgo } from '../lib/format'
 import { useMarket } from '../lib/market-context'
@@ -69,6 +70,10 @@ export default function MarketPage() {
 
   return (
     <Stack spacing={2.5}>
+      <PageHeader
+        title="Bảng giá"
+        description="Chỉ số, cổ phiếu VN30, vàng, crypto và tỷ giá trên một màn hình, cập nhật theo thời gian thực."
+      />
       {/* Điện thoại: chỉ số cuộn ngang trên một hàng thẻ nhỏ, nhường chỗ cho bảng giá */}
       <Box
         sx={{

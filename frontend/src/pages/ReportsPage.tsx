@@ -10,7 +10,6 @@ import LinearProgress from '@mui/material/LinearProgress'
 import ListItemText from '@mui/material/ListItemText'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
-import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
@@ -23,7 +22,8 @@ import { listPortfolios } from '../api/portfolio'
 import { downloadReportCsv, getPortfolioReport } from '../api/reports'
 import ReportDocument, { REPORT_CSS } from '../components/reports/ReportDocument'
 import CustomRange from '../components/reports/CustomRange'
-import { InfoTip, ScrollRow } from '../components/ui'
+import { PageGrid, PageHeader } from '../components/page'
+import { InfoTip, Panel, ScrollRow } from '../components/ui'
 import { todayVN } from '../lib/events'
 import { maskOf, monthChip, monthOptions, reportQuery, type ReportSelection } from '../lib/reports'
 import type { PortfolioAccount, PortfolioReport, ReportCsvDelimiter } from '../lib/types'
@@ -112,109 +112,113 @@ export default function ReportsPage() {
   const ready = !!data && !loading
 
   return (
-    <Stack spacing={2} sx={{ maxWidth: 860, mx: 'auto' }}>
+    <Stack spacing={2.5}>
       <style>{REPORT_CSS}</style>
 
-      <Box>
-        <Typography component="h1" sx={{ fontWeight: 800, fontSize: { xs: 20, md: 24 } }}>
-          Báo cáo danh mục
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Nhìn lại một kỳ: dòng vốn, lãi/lỗ, phí, cổ tức và phân bổ. Lưu PDF hoặc tải CSV để tự giữ hoặc gửi cho người bạn tin.
-        </Typography>
-      </Box>
-
-      <Paper sx={{ p: 2 }}>
-        <Stack spacing={1.5}>
-          <Box>
-            <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.75, fontWeight: 600 }}>
-              Kỳ báo cáo
-            </Typography>
-            <ScrollRow>
-              {months.map((mo) => (
-                <Chip
-                  key={mo}
-                  label={monthChip(mo, today)}
-                  color={!custom && activeMonth === mo ? 'primary' : 'default'}
-                  variant={!custom && activeMonth === mo ? 'filled' : 'outlined'}
-                  onClick={() => setQuery({ m: mo })}
-                />
-              ))}
-              <Chip
-                icon={<EditCalendarOutlined />}
-                label={custom && data ? data.period.label : 'Tự chọn'}
-                color={custom ? 'primary' : 'default'}
-                variant={custom ? 'filled' : 'outlined'}
-                onClick={() => setCustomOpen(true)}
-              />
-            </ScrollRow>
-          </Box>
-
-          {accounts.length > 1 && (
-            <Box>
-              <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.75, fontWeight: 600 }}>
-                Danh mục
-              </Typography>
-              <ScrollRow>
-                <Chip label="Tất cả" color={pf === '' ? 'primary' : 'default'} variant={pf === '' ? 'filled' : 'outlined'} onClick={() => setPortfolio('')} />
-                {accounts.map((a) => (
-                  <Chip
-                    key={a.id}
-                    label={a.name}
-                    color={pf === a.id ? 'primary' : 'default'}
-                    variant={pf === a.id ? 'filled' : 'outlined'}
-                    onClick={() => setPortfolio(a.id)}
-                  />
-                ))}
-              </ScrollRow>
-            </Box>
-          )}
-
-          <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', columnGap: 2, alignItems: 'center' }}>
-            <FormControlLabel
-              control={<Switch checked={hideAmounts} onChange={(e) => setHideAmounts(e.target.checked)} />}
-              label="Ẩn số tiền"
-            />
-            <FormControlLabel
-              control={<Switch checked={hideSymbols} onChange={(e) => setHideSymbols(e.target.checked)} />}
-              label="Ẩn mã"
-            />
-            <InfoTip label="Giải thích tùy chọn ẩn">
-              {
-                'Ẩn số tiền: chỉ còn tỷ lệ % (so với tổng tài sản cuối kỳ), lợi suất và tỷ trọng.\nẨn mã: tài sản đổi thành "Mã 1", "Mã 2"…\nÁp dụng cho cả bản xem trước, PDF và CSV. Ghi chú riêng của giao dịch được bỏ đi khi bật ẩn.'
-              }
-            </InfoTip>
-          </Stack>
-
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="contained"
-              startIcon={<PictureAsPdfOutlined />}
-              disabled={!ready}
-              onClick={() => window.print()}
-              sx={{ flex: { xs: 1, sm: 'none' }, borderRadius: 99 }}
-            >
-              Lưu PDF
-            </Button>
+      <PageHeader
+        eyebrow="Tài sản"
+        title="Báo cáo danh mục"
+        description="Nhìn lại một kỳ: dòng vốn, lãi/lỗ, phí, cổ tức và phân bổ. Lưu PDF hoặc tải CSV để tự giữ hoặc gửi cho người bạn tin."
+        actions={
+          <>
             <Button
               variant="outlined"
               startIcon={<DownloadOutlined />}
               disabled={!ready}
               onClick={(e) => setCsvAnchor(e.currentTarget)}
               aria-haspopup="menu"
-              sx={{ flex: { xs: 1, sm: 'none' }, borderRadius: 99 }}
+              sx={{ flex: { xs: 1, md: 'none' }, borderRadius: 99 }}
             >
               Tải CSV
             </Button>
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            {iosStandalone()
-              ? 'Trên iPhone: nếu không thấy bảng in, mở trang này bằng Safari rồi chọn Chia sẻ → In → Lưu vào Tệp.'
-              : 'Lưu PDF mở hộp thoại in: chọn "Lưu dưới dạng PDF" (máy tính, Android) hoặc chia sẻ / lưu vào Tệp (iPhone).'}
-          </Typography>
-        </Stack>
-      </Paper>
+            <Button
+              variant="contained"
+              startIcon={<PictureAsPdfOutlined />}
+              disabled={!ready}
+              onClick={() => window.print()}
+              sx={{ flex: { xs: 1, md: 'none' }, borderRadius: 99 }}
+            >
+              Lưu PDF
+            </Button>
+          </>
+        }
+      />
 
+      <PageGrid
+        asideFirst
+        aside={
+          <Panel title="Tuỳ chọn báo cáo">
+            <Stack spacing={1.75}>
+              <Box>
+              <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.75, fontWeight: 600 }}>
+                Kỳ báo cáo
+              </Typography>
+              <ScrollRow>
+                {months.map((mo) => (
+                  <Chip
+                    key={mo}
+                    label={monthChip(mo, today)}
+                    color={!custom && activeMonth === mo ? 'primary' : 'default'}
+                    variant={!custom && activeMonth === mo ? 'filled' : 'outlined'}
+                    onClick={() => setQuery({ m: mo })}
+                  />
+                ))}
+                <Chip
+                  icon={<EditCalendarOutlined />}
+                  label={custom && data ? data.period.label : 'Tự chọn'}
+                  color={custom ? 'primary' : 'default'}
+                  variant={custom ? 'filled' : 'outlined'}
+                  onClick={() => setCustomOpen(true)}
+                />
+              </ScrollRow>
+            </Box>
+
+            {accounts.length > 1 && (
+              <Box>
+                <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.75, fontWeight: 600 }}>
+                  Danh mục
+                </Typography>
+                <ScrollRow>
+                  <Chip label="Tất cả" color={pf === '' ? 'primary' : 'default'} variant={pf === '' ? 'filled' : 'outlined'} onClick={() => setPortfolio('')} />
+                  {accounts.map((a) => (
+                    <Chip
+                      key={a.id}
+                      label={a.name}
+                      color={pf === a.id ? 'primary' : 'default'}
+                      variant={pf === a.id ? 'filled' : 'outlined'}
+                      onClick={() => setPortfolio(a.id)}
+                    />
+                  ))}
+                </ScrollRow>
+              </Box>
+            )}
+
+            <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', columnGap: 2, alignItems: 'center' }}>
+              <FormControlLabel
+                control={<Switch checked={hideAmounts} onChange={(e) => setHideAmounts(e.target.checked)} />}
+                label="Ẩn số tiền"
+              />
+              <FormControlLabel
+                control={<Switch checked={hideSymbols} onChange={(e) => setHideSymbols(e.target.checked)} />}
+                label="Ẩn mã"
+              />
+              <InfoTip label="Giải thích tùy chọn ẩn">
+                {
+                  'Ẩn số tiền: chỉ còn tỷ lệ % (so với tổng tài sản cuối kỳ), lợi suất và tỷ trọng.\nẨn mã: tài sản đổi thành "Mã 1", "Mã 2"…\nÁp dụng cho cả bản xem trước, PDF và CSV. Ghi chú riêng của giao dịch được bỏ đi khi bật ẩn.'
+                }
+              </InfoTip>
+            </Stack>
+
+
+          <Typography variant="caption" color="text.secondary">
+              {iosStandalone()
+                ? 'Trên iPhone: nếu không thấy bảng in, mở trang này bằng Safari rồi chọn Chia sẻ → In → Lưu vào Tệp.'
+                : 'Lưu PDF mở hộp thoại in: chọn "Lưu dưới dạng PDF" (máy tính, Android) hoặc chia sẻ / lưu vào Tệp (iPhone).'}
+            </Typography>
+            </Stack>
+          </Panel>
+        }
+      >
       {error && <Alert severity="error">{error}</Alert>}
 
       <Box sx={{ position: 'relative' }}>
@@ -240,6 +244,7 @@ export default function ReportsPage() {
           </Box>
         )}
       </Box>
+      </PageGrid>
 
       {/* Bản dành cho in: gắn thẳng vào body, chỉ hiện khi in (xem REPORT_CSS) */}
       {data && createPortal(<div className="rpt-print-root"><ReportDocument r={data} /></div>, document.body)}

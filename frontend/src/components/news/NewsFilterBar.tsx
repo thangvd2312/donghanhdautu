@@ -55,7 +55,7 @@ export default function NewsFilterBar({ text, onText, filters, onChange, facets,
         slotProps={{
           htmlInput: { 'aria-label': 'Tìm tin', enterKeyHint: 'search' },
           input: {
-            sx: { bgcolor: 'background.paper', borderRadius: 2 },
+            sx: { bgcolor: 'background.paper', borderRadius: '12px' },
             startAdornment: (
               <InputAdornment position="start">
                 <SearchIcon />
@@ -217,14 +217,11 @@ export function NewsFilterSidebar({
     <Paper
       component="aside"
       aria-label="Bộ lọc tin"
-      variant="outlined"
       sx={{
-        position: 'sticky',
-        top: STICKY_TOP.md + 16,
+        // Dính theo khi cuộn đã do PageGrid lo; ở đây chỉ giới hạn chiều cao
         maxHeight: `calc(100vh - ${STICKY_TOP.md + 32}px)`,
         overflowY: 'auto',
         p: 1,
-        borderRadius: 2,
       }}
     >
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 1.25, minHeight: 32 }}>

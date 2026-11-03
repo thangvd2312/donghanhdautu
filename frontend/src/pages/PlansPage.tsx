@@ -1,10 +1,10 @@
 import AddIcon from '@mui/icons-material/Add'
+import FlagOutlined from '@mui/icons-material/FlagOutlined'
 import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
@@ -18,8 +18,8 @@ import { qk } from '../lib/query'
 import { changeColor, fmtDate, fmtPct, fmtPrice } from '../lib/format'
 import type { PlanListItem } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
+import { EmptyState, PageHeader, StatTiles } from '../components/page'
 import { ChangePill } from '../components/ui'
-
 
 /** Danh sách kế hoạch: đang theo dõi (ưu tiên cái đến hạn / chạm mốc) và đã kết thúc */
 export default function PlansPage() {
@@ -35,63 +35,85 @@ export default function PlansPage() {
     .sort((a, b) => b.signals.length - a.signals.length || a.nextReviewAt.localeCompare(b.nextReviewAt))
   const closed = (plans ?? []).filter((p) => p.status === 'closed')
 
+  const alerting = active.filter((p) => p.signals.length > 0).length
+  const holding = active.filter((p) => p.held).length
+  const dueSoon = active.filter((p) => !p.signals.length && new Date(p.nextReviewAt).getTime() <= Date.now()).length
+  const newBtn = (
+    <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} sx={{ whiteSpace: 'nowrap', borderRadius: 99 }}>
+      Lập kế hoạch
+    </Button>
+  )
+
   return (
     <Stack spacing={2.5}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            Kế hoạch đầu tư
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Mua vì đâu, khi nào xem lại, khi nào bán — quyết định theo kế hoạch, không theo cảm xúc.
-          </Typography>
-        </Box>
-        <Box>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} sx={{ whiteSpace: 'nowrap', borderRadius: 99 }}>
-            Lập kế hoạch
-          </Button>
-        </Box>
-      </Stack>
+      <PageHeader
+        eyebrow="Hành động"
+        title="Kế hoạch đầu tư"
+        description="Mua vì đâu, khi nào xem lại, khi nào bán — quyết định theo kế hoạch, không theo cảm xúc."
+        actions={newBtn}
+      />
 
       {error && <Alert severity="error">{error}</Alert>}
       {!plans && !error && <Skeleton variant="rounded" height={160} />}
 
       {plans && !plans.length && (
-        <Paper sx={{ p: 3 }}>
-          <Typography sx={{ fontWeight: 600 }}>Chưa có kế hoạch nào</Typography>
-          <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-            Bắt đầu với một mã bạn đang giữ hoặc đang định mua. Có thể nhờ AI viết nháp từ dữ liệu, rồi sửa theo ý bạn.
-          </Typography>
-        </Paper>
+        <EmptyState Icon={FlagOutlined} title="Chưa có kế hoạch nào" action={newBtn}>
+          Bắt đầu với một mã bạn đang giữ hoặc đang định mua. Có thể nhờ AI viết nháp từ dữ liệu, rồi sửa theo ý bạn.
+        </EmptyState>
       )}
 
-      {active.length > 0 && (
-        <Grid container spacing={2}>
-          {active.map((p) => (
-            <Grid key={p.id} size={{ xs: 12, md: 6 }}>
-              <PlanCard p={p} />
-            </Grid>
-          ))}
-        </Grid>
+      {plans && plans.length > 0 && (
+        <StatTiles
+          items={[
+            { label: 'Đang theo dõi', value: active.length },
+            {
+              label: 'Cần chú ý',
+              value: alerting,
+              hint: alerting ? 'chạm mốc cắt lỗ / chốt lời' : 'chưa có mã nào chạm mốc',
+              color: alerting ? 'warning.main' : undefined,
+            },
+            { label: 'Đến hạn xem lại', value: dueSoon },
+            {
+              label: 'Đang nắm giữ',
+              value: holding,
+              hint: closed.length ? `${closed.length} kế hoạch đã kết thúc` : undefined,
+            },
+          ]}
+        />
       )}
+
+      {active.length > 0 && <PlanGrid plans={active} />}
 
       {closed.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-            Đã kết thúc
-          </Typography>
-          <Grid container spacing={2}>
-            {closed.map((p) => (
-              <Grid key={p.id} size={{ xs: 12, md: 6 }}>
-                <PlanCard p={p} />
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
+        <Stack spacing={1.25}>
+          <Typography sx={{ fontWeight: 700, fontSize: 16 }}>Đã kết thúc</Typography>
+          <PlanGrid plans={closed} />
+        </Stack>
       )}
 
       <PlanEditor open={creating} onClose={() => setCreating(false)} onSaved={(plan) => nav(`/plans/${plan.id}`)} />
     </Stack>
+  )
+}
+
+/** Lưới thẻ kế hoạch: 1 cột điện thoại, 2 cột máy tính bảng, 3 cột desktop */
+function PlanGrid({ plans }: { plans: PlanListItem[] }) {
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: {
+          xs: 'minmax(0, 1fr)',
+          sm: 'repeat(2, minmax(0, 1fr))',
+          lg: 'repeat(3, minmax(0, 1fr))',
+        },
+        gap: 2,
+      }}
+    >
+      {plans.map((p) => (
+        <PlanCard key={p.id} p={p} />
+      ))}
+    </Box>
   )
 }
 
@@ -100,7 +122,14 @@ function PlanCard({ p }: { p: PlanListItem }) {
     <Paper
       component={RouterLink}
       to={`/plans/${p.id}`}
-      sx={{ p: 2, display: 'block', textDecoration: 'none', color: 'inherit', height: '100%', '&:hover': { borderColor: 'primary.main' } }}
+      sx={{
+        p: 2,
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
+        height: '100%',
+        '&:hover': { borderColor: 'primary.main' },
+      }}
     >
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
         <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={40} />
@@ -127,7 +156,13 @@ function PlanCard({ p }: { p: PlanListItem }) {
       <Typography
         variant="body2"
         color="text.secondary"
-        sx={{ mt: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+        sx={{
+          mt: 1.25,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
       >
         {p.thesis}
       </Typography>
@@ -152,7 +187,13 @@ function PlanCard({ p }: { p: PlanListItem }) {
           ) : (
             <WarningAmberOutlined color="warning" sx={{ fontSize: 18, mt: '1px' }} />
           )}
-          <Typography variant="body2" sx={{ color: s.kind === 'stop' ? 'error.main' : 'warning.main', fontWeight: 500 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: s.kind === 'stop' ? 'error.main' : 'warning.main',
+              fontWeight: 500,
+            }}
+          >
             {s.message}
           </Typography>
         </Stack>

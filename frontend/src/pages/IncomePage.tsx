@@ -14,6 +14,8 @@ import MonthBlock from '../components/income/MonthBlock'
 import MonthlyChartPanel from '../components/income/MonthlyChartPanel'
 import SummaryCard from '../components/income/SummaryCard'
 import TransactionDialog from '../components/portfolio/TransactionDialog'
+import { PageGrid, PageHeader } from '../components/page'
+import { Panel } from '../components/ui'
 import { useIncome } from '../hooks/useIncome'
 import { useResource } from '../hooks/useResource'
 import { qk } from '../lib/query'
@@ -64,32 +66,98 @@ export default function IncomePage() {
     </Button>
   )
 
-  return (
-    <Stack spacing={1.5} sx={{ maxWidth: 760, mx: 'auto' }}>
-      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-        <Typography component="h1" sx={{ fontWeight: 800, fontSize: 26, lineHeight: 1.25 }}>
-          Thu nhập cổ tức
-        </Typography>
-      </Box>
+  const mainBlocks = data && !noHoldings && !empty && (
+    <Stack spacing={2.5} aria-busy={loading} sx={{ opacity: loading ? 0.55 : 1, transition: 'opacity .15s' }}>
+      <MonthlyChartPanel months={data.months} today={today} selected={selected} pickedEmpty={pickedEmpty} onSelect={jump} />
 
-      <ToggleButtonGroup
-        exclusive
-        fullWidth
-        size="small"
-        color="primary"
-        value={past}
-        aria-label="Số tháng đã qua"
-        onChange={(_, v: number | null) => {
-          if (!v) return
-          setParams(v === 12 ? {} : { past: String(v) }, { replace: true })
-        }}
-      >
-        {PAST_OPTIONS.map((n) => (
-          <ToggleButton key={n} value={n} sx={{ minHeight: 44 }}>
-            {n} tháng qua
-          </ToggleButton>
+      {overdue.length > 0 && (
+        <Alert
+          severity="info"
+          variant="outlined"
+          sx={{ py: 0 }}
+          action={
+            <Button size="small" color="inherit" onClick={() => jump(overdue[0].month)} sx={{ minHeight: 36 }}>
+              Xem
+            </Button>
+          }
+        >
+          {overdue.length} khoản quá ngày trả, bạn đã nhận chưa?
+        </Alert>
+      )}
+
+      <Stack spacing={1}>
+        {ahead.length > 0 && (
+          <Typography component="h2" variant="overline" color="text.secondary" sx={{ pt: 1 }}>
+            Tháng này và sắp tới
+          </Typography>
+        )}
+        {ahead.map((s) => (
+          <MonthBlock key={s.month} sec={s} today={today} multi={multi} onRecord={record} onDismiss={setDismissing} />
         ))}
-      </ToggleButtonGroup>
+        {behind.length > 0 && (
+          <Typography component="h2" variant="overline" color="text.secondary" sx={{ pt: 1.5 }}>
+            Các tháng đã qua
+          </Typography>
+        )}
+        {behind.map((s) => (
+          <MonthBlock key={s.month} sec={s} today={today} multi={multi} onRecord={record} onDismiss={setDismissing} />
+        ))}
+      </Stack>
+    </Stack>
+  )
+
+  // Cột phụ: số tổng + ghi chú nguồn dữ liệu
+  const asideBlocks = data && !noHoldings && !empty && (
+    <Stack spacing={2.5} aria-busy={loading} sx={{ opacity: loading ? 0.55 : 1, transition: 'opacity .15s' }}>
+      <SummaryCard data={data} past={past} />
+      <Panel title="Lưu ý">
+        <Stack spacing={0.75}>
+          {data.notes.length > 0 && (
+            <Stack spacing={0.5} component="ul" sx={{ m: 0, pl: 2 }}>
+              {data.notes.map((n) => (
+                <Typography key={n} component="li" variant="caption" color="text.secondary">
+                  {n}
+                </Typography>
+              ))}
+            </Stack>
+          )}
+          <Typography variant="caption" color="text.secondary" className="num">
+            Nguồn {data.source} · cập nhật {fmtClock(data.asOf)}. Khoản dự kiến là ước tính, không phải cam kết của công ty. Chỉ tính cổ tức tiền mặt, cổ phiếu
+            thưởng không nằm trong số tiền này. Thuế TNCN 5% là giả định.
+          </Typography>
+        </Stack>
+      </Panel>
+    </Stack>
+  )
+
+  return (
+    <Stack spacing={2.5}>
+      <PageHeader
+        eyebrow="Tài sản"
+        title="Thu nhập cổ tức"
+        description="Cổ tức tiền mặt đã nhận và khoản sắp nhận (ước tính) từ các cổ phiếu bạn đang giữ."
+      />
+
+      <Box sx={{ maxWidth: { md: 460 } }}>
+        <ToggleButtonGroup
+          exclusive
+          fullWidth
+          size="small"
+          color="primary"
+          value={past}
+          aria-label="Số tháng đã qua"
+          onChange={(_, v: number | null) => {
+            if (!v) return
+            setParams(v === 12 ? {} : { past: String(v) }, { replace: true })
+          }}
+        >
+          {PAST_OPTIONS.map((n) => (
+            <ToggleButton key={n} value={n} sx={{ minHeight: 40 }}>
+              {n} tháng qua
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Box>
 
       {failed && (
         <Alert severity="warning" variant="outlined" action={retryBtn}>
@@ -108,7 +176,7 @@ export default function IncomePage() {
         <EmptyBox
           title="Bạn chưa có cổ phiếu trong danh mục"
           actions={
-            <Button variant="contained" component={RouterLink} to="/portfolio">
+            <Button variant="contained" component={RouterLink} to="/portfolio" sx={{ borderRadius: 99 }}>
               Mở danh mục
             </Button>
           }
@@ -119,7 +187,7 @@ export default function IncomePage() {
         <EmptyBox
           title={data.unavailable ? 'Chưa có khoản cổ tức nào để hiển thị' : `Chưa có cổ tức tiền mặt nào trong ${past} tháng qua`}
           actions={
-            <Button variant="outlined" component={RouterLink} to="/events">
+            <Button variant="outlined" component={RouterLink} to="/events" sx={{ borderRadius: 99 }}>
               Xem lịch sự kiện
             </Button>
           }
@@ -128,58 +196,9 @@ export default function IncomePage() {
           khoản mới, bạn không cần làm gì, nó sẽ tự hiện ở đây.
         </EmptyBox>
       ) : (
-        <Stack spacing={1.5} aria-busy={loading} sx={{ opacity: loading ? 0.55 : 1, transition: 'opacity .15s' }}>
-          <SummaryCard data={data} past={past} />
-          <MonthlyChartPanel months={data.months} today={today} selected={selected} pickedEmpty={pickedEmpty} onSelect={jump} />
-
-          {overdue.length > 0 && (
-            <Alert
-              severity="info"
-              variant="outlined"
-              sx={{ py: 0 }}
-              action={
-                <Button size="small" color="inherit" onClick={() => jump(overdue[0].month)} sx={{ minHeight: 36 }}>
-                  Xem
-                </Button>
-              }
-            >
-              {overdue.length} khoản quá ngày trả, bạn đã nhận chưa?
-            </Alert>
-          )}
-
-          <Stack spacing={1}>
-            {ahead.length > 0 && (
-              <Typography component="h2" variant="overline" color="text.secondary" sx={{ pt: 1 }}>
-                Tháng này và sắp tới
-              </Typography>
-            )}
-            {ahead.map((s) => (
-              <MonthBlock key={s.month} sec={s} today={today} multi={multi} onRecord={record} onDismiss={setDismissing} />
-            ))}
-            {behind.length > 0 && (
-              <Typography component="h2" variant="overline" color="text.secondary" sx={{ pt: 1.5 }}>
-                Các tháng đã qua
-              </Typography>
-            )}
-            {behind.map((s) => (
-              <MonthBlock key={s.month} sec={s} today={today} multi={multi} onRecord={record} onDismiss={setDismissing} />
-            ))}
-          </Stack>
-
-          {data.notes.length > 0 && (
-            <Stack spacing={0.5} component="ul" sx={{ m: 0, pl: 2 }}>
-              {data.notes.map((n) => (
-                <Typography key={n} component="li" variant="caption" color="text.secondary">
-                  {n}
-                </Typography>
-              ))}
-            </Stack>
-          )}
-          <Typography variant="caption" color="text.secondary" className="num" sx={{ textAlign: 'center', pt: 0.5 }}>
-            Nguồn {data.source} · cập nhật {fmtClock(data.asOf)}. Khoản dự kiến là ước tính, không phải cam kết của công ty. Chỉ tính cổ tức tiền mặt, cổ phiếu
-            thưởng không nằm trong số tiền này. Thuế TNCN 5% là giả định.
-          </Typography>
-        </Stack>
+        <PageGrid asideFirst aside={asideBlocks}>
+          {mainBlocks}
+        </PageGrid>
       )}
 
       <TransactionDialog
