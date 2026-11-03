@@ -40,6 +40,20 @@ export default function PortfolioPage() {
   const { p, perf, txs, accounts, version, changed, reloadAccounts } = usePortfolioData(pf)
 
   useEffect(() => track('portfolio_viewed'), [])
+  // Lối tắt "Ghi giao dịch" từ trang Hôm nay (?tx=buy): mở sẵn hộp ghi lệnh mua rồi bỏ tham số khỏi URL
+  const txParam = params.get('tx')
+  useEffect(() => {
+    if (txParam !== 'buy') return
+    setPreset({ type: 'buy' })
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('tx')
+        return next
+      },
+      { replace: true },
+    )
+  }, [txParam, setParams])
   const mobile = useIsMobile()
   const valuationNote = `Vàng định giá theo giá mua vào của cửa hàng (số tiền bạn thực nhận nếu bán ngay). Coin: giá vốn và giá hiện tại tính bằng USDT; giá trị và lãi/lỗ quy ra VND theo tỷ giá 1 USDT = ${fmtNum(p?.usdtVnd)} ₫ (${p?.usdtSource ?? ''}). Lãi/lỗ coin là lãi/lỗ USDT quy đổi theo tỷ giá hôm nay, không phải lãi/lỗ VND thực tế từ ngày mua.`
   // Mua / bán từ dòng tài sản: đang xem một danh mục thì dùng danh mục đó; xem gộp mà tài sản chỉ nằm ở một nơi thì chọn sẵn nơi đó

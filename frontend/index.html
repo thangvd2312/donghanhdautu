@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#1d4ed8" />
+    <meta name="theme-color" content="#15213a" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Đầu Tư" />
@@ -14,22 +14,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Font không chặn lần vẽ đầu: tải song song, có rồi mới áp (display=swap) -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
       media="print"
       onload="this.media='all'"
     />
     <style>
       /* Màn khởi động: hiện ngay khi HTML về, React thay thế khi vẽ xong */
-      .boot { position: fixed; inset: 0; display: grid; place-items: center; background: #f4f6f9; }
+      .boot { position: fixed; inset: 0; display: grid; place-items: center; background: #f4f5f7; }
       .boot-inner { display: flex; flex-direction: column; align-items: center; gap: 18px; }
-      .boot-bar { width: 120px; height: 3px; border-radius: 3px; background: #dbe3f5; overflow: hidden; position: relative; }
-      .boot-bar::after { content: ''; position: absolute; inset: 0; width: 40%; border-radius: 3px; background: #1d4ed8; animation: boot 1.1s ease-in-out infinite; }
+      .boot-bar { width: 120px; height: 3px; border-radius: 3px; background: #dde2ec; overflow: hidden; position: relative; }
+      .boot-bar::after { content: ''; position: absolute; inset: 0; width: 40%; border-radius: 3px; background: #15213a; animation: boot 1.1s ease-in-out infinite; }
       @keyframes boot { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
       @media (prefers-color-scheme: dark) {
-        .boot { background: #0e1117; }
+        .boot { background: #0e121a; }
         .boot-bar { background: #1e293b; }
-        .boot-bar::after { background: #60a5fa; }
+        .boot-bar::after { background: #c9a24b; }
       }
       @media (prefers-reduced-motion: reduce) { .boot-bar::after { animation: none; width: 100%; opacity: 0.5; } }
     </style>
@@ -61,7 +61,7 @@
         </div>
       </div>
     </div>
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" /></noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

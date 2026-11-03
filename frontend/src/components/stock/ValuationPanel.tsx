@@ -182,7 +182,7 @@ function ValuationChart({
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: muted,
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: '"Be Vietnam Pro", Inter, system-ui, sans-serif',
       },
       grid: { vertLines: { visible: false }, horzLines: { color: grid } },
       rightPriceScale: { borderColor: grid },
@@ -194,7 +194,7 @@ function ValuationChart({
       autoSize: true,
     })
     const line = chart.addSeries(LineSeries, {
-      color: dark ? '#60a5fa' : '#1d4ed8',
+      color: dark ? '#a9bfeb' : '#1e3560',
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,

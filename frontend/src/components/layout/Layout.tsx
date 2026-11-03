@@ -11,6 +11,7 @@ import BottomNav from './BottomNav'
 import { BOTTOM, BOTTOM_NAV_HEIGHT, DISCLAIMER, matches, MORE, NAV } from './navConfig'
 import Toast from './Toast'
 import UpdatePrompt from './UpdatePrompt'
+import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 
 const SearchDialog = lazy(() => import('../SearchDialog'))
@@ -18,14 +19,17 @@ const SearchDialog = lazy(() => import('../SearchDialog'))
 const loadMoreSheet = () => import('./MoreSheet')
 const MoreSheet = lazy(loadMoreSheet)
 
-/** Vỏ app đã đăng nhập: thanh trên, nội dung trang (Outlet), thanh đáy + bảng "Thêm" trên điện thoại, hộp tìm kiếm, toast thông báo */
+/** Vỏ app đã đăng nhập: sidebar (desktop), thanh trên, nội dung trang (Outlet), thanh đáy + bảng "Thêm" trên điện thoại, hộp tìm kiếm, toast thông báo */
 export default function Layout() {
   const loc = useLocation()
   const mobile = useIsMobile()
   const chatBusy = !!useChat().active?.busy
-  const current = NAV.slice()
-    .reverse()
-    .find((n) => matches(loc.pathname, n.to))?.to
+  const current =
+    loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto')
+      ? '/market'
+      : NAV.slice()
+          .reverse()
+          .find((n) => matches(loc.pathname, n.to))?.to
   const [searchOpen, setSearchOpen] = useState(false)
   // Hộp tìm kiếm tải khi mở lần đầu; sau đó giữ gắn để hiệu ứng đóng vẫn chạy
   const [searchLoaded, setSearchLoaded] = useState(false)
@@ -59,27 +63,30 @@ export default function Layout() {
     (loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto') ? 'Bảng giá' : undefined)
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar mobile={mobile} current={current} pageTitle={pageTitle} chatBusy={chatBusy} onSearch={openSearch} />
-      <Container
-        maxWidth="xl"
-        sx={{
-          py: { xs: 2, md: 3 },
-          px: { xs: 1.5, sm: 2, md: 3 },
-          flex: 1,
-          // Chừa chỗ cho thanh đáy + vùng an toàn của iPhone
-          pb: { xs: `calc(${BOTTOM_NAV_HEIGHT + 16}px + env(safe-area-inset-bottom))`, md: 3 },
-        }}
-      >
-        <Outlet />
-      </Container>
-      {!mobile && (
-        <Container maxWidth="xl" sx={{ pb: 4 }}>
-          <Typography variant="caption" color="text.secondary" component="p">
-            {DISCLAIMER}
-          </Typography>
+    <Box sx={{ minHeight: '100vh', display: 'flex' }}>
+      {!mobile && <Sidebar current={current} chatBusy={chatBusy} />}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <TopBar mobile={mobile} pageTitle={pageTitle} onSearch={openSearch} />
+        <Container
+          maxWidth="lg"
+          sx={{
+            py: { xs: 2, md: 3 },
+            px: { xs: 1.5, sm: 2, md: 3 },
+            flex: 1,
+            // Chừa chỗ cho thanh đáy + vùng an toàn của iPhone
+            pb: { xs: `calc(${BOTTOM_NAV_HEIGHT + 16}px + env(safe-area-inset-bottom))`, md: 3 },
+          }}
+        >
+          <Outlet />
         </Container>
-      )}
+        {!mobile && (
+          <Container maxWidth="lg" sx={{ pb: 4 }}>
+            <Typography variant="caption" color="text.secondary" component="p">
+              {DISCLAIMER}
+            </Typography>
+          </Container>
+        )}
+      </Box>
 
       {mobile && !typing && <BottomNav value={bottomValue} chatBusy={chatBusy} onMore={() => setMoreOpen(true)} />}
 

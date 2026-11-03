@@ -54,7 +54,7 @@ export default function HomePage() {
         <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
           {dateLabel}
         </Typography>
-        <Typography sx={{ fontWeight: 800, fontSize: { xs: 22, md: 26 }, lineHeight: 1.25 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: { xs: 22, md: 26 }, lineHeight: 1.25, letterSpacing: '-0.015em' }}>
           Chào {me?.name || 'bạn'}
         </Typography>
       </Box>
@@ -68,6 +68,9 @@ export default function HomePage() {
       ) : (
         <GettingStarted />
       )}
+
+      {/* Việc đến hạn (đợt giải ngân) đặt ngay dưới tổng quan, trước các điểm cần xem lại */}
+      <DeploymentHomeCard />
 
       <Grid container spacing={2.5}>
         <Grid size={{ xs: 12, md: 7 }}>
@@ -93,8 +96,6 @@ export default function HomePage() {
           </Panel>
         </Grid>
       </Grid>
-
-      <DeploymentHomeCard />
 
       <TipPrompt />
 

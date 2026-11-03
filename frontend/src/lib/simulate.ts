@@ -28,7 +28,7 @@ const GROUP_PHRASE: Record<GroupShockKey, string> = {
   fx: 'tỷ giá USDT',
 }
 export const GROUP_COLOR: Record<SimGroupKey, string> = {
-  stock: '#2563eb',
+  stock: '#3b5ba9',
   gold: '#d4a017',
   crypto: '#8b5cf6',
   cash: '#14a37f',

@@ -1,18 +1,20 @@
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
 import BalanceOutlined from '@mui/icons-material/BalanceOutlined'
+import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined'
+import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
 import TuneOutlined from '@mui/icons-material/TuneOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { Link as RouterLink } from 'react-router-dom'
 import { DataQualityAlert } from '../DataStatus'
 import AllocationBar from './AllocationBar'
-import { HERO_BG, HeroPill } from '../home/HomeBlocks'
+import { HERO_SX, HeroAmount, HeroPill } from '../home/HomeBlocks'
+import QuickActions from '../QuickActions'
 import { InfoTip, Stat } from '../ui'
-import { changeColor, fmtVnd, fmtVndShort } from '../../lib/format'
+import { changeColor, fmtVndShort } from '../../lib/format'
 import type { Performance, Portfolio, PortfolioAccount } from '../../lib/types'
 
 interface PortfolioSummaryProps {
@@ -27,22 +29,23 @@ interface PortfolioSummaryProps {
 export default function PortfolioSummary({ p, perf, accounts, portfolioId: pf }: PortfolioSummaryProps) {
   return (
     <Paper sx={{ overflow: 'hidden' }}>
-      <Box sx={{ p: 2.5, color: '#fff', background: HERO_BG }}>
-        <Typography sx={{ fontSize: 13, opacity: 0.85 }} noWrap>
-          {p?.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
-          {pf ? ` · ${accounts.find((a) => a.id === pf)?.name ?? ''}` : ''}
-        </Typography>
-        <Typography className="num" sx={{ fontSize: { xs: 30, sm: 34 }, fontWeight: 800, lineHeight: 1.2, mt: 0.25 }}>
-          {p?.totalIsEstimate ? '≈ ' : ''}
-          {fmtVnd(p?.totalValue)}
-        </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1.5 }}>
-          <HeroPill
-            label={perf?.isEstimate ? 'Lãi / lỗ (ước tính)' : 'Lãi / lỗ'}
-            vnd={perf?.totalProfit ?? null}
-            pct={perf?.totalProfitPct ?? null}
-          />
-          <HeroPill label="Vốn đã đưa vào" vnd={perf?.netContributions ?? null} pct={null} neutral />
+      <Box sx={HERO_SX}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 1.5, md: 3 }, alignItems: { md: 'flex-end' } }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontSize: 13, color: 'hero.muted' }} noWrap>
+              {p?.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
+              {pf ? ` · ${accounts.find((a) => a.id === pf)?.name ?? ''}` : ''}
+            </Typography>
+            <HeroAmount value={p?.totalValue} estimate={p?.totalIsEstimate} />
+          </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, width: { md: 420 }, flexShrink: 0 }}>
+            <HeroPill
+              label={perf?.isEstimate ? 'Lãi / lỗ (ước tính)' : 'Lãi / lỗ'}
+              vnd={perf?.totalProfit ?? null}
+              pct={perf?.totalProfitPct ?? null}
+            />
+            <HeroPill label="Vốn đã đưa vào" vnd={perf?.netContributions ?? null} pct={null} neutral />
+          </Box>
         </Box>
       </Box>
       <Box sx={{ p: 2.5, pt: 2 }}>
@@ -90,36 +93,20 @@ export default function PortfolioSummary({ p, perf, accounts, portfolioId: pf }:
             ].join('\n\n')}
           </InfoTip>
         </Stack>
-        {p && p.holdings.length > 0 && (
-          <Stack direction="row" useFlexGap sx={{ mt: 1.25, gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<TuneOutlined />}
-              component={RouterLink}
-              to={pf ? `/simulate?p=${encodeURIComponent(pf)}` : '/simulate'}
-              sx={{ borderRadius: 99, flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
-            >
-              Thử kịch bản
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<BalanceOutlined />}
-              component={RouterLink}
-              to={pf ? `/rebalance?p=${encodeURIComponent(pf)}` : '/rebalance'}
-              sx={{ borderRadius: 99, flex: { xs: 1, sm: 'none' }, whiteSpace: 'nowrap' }}
-            >
-              Tái cân bằng
-            </Button>
-          </Stack>
-        )}
-        {p && p.holdings.length > 0 && (
-          <Link component={RouterLink} to="/portfolio-alerts" variant="body2" sx={{ display: 'inline-block', mt: 1 }}>
-            Cảnh báo danh mục: nhắc khi tập trung, lệch tỷ trọng, giảm từ đỉnh
-          </Link>
-        )}
-        <Link component={RouterLink} to="/deployment" variant="body2" sx={{ display: 'block', mt: 0.5 }}>
-          Có tiền mới? Lập kế hoạch giải ngân: mua gì, bao nhiêu, mấy đợt
-        </Link>
+        <Box sx={{ mt: 2 }}>
+          <QuickActions
+            items={
+              p && p.holdings.length > 0
+                ? [
+                    { label: 'Thử kịch bản', to: pf ? `/simulate?p=${encodeURIComponent(pf)}` : '/simulate', Icon: TuneOutlined },
+                    { label: 'Tái cân bằng', to: pf ? `/rebalance?p=${encodeURIComponent(pf)}` : '/rebalance', Icon: BalanceOutlined },
+                    { label: 'Cảnh báo', to: '/portfolio-alerts', Icon: NotificationsActiveOutlined },
+                    { label: 'Giải ngân', to: '/deployment', Icon: DonutSmallOutlined },
+                  ]
+                : [{ label: 'Có tiền mới? Lập kế hoạch giải ngân', to: '/deployment', Icon: DonutSmallOutlined }]
+            }
+          />
+        </Box>
       </Box>
     </Paper>
   )

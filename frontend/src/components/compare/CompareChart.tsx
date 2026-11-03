@@ -57,7 +57,7 @@ export default function CompareChart({
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: dark ? '#949db0' : '#5b6475',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: '"Be Vietnam Pro", Inter, system-ui, sans-serif',
         attributionLogo: false,
       },
       grid: { vertLines: { visible: false }, horzLines: { color: grid } },

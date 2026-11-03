@@ -17,7 +17,7 @@ export const PARTS: DeployPart[] = ['savings', 'gold', 'etf', 'picks', 'crypto']
 export const PART_COLOR: Record<DeployPart, string> = {
   savings: '#14a37f',
   gold: '#d4a017',
-  etf: '#2563eb',
+  etf: '#3b5ba9',
   picks: '#38bdf8',
   crypto: '#8b5cf6',
 }

@@ -1,5 +1,6 @@
 import MenuOutlined from '@mui/icons-material/MenuOutlined'
 import Badge from '@mui/material/Badge'
+import Box from '@mui/material/Box'
 import BottomNavigation from '@mui/material/BottomNavigation'
 import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import Paper from '@mui/material/Paper'
@@ -46,7 +47,12 @@ export default function BottomNav({ value, chatBusy, onMore }: { value: string |
             sx={{ minWidth: 0, px: 0.5 }}
           />
         ))}
-        <BottomNavigationAction value="more" label="Thêm" icon={<MenuOutlined />} sx={{ minWidth: 0, px: 0.5 }} />
+        <BottomNavigationAction value="more" label="Thêm" icon={
+            // Bọc trong span như các mục khác để viên thuốc "đang chọn" không bóp nhỏ biểu tượng
+            <Box component="span" sx={{ display: 'inline-flex' }}>
+              <MenuOutlined />
+            </Box>
+          } sx={{ minWidth: 0, px: 0.5 }} />
       </BottomNavigation>
     </Paper>
   )

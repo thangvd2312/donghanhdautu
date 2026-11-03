@@ -10,8 +10,8 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState, type ReactNode } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
+import { BRAND_GOLD, BRAND_NAVY } from '../theme'
 
-const BRAND = '#1d4ed8'
 
 /** Khung nội dung có tiêu đề — đơn vị bố cục cơ bản của mọi trang */
 export function Panel({
@@ -126,13 +126,13 @@ export function KV({ k, v, color }: { k: ReactNode; v: ReactNode; color?: string
   )
 }
 
-/** Logo: chữ "Đ" có nét ngang thành mũi tên đi lên. Màu thương hiệu cố định để chữ trắng luôn đủ tương phản ở nền tối */
+/** Logo: chữ "Đ" có nét ngang thành mũi tên vàng đi lên, nền navy. Màu cố định để luôn đủ tương phản ở cả nền sáng, tối và sidebar */
 export function Logo({ size = 32 }: { size?: number }) {
   return (
     <Box component="svg" viewBox="0 0 32 32" sx={{ width: size, height: size, flexShrink: 0 }} aria-hidden>
-      <rect width="32" height="32" rx="7" fill={BRAND} />
+      <rect width="32" height="32" rx="7" fill={BRAND_NAVY} stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
       <path d="M12 8h4.5a8 8 0 0 1 0 16H12z" stroke="#fff" strokeWidth="2.8" fill="none" strokeLinejoin="round" />
-      <path d="M7.5 18.5l4.5-4.5 3 3" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 18.5l4.5-4.5 3 3" stroke={BRAND_GOLD} strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Box>
   )
 }

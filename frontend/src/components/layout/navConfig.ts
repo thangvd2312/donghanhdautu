@@ -27,16 +27,52 @@ export interface NavItemWithIcon extends NavItem {
   Icon: SvgIconComponent
 }
 
-/** Thanh tab trên desktop */
-export const NAV: NavItem[] = [
-  { to: '/', label: 'Hôm nay' },
-  { to: '/market', label: 'Bảng giá' },
-  { to: '/portfolio', label: 'Danh mục' },
-  { to: '/plans', label: 'Kế hoạch' },
-  { to: '/goals', label: 'Mục tiêu' },
-  { to: '/advisor', label: 'Cố vấn' },
-  { to: '/news', label: 'Tin tức' },
+/** Sidebar trên desktop: mọi trang, chia nhóm (thay cho thanh tab + menu tài khoản) */
+export const SIDEBAR: { title?: string; items: NavItemWithIcon[] }[] = [
+  {
+    items: [
+      { to: '/', label: 'Hôm nay', Icon: HomeOutlined },
+      { to: '/market', label: 'Bảng giá', Icon: ShowChartOutlined },
+      { to: '/advisor', label: 'Cố vấn', Icon: ForumOutlined },
+    ],
+  },
+  {
+    title: 'Tài sản',
+    items: [
+      { to: '/portfolio', label: 'Danh mục', Icon: AccountBalanceWalletOutlined },
+      { to: '/goals', label: 'Mục tiêu', Icon: SavingsOutlined },
+      { to: '/income', label: 'Thu nhập cổ tức', Icon: PaidOutlined },
+      { to: '/reports', label: 'Báo cáo', Icon: SummarizeOutlined },
+    ],
+  },
+  {
+    title: 'Hành động',
+    items: [
+      { to: '/deployment', label: 'Giải ngân', Icon: DonutSmallOutlined },
+      { to: '/plans', label: 'Kế hoạch', Icon: FlagOutlined },
+      { to: '/rebalance', label: 'Tái cân bằng', Icon: BalanceOutlined },
+      { to: '/journal', label: 'Nhật ký', Icon: MenuBookOutlined },
+      { to: '/tips', label: 'Soi lời khuyên', Icon: FactCheckOutlined },
+    ],
+  },
+  {
+    title: 'Công cụ',
+    items: [
+      { to: '/screener', label: 'Lọc cổ phiếu', Icon: FilterAltOutlined },
+      { to: '/compare', label: 'So sánh', Icon: CompareArrowsOutlined },
+      { to: '/simulate', label: 'Thử kịch bản', Icon: TuneOutlined },
+      { to: '/events', label: 'Lịch sự kiện', Icon: EventOutlined },
+      { to: '/practice', label: 'Luyện tập', Icon: SchoolOutlined },
+    ],
+  },
+  {
+    title: 'Thông tin',
+    items: [{ to: '/news', label: 'Tin tức', Icon: NewspaperOutlined }],
+  },
 ]
+
+/** Mọi mục trên sidebar, dùng để tìm mục đang chọn */
+export const NAV: NavItem[] = SIDEBAR.flatMap((g) => g.items)
 
 /** Thanh đáy trên điện thoại: 4 trang dùng nhiều nhất + "Thêm" */
 export const BOTTOM: NavItemWithIcon[] = [
@@ -65,9 +101,12 @@ export const MORE: NavItemWithIcon[] = [
   { to: '/settings', label: 'Cài đặt & thông báo', Icon: SettingsOutlined },
 ]
 
-/** Menu tài khoản trên desktop: các trang không có trên thanh tab (cùng thứ tự với "Thêm") */
-const IN_TABS = new Set(NAV.map((n) => n.to))
-export const USER_MENU: NavItemWithIcon[] = MORE.filter((n) => !IN_TABS.has(n.to))
+/** Menu tài khoản trên desktop: các trang không có trên sidebar */
+const IN_SIDEBAR = new Set(NAV.map((n) => n.to))
+export const USER_MENU: NavItemWithIcon[] = MORE.filter((n) => !IN_SIDEBAR.has(n.to))
+
+/** Bề rộng sidebar desktop */
+export const SIDEBAR_WIDTH = 236
 
 /** Chiều cao thanh đáy (chưa tính vùng an toàn của iPhone) */
 export const BOTTOM_NAV_HEIGHT = 60

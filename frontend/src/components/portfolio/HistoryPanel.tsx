@@ -61,14 +61,14 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
   useEffect(() => {
     if (!ref.current || points.length < 2) return
     const grid = dark ? '#222a37' : '#eef1f5'
-    const main = dark ? '#60a5fa' : '#2563eb'
+    const main = dark ? '#a9bfeb' : '#1e3560'
     const faded = dark ? '#475569' : '#b6c2d4'
     const chart = createChart(ref.current, {
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: dark ? '#949db0' : '#5b6475',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: '"Be Vietnam Pro", Inter, system-ui, sans-serif',
         // Ghi nguồn bằng dòng chữ dưới biểu đồ thay cho logo đè lên đường vẽ
         attributionLogo: false,
       },
@@ -211,7 +211,7 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
               </Stack>
               <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
                 <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                  <Swatch color={dark ? '#60a5fa' : '#2563eb'} /> Tài sản
+                  <Swatch color={dark ? '#a9bfeb' : '#1e3560'} /> Tài sản
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                   <Swatch color={dark ? '#94a3b8' : '#64748b'} dashed /> Vốn {fmtVndShort(shown.netContributions)}

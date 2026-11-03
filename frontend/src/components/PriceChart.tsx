@@ -52,7 +52,7 @@ export default function PriceChart({
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: dark ? '#949db0' : '#5b6475',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: '"Be Vietnam Pro", Inter, system-ui, sans-serif',
       },
       grid: { vertLines: { color: grid }, horzLines: { color: grid } },
       rightPriceScale: { borderColor: grid },

@@ -9,44 +9,82 @@ interface PricePalette {
   floor: string
 }
 
+/** Thẻ tổng tài sản và sidebar: nền navy ở cả hai chế độ, chữ sáng, lãi / lỗ sáng hơn để đọc được trên nền tối */
+interface HeroPalette {
+  bg: string
+  ink: string
+  muted: string
+  chip: string
+  line: string
+  up: string
+  down: string
+  gold: string
+}
+
 declare module '@mui/material/styles' {
   interface Palette {
     price: PricePalette
+    hero: HeroPalette
   }
   interface PaletteOptions {
     price?: PricePalette
+    hero?: HeroPalette
   }
 }
 
-const FONT = 'Inter, "Segoe UI", Roboto, system-ui, sans-serif'
+const FONT = '"Be Vietnam Pro", Inter, "Segoe UI", Roboto, system-ui, sans-serif'
+
+/** Màu thương hiệu: navy (tin cậy, điềm tĩnh) + vàng (tài sản) — dùng chung cho logo, sidebar, thẻ tổng tài sản */
+export const BRAND_NAVY = '#15213a'
+export const BRAND_GOLD = '#c9a24b'
 
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   colorSchemes: {
     light: {
       palette: {
-        primary: { main: '#1d4ed8', dark: '#1e3a8a', light: '#3b82f6' },
-        secondary: { main: '#0f766e' },
-        background: { default: '#f4f6f9', paper: '#ffffff' },
-        divider: '#e3e7ee',
-        text: { primary: '#111827', secondary: '#5b6475' },
+        primary: { main: '#1e3560', dark: '#15213a', light: '#3a5a8f' },
+        secondary: { main: '#a67c1f' },
+        background: { default: '#f4f5f7', paper: '#ffffff' },
+        divider: '#e4e7ec',
+        text: { primary: '#121a2b', secondary: '#5b6475' },
         success: { main: '#0a8f45' },
         error: { main: '#d32f2f' },
         warning: { main: '#b7791f' },
         price: { up: '#0a8f45', down: '#d32f2f', ref: '#b7791f', ceil: '#9333ea', floor: '#0284c7' },
+        hero: {
+          bg: BRAND_NAVY,
+          ink: '#f6f2e7',
+          muted: '#a9b3c7',
+          chip: 'rgba(255, 255, 255, 0.07)',
+          line: 'rgba(255, 255, 255, 0.1)',
+          up: '#4ade94',
+          down: '#ff8a80',
+          gold: BRAND_GOLD,
+        },
       },
     },
     dark: {
       palette: {
-        primary: { main: '#60a5fa', dark: '#3b82f6', light: '#93c5fd' },
-        secondary: { main: '#2dd4bf' },
-        background: { default: '#0e1117', paper: '#161b24' },
-        divider: '#262d3a',
-        text: { primary: '#e6e9ef', secondary: '#949db0' },
+        primary: { main: '#a9bfeb', dark: '#7f9bd4', light: '#cfdcf5' },
+        secondary: { main: '#d4b062' },
+        background: { default: '#0e121a', paper: '#161c27' },
+        divider: '#273042',
+        text: { primary: '#e7eaf0', secondary: '#97a1b4' },
         success: { main: '#22c55e' },
         error: { main: '#f05252' },
         warning: { main: '#f2c94c' },
         price: { up: '#22c55e', down: '#f05252', ref: '#f2c94c', ceil: '#d36cf2', floor: '#38bdf8' },
+        hero: {
+          bg: '#1a2742',
+          ink: '#f6f2e7',
+          muted: '#a9b3c7',
+          chip: 'rgba(255, 255, 255, 0.07)',
+          line: 'rgba(255, 255, 255, 0.1)',
+          up: '#4ade94',
+          down: '#ff8a80',
+          gold: BRAND_GOLD,
+        },
       },
     },
   },
@@ -54,8 +92,8 @@ export const theme = createTheme({
   typography: {
     fontFamily: FONT,
     fontSize: 14,
-    h4: { fontWeight: 700, letterSpacing: '-0.01em' },
-    h5: { fontWeight: 700, letterSpacing: '-0.01em' },
+    h4: { fontWeight: 700, letterSpacing: '-0.02em' },
+    h5: { fontWeight: 700, letterSpacing: '-0.015em' },
     h6: { fontWeight: 600, fontSize: '1.05rem' },
     subtitle2: { fontWeight: 600 },
     button: { textTransform: 'none', fontWeight: 600 },
@@ -84,6 +122,8 @@ export const theme = createTheme({
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: ({ theme }) => ({ backgroundImage: 'none', border: `1px solid ${theme.vars.palette.divider}` }),
+        // Thẻ, menu, hộp thoại bo 14px (mềm hơn shape mặc định của nút, ô nhập)
+        rounded: { borderRadius: 14 },
       },
     },
     MuiAppBar: {
@@ -140,7 +180,12 @@ export const theme = createTheme({
     },
     MuiBottomNavigationAction: {
       styleOverrides: {
-        label: { fontSize: 12, whiteSpace: 'nowrap', '&.Mui-selected': { fontSize: 12, fontWeight: 600 } },
+        root: {
+          // Mục đang chọn: biểu tượng nằm trong viên thuốc nền nhạt
+          '& > :first-child': { borderRadius: 99, padding: '2px 16px', transition: 'background-color 150ms' },
+          '&.Mui-selected > :first-child': { backgroundColor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)' },
+        },
+        label: { fontSize: 12, whiteSpace: 'nowrap', marginTop: 2, '&.Mui-selected': { fontSize: 12, fontWeight: 600 } },
       },
     },
     MuiTab: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600, minHeight: 44 } } },

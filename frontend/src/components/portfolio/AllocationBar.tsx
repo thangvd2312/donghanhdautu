@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography'
 import { fmtNum } from '../../lib/format'
 
 const ALLOC_COLORS: Record<string, string> = {
-  'Cổ phiếu': '#2563eb',
+  'Cổ phiếu': '#3b5ba9',
   Vàng: '#d4a017',
   Crypto: '#8b5cf6',
   'Tiền mặt / tiết kiệm': '#14a37f',

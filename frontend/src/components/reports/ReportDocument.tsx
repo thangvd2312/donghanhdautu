@@ -5,7 +5,7 @@ import type { AssetType, PortfolioReport, ReportAmount, ReportTransaction } from
 import { Logo } from '../ui'
 
 const TYPE_COLOR: Record<AssetType, string> = {
-  stock: '#2563eb',
+  stock: '#3b5ba9',
   gold: '#d4a017',
   crypto: '#8b5cf6',
   cash: '#14a37f',

@@ -1,4 +1,7 @@
+import AddOutlined from '@mui/icons-material/AddOutlined'
 import ArrowForward from '@mui/icons-material/ArrowForward'
+import BalanceOutlined from '@mui/icons-material/BalanceOutlined'
+import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined'
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
 import CheckCircleOutlined from '@mui/icons-material/CheckCircleOutlined'
 import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
@@ -19,30 +22,72 @@ import AllocationBar from '../portfolio/AllocationBar'
 import { DataQualityAlert } from '../DataStatus'
 import { ChangePill, InfoTip } from '../ui'
 import AssetAvatar from '../AssetAvatar'
+import QuickActions from '../QuickActions'
 
 const ask = (text: string) => `/advisor?q=${encodeURIComponent(text)}`
 
-/** Nền thẻ tổng quan: xanh thương hiệu, giữ nguyên ở chế độ tối để số tiền luôn nổi bật */
-export const HERO_BG = 'linear-gradient(135deg, #1d4ed8 0%, #3730a3 100%)'
+/** Thẻ tổng quan: nền navy trung tính (giữ ở chế độ tối) để số lãi / lỗ không tranh màu với thương hiệu, ánh vàng nhẹ góc trên */
+export const HERO_SX = {
+  p: 2.5,
+  bgcolor: 'hero.bg',
+  color: 'hero.ink',
+  backgroundImage: 'radial-gradient(120% 90% at 100% 0%, rgba(201, 162, 75, 0.16) 0%, rgba(201, 162, 75, 0) 55%)',
+} as const
 
-/** Viên thông số trên nền xanh: nhãn nhỏ + số có mũi tên ▲▼ (xanh lá / đỏ nhạt để đọc được trên nền xanh) */
+/** Số tiền lớn trên thẻ tổng quan: ba số cuối và ký hiệu ₫ nhạt hơn để mắt đọc phần triệu / tỷ trước */
+export function HeroAmount({ value, estimate }: { value: number | null | undefined; estimate?: boolean }) {
+  const text = fmtVnd(value)
+  const m = /^(.+[.,])(\d{3})\s?₫$/.exec(text)
+  return (
+    <Typography className="num" sx={{ fontSize: { xs: 30, sm: 36 }, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, mt: 0.5 }}>
+      {estimate ? '≈ ' : ''}
+      {m ? (
+        <>
+          {m[1]}
+          <Box component="span" sx={{ opacity: 0.55, fontWeight: 600 }}>
+            {m[2]}
+          </Box>
+          <Box component="span" sx={{ fontSize: '0.55em', fontWeight: 600, opacity: 0.7, ml: 0.5 }}>
+            ₫
+          </Box>
+        </>
+      ) : (
+        text
+      )}
+    </Typography>
+  )
+}
+
+/** Trạng thái phiên: chấm xanh khi đang giao dịch */
+export function SessionDot({ open }: { open: boolean }) {
+  return (
+    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', color: 'hero.muted' }}>
+      <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: open ? 'hero.up' : 'hero.muted' }} />
+      <Typography sx={{ fontSize: 12 }}>{open ? 'Đang trong phiên' : 'Đã đóng cửa'}</Typography>
+    </Stack>
+  )
+}
+
+/** Viên thông số trên nền navy: nhãn nhỏ + số có mũi tên ▲▼ (xanh / đỏ sáng để đọc được trên nền tối) */
 export function HeroPill({ label, vnd, pct, neutral }: { label: string; vnd: number | null; pct: number | null; neutral?: boolean }) {
   const up = !neutral && (vnd ?? 0) > 0
   const down = !neutral && (vnd ?? 0) < 0
-  const color = up ? '#86efac' : down ? '#fca5a5' : '#fff'
+  const color = up ? 'hero.up' : down ? 'hero.down' : 'hero.ink'
   return (
-    <Box sx={{ bgcolor: 'rgba(255,255,255,0.14)', borderRadius: 2, px: 1.25, py: 0.75, minWidth: 0 }}>
-      <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 0.5, alignItems: 'baseline' }}>
-        <Typography noWrap sx={{ fontSize: 11, opacity: 0.8, lineHeight: 1.3 }}>
-          {label}
-        </Typography>
-        <Typography className="num" sx={{ fontSize: 11, fontWeight: 700, color, lineHeight: 1.3 }}>
-          {pct === null ? '' : fmtPct(pct, 2)}
-        </Typography>
-      </Stack>
-      <Typography className="num" noWrap sx={{ fontSize: 15, fontWeight: 700, color, lineHeight: 1.4 }}>
-        {vnd === null ? '—' : neutral ? fmtVndShort(vnd) : `${up ? '▲' : down ? '▼' : ''} ${fmtVndShort(Math.abs(vnd))}`}
+    <Box sx={{ bgcolor: 'hero.chip', border: 1, borderColor: 'hero.line', borderRadius: '12px', px: 1.5, py: 1, minWidth: 0 }}>
+      <Typography noWrap sx={{ fontSize: 11.5, color: 'hero.muted', lineHeight: 1.3 }}>
+        {label}
       </Typography>
+      <Stack direction="row" useFlexGap sx={{ alignItems: 'baseline', columnGap: 0.75, flexWrap: 'wrap' }}>
+        <Typography className="num" noWrap sx={{ fontSize: 15, fontWeight: 700, color, lineHeight: 1.4 }}>
+          {vnd === null ? '—' : neutral ? fmtVndShort(vnd) : `${up ? '▲' : down ? '▼' : ''} ${fmtVndShort(Math.abs(vnd))}`}
+        </Typography>
+        {pct !== null && (
+          <Typography className="num" sx={{ fontSize: 11.5, fontWeight: 600, color, lineHeight: 1.3 }}>
+            {fmtPct(pct, 2)}
+          </Typography>
+        )}
+      </Stack>
     </Box>
   )
 }
@@ -54,32 +99,75 @@ export function TodayBlock({ d, demo }: { d: HomeToday; demo?: boolean }) {
   const movers = [...day.gainers, ...day.losers].sort((a, b) => Math.abs(b.changeVnd) - Math.abs(a.changeVnd)).slice(0, 5)
   return (
     <Paper sx={{ overflow: 'hidden' }}>
-      <Box sx={{ p: 2.5, color: '#fff', background: HERO_BG }}>
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography sx={{ fontSize: 13, opacity: 0.85 }}>
-            {d.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
-          </Typography>
-          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', opacity: 0.85 }}>
-            <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: d.stockSessionOpen ? '#4ade80' : 'rgba(255,255,255,0.5)' }} />
-            <Typography sx={{ fontSize: 12 }}>{d.stockSessionOpen ? 'Đang trong phiên' : 'Đã đóng cửa'}</Typography>
-          </Stack>
-        </Stack>
-        <Typography className="num" sx={{ fontSize: { xs: 30, sm: 34 }, fontWeight: 800, lineHeight: 1.2, mt: 0.25 }}>
-          {d.totalIsEstimate ? '≈ ' : ''}
-          {fmtVnd(d.totalValue)}
-        </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1.5 }}>
-          <HeroPill label="Hôm nay" vnd={day.changeVnd} pct={day.changePct} />
-          <HeroPill label="Lãi / lỗ so với vốn" vnd={d.totalPnl} pct={d.totalPnlPct} />
+      <Box sx={HERO_SX}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 1.5, md: 3 }, alignItems: { md: 'flex-end' } }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>
+                {d.totalIsEstimate ? 'Tổng tài sản (ước tính)' : 'Tổng tài sản'}
+              </Typography>
+              <Box sx={{ display: { md: 'none' } }}>
+                <SessionDot open={d.stockSessionOpen} />
+              </Box>
+            </Stack>
+            <HeroAmount value={d.totalValue} estimate={d.totalIsEstimate} />
+            {d.dataQuality.oldestPriceAt && (
+              <Typography sx={{ fontSize: 11, color: 'hero.muted', mt: 0.75, display: { xs: 'none', md: 'block' } }}>
+                Giá cập nhật {timeAgo(d.dataQuality.oldestPriceAt)}
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ width: { md: 420 }, flexShrink: 0 }}>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end', mb: 1 }}>
+              <SessionDot open={d.stockSessionOpen} />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+              <HeroPill label="Hôm nay" vnd={day.changeVnd} pct={day.changePct} />
+              <HeroPill label="Lãi / lỗ so với vốn" vnd={d.totalPnl} pct={d.totalPnlPct} />
+            </Box>
+          </Box>
         </Box>
         {d.dataQuality.oldestPriceAt && (
-          <Typography sx={{ fontSize: 11, opacity: 0.7, mt: 1 }}>Giá cập nhật {timeAgo(d.dataQuality.oldestPriceAt)}</Typography>
+          <Typography sx={{ fontSize: 11, color: 'hero.muted', mt: 1.25, display: { md: 'none' } }}>
+            Giá cập nhật {timeAgo(d.dataQuality.oldestPriceAt)}
+          </Typography>
         )}
       </Box>
 
-      <Box sx={{ p: 2.5, pt: 2 }}>
+      <Box sx={{ p: { xs: 2, sm: 2.5 }, pb: 0 }}>
+        {demo ? (
+          <Button variant="contained" component={RouterLink} to="/register" fullWidth sx={{ borderRadius: 99 }}>
+            Tạo tài khoản
+          </Button>
+        ) : (
+          <QuickActions
+            items={[
+              {
+                label: 'Hỏi cố vấn',
+                to: ask('Hôm nay danh mục của tôi biến động thế nào, vì sao, và tôi có cần làm gì không?'),
+                Icon: AutoAwesomeOutlined,
+                primary: true,
+              },
+              { label: 'Giải ngân', to: '/deployment', Icon: DonutSmallOutlined },
+              { label: 'Ghi giao dịch', to: '/portfolio?tx=buy', Icon: AddOutlined },
+              { label: 'Tái cân bằng', to: '/rebalance', Icon: BalanceOutlined },
+            ]}
+          />
+        )}
+      </Box>
+
+      {/* Desktop: biến động bên trái, phân bổ bên phải để số tiền không bị kéo cách xa tên mã */}
+      <Box
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: movers.length ? 'minmax(0, 1.4fr) minmax(0, 1fr)' : '1fr' },
+          gap: { xs: 2, md: 4 },
+          alignItems: 'start',
+        }}
+      >
         {movers.length > 0 && (
-          <Box sx={{ mb: 2 }}>
+          <Box>
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 0.5 }}>
               <Typography variant="subtitle2">Biến động hôm nay</Typography>
               {day.notes.length > 0 && <InfoTip>{day.notes.join(' ')}</InfoTip>}
@@ -89,26 +177,15 @@ export function TodayBlock({ d, demo }: { d: HomeToday; demo?: boolean }) {
             ))}
           </Box>
         )}
-        <Box sx={{ mb: 1.5, '&:empty': { display: 'none' } }}>
-          <DataQualityAlert quality={d.dataQuality} />
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1.25 }}>
+            Phân bổ
+          </Typography>
+          <Box sx={{ mb: 1.5, '&:empty': { display: 'none' } }}>
+            <DataQualityAlert quality={d.dataQuality} />
+          </Box>
+          <AllocationBar allocation={d.allocationPct} />
         </Box>
-        <AllocationBar allocation={d.allocationPct} />
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<AutoAwesomeOutlined />}
-            component={RouterLink}
-            to={demo ? '/register' : ask('Hôm nay danh mục của tôi biến động thế nào, vì sao, và tôi có cần làm gì không?')}
-            sx={{ flex: 1, borderRadius: 99 }}
-          >
-            {demo ? 'Tạo tài khoản' : 'Hỏi cố vấn'}
-          </Button>
-          {!demo && (
-            <Button variant="outlined" component={RouterLink} to="/portfolio" endIcon={<ArrowForward />} sx={{ flex: 1, borderRadius: 99 }}>
-              Danh mục
-            </Button>
-          )}
-        </Stack>
       </Box>
     </Paper>
   )
