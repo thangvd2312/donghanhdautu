@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DeploymentSetup, DeployStepPreview } from './types'
-import { buildDeployRequest, groupSteps, horizonFor, initialForm, money, stepAction, stepMix, stepPreset } from './deployment'
+import { buildDeployRequest, groupSteps, horizonFor, initialForm, money, parseDeployParams, stepAction, stepMix, stepPreset } from './deployment'
 
 const setup = (over: Partial<NonNullable<DeploymentSetup['profile']>> = {}): DeploymentSetup => ({
   profile: {
@@ -31,13 +31,29 @@ describe('kế hoạch giải ngân: form → yêu cầu', () => {
     const s = setup()
     const f = { ...initialForm(s), amount: 1e8, goalId: 'g1' }
     expect(f.horizon).toBe('medium')
-    expect(buildDeployRequest(f, s)).toMatchObject({ amount: 1e8, needBy: '2028-06-01', tranches: 3, etf: 'E1VFVN30' })
+    expect(buildDeployRequest(f, s)).toMatchObject({
+      amount: 1e8,
+      needBy: '2028-06-01',
+      tranches: 3,
+      etf: 'E1VFVN30',
+    })
   })
 
   it('chỉ gửi câu đã hỏi: quỹ dự phòng khi khảo sát nói chưa có, margin khi có dùng; nợ khi trả lời có', () => {
     const plain = setup()
-    const f = { ...initialForm(plain), amount: 1e8, monthlyExpense: 1e7, marginDebt: 5e6, debt: 3e6, hasDebt: false }
-    expect(buildDeployRequest(f, plain)).toMatchObject({ emergency: null, marginDebt: 0, highInterestDebt: 0 })
+    const f = {
+      ...initialForm(plain),
+      amount: 1e8,
+      monthlyExpense: 1e7,
+      marginDebt: 5e6,
+      debt: 3e6,
+      hasDebt: false,
+    }
+    expect(buildDeployRequest(f, plain)).toMatchObject({
+      emergency: null,
+      marginDebt: 0,
+      highInterestDebt: 0,
+    })
     const risky = setup({ emergency: 'no', margin: 'often' })
     expect(buildDeployRequest({ ...f, hasDebt: true }, risky)).toMatchObject({
       emergency: { monthlyExpense: 1e7, saved: 0, months: 6 },
@@ -48,7 +64,12 @@ describe('kế hoạch giải ngân: form → yêu cầu', () => {
 
   it('tiền đã ghi là tiền mặt chỉ áp dụng cho giải ngân một lần', () => {
     const s = setup()
-    const f = { ...initialForm(s), amount: 1e8, fromCash: true, mode: 'monthly' as const }
+    const f = {
+      ...initialForm(s),
+      amount: 1e8,
+      fromCash: true,
+      mode: 'monthly' as const,
+    }
     expect(buildDeployRequest(f, s)!.fromCash).toBe(false)
   })
 })
@@ -56,10 +77,26 @@ describe('kế hoạch giải ngân: form → yêu cầu', () => {
 describe('chỉnh tỷ trọng', () => {
   const mix = { savings: 30, gold: 15, etf: 35, picks: 15, crypto: 5 }
   it('tiền gửi nhận / nhường phần chênh, tổng luôn 100, không âm', () => {
-    expect(stepMix(mix, 'crypto', 5)).toEqual({ ...mix, crypto: 10, savings: 25 })
-    expect(stepMix(mix, 'crypto', -10)).toEqual({ ...mix, crypto: 0, savings: 35 })
-    expect(stepMix({ ...mix, savings: 0, etf: 65 }, 'gold', 5)).toEqual({ ...mix, savings: 0, etf: 65 })
-    expect(stepMix(mix, 'savings', 5)).toEqual({ ...mix, savings: 35, etf: 30 })
+    expect(stepMix(mix, 'crypto', 5)).toEqual({
+      ...mix,
+      crypto: 10,
+      savings: 25,
+    })
+    expect(stepMix(mix, 'crypto', -10)).toEqual({
+      ...mix,
+      crypto: 0,
+      savings: 35,
+    })
+    expect(stepMix({ ...mix, savings: 0, etf: 65 }, 'gold', 5)).toEqual({
+      ...mix,
+      savings: 0,
+      etf: 65,
+    })
+    expect(stepMix(mix, 'savings', 5)).toEqual({
+      ...mix,
+      savings: 35,
+      etf: 30,
+    })
   })
 })
 
@@ -118,16 +155,73 @@ describe('đợt đã lưu: nút chính và điền sẵn giao dịch', () => {
       reason: 'plan',
       note: 'Kế hoạch giải ngân · ETF E1VFVN30 · đợt 1/3',
     })
-    expect(stepPreset(step({ kind: 'crypto', assetType: 'crypto', symbol: 'BTCUSDT', quantity: 0.0006, price: 2.5e9 }))).toMatchObject({
+    expect(
+      stepPreset(
+        step({
+          kind: 'crypto',
+          assetType: 'crypto',
+          symbol: 'BTCUSDT',
+          quantity: 0.0006,
+          price: 2.5e9,
+        }),
+      ),
+    ).toMatchObject({
       type: 'buy',
       assetType: 'crypto',
       symbol: 'BTCUSDT',
       quantity: 0.0006,
     })
     expect(stepPreset(step({ kind: 'crypto', assetType: 'crypto', symbol: 'BTCUSDT' }))).not.toHaveProperty('price')
-    expect(stepPreset(step({ kind: 'savings', assetType: 'cash', symbol: 'VND', tranches: 1 }))).toMatchObject({
+    expect(
+      stepPreset(
+        step({
+          kind: 'savings',
+          assetType: 'cash',
+          symbol: 'VND',
+          tranches: 1,
+        }),
+      ),
+    ).toMatchObject({
       type: 'deposit',
       amount: 11_700_000,
+    })
+  })
+})
+
+describe('điền sẵn từ đường dẫn', () => {
+  const q = (s: string) => parseDeployParams(new URLSearchParams(s))
+  it('số tiền, tỷ trọng 5 phần, mục tiêu', () => {
+    expect(q('new=1&amount=100000000&mix=50-10-30-10-0&goal=g1')).toEqual({
+      amount: 100_000_000,
+      mix: { savings: 50, gold: 10, etf: 30, picks: 10, crypto: 0 },
+      goalId: 'g1',
+    })
+  })
+  it('bỏ tham số sai: tổng khác 100, thiếu phần, số âm, số tiền không dương', () => {
+    expect(q('mix=50-10-30-10')).toEqual({})
+    expect(q('mix=50-10-30-10-5')).toEqual({})
+    expect(q('mix=60-10-30--10-10')).toEqual({})
+    expect(q('amount=abc')).toEqual({})
+    expect(q('amount=-5')).toEqual({})
+    expect(q('amount=2000000&mix=x-1-1-1-1')).toEqual({ amount: 2_000_000 })
+  })
+  it('form điền sẵn số tiền, tỷ trọng, mục tiêu có trong hồ sơ (kèm khung thời gian)', () => {
+    const s = setup()
+    const f = initialForm(s, {
+      amount: 1e8,
+      mix: { savings: 100, gold: 0, etf: 0, picks: 0, crypto: 0 },
+      goalId: 'g1',
+    })
+    expect(f).toMatchObject({
+      amount: 1e8,
+      goalId: 'g1',
+      mix: { savings: 100 },
+    })
+    expect(initialForm(s, { goalId: 'nope' }).goalId).toBeNull()
+    expect(initialForm(s)).toMatchObject({
+      amount: 0,
+      goalId: null,
+      mix: null,
     })
   })
 })

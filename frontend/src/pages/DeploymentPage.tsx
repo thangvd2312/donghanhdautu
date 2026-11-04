@@ -21,7 +21,7 @@ import { EmptyState, PageHeader } from '../components/page'
 import { DialogHeader } from '../components/ui'
 import { useDeploymentPreview } from '../hooks/useDeploymentPreview'
 import { useResource } from '../hooks/useResource'
-import { buildDeployRequest, initialForm, type DeployForm } from '../lib/deployment'
+import { buildDeployRequest, initialForm, parseDeployParams, type DeployForm } from '../lib/deployment'
 import { fmtDate } from '../lib/format'
 import { qk } from '../lib/query'
 
@@ -49,7 +49,8 @@ export default function DeploymentPage() {
 
   // Hồ sơ tải xong lần đầu: điền sẵn khung thời gian
   useEffect(() => {
-    if (setup && !form) setForm(initialForm(setup))
+    if (setup && !form) setForm(initialForm(setup, building ? parseDeployParams(params) : {}))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup, form])
 
   const req = form ? buildDeployRequest(form, setup) : null

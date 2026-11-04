@@ -81,3 +81,81 @@ describe('phân bổ tài sản cho mục tiêu (PostgreSQL)', () => {
     }
   });
 });
+
+describe('mục tiêu "Sinh lời đều mỗi năm" (PostgreSQL)', () => {
+  // Danh mục trống: chỉ cần valuation cho phần "danh mục hiện tại"
+  const withPortfolio = new GoalsService(prisma, {
+    valuation: () => Promise.resolve({ holdings: [] }),
+  } as unknown as PortfolioService);
+
+  async function balancedUser(tag: string) {
+    const u = await testUser(prisma, tag);
+    await prisma.investorProfile.create({
+      data: {
+        userId: u.id,
+        answers: { experience: '1_3', income_share: 'some' },
+        riskScore: 50,
+        riskType: 'balanced',
+        goal: 'grow',
+        horizon: 'long',
+        maxDrawdownPct: 20,
+        fomoProne: false,
+      },
+    });
+    return u;
+  }
+
+  const want = {
+    kind: 'return' as const,
+    name: 'Lãi đều 10–12%/năm',
+    capital: 100_000_000,
+    returnMinPct: 10,
+    returnMaxPct: 12,
+    holdYears: 5,
+    allocations: [],
+  };
+
+  it('lưu mục tiêu, tự tính ngày đích và giá trị đích; người dùng chọn phương án thì giá trị đích đổi theo', async () => {
+    const u = await balancedUser('goal-return');
+    const { id } = await withPortfolio.create(u.id, want);
+    const saved = await prisma.goal.findUniqueOrThrow({ where: { id } });
+    expect(saved.kind).toBe('return');
+    expect(saved.riskChoice).toBeNull();
+    expect(saved.targetDate.getUTCFullYear()).toBe(new Date().getUTCFullYear() + 5);
+
+    const list = await withPortfolio.list(u.id);
+    const g = list.goals.find((x) => x.id === id)!;
+    expect(g.advice?.verdict).toBe('over_risk');
+    expect(g.returnTarget).toMatchObject({
+      capital: 100_000_000,
+      minPct: 10,
+      maxPct: 12,
+      holdYears: 5,
+      riskChoice: null,
+    });
+    const target = g.advice!.options.find((o) => o.key === 'target')!;
+    expect(saved.targetAmount).toBe(target.projection.mid);
+    expect(list.assumptions.map((a) => a.part)).toEqual(['savings', 'gold', 'etf', 'picks', 'crypto']);
+
+    await withPortfolio.choose(u.id, id, { choice: 'within' });
+    const after = await prisma.goal.findUniqueOrThrow({ where: { id } });
+    const within = g.advice!.options.find((o) => o.key === 'within')!;
+    expect(after.riskChoice).toBe('within');
+    expect(after.targetAmount).toBe(within.projection.mid);
+  });
+
+  it('xem trước không ghi gì', async () => {
+    const u = await balancedUser('goal-preview');
+    const res = await withPortfolio.preview(u.id, want);
+    expect(res.advice?.options).toHaveLength(2);
+    expect(await prisma.goal.count({ where: { userId: u.id } })).toBe(0);
+  });
+
+  it('mục tiêu số tiền không có phương án để chọn; mục tiêu người khác không chọn được', async () => {
+    const u = await userWithFpt('goal-choice-amount');
+    const { id } = await goals.create(u.id, goal('A', 10));
+    await expect(withPortfolio.choose(u.id, id, { choice: 'within' })).rejects.toThrow('Chỉ mục tiêu sinh lời');
+    const other = await testUser(prisma, 'goal-choice-other');
+    await expect(withPortfolio.choose(other.id, id, { choice: 'within' })).rejects.toThrow('Không tìm thấy');
+  });
+});

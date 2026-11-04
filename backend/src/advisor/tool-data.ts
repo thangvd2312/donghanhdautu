@@ -78,9 +78,27 @@ export class AdvisorToolData {
       financialGoals: goals.length
         ? goals.map((g) => ({
             name: g.name,
+            // amount: cần số tiền vào ngày · return: muốn lãi đều mỗi năm trên số vốn (trang Mục tiêu đã gợi ý cách chia tiền)
+            kind: g.kind,
+            ...(g.kind === 'return'
+              ? {
+                  capitalVnd: g.capital,
+                  wantedAnnualReturnPct: g.returnMaxPct
+                    ? `${g.returnMinPct}–${g.returnMaxPct}`
+                    : `trên ${g.returnMinPct}`,
+                  holdYears: g.holdYears,
+                  chosenOption:
+                    g.riskChoice === 'within'
+                      ? 'trong mức rủi ro đã khai'
+                      : g.riskChoice === 'target'
+                        ? 'đạt mức lãi mong muốn'
+                        : null,
+                }
+              : {}),
             targetAmountVnd: g.targetAmount,
             targetDate: g.targetDate.toISOString().slice(0, 10),
             monthlyContributionVnd: g.monthlyContribution,
+            // Kiểu amount cũ: giả định người dùng nhập; trang Mục tiêu nay dùng bảng giả định chung (docs/DESIGN_GOALS_V2.md)
             assumedAnnualReturnPct: g.expectedReturnPct,
             targetAllocationPct: g.targetAllocation,
             assignedAssets: g.allocations.map((a) => ({ asset: a.symbol.replace(/USDT$/, ''), pctOfHolding: a.pct })),

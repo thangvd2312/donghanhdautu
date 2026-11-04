@@ -475,6 +475,15 @@ model Goal {
   /// active | paused | achieved
   status              String           @default("active")
   note                String?
+  /// amount: có số tiền vào ngày · return: sinh lời đều mỗi năm (docs/DESIGN_GOALS_V2.md)
+  kind                String           @default("amount")
+  /// Kiểu return: số vốn (VND), mức lãi mong muốn (%/năm; max null = "trên min"), số năm giữ
+  capital             Float?
+  returnMinPct        Float?
+  returnMaxPct        Float?
+  holdYears           Int?
+  /// Kiểu return khi phải chọn: within (trong mức rủi ro) | target (đạt mức mong muốn); null = chưa chọn
+  riskChoice          String?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   allocations         GoalAllocation[]

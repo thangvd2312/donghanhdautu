@@ -1,14 +1,4 @@
-import type {
-  DeployEtf,
-  DeployHorizon,
-  DeployMix,
-  DeployMode,
-  DeployPart,
-  DeployStepPreview,
-  DeployTranches,
-  DeploymentRequest,
-  DeploymentSetup,
-} from './types'
+import type { DeployEtf, DeployHorizon, DeployMix, DeployMode, DeployPart, DeployStepPreview, DeployTranches, DeploymentRequest, DeploymentSetup } from './types'
 import type { TxPreset } from './tx'
 
 export const PARTS: DeployPart[] = ['savings', 'gold', 'etf', 'picks', 'crypto']
@@ -59,11 +49,47 @@ export interface DeployForm {
   mix: DeployMix | null
 }
 
-export const initialForm = (setup: DeploymentSetup | null): DeployForm => ({
-  amount: 0,
+function goalHorizon(setup: DeploymentSetup | null, goalId?: string): DeployHorizon | null {
+  const g = goalId ? setup?.goals.find((x) => x.id === goalId) : undefined
+  return g ? horizonFor(g.targetDate, todayKey()) : null
+}
+
+/** Điền sẵn từ đường dẫn (`?amount=&mix=&goal=`), ví dụ từ trang Mục tiêu */
+export interface DeployPrefill {
+  amount?: number
+  mix?: DeployMix
+  goalId?: string
+}
+
+/** Đọc `amount` (số dương), `mix` (5 số không âm cách nhau bằng "-", tổng 100: tiền gửi-vàng-ETF-tự chọn-crypto) và `goal`; sai thì bỏ qua tham số đó */
+export function parseDeployParams(params: URLSearchParams): DeployPrefill {
+  const out: DeployPrefill = {}
+  const amount = Number(params.get('amount'))
+  if (Number.isFinite(amount) && amount > 0) out.amount = Math.round(amount)
+  const raw = params.get('mix')
+  if (raw) {
+    const n = raw.split('-')
+    const v = n.map((x) => (x.trim() === '' ? NaN : Number(x)))
+    if (v.length === PARTS.length && v.every((x) => Number.isFinite(x) && x >= 0) && Math.abs(v.reduce((a, b) => a + b, 0) - 100) < 0.01) {
+      out.mix = {
+        savings: v[0],
+        gold: v[1],
+        etf: v[2],
+        picks: v[3],
+        crypto: v[4],
+      }
+    }
+  }
+  const goal = params.get('goal')?.trim()
+  if (goal) out.goalId = goal
+  return out
+}
+
+export const initialForm = (setup: DeploymentSetup | null, prefill: DeployPrefill = {}): DeployForm => ({
+  amount: prefill.amount ?? 0,
   mode: 'one_time',
-  horizon: setup?.profile?.horizon ?? 'long',
-  goalId: null,
+  horizon: goalHorizon(setup, prefill.goalId) ?? setup?.profile?.horizon ?? 'long',
+  goalId: prefill.goalId && setup?.goals.some((g) => g.id === prefill.goalId) ? prefill.goalId : null,
   fromCash: false,
   tranches: 3,
   etf: 'E1VFVN30',
@@ -73,7 +99,7 @@ export const initialForm = (setup: DeploymentSetup | null): DeployForm => ({
   monthlyExpense: 0,
   saved: 0,
   emergencyMonths: 6,
-  mix: null,
+  mix: prefill.mix ?? null,
 })
 
 /** Câu nào cần hỏi thêm ở bước 2: khảo sát nói chưa có quỹ dự phòng / có dùng margin */
@@ -103,7 +129,11 @@ export function buildDeployRequest(form: DeployForm, setup: DeploymentSetup | nu
     marginDebt: need.margin ? form.marginDebt : 0,
     emergency:
       need.emergency && form.monthlyExpense > 0
-        ? { monthlyExpense: form.monthlyExpense, saved: form.saved, months: form.emergencyMonths }
+        ? {
+            monthlyExpense: form.monthlyExpense,
+            saved: form.saved,
+            months: form.emergencyMonths,
+          }
         : null,
   }
 }
@@ -196,6 +226,14 @@ export function stepPreset(s: DeployStepPreview, portfolioId?: string | null): T
     }
   }
   // Coin: giá nhập theo USDT nên không điền giá VND lúc lập
-  if (s.assetType === 'crypto') return { ...base, ...bought, type: 'buy', assetType: 'crypto', symbol: s.symbol ?? undefined, quantity: s.quantity ?? undefined }
+  if (s.assetType === 'crypto')
+    return {
+      ...base,
+      ...bought,
+      type: 'buy',
+      assetType: 'crypto',
+      symbol: s.symbol ?? undefined,
+      quantity: s.quantity ?? undefined,
+    }
   return null
 }

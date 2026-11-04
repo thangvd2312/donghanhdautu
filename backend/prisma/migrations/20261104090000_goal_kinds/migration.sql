@@ -1,0 +1,7 @@
+-- Mục tiêu v2: kiểu "Sinh lời đều mỗi năm" (docs/DESIGN_GOALS_V2.md)
+ALTER TABLE "Goal" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'amount';
+ALTER TABLE "Goal" ADD COLUMN "capital" DOUBLE PRECISION;
+ALTER TABLE "Goal" ADD COLUMN "returnMinPct" DOUBLE PRECISION;
+ALTER TABLE "Goal" ADD COLUMN "returnMaxPct" DOUBLE PRECISION;
+ALTER TABLE "Goal" ADD COLUMN "holdYears" INTEGER;
+ALTER TABLE "Goal" ADD COLUMN "riskChoice" TEXT;
