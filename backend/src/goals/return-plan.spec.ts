@@ -14,7 +14,11 @@ const base = { capital: 100_000_000, monthly: 0, holdYears: 5, choice: null, hol
 
 describe('expectedOf', () => {
   it('weights the assumption table and ignores crypto', () => {
-    expect(expectedOf({ savings: 100, gold: 0, etf: 0, picks: 0, crypto: 0 })).toEqual({ low: 4.5, mid: 5.5, high: 6.5 });
+    expect(expectedOf({ savings: 100, gold: 0, etf: 0, picks: 0, crypto: 0 })).toEqual({
+      low: 4.5,
+      mid: 5.5,
+      high: 6.5,
+    });
     expect(expectedOf({ savings: 50, gold: 0, etf: 50, picks: 0, crypto: 0 })?.mid).toBe(8.3);
     // crypto không tính: 50% ETF + 50% crypto = như 100% ETF
     expect(expectedOf({ savings: 0, gold: 0, etf: 50, picks: 0, crypto: 50 })?.mid).toBe(11);
