@@ -112,7 +112,9 @@ const scenarios: Scenario[] = [
   { name: 'tip-plan-editor', path: '/tips', act: async (p) => { await p.locator('a[href^="/tips/"]').first().click(); await p.getByText('Mức nóng / 100').waitFor({ timeout: 25_000 }); await click(p, 'Viết kế hoạch trước khi mua'); await p.waitForTimeout(800) } },
   { name: 'goals', path: '/goals' },
   { name: 'goals-new', path: '/goals', act: (p) => click(p, 'Thêm mục tiêu') },
-  { name: 'goals-sim', path: '/goals', act: async (p) => { const l = p.getByText('Thử thay đổi mức góp').first(); if (await l.count()) { await l.click(); await p.waitForTimeout(600) } } },
+  { name: 'goals-template-form', path: '/goals', act: async (p) => { await click(p, 'Thêm mục tiêu'); await click(p, /Mua nhà/) } },
+  { name: 'goals-levers', path: '/goals', act: async (p) => { const b = p.getByRole('button', { name: 'Tới đích sớm hơn' }).first(); if (await b.count()) { await b.click(); await p.waitForTimeout(1200) } } },
+  { name: 'goals-contribution', path: '/goals', act: async (p) => { const b = p.getByRole('button', { name: 'Góp tháng này' }).first(); if (await b.count()) { await b.click(); await p.waitForTimeout(2000) } } },
   { name: 'events', path: '/events' },
   { name: 'events-quarter', path: '/events', act: (p) => click(p, '3 tháng') },
   {

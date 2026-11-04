@@ -1,18 +1,20 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
-import Paper from '@mui/material/Paper'
+import Collapse from '@mui/material/Collapse'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { chooseGoalOption } from '../../api/goals'
 import { fmtNum, fmtVndShort } from '../../lib/format'
-import { bandText, deployLink, OPTION_LABEL, STATUS_LABEL, VERDICT_COLOR } from '../../lib/goals'
+import { money } from '../../lib/deployment'
+import { bandText, deployLink, monthYear, OPTION_LABEL, trackChip, VERDICT_COLOR } from '../../lib/goals'
+import { PART_SHORT } from '../../lib/deployment'
 import type { Goal, GoalAssumption, GoalOption, GoalRiskChoice } from '../../lib/types'
 import { ChangePill, InfoTip } from '../ui'
-import { AssumptionsButton, ExpectedFigure, MixRows } from './AdviceParts'
+import { AssumptionsButton, BandCompare, ExpectedFigure, MixRows, RulesNote } from './AdviceParts'
+import { CARD_SX, GoalIcon, StatusChip } from './goalUi'
 import GoalMenu from './GoalMenu'
 
 function OptionCard({ o, chosen, busy, onChoose }: { o: GoalOption; chosen: boolean; busy: boolean; onChoose: () => void }) {
@@ -58,13 +60,16 @@ export default function ReturnGoalCard({
   assumptions,
   onEdit,
   onChanged,
+  onContribute,
 }: {
   g: Goal
   assumptions: GoalAssumption[]
   onEdit: () => void
   onChanged: () => void
+  onContribute: () => void
 }) {
   const [error, setError] = useState('')
+  const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const rt = g.returnTarget
   const advice = g.advice
@@ -87,30 +92,75 @@ export default function ReturnGoalCard({
   }
   const cur = advice?.current
 
+  const chip = trackChip(g)
+  const t = g.track
+  const drift = t.drift
+  const sentence = !advice
+    ? 'Làm khảo sát khẩu vị rủi ro để nhận gợi ý chia vốn.'
+    : selected
+      ? `Phương án đang theo: ${selected.key === 'target' ? 'đạt mức mong muốn' : 'trong mức rủi ro của bạn'}, năm xấu −${fmtNum(selected.worstPct, 0)}%.`
+      : 'Chưa chọn phương án: mở chi tiết để chọn một cách chia vốn.'
+
   return (
-    <Paper sx={{ p: { xs: 2, md: 2.5 }, opacity: g.status === 'active' ? 1 : 0.8 }}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+    <Box component="article" sx={{ ...CARD_SX, gap: 1.5, opacity: g.status === 'active' ? 1 : 0.8 }}>
+      <Stack direction="row" sx={{ gap: 1.5, alignItems: 'flex-start' }}>
+        <GoalIcon template={g.template} kind={g.kind} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-            <Typography sx={{ fontWeight: 700, fontSize: 17 }} noWrap>
+          <Stack direction="row" sx={{ gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography component="h2" sx={{ fontSize: 16, fontWeight: 700 }}>
               {g.name}
             </Typography>
-            <Chip size="small" label={bandText(rt.minPct, rt.maxPct)} sx={{ fontWeight: 700, color: 'hero.gold', bgcolor: 'hero.bg' }} />
+            {chip && <StatusChip chip={chip} display={{ xs: 'inline-block', md: 'none' }} />}
           </Stack>
-          <Typography variant="caption" color="text.secondary" component="div" className="num">
-            {g.status !== 'active' ? `${STATUS_LABEL[g.status]} · ` : ''}Vốn {fmtVndShort(rt.capital)} · giữ {rt.holdYears} năm
-            {g.monthlyContribution > 0 ? ` · góp ${fmtVndShort(g.monthlyContribution)}/tháng` : ''}
+          <Typography className="num" sx={{ fontSize: 13, color: 'text.secondary' }}>
+            Vốn {money(rt.capital)}
+            {g.monthlyContribution > 0 ? ` · góp ${money(g.monthlyContribution)}${g.monthlyContributionMax ? `–${money(g.monthlyContributionMax)}` : ''}/tháng` : ''} · từ{' '}
+            {monthYear(g.startedAt)}
+          </Typography>
+          <Typography className="num" sx={{ fontSize: 12, color: 'text.secondary', display: { xs: 'none', md: 'block' } }}>
+            Mong muốn {bandText(rt.minPct, rt.maxPct)} · giữ {rt.holdYears} năm
           </Typography>
         </Box>
+        {chip && <StatusChip chip={chip} display={{ xs: 'none', md: 'inline-block' }} />}
         <GoalMenu g={g} onEdit={onEdit} onChanged={onChanged} onError={setError} />
       </Stack>
 
-      {!advice && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-          Làm khảo sát khẩu vị rủi ro để nhận gợi ý chia vốn.
-        </Typography>
-      )}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1 }}>
+        {[
+          ['Góp đúng lịch', t.contributions.expected > 0 ? `${t.contributions.done}/${t.contributions.expected} tháng` : 'Tháng đầu'],
+          ['Lệch tỷ trọng', drift ? `${fmtNum(Math.abs(drift.points), 0)} điểm %` : '—'],
+          ['Mua có lý do', t.reasonedBuys.total > 0 ? `${t.reasonedBuys.withReason}/${t.reasonedBuys.total} lần` : '—'],
+        ].map(([k, v]) => (
+          <Box key={k} sx={{ bgcolor: 'action.hover', borderRadius: '12px', px: 1.25, py: 1 }}>
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{k}</Typography>
+            <Typography className="num" sx={{ fontSize: 15, fontWeight: 700 }}>
+              {v}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+      <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
+        {sentence}
+        {drift && Math.abs(drift.points) >= 5 ? ` ${PART_SHORT[drift.part]} đang lệch đích ${fmtNum(Math.abs(drift.points), 0)} điểm %.` : ''}
+      </Typography>
 
+      <Stack direction="row" sx={{ gap: 1 }}>
+        <Button
+          variant="outlined"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          sx={{ flex: 1, borderRadius: 99, height: 44, textTransform: 'none', fontWeight: 600 }}
+        >
+          {open ? 'Thu gọn' : 'Chi tiết'}
+        </Button>
+        {g.status === 'active' && (
+          <Button variant="contained" onClick={onContribute} sx={{ flex: 1, borderRadius: 99, height: 44, textTransform: 'none', fontWeight: 600 }}>
+            Góp tháng này
+          </Button>
+        )}
+      </Stack>
+
+      <Collapse in={open} unmountOnExit>
       {advice && (
         <>
           <Box sx={{ position: 'relative', mt: 1.5, pl: 1.75 }}>
@@ -281,11 +331,16 @@ export default function ReturnGoalCard({
         )}
         <AssumptionsButton assumptions={assumptions} />
       </Stack>
-      {error && (
-        <Alert severity="error" sx={{ mt: 1.5 }}>
-          {error}
-        </Alert>
+      {advice?.compare && advice.compare.length > 0 && (
+        <Box sx={{ mt: 1.5 }}>
+          <BandCompare rows={advice.compare} />
+        </Box>
       )}
-    </Paper>
+      <Box sx={{ mt: 1 }}>
+        <RulesNote />
+      </Box>
+      </Collapse>
+      {error && <Alert severity="error">{error}</Alert>}
+    </Box>
   )
 }

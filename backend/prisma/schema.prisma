@@ -28,6 +28,7 @@ model User {
   plans               InvestmentPlan[]
   importBatches       ImportBatch[]
   goals               Goal[]
+  goalContributions   GoalContribution[]
   telegram            TelegramLink?
   pushSettings        PushSettings?
   pushSubscriptions   PushSubscription[]
@@ -339,8 +340,12 @@ model Transaction {
   /// Kế hoạch người dùng gắn giao dịch vào (cùng tài sản); null = giao dịch không theo kế hoạch nào
   planId        String?
   plan          InvestmentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
+  /// Mục tiêu giao dịch này thuộc về (để tính tiến độ mục tiêu); null = chưa gắn
+  goalId        String?
+  goal          Goal?                 @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
+  @@index([userId, goalId])
   @@index([importBatchId])
   @@index([portfolioId])
   @@index([planId])
@@ -459,49 +464,66 @@ model PriceDaily {
 
 /// Mục tiêu tài chính: số tiền đích, ngày đích, tài sản được gán (theo %), tỷ trọng mong muốn
 model Goal {
-  id                  String           @id @default(cuid())
-  userId              String
-  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name                String
-  /// VND
-  targetAmount        Float
-  targetDate          DateTime         @db.Date
-  /// Dự định góp thêm mỗi tháng (VND)
-  monthlyContribution Float            @default(0)
-  /// Lợi suất năm GIẢ ĐỊNH để mô phỏng (%), không phải cam kết
-  expectedReturnPct   Float            @default(6)
-  /// Tỷ trọng mong muốn theo loại tài sản, vd {"stock":50,"gold":20,"cash":30}; tổng 100
-  targetAllocation    Json?
+  id                     String             @id @default(cuid())
+  userId                 String
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                   String
+  /// VND. Kiểu return: giá trị dự kiến của phương án đang dùng; kiểu safety: chi tiêu tháng × số tháng
+  targetAmount           Float
+  targetDate             DateTime           @db.Date
+  /// Dự định góp thêm mỗi tháng (VND); khi góp theo khoảng "20–30 tr" đây là mức thấp (lịch dùng mức này)
+  monthlyContribution    Float              @default(0)
+  /// Mức góp cao của khoảng; null = góp đúng một mức
+  monthlyContributionMax Float?
+  /// Ngày góp tiền mỗi tháng (1–28); null = mặc định 5
+  contributionDay        Int?
   /// active | paused | achieved
-  status              String           @default("active")
-  note                String?
-  /// amount: có số tiền vào ngày · return: sinh lời đều mỗi năm (docs/DESIGN_GOALS_V2.md)
-  kind                String           @default("amount")
+  status                 String             @default("active")
+  note                   String?
+  /// amount: có số tiền vào ngày · return: sinh lời đều mỗi năm · safety: quỹ dự phòng (docs/DESIGN_GOALS_V3.md)
+  kind                   String             @default("amount")
+  /// Mẫu chỉ để điền sẵn: house | car | education | retirement | emergency | grow | custom
+  template               String?
+  /// 1 safety · 2 amount hạn cứng · 3 amount hạn mềm · 4 return / hưu trí; server tính từ kiểu + mẫu
+  priority               Int                @default(4)
+  /// Mốc bắt đầu của lộ trình và của việc đếm tháng góp tiền
+  startedAt              DateTime           @default(now()) @db.Date
   /// Kiểu return: số vốn (VND), mức lãi mong muốn (%/năm; max null = "trên min"), số năm giữ
-  capital             Float?
-  returnMinPct        Float?
-  returnMaxPct        Float?
-  holdYears           Int?
+  capital                Float?
+  returnMinPct           Float?
+  returnMaxPct           Float?
+  holdYears              Int?
   /// Kiểu return khi phải chọn: within (trong mức rủi ro) | target (đạt mức mong muốn); null = chưa chọn
-  riskChoice          String?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  allocations         GoalAllocation[]
+  riskChoice             String?
+  /// Kiểu safety: chi tiêu thiết yếu mỗi tháng (VND) và số tháng muốn dự phòng
+  monthlyExpense         Float?
+  safetyMonths           Int?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  transactions           Transaction[]
+  deploymentPlans        DeploymentPlan[]
 
   @@index([userId])
 }
 
-/// Phần trăm của một tài sản được gán cho mục tiêu. Tổng % của một tài sản qua mọi mục tiêu ≤ 100
-model GoalAllocation {
-  id        String @id @default(cuid())
-  goalId    String
-  goal      Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  /// stock | crypto | gold | cash
-  assetType String
-  symbol    String
-  pct       Float
+/// Tháng góp tiền của một người dùng: tổng tiền, cách chia cho từng mục tiêu (kèm các dòng mua) và đã làm chưa
+model GoalContribution {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Ngày 1 của tháng
+  month      DateTime  @db.Date
+  /// Tổng tiền góp tháng này (VND)
+  amount     Float
+  /// [{ goalId, amount, shortfall, lines: [{ part, label, assetType, symbol, amount, reason }] }]
+  split      Json
+  /// planned | done | skipped
+  status     String    @default("planned")
+  skipReason String?
+  createdAt  DateTime  @default(now())
+  doneAt     DateTime?
 
-  @@unique([goalId, assetType, symbol])
+  @@unique([userId, month])
 }
 
 /// Liên kết Telegram do người dùng chủ động tạo (bấm Start với mã một lần). Không có liên kết = không gửi gì ra ngoài
@@ -911,9 +933,14 @@ model DeploymentPlan {
   userId            String
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   portfolioId       String?
-  /// VND: một lần, hoặc mỗi tháng khi mode = monthly
+  /// Mục tiêu kế hoạch phục vụ; null = không gắn
+  goalId            String?
+  goal              Goal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  /// VND: một lần (vốn ban đầu khi mode = both), hoặc mỗi tháng khi mode = monthly
   amount            Float
-  /// one_time | monthly
+  /// VND mỗi tháng khi mode = both
+  monthlyAmount     Float?
+  /// one_time | monthly | both (vốn ban đầu + mỗi tháng)
   mode              String
   /// short | medium | long (đã suy từ needBy nếu có)
   horizon           String
@@ -938,6 +965,7 @@ model DeploymentPlan {
 
   @@index([userId, status])
   @@index([status, nextReviewAt])
+  @@index([goalId])
 }
 
 /// Một đợt của kế hoạch giải ngân: trả nợ, quỹ dự phòng, hoặc mua một sản phẩm

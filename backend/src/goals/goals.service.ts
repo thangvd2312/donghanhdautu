@@ -1,24 +1,26 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import type {
+  GoalAssignResponse,
   GoalIdResponse,
+  GoalKind,
+  GoalLeversResponse,
   GoalPreviewResponse,
   GoalsResponse,
+  GroupTargets,
   GoalStatusResponse,
   OkResponse,
-  RiskType,
 } from '@dautu/contracts';
 import { vnDateKey } from '../market/types';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.service';
-import type { ChoiceDto, GoalDto, StatusDto } from './dto/goal.dto';
-import { normalizeAllocations, normalizeSymbol, validateAllocations, validateTargetAllocation } from './goal-math';
-import type { Allocation } from './goal-math';
-import { activeOption, adviceForReturn, holdingsByType, toGoalsResponse } from './goals.presenter';
-import type { AdviceProfile } from './return-plan';
-
-type Answers = Record<string, string | undefined>;
-const answersOf = (v: unknown): Answers => (v && typeof v === 'object' ? (v as Answers) : {});
+import type { AssignDto, ChoiceDto, GoalDto, StatusDto } from './dto/goal.dto';
+import { goalLevers } from './goal-levers';
+import { normalizeSymbol } from './goal-math';
+import { combineTargetMixes, priorityOf, resolveKind, templateKindError } from './goal-plan';
+import { goalTrack } from './goal-track';
+import { GoalsContextService } from './goals-context.service';
+import { activeOption } from './return-plan';
+import { adviceForReturn, contributionsOfGoal, holdingsByType, toGoalActual, toGoalsResponse } from './goals.presenter';
 
 /** Ngày sau `years` năm (YYYY-MM-DD) */
 function addYears(dateKey: string, years: number) {
@@ -27,51 +29,66 @@ function addYears(dateKey: string, years: number) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Mặc định ngày đích của quỹ dự phòng khi người dùng không đặt: 1 năm nữa */
+const SAFETY_DEFAULT_YEARS = 1;
+
 @Injectable()
 export class GoalsService {
   constructor(
     private prisma: PrismaService,
     private portfolio: PortfolioService,
+    private context: GoalsContextService,
   ) {}
 
   async list(userId: string): Promise<GoalsResponse> {
-    const [goals, v, profile] = await Promise.all([
-      this.prisma.goal.findMany({
-        where: { userId },
-        include: { allocations: true },
-        orderBy: [{ status: 'asc' }, { targetDate: 'asc' }],
-      }),
-      this.portfolio.valuation(userId),
-      this.profile(userId),
-    ]);
-    return toGoalsResponse(goals, v, vnDateKey(), profile);
+    return toGoalsResponse(await this.context.load(userId));
   }
 
-  /** Kết luận cho một yêu cầu chưa lưu (form đang nhập); kiểu amount cần tài sản đã gán nên chỉ xem trước kiểu return */
+  /**
+   * Tỷ trọng đích gộp (4 nhóm) của các mục tiêu đang chạy, có trọng số theo giá trị đang thuộc từng mục tiêu; để điền sẵn
+   * tỷ trọng lệch ở Cảnh báo danh mục. null khi chưa có mục tiêu nào có tỷ trọng đích.
+   */
+  async combinedTargets(userId: string): Promise<{ label: string; targets: GroupTargets } | null> {
+    const ctx = await this.context.load(userId);
+    const active = ctx.goals.filter((g) => g.status === 'active' && ctx.targetMix[g.id]);
+    const targets = combineTargetMixes(
+      active.map((g) => ({ mix: ctx.targetMix[g.id]!, weight: ctx.attribution.byGoal[g.id].value })),
+    );
+    if (!targets) return null;
+    return { label: active.length === 1 ? `Theo mục tiêu "${active[0].name}"` : 'Theo các mục tiêu của bạn', targets };
+  }
+
+  /** Kết luận cho một yêu cầu chưa lưu (form đang nhập); chỉ xem trước kiểu return, kiểu khác có sẵn trong GET /goals */
   async preview(userId: string, dto: GoalDto): Promise<GoalPreviewResponse> {
-    if (dto.kind !== 'return') return { advice: null };
+    if (resolveKind(dto.kind, dto.template) !== 'return') return { advice: null };
     this.checkReturn(dto);
-    const [v, profile] = await Promise.all([this.portfolio.valuation(userId), this.profile(userId)]);
+    const [v, profile] = await Promise.all([this.portfolio.valuation(userId), this.context.profile(userId)]);
     return { advice: adviceForReturn(this.returnColumns(dto, null), profile, holdingsByType(v)) };
   }
 
   async create(userId: string, dto: GoalDto): Promise<GoalIdResponse> {
-    const derived = await this.derived(userId, dto, null);
-    return this.locked(userId, async (db) => {
-      const allocations = this.normalized(dto);
-      await this.validate(db, userId, dto, allocations, null);
-      const g = await db.goal.create({
-        data: { userId, ...this.fields(dto, derived), allocations: { create: allocations } },
-      });
-      return { id: g.id };
+    const kind = this.kindOf(dto);
+    const derived = await this.derived(userId, dto, kind, null);
+    const g = await this.prisma.goal.create({
+      data: { userId, startedAt: new Date(`${vnDateKey()}T00:00:00Z`), ...this.fields(dto, kind, derived) },
     });
+    return { id: g.id };
+  }
+
+  /** Sửa mục tiêu: chỉ đổi mục tiêu, không đụng tới sổ giao dịch và tài sản đã gắn */
+  async update(userId: string, id: string, dto: GoalDto): Promise<GoalIdResponse> {
+    const prev = await this.own(userId, id);
+    const kind = this.kindOf(dto);
+    const derived = await this.derived(userId, dto, kind, prev.riskChoice);
+    await this.prisma.goal.update({ where: { id }, data: this.fields(dto, kind, derived) });
+    return { id };
   }
 
   /** Chọn phương án (trong mức rủi ro / đạt mức mong muốn); cập nhật luôn giá trị đích dự kiến */
   async choose(userId: string, id: string, dto: ChoiceDto): Promise<GoalIdResponse> {
     const g = await this.own(userId, id);
     if (g.kind !== 'return') throw new BadRequestException('Chỉ mục tiêu sinh lời mới có phương án để chọn');
-    const [v, profile] = await Promise.all([this.portfolio.valuation(userId), this.profile(userId)]);
+    const [v, profile] = await Promise.all([this.portfolio.valuation(userId), this.context.profile(userId)]);
     const advice = adviceForReturn({ ...g, riskChoice: dto.choice }, profile, holdingsByType(v));
     if (!advice.options.some((o) => o.key === dto.choice))
       throw new BadRequestException('Phương án này không còn phù hợp');
@@ -82,17 +99,71 @@ export class GoalsService {
     return { id };
   }
 
-  private async profile(userId: string): Promise<AdviceProfile | null> {
-    const p = await this.prisma.investorProfile.findUnique({ where: { userId } });
-    if (!p) return null;
-    const a = answersOf(p.answers);
+  async setStatus(userId: string, id: string, dto: StatusDto): Promise<GoalStatusResponse> {
+    await this.own(userId, id);
+    await this.prisma.goal.update({ where: { id }, data: { status: dto.status } });
+    return { id, status: dto.status };
+  }
+
+  async remove(userId: string, id: string): Promise<OkResponse> {
+    await this.own(userId, id);
+    await this.prisma.goal.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  /**
+   * Gắn một tài sản cũ vào mục tiêu: mọi giao dịch chưa gắn của mã đó (tiền mặt: cả số dư đầu kỳ, nạp, rút, phí). Giao
+   * dịch đã gắn mục tiêu khác giữ nguyên.
+   */
+  async assign(userId: string, id: string, dto: AssignDto): Promise<GoalAssignResponse> {
+    await this.own(userId, id);
+    const target =
+      dto.assetType === 'cash'
+        ? { OR: [{ assetType: 'cash' }, { assetType: null }] }
+        : { assetType: dto.assetType, symbol: normalizeSymbol(dto.symbol) };
+    const { count } = await this.prisma.transaction.updateMany({
+      where: { userId, deletedAt: null, goalId: null, ...target },
+      data: { goalId: id },
+    });
+    return { id, assigned: count };
+  }
+
+  /** Các cách tới đích sớm hơn của một mục tiêu, kèm cái giá */
+  async levers(userId: string, id: string): Promise<GoalLeversResponse> {
+    const ctx = await this.context.load(userId);
+    const goal = ctx.goals.find((g) => g.id === id);
+    if (!goal) throw new NotFoundException('Không tìm thấy mục tiêu');
+    const share = ctx.attribution.byGoal[id];
+    const actual = toGoalActual(share);
+    const targetMix = ctx.targetMix[id] ?? null;
+    const track = goalTrack({
+      goal,
+      today: ctx.today,
+      current: share.value,
+      actualPct: share.value > 0 ? actual.pct : null,
+      targetMix,
+      contributions: contributionsOfGoal(id, ctx.contributions),
+      buys: ctx.buys[id] ?? [],
+    });
     return {
-      riskType: p.riskType as RiskType,
-      maxDrawdownPct: p.maxDrawdownPct,
-      fomoProne: p.fomoProne,
-      experience: a.experience ?? null,
-      incomeShare: a.income_share ?? null,
+      goalId: id,
+      kind: goal.kind,
+      status: track.status,
+      targetDate: goal.targetDate,
+      reachDate: track.reach?.mid ?? null,
+      delayMonths: track.delayMonths,
+      levers: goalLevers({ goal, current: share.value, mix: targetMix, profile: ctx.profile, today: ctx.today }),
     };
+  }
+
+  private kindOf(dto: GoalDto): GoalKind {
+    const kind = resolveKind(dto.kind, dto.template);
+    const mismatch = templateKindError(kind, dto.template);
+    if (mismatch) throw new BadRequestException(mismatch);
+    if (dto.monthlyContributionMax != null && dto.monthlyContributionMax < (dto.monthlyContribution ?? 0)) {
+      throw new BadRequestException('Mức góp cao nhất phải từ mức góp thấp nhất trở lên');
+    }
+    return kind;
   }
 
   private checkReturn(dto: GoalDto) {
@@ -113,13 +184,25 @@ export class GoalsService {
   }
 
   /**
-   * Kiểu return: ngày đích = hôm nay + số năm giữ, giá trị đích = giá trị trung bình dự kiến của phương án đang dùng
-   * (để cố vấn / "Cần xem lại" vẫn đọc được). Sửa mục tiêu giữ lựa chọn cũ nếu phương án đó vẫn còn.
+   * Giá trị server tự tính. Kiểu return: ngày đích = hôm nay + số năm giữ, giá trị đích = giá trị trung bình dự kiến
+   * của phương án đang dùng (sửa mục tiêu giữ lựa chọn cũ nếu phương án đó vẫn còn). Kiểu safety: đích = chi tiêu
+   * tháng × số tháng. Kiểu amount: không có gì để tính.
    */
-  private async derived(userId: string, dto: GoalDto, prevChoice: string | null) {
-    if (dto.kind !== 'return') return null;
+  private async derived(userId: string, dto: GoalDto, kind: GoalKind, prevChoice: string | null) {
+    const today = vnDateKey();
+    if (kind === 'amount') {
+      if (!dto.targetDate || dto.targetDate <= today) throw new BadRequestException('Ngày đích phải ở tương lai');
+      return null;
+    }
+    if (kind === 'safety') {
+      if (dto.targetDate && dto.targetDate <= today) throw new BadRequestException('Ngày đích phải ở tương lai');
+      return {
+        targetAmount: Math.max(1, (dto.monthlyExpense ?? 0) * (dto.safetyMonths ?? 0)),
+        targetDate: dto.targetDate ?? addYears(today, SAFETY_DEFAULT_YEARS),
+      };
+    }
     this.checkReturn(dto);
-    const [v, profile] = await Promise.all([this.portfolio.valuation(userId), this.profile(userId)]);
+    const [v, profile] = await Promise.all([this.portfolio.valuation(userId), this.context.profile(userId)]);
     const cols = this.returnColumns(dto, prevChoice);
     const advice = adviceForReturn(cols, profile, holdingsByType(v));
     const riskChoice =
@@ -128,108 +211,43 @@ export class GoalsService {
       ...cols,
       riskChoice,
       targetAmount: Math.max(1, activeOption(advice).projection.mid),
-      targetDate: addYears(vnDateKey(), cols.holdYears),
+      targetDate: addYears(today, cols.holdYears),
     };
   }
 
-  /** Sửa mục tiêu: chỉ đổi mục tiêu và phần gán, không đụng tới sổ giao dịch */
-  async update(userId: string, id: string, dto: GoalDto): Promise<GoalIdResponse> {
-    return this.locked(userId, async (db) => {
-      const prev = await this.own(userId, id, db);
-      const derived = await this.derived(userId, dto, prev.riskChoice);
-      const allocations = this.normalized(dto);
-      await this.validate(db, userId, dto, allocations, id);
-      await db.goalAllocation.deleteMany({ where: { goalId: id } });
-      await db.goal.update({
-        where: { id },
-        data: { ...this.fields(dto, derived), allocations: { create: allocations } },
-      });
-      return { id };
-    });
-  }
-
-  /**
-   * Kiểm tra phần trăm còn trống rồi ghi trong cùng transaction có khoá theo người dùng: hai yêu cầu cùng lúc
-   * không thể cùng đọc phần gán cũ rồi cùng ghi vượt 100% một tài sản.
-   */
-  private locked<T>(userId: string, fn: (db: Prisma.TransactionClient) => Promise<T>) {
-    return this.prisma.$transaction(async (db) => {
-      await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`goals:${userId}`}))`;
-      return fn(db);
-    });
-  }
-
-  async setStatus(userId: string, id: string, dto: StatusDto): Promise<GoalStatusResponse> {
-    await this.own(userId, id);
-    await this.prisma.goal.update({ where: { id }, data: { status: dto.status } });
-    return { id, status: dto.status };
-  }
-
-  async remove(userId: string, id: string): Promise<OkResponse> {
-    await this.own(userId, id);
-    await this.prisma.goal.delete({ where: { id } });
-    return { ok: true };
-  }
-
-  private fields(dto: GoalDto, derived: Awaited<ReturnType<GoalsService['derived']>>) {
-    const ret = derived
-      ? {
-          kind: 'return',
-          capital: derived.capital,
-          returnMinPct: derived.returnMinPct,
-          returnMaxPct: derived.returnMaxPct,
-          holdYears: derived.holdYears,
-          riskChoice: derived.riskChoice,
-        }
-      : { kind: 'amount', capital: null, returnMinPct: null, returnMaxPct: null, holdYears: null, riskChoice: null };
+  private fields(dto: GoalDto, kind: GoalKind, derived: Awaited<ReturnType<GoalsService['derived']>>) {
+    const none = { capital: null, returnMinPct: null, returnMaxPct: null, holdYears: null, riskChoice: null };
+    const noSafety = { monthlyExpense: null, safetyMonths: null };
+    const kindFields =
+      kind === 'return' && derived && 'capital' in derived
+        ? {
+            capital: derived.capital,
+            returnMinPct: derived.returnMinPct,
+            returnMaxPct: derived.returnMaxPct,
+            holdYears: derived.holdYears,
+            riskChoice: derived.riskChoice,
+            ...noSafety,
+          }
+        : kind === 'safety'
+          ? { ...none, monthlyExpense: dto.monthlyExpense!, safetyMonths: dto.safetyMonths! }
+          : { ...none, ...noSafety };
     return {
-      ...ret,
+      ...kindFields,
+      kind,
+      template: dto.template ?? null,
+      priority: priorityOf(kind, dto.template),
       name: dto.name.trim(),
       targetAmount: derived ? derived.targetAmount : dto.targetAmount!,
       targetDate: new Date(`${derived ? derived.targetDate : dto.targetDate!}T00:00:00Z`),
       monthlyContribution: dto.monthlyContribution ?? 0,
-      expectedReturnPct: dto.expectedReturnPct ?? 6,
-      // Không đặt tỷ trọng mong muốn = xoá (NULL trong DB)
-      targetAllocation: dto.targetAllocation ? dto.targetAllocation : Prisma.DbNull,
+      monthlyContributionMax: dto.monthlyContributionMax ?? null,
+      contributionDay: dto.contributionDay ?? null,
       note: dto.note?.trim() || null,
     };
   }
 
-  /** Phần gán có % > 0 với mã đã chuẩn hóa: đúng dữ liệu được kiểm tra và lưu */
-  private normalized(dto: GoalDto) {
-    return normalizeAllocations(dto.allocations.filter((a) => a.pct > 0));
-  }
-
-  private async validate(
-    db: Prisma.TransactionClient,
-    userId: string,
-    dto: GoalDto,
-    next: Allocation[],
-    goalId: string | null,
-  ) {
-    const errors: string[] = [];
-    if (dto.kind !== 'return' && (!dto.targetDate || dto.targetDate <= vnDateKey()))
-      errors.push('Ngày đích phải ở tương lai');
-    const allocErr = validateTargetAllocation(dto.targetAllocation);
-    if (allocErr) errors.push(allocErr);
-    const others = await db.goalAllocation.findMany({
-      where: { goal: { userId }, ...(goalId ? { goalId: { not: goalId } } : {}) },
-    });
-    const holdings = await db.holding.findMany({
-      where: { userId },
-      select: { assetType: true, symbol: true },
-    });
-    for (const a of next) {
-      if (!holdings.some((h) => h.assetType === a.assetType && normalizeSymbol(h.symbol) === a.symbol)) {
-        errors.push(`${a.symbol} không có trong danh mục của bạn`);
-      }
-    }
-    errors.push(...validateAllocations(next, others, (a) => a.symbol.replace(/USDT$/, '')));
-    if (errors.length) throw new BadRequestException(errors.join('. '));
-  }
-
-  private async own(userId: string, id: string, db: Prisma.TransactionClient = this.prisma) {
-    const g = await db.goal.findFirst({ where: { id, userId } });
+  private async own(userId: string, id: string) {
+    const g = await this.prisma.goal.findFirst({ where: { id, userId } });
     if (!g) throw new NotFoundException('Không tìm thấy mục tiêu');
     return g;
   }

@@ -26,6 +26,15 @@ describe('DeploymentDto (ValidationPipe như main.ts)', () => {
     await expect(run({ amount: 5_000_000, mode: 'monthly', horizon: 'medium' })).resolves.toBeTruthy();
   });
 
+  it('vốn ban đầu cộng góp mỗi tháng: cần số góp mỗi tháng; nhận goalId', async () => {
+    const dto = (await run({ ...ok, mode: 'both', monthlyAmount: 20_000_000, goalId: 'g1' })) as DeploymentDto;
+    expect(dto).toMatchObject({ mode: 'both', monthlyAmount: 20_000_000, goalId: 'g1' });
+    await expect(run({ ...ok, mode: 'both' })).rejects.toMatchObject({ status: 400 });
+    await expect(run({ ...ok, mode: 'both', monthlyAmount: 500_000 })).rejects.toMatchObject({ status: 400 });
+    // các cách cũ không cần số góp mỗi tháng
+    await expect(run({ ...ok, mode: 'one_time' })).resolves.toBeTruthy();
+  });
+
   it.each([
     ['dưới 1 triệu', { ...ok, amount: 999_999 }],
     ['số tiền là chữ', { ...ok, amount: '100' }],

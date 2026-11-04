@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import type {
+  GoalAssignResponse,
   GoalIdResponse,
+  GoalLeversResponse,
   GoalPreviewResponse,
   GoalsResponse,
   GoalStatusResponse,
@@ -9,7 +11,7 @@ import type {
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ChoiceDto, GoalDto, StatusDto } from './dto/goal.dto';
+import { AssignDto, ChoiceDto, GoalDto, StatusDto } from './dto/goal.dto';
 import { GoalsService } from './goals.service';
 
 @UseGuards(JwtAuthGuard)
@@ -41,6 +43,18 @@ export class GoalsController {
   @Post(':id/choice')
   choose(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ChoiceDto): Promise<GoalIdResponse> {
     return this.goals.choose(user.id, id, dto);
+  }
+
+  /** Gắn mọi giao dịch chưa gắn của một mã (tiền mặt: cả nạp / rút) vào mục tiêu */
+  @Post(':id/assign')
+  assign(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AssignDto): Promise<GoalAssignResponse> {
+    return this.goals.assign(user.id, id, dto);
+  }
+
+  /** Các cách tới đích sớm hơn kèm cái giá */
+  @Get(':id/levers')
+  levers(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<GoalLeversResponse> {
+    return this.goals.levers(user.id, id);
   }
 
   @Post(':id/status')

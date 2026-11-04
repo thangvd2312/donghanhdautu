@@ -132,6 +132,67 @@ describe('kế hoạch giải ngân đã lưu (PostgreSQL)', () => {
     expect(reopened.steps.find((s) => s.id === etf.id)).toMatchObject({ status: 'pending', transactionId: null });
   });
 
+  it('vốn ban đầu cộng góp mỗi tháng, gắn mục tiêu: lưu goalId và monthlyAmount, giao dịch của đợt thuộc mục tiêu', async () => {
+    const u = await userWithProfile('dpl-both');
+    const other = await userWithProfile('dpl-both-other');
+    const goal = await prisma.goal.create({
+      data: { userId: u.id, name: 'Mua nhà', targetAmount: 2e9, targetDate: new Date('2033-01-01T00:00:00Z') },
+    });
+    const theirs = await prisma.goal.create({
+      data: { userId: other.id, name: 'Xe', targetAmount: 1e9, targetDate: new Date('2033-01-01T00:00:00Z') },
+    });
+    const both = {
+      amount: 100_000_000,
+      mode: 'both' as const,
+      monthlyAmount: 20_000_000,
+      horizon: 'long' as const,
+      tranches: 1 as const,
+    };
+
+    await expect(plans.save(u.id, { ...both, goalId: theirs.id })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(plans.save(u.id, { ...both, monthlyAmount: undefined })).rejects.toBeInstanceOf(BadRequestException);
+
+    const p = await plans.save(u.id, { ...both, goalId: goal.id });
+    expect(p).toMatchObject({ goalId: goal.id });
+    expect(p.plan).toMatchObject({ mode: 'both', amount: 100_000_000, monthlyAmount: 20_000_000 });
+    expect(p.progress.totalAmount).toBe(100_000_000 + 6 * 20_000_000);
+    const row = await prisma.deploymentPlan.findUniqueOrThrow({ where: { id: p.id } });
+    expect(row).toMatchObject({ goalId: goal.id, monthlyAmount: 20_000_000, mode: 'both' });
+
+    const etf = p.steps.find((s) => s.kind === 'etf')!;
+    const tx = await transactions.create(u.id, {
+      type: 'buy',
+      date: vnDateKey(),
+      assetType: 'stock',
+      symbol: 'E1VFVN30',
+      quantity: 300,
+      price: 100_000,
+    });
+    await plans.stepDone(u.id, p.id, etf.id, { transactionId: tx.id });
+    expect((await prisma.transaction.findUniqueOrThrow({ where: { id: tx.id } })).goalId).toBe(goal.id);
+
+    // giao dịch đã gắn mục tiêu khác thì giữ nguyên
+    const second = await prisma.goal.create({
+      data: { userId: u.id, name: 'Xe', targetAmount: 1e9, targetDate: new Date('2033-01-01T00:00:00Z') },
+    });
+    const p2 = await plans.save(u.id, { ...both, goalId: goal.id });
+    const tx2 = await transactions.create(u.id, {
+      type: 'buy',
+      date: vnDateKey(),
+      assetType: 'stock',
+      symbol: 'E1VFVN30',
+      quantity: 10,
+      price: 100_000,
+      goalId: second.id,
+    });
+    await plans.stepDone(u.id, p2.id, p2.steps.find((s) => s.kind === 'etf')!.id, { transactionId: tx2.id });
+    expect((await prisma.transaction.findUniqueOrThrow({ where: { id: tx2.id } })).goalId).toBe(second.id);
+
+    // xoá mục tiêu: kế hoạch vẫn còn, chỉ mất liên kết
+    await prisma.goal.delete({ where: { id: goal.id } });
+    expect((await prisma.deploymentPlan.findUniqueOrThrow({ where: { id: p2.id } })).goalId).toBeNull();
+  });
+
   it('kế hoạch / đợt của người khác → 404; huỷ thì không còn kế hoạch đang chạy', async () => {
     const u = await userWithProfile('dpl-owner');
     const other = await userWithProfile('dpl-owner-other');

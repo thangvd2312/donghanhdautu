@@ -6,13 +6,14 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { fmtStockPrice, fmtVnd } from '../../lib/format'
-import { asks, HORIZON_LABEL, horizonFor, money, todayKey, type DeployForm } from '../../lib/deployment'
+import { asks, HORIZON_LABEL, horizonFor, MODE_LABEL, money, todayKey, type DeployForm } from '../../lib/deployment'
 import { moneyText, parseMoneyText } from '../../lib/rebalance'
 import type { DeployEtf, DeployHorizon, DeployMode, DeploymentSetup } from '../../lib/types'
 import { Segmented } from '../rebalance/RebalanceParts'
 import { Panel } from '../ui'
 
 const AMOUNT_CHIPS = [10e6, 50e6, 100e6, 500e6]
+const MONTHLY_CHIPS = [5e6, 10e6, 20e6, 50e6]
 
 type Patch = (p: Partial<DeployForm>) => void
 
@@ -41,7 +42,7 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
       <Stack spacing={2.5}>
         <Box>
           <MoneyField
-            label={form.mode === 'monthly' ? 'Số tiền góp mỗi tháng' : 'Số tiền muốn giải ngân'}
+            label={form.mode === 'monthly' ? 'Số tiền góp mỗi tháng' : form.mode === 'both' ? 'Vốn ban đầu' : 'Số tiền muốn giải ngân'}
             value={form.amount}
             onChange={(amount) => onChange({ amount })}
             testId="dp-amount"
@@ -59,6 +60,23 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
             ))}
           </Stack>
         </Box>
+        {form.mode === 'both' && (
+          <Box>
+            <MoneyField label="Góp thêm mỗi tháng" value={form.monthlyAmount} onChange={(monthlyAmount) => onChange({ monthlyAmount })} testId="dp-monthly" />
+            <Stack direction="row" useFlexGap sx={{ gap: 0.75, flexWrap: 'wrap', mt: 1 }}>
+              {MONTHLY_CHIPS.map((v) => (
+                <Chip
+                  key={v}
+                  label={money(v)}
+                  variant={form.monthlyAmount === v ? 'filled' : 'outlined'}
+                  color={form.monthlyAmount === v ? 'primary' : 'default'}
+                  onClick={() => onChange({ monthlyAmount: v })}
+                  sx={{ height: 36, minWidth: 64 }}
+                />
+              ))}
+            </Stack>
+          </Box>
+        )}
         <Segmented<DeployMode>
           label="Giải ngân"
           value={form.mode}
@@ -66,6 +84,7 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
           options={[
             { value: 'one_time', label: 'Một lần', desc: 'Có sẵn một khoản, chia vào các phần rồi mua theo đợt.' },
             { value: 'monthly', label: 'Mỗi tháng', desc: 'Góp đều mỗi tháng, mỗi tháng ưu tiên phần đang thiếu nhiều nhất.' },
+            { value: 'both', label: MODE_LABEL.both, desc: 'Có sẵn một khoản để chia đợt và vẫn góp đều mỗi tháng: cả hai cùng đổ vào phần đang thiếu.' },
           ]}
         />
         <Box>
@@ -87,7 +106,7 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
           {setup.goals.length > 0 && (
             <Box sx={{ mt: 1.25 }}>
               <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
-                Hoặc tiền này dành cho mục tiêu:
+                Tiền này dành cho mục tiêu:
               </Typography>
               <Stack direction="row" useFlexGap sx={{ gap: 0.75, flexWrap: 'wrap' }}>
                 {setup.goals.map((g) => (
@@ -97,7 +116,16 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
                     variant={form.goalId === g.id ? 'filled' : 'outlined'}
                     color={form.goalId === g.id ? 'primary' : 'default'}
                     onClick={() =>
-                      onChange(form.goalId === g.id ? { goalId: null } : { goalId: g.id, horizon: horizonFor(g.targetDate, todayKey()) })
+                      onChange(
+                        form.goalId === g.id
+                          ? { goalId: null }
+                          : {
+                              goalId: g.id,
+                              horizon: horizonFor(g.targetDate, todayKey()),
+                              // Cách "vốn ban đầu + mỗi tháng": điền sẵn mức góp đã khai ở mục tiêu
+                              ...(form.mode === 'both' && !form.monthlyAmount && g.monthlyContribution >= 1_000_000 ? { monthlyAmount: g.monthlyContribution } : {}),
+                            },
+                      )
                     }
                     sx={{ height: 36 }}
                   />
@@ -106,7 +134,7 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
             </Box>
           )}
         </Box>
-        {form.mode === 'one_time' && setup.cashVnd > 0 && (
+        {form.mode !== 'monthly' && setup.cashVnd > 0 && (
           <FormControlLabel
             control={<Checkbox checked={form.fromCash} onChange={(e) => onChange({ fromCash: e.target.checked })} />}
             label={
@@ -218,7 +246,7 @@ export function OptionsPanel({ form, setup, onChange }: { form: DeployForm; setu
   return (
     <Panel title="Tuỳ chọn">
       <Stack spacing={2.5}>
-        {form.mode === 'one_time' && (
+        {form.mode !== 'monthly' && (
           <Segmented<'1' | '3' | '6'>
             label="Chia phần cổ phiếu và crypto thành"
             value={String(form.tranches) as '1' | '3' | '6'}

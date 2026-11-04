@@ -1,46 +1,4 @@
-import {
-  goalProgress,
-  monthsUntil,
-  project,
-  requiredMonthly,
-  validateAllocations,
-  validateTargetAllocation,
-} from './goal-math';
-
-const holdings = [
-  { assetType: 'stock', symbol: 'FPT', displayName: 'FPT', marketValue: 100_000_000, costValue: 80_000_000 },
-  { assetType: 'gold', symbol: 'SJL1L10', displayName: 'SJC', marketValue: null, costValue: 50_000_000 },
-  { assetType: 'cash', symbol: 'VND', displayName: 'VND', marketValue: 20_000_000, costValue: 20_000_000 },
-];
-
-describe('goalProgress', () => {
-  it('tiến độ tính theo phần trăm tài sản được gán; thiếu giá thì tạm tính theo giá vốn và đánh dấu', () => {
-    const p = goalProgress(
-      { targetAmount: 200_000_000, targetAllocation: { stock: 50, gold: 30, cash: 20 } },
-      [
-        { assetType: 'stock', symbol: 'FPT', pct: 60 },
-        { assetType: 'gold', symbol: 'SJL1L10', pct: 100 },
-      ],
-      holdings,
-    );
-    expect(p.current).toBe(60_000_000 + 50_000_000);
-    expect(p.progressPct).toBeCloseTo(55);
-    expect(p.isEstimate).toBe(true);
-    expect(p.actualAllocation.stock).toBeCloseTo((60 / 110) * 100);
-    expect(p.deviation!.find((d) => d.assetType === 'cash')).toMatchObject({ target: 20, actual: 0, diff: -20 });
-  });
-
-  it('tài sản đã gán nhưng không còn nắm giữ được nêu rõ, không tính giá trị', () => {
-    const p = goalProgress(
-      { targetAmount: 1, targetAllocation: null },
-      [{ assetType: 'stock', symbol: 'HPG', pct: 50 }],
-      holdings,
-    );
-    expect(p.current).toBe(0);
-    expect(p.missingAssets).toEqual(['HPG']);
-    expect(p.deviation).toBeNull();
-  });
-});
+import { monthsToReach, monthsUntil, normalizeSymbol, project, requiredMonthly } from './goal-math';
 
 describe('mô phỏng', () => {
   it('số tháng tới ngày đích', () => {
@@ -65,55 +23,32 @@ describe('mô phỏng', () => {
   });
 });
 
-describe('kiểm tra phân bổ', () => {
-  const name = (a: { symbol: string }) => a.symbol;
-
-  it('không cho tổng % của một tài sản qua các mục tiêu vượt 100', () => {
-    const others = [{ assetType: 'stock', symbol: 'FPT', pct: 70 }];
-    expect(validateAllocations([{ assetType: 'stock', symbol: 'FPT', pct: 30 }], others, name)).toEqual([]);
-    expect(validateAllocations([{ assetType: 'stock', symbol: 'FPT', pct: 40 }], others, name)[0]).toContain(
-      'chỉ còn 30%',
-    );
+describe('monthsToReach', () => {
+  it('đã đủ thì 0 tháng', () => {
+    expect(monthsToReach(200, 0, 6, 100)).toBe(0);
   });
 
-  it('chặn % không hợp lệ và gán trùng trong cùng mục tiêu', () => {
-    const errs = validateAllocations(
-      [
-        { assetType: 'stock', symbol: 'FPT', pct: 150 },
-        { assetType: 'stock', symbol: 'FPT', pct: 10 },
-      ],
-      [],
-      name,
-    );
-    expect(errs.join(' ')).toContain('0–100');
-    expect(errs.join(' ')).toContain('hai lần');
+  it('khớp với mô phỏng: tháng ngay trước chưa đủ, tháng này đủ', () => {
+    const m = monthsToReach(50_000_000, 2_000_000, 8, 200_000_000)!;
+    expect(project(50_000_000, 2_000_000, 8, m)).toBeGreaterThanOrEqual(200_000_000);
+    expect(project(50_000_000, 2_000_000, 8, m - 1)).toBeLessThan(200_000_000);
   });
 
-  it('tỷ trọng mong muốn phải cộng lại 100%', () => {
-    expect(validateTargetAllocation({ stock: 60, gold: 20, cash: 20 })).toBeNull();
-    expect(validateTargetAllocation({ stock: 60, gold: 20 })).toContain('80%');
-    expect(validateTargetAllocation({ bond: 100 })).toContain('không hợp lệ');
-    expect(validateTargetAllocation(null)).toBeNull();
+  it('lợi suất 0%: chỉ cộng tiền góp', () => {
+    expect(monthsToReach(0, 1_000_000, 0, 10_000_000)).toBe(10);
+  });
+
+  it('không góp, không có lãi: không bao giờ đạt', () => {
+    expect(monthsToReach(1_000_000, 0, 0, 2_000_000)).toBeNull();
+  });
+
+  it('quá 50 năm thì coi là không đạt', () => {
+    expect(monthsToReach(0, 1_000, 0, 1e12)).toBeNull();
   });
 });
 
-describe('mã tài sản cũ chưa chuẩn hóa', () => {
-  it('tiến độ vẫn khớp holding khi mã đã lưu là chữ thường', () => {
-    const p = goalProgress(
-      { targetAmount: 1e9, targetAllocation: null },
-      [{ assetType: 'stock', symbol: ' fpt ', pct: 50 }],
-      holdings,
-    );
-    expect(p.current).toBe(50_000_000);
-    expect(p.assets[0].held).toBe(true);
-  });
-
-  it('tính phần đã gán cho mục tiêu khác không phân biệt hoa thường', () => {
-    const errs = validateAllocations(
-      [{ assetType: 'stock', symbol: 'FPT', pct: 60 }],
-      [{ assetType: 'stock', symbol: 'fpt', pct: 60 }],
-      (a) => a.symbol,
-    );
-    expect(errs[0]).toContain('chỉ còn 40%');
+describe('normalizeSymbol', () => {
+  it('cắt khoảng trắng và viết hoa', () => {
+    expect(normalizeSymbol(' fpt ')).toBe('FPT');
   });
 });

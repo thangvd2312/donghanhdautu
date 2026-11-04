@@ -33,6 +33,8 @@ export interface TxPreset {
   note?: string
   /** Lý do trong nhật ký quyết định (vd mua theo Kế hoạch giải ngân) */
   reason?: JournalReason
+  /** Mục tiêu giao dịch thuộc về (vd mua theo tháng góp tiền của mục tiêu) */
+  goalId?: string
 }
 
 /** Giá trị người dùng nhập trong form giao dịch (số đều là chuỗi như trong ô nhập) kèm các cờ suy ra từ loại giao dịch */
@@ -67,6 +69,8 @@ export interface TxForm {
   reason: JournalReason | null
   /** Kế hoạch đang gắn (null = không gắn) */
   linkedPlanId: string | null
+  /** Mục tiêu đang chọn: undefined = form không có ô Mục tiêu (khi sửa: giữ nguyên), null = không gắn */
+  goalId?: string | null
 }
 
 /** Kiểm tra form giao dịch và dựng thân yêu cầu; sai thì trả về thông báo lỗi đầu tiên. Server vẫn kiểm tra lại toàn bộ sổ. */
@@ -117,6 +121,10 @@ export function buildTransactionBody(f: TxForm): { error: string } | { body: Rec
       if (f.linkedPlanId) body.planId = f.linkedPlanId
     }
   }
+  // Sửa: gửi rõ null để gỡ khỏi mục tiêu; tạo mới: chỉ gửi khi có chọn
+  if (f.editing) {
+    if (f.goalId !== undefined) body.goalId = f.goalId
+  } else if (f.goalId) body.goalId = f.goalId
   for (const k of ['fee', 'tax', 'fxRate'] as const) {
     if (body[k] !== undefined && !(Number(body[k]) >= 0)) return { error: 'Phí, thuế, tỷ giá phải là số không âm' }
   }

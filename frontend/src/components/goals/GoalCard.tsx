@@ -1,246 +1,170 @@
-import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Collapse from '@mui/material/Collapse'
-import Divider from '@mui/material/Divider'
-import Grid from '@mui/material/Grid'
-import Paper from '@mui/material/Paper'
-import Slider from '@mui/material/Slider'
+import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
-import { changeColor, fmtDate, fmtNum, fmtVndShort } from '../../lib/format'
-import { project, requiredMonthly } from '../../lib/goalMath'
-import { STATUS_LABEL, TYPE_LABEL } from '../../lib/goals'
-import type { Goal } from '../../lib/types'
-import { ChangePill, InfoTip, KV } from '../ui'
-import { ExpectedFigure, MixRows } from './AdviceParts'
+import { PART_SHORT, PARTS, money } from '../../lib/deployment'
+import { fmtNum } from '../../lib/format'
+import { deadlineNote, GOAL_PART_COLOR, monthsLeftText, monthYear, nextActions, trackChip } from '../../lib/goals'
+import { pathToday } from '../../lib/goalMath'
+import type { Goal, GoalContributionView } from '../../lib/types'
+import { CARD_SX, GoalIcon, StatusChip } from './goalUi'
 import GoalMenu from './GoalMenu'
-import ProgressRing from './ProgressRing'
 
-export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: () => void; onChanged: () => void }) {
-  const [simOpen, setSimOpen] = useState(false)
-  const [monthly, setMonthly] = useState(g.monthlyContribution)
+/** Thẻ mục tiêu "có số tiền vào ngày" (artboard 2 của mockup Mục tiêu v3) */
+export default function GoalCard({
+  g,
+  contribution,
+  onEdit,
+  onChanged,
+  onLevers,
+  onContribute,
+}: {
+  g: Goal
+  contribution: GoalContributionView | null
+  onEdit: () => void
+  onChanged: () => void
+  onLevers: () => void
+  onContribute: () => void
+}) {
   const [error, setError] = useState('')
-  // Điện thoại: tỷ trọng và giả định thu gọn sau nút "Chi tiết"
-  const [detail, setDetail] = useState(false)
   const p = g.progress
-  // Lợi suất do máy chủ suy ra từ tỷ trọng gợi ý theo thời gian còn lại; người dùng không tự nhập
-  const ret = g.expectedReturnPct
-  const projected = project(p.current, monthly, ret, g.monthsLeft)
-  const need = requiredMonthly(p.current, g.targetAmount, ret, g.monthsLeft)
-  const advice = g.advice
-  const opt = advice?.options[0]
-  const warn = g.status === 'active' && !g.simulation.onTrack
+  const chip = trackChip(g)
+  const pct = Math.min(100, Math.max(0, p.progressPct))
+  const mid = g.expectedReturn?.mid
+  const path = mid != null && g.status === 'active' ? pathToday(g.targetAmount, g.monthlyContribution, mid, g.monthsLeft) : null
+  const tick = path != null && g.targetAmount > 0 ? Math.min(100, (path / g.targetAmount) * 100) : null
+  const reach = g.track.reach
+  const actions = nextActions(g, contribution)
+  const mix = g.targetMix
+  const rows = mix ? PARTS.filter((k) => mix[k] > 0 || g.actual.pct[k] > 0) : []
+  const stock = mix ? mix.etf + mix.picks : null
 
   return (
-    <Paper
-      sx={{
-        p: { xs: 2, md: 2.5 },
-        pl: warn ? { xs: 2.5, md: 3 } : undefined,
-        position: 'relative',
-        overflow: 'hidden',
-        opacity: g.status === 'active' ? 1 : 0.8,
-      }}
-    >
-      {warn && (
-        <Box
-          aria-hidden
-          sx={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 4,
-            bgcolor: 'warning.main',
-          }}
-        />
-      )}
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-        <ProgressRing value={p.progressPct} />
+    <Box component="article" sx={{ ...CARD_SX, gap: 1.75, opacity: g.status === 'active' ? 1 : 0.8 }}>
+      <Stack direction="row" sx={{ gap: 1.5, alignItems: 'flex-start' }}>
+        <GoalIcon template={g.template} kind={g.kind} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 17 }} noWrap>
-            {g.name}
+          <Stack direction="row" sx={{ gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography component="h2" sx={{ fontSize: 16, fontWeight: 700 }}>
+              {g.name}
+            </Typography>
+            {chip && <StatusChip chip={chip} display={{ xs: 'inline-block', md: 'none' }} />}
+          </Stack>
+          <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
+            Hạn {monthYear(g.targetDate)}
+            {deadlineNote(g)}
           </Typography>
-          <Typography className="num" sx={{ fontSize: 18, fontWeight: 800, lineHeight: 1.3 }}>
-            {p.isEstimate ? '≈ ' : ''}
-            {fmtVndShort(p.current)}
-            <Box
-              component="span"
-              sx={{
-                color: 'text.secondary',
-                fontWeight: 500,
-                fontSize: 14,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {' '}
-              / {fmtVndShort(g.targetAmount)}
-            </Box>
-          </Typography>
-          <Typography variant="caption" color="text.secondary" component="div" noWrap>
-            {g.status !== 'active' ? `${STATUS_LABEL[g.status]} · ` : ''}còn {g.monthsLeft} tháng · hạn {fmtDate(g.targetDate)}
-          </Typography>
-          {g.status === 'active' && (
-            <Box sx={{ mt: 0.5 }}>
-              <ChangePill small color={g.simulation.onTrack ? 'success.main' : 'warning.main'}>
-                {g.simulation.onTrack ? 'Đúng hướng' : 'Chưa đủ'}
-              </ChangePill>
-            </Box>
-          )}
         </Box>
+        {chip && <StatusChip chip={chip} display={{ xs: 'none', md: 'inline-block' }} />}
         <GoalMenu g={g} onEdit={onEdit} onChanged={onChanged} onError={setError} />
       </Stack>
-      <Box sx={{ mt: 1.5 }} />
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        component="div"
-        sx={{
-          display: { xs: '-webkit-box', md: 'block' },
-          WebkitLineClamp: 1,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
-      >
-        {fmtNum(p.progressPct, 1)}% · từ{' '}
-        {p.assets.length ? p.assets.map((a) => `${a.pct}% ${a.name.replace(/(.)USDT$/, '$1')}`).join(', ') : 'chưa gán tài sản nào'}
-      </Typography>
-      {p.isEstimate && (
-        <Typography variant="caption" color="warning.main" component="div">
-          Có tài sản thiếu giá thị trường, đang tạm tính theo giá vốn.
-        </Typography>
-      )}
-      {p.missingAssets.length > 0 && (
-        <Typography variant="caption" color="warning.main" component="div">
-          {p.missingAssets.join(', ')} đã gán nhưng không còn trong danh mục.
-        </Typography>
-      )}
 
-      {advice && (
-        <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13.5 }}>
-            {advice.summary}
-          </Typography>
-          {opt && (
-            <Box
-              sx={{
-                mt: 1,
-                display: { xs: detail ? 'block' : 'none', md: 'block' },
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
-                Nên để tiền ở đâu
-              </Typography>
-              <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
-                <ExpectedFigure o={opt} big={22} />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <MixRows mix={opt.mix} />
-                </Box>
-              </Stack>
+      <Box>
+        <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <Typography className="num" sx={{ fontSize: 24, fontWeight: 700 }}>
+            {p.isEstimate ? '≈ ' : ''}
+            {money(p.current)}{' '}
+            <Box component="span" sx={{ fontSize: 14, fontWeight: 500, color: 'text.secondary' }}>
+              / {money(g.targetAmount)}
             </Box>
+          </Typography>
+          <Typography className="num" sx={{ fontSize: 14, fontWeight: 700, color: 'secondary.main' }}>
+            {fmtNum(p.progressPct, p.progressPct < 10 ? 1 : 0)}%
+          </Typography>
+        </Stack>
+        <Box
+          role="progressbar"
+          aria-label={`Tiến độ ${g.name}`}
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          sx={{ position: 'relative', height: 8, borderRadius: '4px', bgcolor: 'action.hover', mt: 1 }}
+        >
+          <Box sx={{ width: `${pct}%`, height: 8, borderRadius: '4px', bgcolor: 'hero.gold' }} />
+          {tick != null && (
+            <Box
+              aria-hidden
+              sx={{ position: 'absolute', left: `${tick}%`, top: -4, width: 2, height: 16, bgcolor: 'primary.dark', ml: '-1px' }}
+            />
           )}
+        </Box>
+        {path != null && (
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.75 }}>
+            Vạch đen: lộ trình hôm nay (<span className="num">{money(path)}</span>)
+          </Typography>
+        )}
+        {reach?.mid && (
+          <Typography className="num" sx={{ fontSize: 13, mt: 0.75 }}>
+            Dự kiến đạt <b>{monthYear(reach.mid)}</b>
+            {reach.bad && reach.good && (
+              <Box component="span" sx={{ color: 'text.secondary' }}>
+                {' '}
+                (khoảng {monthYear(reach.good)} – {monthYear(reach.bad)})
+              </Box>
+            )}
+          </Typography>
+        )}
+        {p.isEstimate && (
+          <Typography sx={{ fontSize: 12, color: 'warning.main', mt: 0.5 }}>Có tài sản thiếu giá thị trường, tạm tính theo giá vốn.</Typography>
+        )}
+      </Box>
+
+      {mix && rows.length > 0 && (
+        <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between', columnGap: 1, flexWrap: 'wrap' }}>
+            <Typography noWrap sx={{ fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+              Tỷ trọng: đích / thực
+            </Typography>
+            <Typography noWrap sx={{ fontSize: 12, color: 'text.secondary' }}>
+              {monthsLeftText(g.monthsLeft)}
+              {stock != null ? ` · cổ phiếu ${fmtNum(stock, 0)}%` : ''}
+            </Typography>
+          </Stack>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '88px minmax(0, 1fr) 64px', gap: '6px 10px', alignItems: 'center', fontSize: 13 }}>
+            {rows.map((k) => (
+              <Box key={k} sx={{ display: 'contents' }}>
+                <span>{PART_SHORT[k]}</span>
+                <Box aria-hidden sx={{ height: 6, borderRadius: '3px', bgcolor: 'action.hover' }}>
+                  <Box sx={{ width: `${Math.min(100, g.actual.pct[k])}%`, height: 6, borderRadius: '3px', bgcolor: GOAL_PART_COLOR[k] }} />
+                </Box>
+                <span className="num" style={{ textAlign: 'right' }}>
+                  {fmtNum(mix[k], 0)} / {fmtNum(g.actual.pct[k], 0)}%
+                </span>
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
 
-      <Button
-        size="small"
-        onClick={() => setDetail((v) => !v)}
-        aria-expanded={detail}
-        sx={{
-          display: { xs: 'inline-flex', md: 'none' },
-          mt: 1,
-          ml: -1,
-          fontWeight: 600,
-          textTransform: 'none',
-        }}
-      >
-        {detail ? 'Thu gọn' : 'Chi tiết'}
-      </Button>
-      <Grid container spacing={2.5} sx={{ mt: 0.5, display: { xs: detail ? 'flex' : 'none', md: 'flex' } }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-            Tỷ trọng hiện tại / mong muốn
-          </Typography>
-          {p.deviation ? (
-            p.deviation.map((d) => (
-              <KV
-                key={d.assetType}
-                k={TYPE_LABEL[d.assetType]}
-                v={`${fmtNum(d.actual, 0)}% / ${fmtNum(d.target, 0)}% (${d.diff > 0 ? '+' : ''}${fmtNum(d.diff, 0)} điểm)`}
-                color={Math.abs(d.diff) >= 10 ? 'warning.main' : undefined}
-              />
-            ))
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Chưa đặt tỷ trọng mong muốn.
-            </Typography>
-          )}
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-            Mô phỏng
-          </Typography>
-          <KV k="Góp mỗi tháng" v={fmtVndShort(g.monthlyContribution)} />
-          <KV k="Dự kiến tới hạn" v={fmtVndShort(g.simulation.projected)} color={changeColor(g.simulation.projected - g.targetAmount)} />
-          <KV k="Cần góp mỗi tháng để đạt" v={fmtVndShort(g.simulation.requiredMonthly)} />
-        </Grid>
-      </Grid>
-      <Button
-        variant="outlined"
-        size="small"
-        onClick={() => setSimOpen((v) => !v)}
-        aria-expanded={simOpen}
-        sx={{
-          mt: 1.5,
-          display: 'flex',
-          fontWeight: 600,
-          textTransform: 'none',
-          minHeight: 36,
-        }}
-      >
-        {simOpen ? 'Ẩn mô phỏng' : 'Thử thay đổi mức góp'}
-      </Button>
-
-      <Collapse in={simOpen} unmountOnExit>
-        <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-          <Typography variant="caption" color="text.secondary" component="div" sx={{ display: { xs: 'none', md: 'block' } }}>
-            Mô phỏng theo lợi suất trung bình của tỷ trọng gợi ý, không phải kết quả được đảm bảo. Lợi suất thực tế có thể âm.
-          </Typography>
-          <Box sx={{ display: { xs: 'block', md: 'none' }, float: 'right' }}>
-            <InfoTip>
-              Mô phỏng theo lợi suất trung bình của tỷ trọng gợi ý, không phải kết quả được đảm bảo. Lợi suất thực tế có thể âm.
-            </InfoTip>
-          </Box>
-          <Typography variant="body2" sx={{ mt: { md: 1.5 } }}>
-            Góp mỗi tháng: <b>{fmtVndShort(monthly)}</b>
-          </Typography>
-          <Slider
-            value={monthly}
-            min={0}
-            max={Math.max(g.targetAmount / 12, g.monthlyContribution * 2, 1_000_000)}
-            step={500_000}
-            onChange={(_, v) => setMonthly(v as number)}
-          />
-          <Divider sx={{ my: 1 }} />
-          <KV k="Dự kiến tới hạn" v={fmtVndShort(projected)} color={changeColor(projected - g.targetAmount)} />
-          <KV
-            k="So với mục tiêu"
-            v={`${projected >= g.targetAmount ? 'đủ, dư ' : 'thiếu '}${fmtVndShort(Math.abs(projected - g.targetAmount))}`}
-          />
-          <KV k={`Cần góp mỗi tháng (lợi suất ${fmtNum(ret, 1)}%/năm)`} v={fmtVndShort(need)} />
+      {actions.length > 0 && (
+        <Box sx={{ bgcolor: 'action.hover', borderRadius: '12px', px: 1.5, py: 1.25, display: 'flex', flexDirection: 'column', gap: 0.5, fontSize: 13 }}>
+          <Box sx={{ fontWeight: 600 }}>Việc tiếp theo</Box>
+          {actions.map((a) => (
+            <Box key={a} className="num">
+              • {a}
+            </Box>
+          ))}
         </Box>
-      </Collapse>
+      )}
+
+      {g.status === 'active' && (
+        <Stack direction="row" sx={{ gap: 1 }}>
+          <Button variant="outlined" onClick={onLevers} sx={{ flex: 1, borderRadius: 99, height: 44, textTransform: 'none', fontWeight: 600 }}>
+            Tới đích sớm hơn
+          </Button>
+          <Button variant="contained" onClick={onContribute} sx={{ flex: 1, borderRadius: 99, height: 44, textTransform: 'none', fontWeight: 600 }}>
+            Góp tháng này
+          </Button>
+        </Stack>
+      )}
       {g.note && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, display: { xs: 'none', md: 'block' } }}>
+        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
           {g.note}
         </Typography>
       )}
-      {error && (
-        <Alert severity="error" sx={{ mt: 1.5 }}>
-          {error}
-        </Alert>
-      )}
-    </Paper>
+      {error && <Alert severity="error">{error}</Alert>}
+    </Box>
   )
 }

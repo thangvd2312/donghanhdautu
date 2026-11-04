@@ -69,6 +69,7 @@ export function toTransactionView(t: Transaction, revisionCount: number, goldNam
     reason: t.reason as TransactionView['reason'],
     emotion: t.emotion as TransactionView['emotion'],
     planId: t.planId,
+    goalId: t.goalId,
   };
 }
 

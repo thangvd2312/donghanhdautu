@@ -1,5 +1,5 @@
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient, type QueryKey } from '@tanstack/react-query'
 import type { PersistQueryClientOptions } from '@tanstack/react-query-persist-client'
 import { CACHE_STORAGE_KEY } from '../api/client'
 
@@ -35,6 +35,16 @@ export const qk = {
   deployment: ['deployment', 'active'],
   deploymentSetup: ['deployment', 'setup'],
 } as const
+
+/**
+ * Sau khi mục tiêu hoặc giao dịch đổi (lưu mục tiêu, gắn mã, góp tiền, ghi giao dịch): tải lại mục tiêu và các nơi
+ * hiện số liệu của nó (trang Hôm nay, danh mục, giải ngân).
+ */
+export function invalidateGoalData(client: QueryClient, { portfolio = false }: { portfolio?: boolean } = {}) {
+  const keys: QueryKey[] = [qk.goals, ['home'], qk.deployment, qk.deploymentSetup]
+  if (portfolio) keys.push(['portfolio'], qk.accounts)
+  return Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })))
+}
 
 function storage(): Storage | undefined {
   try {

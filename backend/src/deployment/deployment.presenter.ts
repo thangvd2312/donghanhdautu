@@ -48,6 +48,7 @@ export function toDeploymentPlanView(p: DeploymentPlan & { steps: DeploymentStep
     status: p.status as DeployPlanStatus,
     createdAt: p.createdAt.toISOString(),
     portfolioId: p.portfolioId,
+    goalId: p.goalId,
     fromCash: !!inputs.fromCash,
     plan: p.snapshot as unknown as Omit<DeploymentPreview, 'steps'>,
     steps,

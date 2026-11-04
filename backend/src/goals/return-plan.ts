@@ -4,6 +4,7 @@ import type {
   DeployPart,
   GoalAdvice,
   GoalAssumption,
+  GoalBandCompare,
   GoalOption,
   GoalRange,
   GoalRiskChoice,
@@ -20,8 +21,9 @@ import { project, requiredMonthly } from './goal-math';
 /** Lợi suất trung bình mỗi năm khi giữ từ 5 năm (%, VND, trước thuế/phí giao dịch). Xem lại mỗi quý. */
 export const RETURN_ASSUMPTIONS: Record<DeployPart, { range: GoalRange | null; source: string }> = {
   savings: {
-    range: { low: 5, mid: 6, high: 7 },
-    source: 'Lãi tiết kiệm 12 tháng phổ biến ~7%/năm (10/2026); dài hạn thường thấp hơn',
+    range: { low: 4.5, mid: 5.5, high: 6.5 },
+    source:
+      'Lãi 12 tháng bình quân 4 ngân hàng nhà nước ~4,3%/năm (mốc tham chiếu của quỹ DCBF, VFF, 9/2026); ngân hàng nhỏ ~6–7%',
   },
   gold: {
     range: { low: 3, mid: 7, high: 11 },
@@ -58,7 +60,7 @@ export interface AdviceProfile {
 /** Giá trị hiện có theo 4 nhóm của danh mục (VND) */
 export type HoldingsByType = Record<'stock' | 'gold' | 'cash' | 'crypto', number>;
 
-const SHORT_LABEL: Record<DeployPart, string> = {
+export const SHORT_LABEL: Record<DeployPart, string> = {
   savings: 'tiền gửi',
   gold: 'vàng',
   etf: 'ETF',
@@ -67,6 +69,12 @@ const SHORT_LABEL: Record<DeployPart, string> = {
 };
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const EMPTY: DeployMix = { savings: 0, gold: 0, etf: 0, picks: 0, crypto: 0 };
+/** Tỷ trọng của quỹ dự phòng: toàn bộ tiền gửi rút được ngay */
+export const SAVINGS_ONLY: DeployMix = { ...EMPTY, savings: 100 };
+
+/** Phương án đang dùng của một kết luận: phương án đã chọn, nếu chưa chọn thì phương án đạt mức mong muốn */
+export const activeOption = (a: GoalAdvice) =>
+  a.options.find((o) => o.key === a.chosen) ?? a.options[a.options.length - 1];
 
 /** Lợi suất kỳ vọng của một tỷ trọng; phần crypto không tính (tính trên phần còn lại). null khi toàn crypto */
 export function expectedOf(mix: DeployMix): GoalRange | null {
@@ -157,6 +165,34 @@ export interface ReturnGoalInput {
   holdings: HoldingsByType;
 }
 
+/** Các mức lãi mong muốn người dùng chọn được (giống các nút trên form) */
+export const RETURN_BANDS: { min: number; max: number | null }[] = [
+  { min: 6, max: 8 },
+  { min: 8, max: 10 },
+  { min: 10, max: 12 },
+  { min: 12, max: null },
+];
+
+/** So 4 mức lãi: với mỗi mức, tỷ trọng ít cổ phiếu nhất đạt cận dưới (cùng thang, cùng giới hạn theo số năm giữ) */
+function compareBands(rungs: DeployMix[], i: ReturnGoalInput, maxDd: number | null): GoalBandCompare[] {
+  return RETURN_BANDS.map((b) => {
+    const k = rungs.findIndex((m) => (expectedOf(m)?.mid ?? 0) >= b.min);
+    const mix = rungs[k >= 0 ? k : rungs.length - 1];
+    const worstPct = worstDropPct(mix);
+    return {
+      minPct: b.min,
+      maxPct: b.max,
+      reachable: k >= 0,
+      stockPct: mix.etf + mix.picks,
+      expectedMid: expectedOf(mix)?.mid ?? 0,
+      worstPct,
+      worstAmount: Math.round((i.capital * worstPct) / 100),
+      overRisk: maxDd === null ? null : worstPct > maxDd,
+      selected: b.min === i.minPct && b.max === i.maxPct,
+    };
+  });
+}
+
 /** Kiểu "Sinh lời đều mỗi năm": phương án đạt mức mong muốn, phương án trong mức rủi ro, và kết luận */
 export function returnAdvice(i: ReturnGoalInput): GoalAdvice {
   const months = Math.round(i.holdYears * 12);
@@ -191,6 +227,7 @@ export function returnAdvice(i: ReturnGoalInput): GoalAdvice {
     maxDrawdownPct: maxDd,
     current: currentOf(i.holdings, i.minPct),
     notes,
+    compare: compareBands(rungs, i, maxDd),
   };
 
   if (!reachable && i.holdYears < 3) {
@@ -279,6 +316,44 @@ export function amountAdvice(i: AmountGoalInput): { advice: GoalAdvice; expected
       maxDrawdownPct: i.profile.maxDrawdownPct,
       current: currentOf(i.holdings, expected.mid),
       notes,
+    },
+  };
+}
+
+export interface SafetyGoalInput {
+  targetAmount: number;
+  current: number;
+  monthly: number;
+  months: number;
+  monthlyExpense: number;
+  safetyMonths: number;
+  profile: AdviceProfile | null;
+  holdings: HoldingsByType;
+}
+
+/** Kiểu "Quỹ dự phòng": chỉ tiền gửi rút được ngay, đích = chi tiêu tháng × số tháng */
+export function safetyAdvice(i: SafetyGoalInput): { advice: GoalAdvice; expectedMid: number } {
+  const o = option('target', SAVINGS_ONLY, i.current, i.monthly, i.months);
+  const need = requiredMonthly(i.current, i.targetAmount, o.expected.mid, i.months);
+  const tail =
+    i.current >= i.targetAmount
+      ? 'Quỹ đã đủ.'
+      : need <= i.monthly
+        ? 'Mức góp hiện tại là đủ.'
+        : `Cần góp ≈ ${shortVnd(need)}/tháng.`;
+  return {
+    expectedMid: o.expected.mid,
+    advice: {
+      verdict: 'ok',
+      summary:
+        `${i.safetyMonths} tháng chi tiêu ${shortVnd(i.monthlyExpense)} = ${shortVnd(i.targetAmount)}: ` +
+        `chỉ để tiền gửi rút được ngay. ${tail}`,
+      options: [o],
+      chosen: 'target',
+      riskLabel: i.profile ? riskLabel(i.profile.riskType) : null,
+      maxDrawdownPct: i.profile?.maxDrawdownPct ?? null,
+      current: currentOf(i.holdings, o.expected.mid),
+      notes: ['Quỹ dự phòng không để đầu tư: cần rút được ngay khi mất việc hay ốm đau.'],
     },
   };
 }

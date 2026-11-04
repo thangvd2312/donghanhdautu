@@ -31,7 +31,10 @@ export const MIX_STEP = 5
 
 /** Những gì người dùng nhập trên trang (giữ dạng dễ sửa; chuyển thành yêu cầu API bằng `buildDeployRequest`) */
 export interface DeployForm {
+  /** Một lần: số tiền; mỗi tháng: số mỗi tháng; cả hai: vốn ban đầu */
   amount: number
+  /** Chỉ khi mode = both: góp mỗi tháng */
+  monthlyAmount: number
   mode: DeployMode
   horizon: DeployHorizon
   /** Mục tiêu đang chọn làm ngày cần tiền */
@@ -87,6 +90,7 @@ export function parseDeployParams(params: URLSearchParams): DeployPrefill {
 
 export const initialForm = (setup: DeploymentSetup | null, prefill: DeployPrefill = {}): DeployForm => ({
   amount: prefill.amount ?? 0,
+  monthlyAmount: 0,
   mode: 'one_time',
   horizon: goalHorizon(setup, prefill.goalId) ?? setup?.profile?.horizon ?? 'long',
   goalId: prefill.goalId && setup?.goals.some((g) => g.id === prefill.goalId) ? prefill.goalId : null,
@@ -114,14 +118,17 @@ export function asks(setup: DeploymentSetup | null) {
 /** Yêu cầu API từ form; null khi chưa đủ để tính (chưa nhập số tiền, chưa có hồ sơ) */
 export function buildDeployRequest(form: DeployForm, setup: DeploymentSetup | null): DeploymentRequest | null {
   if (!setup?.profile || form.amount < MIN_AMOUNT) return null
+  if (form.mode === 'both' && form.monthlyAmount < MIN_AMOUNT) return null
   const need = asks(setup)
   const goal = form.goalId ? setup.goals.find((g) => g.id === form.goalId) : undefined
   return {
     amount: form.amount,
     mode: form.mode,
+    ...(form.mode === 'both' ? { monthlyAmount: form.monthlyAmount } : {}),
+    goalId: goal?.id ?? null,
     horizon: form.horizon,
     needBy: goal?.targetDate ?? null,
-    fromCash: form.mode === 'one_time' && form.fromCash,
+    fromCash: form.mode !== 'monthly' && form.fromCash,
     tranches: form.tranches,
     etf: form.etf,
     mix: form.mix,
@@ -236,4 +243,18 @@ export function stepPreset(s: DeployStepPreview, portfolioId?: string | null): T
       quantity: s.quantity ?? undefined,
     }
   return null
+}
+
+/** Tên cách giải ngân (tiêu đề, ô số liệu) */
+export const MODE_LABEL: Record<DeployMode, string> = {
+  one_time: 'Một lần',
+  monthly: 'Mỗi tháng',
+  both: 'Vốn ban đầu + mỗi tháng',
+}
+
+/** Số tiền của kế hoạch theo cách giải ngân: "100 tr", "10 tr mỗi tháng", "100 tr + 10 tr mỗi tháng" */
+export function amountText(mode: DeployMode, amount: number, monthlyAmount: number | null): string {
+  if (mode === 'monthly') return `${money(amount)} mỗi tháng`
+  if (mode === 'both') return `${money(amount)} + ${money(monthlyAmount ?? 0)} mỗi tháng`
+  return money(amount)
 }

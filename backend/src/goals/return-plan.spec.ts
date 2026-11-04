@@ -1,5 +1,5 @@
 import { worstDropPct } from '../deployment/deployment.mix';
-import { amountAdvice, amountsOf, currentOf, expectedOf, ladder, returnAdvice } from './return-plan';
+import { amountAdvice, amountsOf, currentOf, expectedOf, ladder, returnAdvice, safetyAdvice } from './return-plan';
 import type { AdviceProfile, HoldingsByType } from './return-plan';
 
 const balanced: AdviceProfile = {
@@ -14,8 +14,8 @@ const base = { capital: 100_000_000, monthly: 0, holdYears: 5, choice: null, hol
 
 describe('expectedOf', () => {
   it('weights the assumption table and ignores crypto', () => {
-    expect(expectedOf({ savings: 100, gold: 0, etf: 0, picks: 0, crypto: 0 })).toEqual({ low: 5, mid: 6, high: 7 });
-    expect(expectedOf({ savings: 50, gold: 0, etf: 50, picks: 0, crypto: 0 })?.mid).toBe(8.5);
+    expect(expectedOf({ savings: 100, gold: 0, etf: 0, picks: 0, crypto: 0 })).toEqual({ low: 4.5, mid: 5.5, high: 6.5 });
+    expect(expectedOf({ savings: 50, gold: 0, etf: 50, picks: 0, crypto: 0 })?.mid).toBe(8.3);
     // crypto không tính: 50% ETF + 50% crypto = như 100% ETF
     expect(expectedOf({ savings: 0, gold: 0, etf: 50, picks: 0, crypto: 50 })?.mid).toBe(11);
     expect(expectedOf({ savings: 0, gold: 0, etf: 0, picks: 0, crypto: 100 })).toBeNull();
@@ -109,8 +109,8 @@ describe('currentOf', () => {
   it('reports the current mix and the gap to the target, crypto not counted', () => {
     const c = currentOf({ stock: 50, gold: 0, cash: 50, crypto: 100 }, 10)!;
     expect(c.cryptoPct).toBe(50);
-    expect(c.expectedMid).toBe(8.5);
-    expect(c.gapPct).toBe(-1.5);
+    expect(c.expectedMid).toBe(8.3);
+    expect(c.gapPct).toBe(-1.7);
     expect(currentOf(none, 10)).toBeNull();
   });
 });
@@ -126,7 +126,7 @@ describe('amountAdvice', () => {
       holdings: none,
     });
     expect(advice.options[0].mix.savings).toBe(100);
-    expect(expectedMid).toBe(6);
+    expect(expectedMid).toBe(5.5);
     expect(advice.summary).toContain('Cần góp');
   });
 
@@ -148,5 +148,47 @@ describe('amountsOf', () => {
   it('rounds to thousands and keeps the total', () => {
     const a = amountsOf({ savings: 33, gold: 33, etf: 34, picks: 0, crypto: 0 }, 1_000_001);
     expect(a.savings + a.gold + a.etf + a.picks + a.crypto).toBe(1_000_001);
+  });
+});
+
+describe('safetyAdvice', () => {
+  const input = {
+    targetAmount: 60_000_000,
+    current: 0,
+    monthly: 3_000_000,
+    months: 12,
+    monthlyExpense: 10_000_000,
+    safetyMonths: 6,
+    profile: balanced,
+    holdings: none,
+  };
+
+  it('chỉ tiền gửi, một phương án, nêu số tháng chi tiêu và số cần góp', () => {
+    const { advice, expectedMid } = safetyAdvice(input);
+    expect(expectedMid).toBe(5.5);
+    expect(advice.options).toHaveLength(1);
+    expect(advice.options[0].mix).toEqual({ savings: 100, gold: 0, etf: 0, picks: 0, crypto: 0 });
+    expect(advice.options[0].worstPct).toBe(0);
+    expect(advice.summary).toContain('6 tháng chi tiêu');
+    expect(advice.summary).toContain('Cần góp');
+  });
+
+  it('đã đủ quỹ hoặc mức góp đủ thì nói rõ; không cần hồ sơ rủi ro', () => {
+    expect(safetyAdvice({ ...input, current: 60_000_000 }).advice.summary).toContain('đã đủ');
+    expect(safetyAdvice({ ...input, monthly: 6_000_000 }).advice.summary).toContain('góp hiện tại là đủ');
+    expect(safetyAdvice({ ...input, profile: null }).advice.riskLabel).toBeNull();
+  });
+});
+
+describe('returnAdvice compare', () => {
+  it('so 4 mức lãi với cùng hồ sơ: mức càng cao càng nhiều cổ phiếu, trên 12% không đạt', () => {
+    const advice = returnAdvice({ ...base, minPct: 10, maxPct: 12, profile: null });
+    const c = advice.compare!;
+    expect(c.map((r) => r.minPct)).toEqual([6, 8, 10, 12]);
+    expect(c.map((r) => r.stockPct)).toEqual([...c.map((r) => r.stockPct)].sort((a, b) => a - b));
+    expect(c[2]).toMatchObject({ selected: true, reachable: true, stockPct: 80, overRisk: null });
+    expect(c[3].reachable).toBe(false);
+    expect(c.filter((r) => r.selected)).toHaveLength(1);
+    expect(c[2].worstAmount).toBe(Math.round((100_000_000 * c[2].worstPct) / 100));
   });
 });

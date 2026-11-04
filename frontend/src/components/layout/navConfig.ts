@@ -49,7 +49,7 @@ export const SIDEBAR: { title?: string; items: NavItemWithIcon[] }[] = [
     title: 'Hành động',
     items: [
       { to: '/deployment', label: 'Giải ngân', Icon: DonutSmallOutlined },
-      { to: '/plans', label: 'Kế hoạch', Icon: FlagOutlined },
+      { to: '/plans', label: 'Kế hoạch mã', Icon: FlagOutlined },
       { to: '/rebalance', label: 'Tái cân bằng', Icon: BalanceOutlined },
       { to: '/journal', label: 'Nhật ký', Icon: MenuBookOutlined },
       { to: '/tips', label: 'Soi lời khuyên', Icon: FactCheckOutlined },
@@ -74,11 +74,11 @@ export const SIDEBAR: { title?: string; items: NavItemWithIcon[] }[] = [
 /** Mọi mục trên sidebar, dùng để tìm mục đang chọn */
 export const NAV: NavItem[] = SIDEBAR.flatMap((g) => g.items)
 
-/** Thanh đáy trên điện thoại: 4 trang dùng nhiều nhất + "Thêm" */
+/** Thanh đáy trên điện thoại: 4 trang dùng nhiều nhất + "Thêm" (docs/DESIGN_GOALS_V3.md §11.3) */
 export const BOTTOM: NavItemWithIcon[] = [
   { to: '/', label: 'Hôm nay', Icon: HomeOutlined },
   { to: '/portfolio', label: 'Danh mục', Icon: AccountBalanceWalletOutlined },
-  { to: '/plans', label: 'Kế hoạch', Icon: FlagOutlined },
+  { to: '/goals', label: 'Mục tiêu', Icon: SavingsOutlined },
   { to: '/advisor', label: 'Cố vấn', Icon: ForumOutlined },
 ]
 
@@ -106,7 +106,6 @@ export const MORE_GROUPS: { title: string; items: NavItemWithIcon[] }[] = [
   {
     title: 'Tài sản',
     items: [
-      { to: '/goals', label: 'Mục tiêu', Icon: SavingsOutlined },
       { to: '/income', label: 'Cổ tức', Icon: PaidOutlined },
       { to: '/reports', label: 'Báo cáo', Icon: SummarizeOutlined },
       { to: '/journal', label: 'Nhật ký', Icon: MenuBookOutlined },
@@ -116,6 +115,7 @@ export const MORE_GROUPS: { title: string; items: NavItemWithIcon[] }[] = [
     title: 'Hành động',
     items: [
       { to: '/deployment', label: 'Giải ngân', Icon: DonutSmallOutlined },
+      { to: '/plans', label: 'Kế hoạch mã', Icon: FlagOutlined },
       { to: '/rebalance', label: 'Tái cân bằng', Icon: BalanceOutlined },
       { to: '/tips', label: 'Soi lời khuyên', Icon: FactCheckOutlined },
       { to: '/simulate', label: 'Thử kịch bản', Icon: TuneOutlined },

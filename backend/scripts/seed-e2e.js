@@ -103,16 +103,19 @@ async function main() {
       priceAtReview: 120_000,
     },
   });
-  await prisma.goal.create({
+  const goal = await prisma.goal.create({
     data: {
       userId: user.id,
       name: 'Quỹ mua nhà',
+      template: 'house',
+      priority: 2,
       targetAmount: 1_500_000_000,
       targetDate: new Date(`${addDays(today, 5 * 365)}T00:00:00Z`),
       monthlyContribution: 10_000_000,
-      allocations: { create: [{ assetType: 'stock', symbol: 'FPT', pct: 100 }] },
     },
   });
+  // Mục tiêu v3: tài sản thuộc mục tiêu theo giao dịch gắn mục tiêu (FPT thuộc quỹ mua nhà)
+  await prisma.transaction.updateMany({ where: { userId: user.id, symbol: 'FPT' }, data: { goalId: goal.id } });
   await prisma.conversation.create({
     data: {
       userId: user.id,

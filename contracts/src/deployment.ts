@@ -7,7 +7,8 @@ import type { RiskType } from './auth'
 export type DeployPart = 'savings' | 'gold' | 'etf' | 'picks' | 'crypto'
 /** Tỷ trọng (%) hoặc số tiền (VND) theo từng phần */
 export type DeployMix = Record<DeployPart, number>
-export type DeployMode = 'one_time' | 'monthly'
+/** one_time: một lần · monthly: góp mỗi tháng · both: vốn ban đầu (chia đợt) cộng góp mỗi tháng */
+export type DeployMode = 'one_time' | 'monthly' | 'both'
 /** Lúc cần dùng số tiền này: dưới 1 năm | 1–3 năm | trên 3 năm */
 export type DeployHorizon = 'short' | 'medium' | 'long'
 export type DeployEtf = 'E1VFVN30' | 'FUEVFVND'
@@ -25,8 +26,12 @@ export interface DeploySafetyInputs {
 
 export interface DeploymentRequest extends DeploySafetyInputs {
   portfolioId?: string | null
-  /** VND: một lần, hoặc mỗi tháng khi mode = monthly */
+  /** Mục tiêu kế hoạch này phục vụ (phải là mục tiêu của người dùng); bỏ trống = không gắn */
+  goalId?: string | null
+  /** VND: một lần, hoặc mỗi tháng khi mode = monthly; mode = both: vốn ban đầu */
   amount: number
+  /** VND mỗi tháng: bắt buộc khi mode = both, bỏ qua với mode khác */
+  monthlyAmount?: number | null
   mode: DeployMode
   horizon: DeployHorizon
   /** Ngày cần dùng tiền (YYYY-MM-DD), nếu biết: quyết định khung thời gian và kỳ hạn gửi */
@@ -54,7 +59,18 @@ export interface DeploymentSetup {
   /** Tiền mặt VND đang ghi trong danh mục (gộp mọi danh mục) */
   cashVnd: number
   holdingsTotal: number
-  goals: { id: string; name: string; targetDate: string; targetAmount: number }[]
+  goals: {
+    id: string
+    name: string
+    kind: 'amount' | 'return' | 'safety'
+    targetDate: string
+    targetAmount: number
+    /** Mức góp mỗi tháng đã khai ở mục tiêu (VND), để điền sẵn cách "vốn ban đầu + mỗi tháng" */
+    monthlyContribution: number
+    /** Kiểu safety: chi tiêu mỗi tháng và số tháng dự phòng, để điền sẵn quỹ dự phòng */
+    monthlyExpense: number | null
+    safetyMonths: number | null
+  }[]
   etfOptions: { symbol: DeployEtf; name: string; price: number | null }[]
   /** Kế hoạch đang chạy (nếu có) */
   activePlanId: string | null
@@ -129,7 +145,10 @@ export interface DeployWorstCase {
 }
 
 export interface DeploymentPreview {
+  /** Một lần: số tiền; mỗi tháng: số mỗi tháng; both: vốn ban đầu */
   amount: number
+  /** Chỉ có khi mode = both */
+  monthlyAmount: number | null
   mode: DeployMode
   horizon: DeployHorizon
   needBy: string | null
@@ -179,6 +198,8 @@ export interface DeploymentPlanView {
   status: DeployPlanStatus
   createdAt: string
   portfolioId: string | null
+  /** Mục tiêu kế hoạch phục vụ; null = không gắn */
+  goalId: string | null
   /** Số tiền đã ghi là tiền mặt trong danh mục lúc lập (đợt tiền gửi không cần ghi sổ lại) */
   fromCash: boolean
   /** Kết quả lúc lập (không kèm các đợt) */

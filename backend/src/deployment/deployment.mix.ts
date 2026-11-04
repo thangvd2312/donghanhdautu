@@ -1,7 +1,10 @@
-import type { DeployAdjustment, DeployHorizon, DeployMix, DeployPart, RiskType } from '@dautu/contracts';
+import type { DeployAdjustment, DeployEtf, DeployHorizon, DeployMix, DeployPart, RiskType } from '@dautu/contracts';
 import { RISK_TYPE_LABEL, TARGET_MIX } from '../profile/quiz';
 
 export const PARTS: DeployPart[] = ['savings', 'gold', 'etf', 'picks', 'crypto'];
+
+/** ETF mà Kế hoạch giải ngân gợi ý; cổ phiếu trong danh sách này tính vào phần ETF, cổ phiếu khác là "tự chọn" */
+export const ETF_SYMBOLS: readonly DeployEtf[] = ['E1VFVN30', 'FUEVFVND'];
 
 export const PART_LABEL: Record<DeployPart, string> = {
   savings: 'Tiền gửi tiết kiệm',

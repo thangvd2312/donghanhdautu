@@ -10,10 +10,11 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { Ref } from 'react'
 import { fmtNum, fmtVnd } from '../../lib/format'
-import { dayLabel, groupSteps, MIX_STEP, money, PART_COLOR, PART_SHORT, PARTS, stepMix } from '../../lib/deployment'
+import { amountText, dayLabel, groupSteps, MIX_STEP, money, PART_COLOR, PART_SHORT, PARTS, stepMix } from '../../lib/deployment'
 import type { DeployMix, DeploymentPreview, DeployRationale } from '../../lib/types'
 import { HERO_SX } from '../home/HomeBlocks'
 import { InfoTip, Panel } from '../ui'
+import { RulesNote } from '../goals/AdviceParts'
 
 /** Thanh ngang xếp chồng theo 5 phần (100%) */
 function MixBar({ mix, label }: { mix: DeployMix; label: string }) {
@@ -156,7 +157,7 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
           Kế hoạch tham khảo · kiểu {res.profile.planLabel}
         </Typography>
         <Typography className="num" sx={{ fontSize: { xs: 30, sm: 36 }, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, mt: 0.5 }}>
-          {res.mode === 'monthly' ? `${money(res.amount)} mỗi tháng` : money(res.amount)}
+          {amountText(res.mode, res.amount, res.monthlyAmount)}
         </Typography>
         <Stack spacing={1} sx={{ mt: 2 }}>
           {hasCurrent && <MixBar mix={fill(currentMix)} label="Hiện tại" />}
@@ -369,6 +370,7 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
           </Typography>
         ))}
       </Box>
+      <RulesNote />
     </Stack>
   )
 }

@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
-  GroupTargets,
   PortfolioAlertKind,
   PortfolioAlertPreview,
   PortfolioAlertRule,
@@ -9,6 +8,7 @@ import type {
   PortfolioAlertSettings,
   TargetSuggestion,
 } from '@dautu/contracts';
+import { GoalsService } from '../goals/goals.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
@@ -45,18 +45,14 @@ export class PortfolioAlertsService {
     private portfolio: PortfolioService,
     private store: PortfolioAlertRuleStore,
     private history: PortfolioAlertHistory,
+    private goals: GoalsService,
   ) {}
 
   async settings(userId: string): Promise<PortfolioAlertSettings> {
-    const [list, profile, goals, deployment] = await Promise.all([
+    const [list, profile, goalTargets, deployment] = await Promise.all([
       this.store.configs(userId),
       this.prisma.investorProfile.findUnique({ where: { userId }, select: { riskType: true } }),
-      this.prisma.goal.findMany({
-        where: { userId, status: 'active', targetAllocation: { not: Prisma.DbNull } },
-        select: { name: true, targetAllocation: true },
-        orderBy: { targetDate: 'asc' },
-        take: 5,
-      }),
+      this.goals.combinedTargets(userId),
       this.prisma.deploymentPlan.findFirst({
         where: { userId, status: { in: ['active', 'done'] } },
         orderBy: { createdAt: 'desc' },
@@ -91,10 +87,8 @@ export class PortfolioAlertsService {
         targets: ref,
       });
     }
-    for (const g of goals) {
-      const t = g.targetAllocation as Partial<GroupTargets>;
-      if (validateTargets(t)) continue;
-      suggestions.push({ source: 'goal', label: `Theo mục tiêu "${g.name}"`, targets: normalizeTargets(t) });
+    if (goalTargets && !validateTargets(goalTargets.targets)) {
+      suggestions.push({ source: 'goal', label: goalTargets.label, targets: normalizeTargets(goalTargets.targets) });
     }
     return { rules, limits: LIMITS, suggestions };
   }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   DeployEtf,
   DeployHorizon,
@@ -13,11 +13,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionsService } from '../portfolio/transactions.service';
 import { vnd } from '../portfolio/analysis/rebalance.math';
-import { riskLabel, PARTS } from './deployment.mix';
+import { ETF_SYMBOLS, riskLabel, PARTS } from './deployment.mix';
 import { horizonFor, planDeployment, type PlanPrices } from './deployment.plan';
 import type { DeploymentDto } from './dto/deployment.dto';
 
-const ETFS: DeployEtf[] = ['E1VFVN30', 'FUEVFVND'];
 const NO_PROFILE = 'Làm bài khảo sát khẩu vị rủi ro trước để app biết mức rủi ro hợp với bạn';
 
 type Answers = Record<string, string | undefined>;
@@ -57,8 +56,12 @@ export class DeploymentService {
       goals: goals.map((g) => ({
         id: g.id,
         name: g.name,
+        kind: g.kind as DeploymentSetup['goals'][number]['kind'],
         targetDate: g.targetDate.toISOString().slice(0, 10),
         targetAmount: g.targetAmount,
+        monthlyContribution: g.monthlyContribution,
+        monthlyExpense: g.monthlyExpense,
+        safetyMonths: g.safetyMonths,
       })),
       etfOptions,
       activePlanId: null,
@@ -78,7 +81,9 @@ export class DeploymentService {
       if (total !== 100) throw new BadRequestException(`Tổng tỷ trọng phải bằng 100% (hiện ${total}%)`);
     }
     const mode = dto.mode;
-    const fromCash = mode === 'one_time' && !!dto.fromCash;
+    if (mode === 'both' && !dto.monthlyAmount) throw new BadRequestException('Nhập số tiền góp mỗi tháng');
+    await this.assertGoal(userId, dto.goalId);
+    const fromCash = mode !== 'monthly' && !!dto.fromCash;
 
     const v = await this.portfolio.valuation(userId, portfolioId);
     const cash = this.cashVnd(v.holdings);
@@ -94,6 +99,7 @@ export class DeploymentService {
     return planDeployment({
       req: {
         amount: dto.amount,
+        monthlyAmount: mode === 'both' ? dto.monthlyAmount : null,
         mode,
         horizon: dto.needBy ? horizonFor(dto.needBy, today) : dto.horizon,
         needBy: dto.needBy ?? null,
@@ -118,6 +124,13 @@ export class DeploymentService {
       asOf: v.generatedAt,
       notes,
     });
+  }
+
+  /** Mục tiêu gắn kế hoạch phải là của chính người dùng */
+  private async assertGoal(userId: string, goalId?: string | null) {
+    if (!goalId) return;
+    const goal = await this.prisma.goal.findFirst({ where: { id: goalId, userId }, select: { id: true } });
+    if (!goal) throw new NotFoundException('Không tìm thấy mục tiêu');
   }
 
   private cashVnd(holdings: { assetType: string; symbol: string; marketValue: number | null; costValue: number }[]) {
@@ -181,7 +194,7 @@ export class DeploymentService {
 
   private etfOptions(): Promise<DeploymentSetup['etfOptions']> {
     return Promise.all(
-      ETFS.map(async (symbol) => {
+      ETF_SYMBOLS.map(async (symbol) => {
         const info = await this.market.assertStock(symbol).catch(() => null);
         await this.market.stockQuote(symbol).catch(() => null);
         return { symbol, name: info?.name ?? symbol, price: this.market.priceInfo('stock', symbol).value };

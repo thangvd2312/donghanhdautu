@@ -39,7 +39,10 @@ export const ETF_NAME: Record<DeployEtf, string> = {
 };
 
 export interface PlanRequest extends DeploySafetyInputs {
+  /** Một lần: số tiền; mỗi tháng: số mỗi tháng; both: vốn ban đầu */
   amount: number;
+  /** Số mỗi tháng khi mode = both */
+  monthlyAmount?: number | null;
   mode: DeployMode;
   /** Khung thời gian đã chốt (suy từ needBy nếu có) */
   horizon: DeployHorizon;
@@ -356,14 +359,22 @@ function oneTime(ctx: Ctx, current: DeployMix, mix: DeployMix, needs: Omit<Deplo
  * Góp mỗi tháng: lập lịch MONTHLY_MONTHS tháng. Mỗi tháng lớp an toàn trước (tới khi xong), phần còn lại lấp phần đang
  * thiếu nhiều nhất; phần nhận quá ít trong tháng được gộp vào phần nhận nhiều nhất cho đỡ vụn.
  */
-function monthly(ctx: Ctx, current: DeployMix, mix: DeployMix, needs: Omit<DeploySafetyItem, 'amount'>[]) {
+function monthly(
+  ctx: Ctx,
+  current: DeployMix,
+  mix: DeployMix,
+  needs: Omit<DeploySafetyItem, 'amount'>[],
+  perMonth: number,
+  /** Số tháng lùi lại trước khi bắt đầu góp (mode = both: tháng đầu là đợt vốn ban đầu) */
+  startOffset = 0,
+) {
   const safety = needs.map((n) => ({ ...n, amount: 0 }));
   const cur = { ...current };
   const alloc = zero();
   const plan: { date: string; safety: [DeploySafetyItem['kind'], number][]; parts: DeployMix }[] = [];
   for (let m = 0; m < MONTHLY_MONTHS; m += 1) {
-    const date = addMonthsKey(ctx.today, m);
-    let money = ctx.req.amount;
+    const date = addMonthsKey(ctx.today, m + startOffset);
+    let money = perMonth;
     const paid: [DeploySafetyItem['kind'], number][] = [];
     for (const s of safety) {
       const a = Math.min(s.need - s.amount, money);
@@ -406,6 +417,36 @@ function monthly(ctx: Ctx, current: DeployMix, mix: DeployMix, needs: Omit<Deplo
   return { safety, alloc, steps, how };
 }
 
+/**
+ * Vốn ban đầu cộng góp mỗi tháng: vốn chia đợt như "một lần", rồi lịch góp hằng tháng bắt đầu từ tháng sau, tính trên
+ * danh mục đã gồm vốn ban đầu. Lớp an toàn còn thiếu sau vốn ban đầu được nối tiếp ở các tháng góp.
+ */
+function both(ctx: Ctx, current: DeployMix, mix: DeployMix, needs: Omit<DeploySafetyItem, 'amount'>[]) {
+  const first = oneTime(ctx, current, mix, needs);
+  const ethFirst = ctx.withEth;
+  const after = zero();
+  for (const p of PARTS) after[p] = current[p] + first.alloc[p];
+  const remaining = needs
+    .map((n) => ({ ...n, need: n.need - (first.safety.find((s) => s.kind === n.kind)?.amount ?? 0) }))
+    .filter((n) => n.need > 0);
+  const next = monthly(ctx, after, mix, remaining, ctx.req.monthlyAmount ?? 0, 1);
+  ctx.withEth = ethFirst || ctx.withEth;
+
+  const alloc = zero();
+  for (const p of PARTS) alloc[p] = first.alloc[p] + next.alloc[p];
+  const safety = first.safety.map((s) => ({
+    ...s,
+    amount: s.amount + (next.safety.find((x) => x.kind === s.kind)?.amount ?? 0),
+  }));
+  const none = 'Không mua thêm';
+  const how = {} as Record<DeployPart, string>;
+  for (const p of PARTS) {
+    const [a, b] = [first.how[p], next.how[p]];
+    how[p] = a === none ? b : b === none ? a : `Vốn ban đầu: ${a}. Góp mỗi tháng: ${b}`;
+  }
+  return { safety, alloc, steps: [...first.steps, ...next.steps], how };
+}
+
 function instrument(part: DeployPart, ctx: Ctx): string {
   const { req, prices } = ctx;
   switch (part) {
@@ -433,10 +474,15 @@ export function planDeployment(input: PlanInput): DeploymentPreview {
   const cmp = req.mix ? compareOverride(sug.mix, req.mix, factors) : { overrides: [], warnings: [] };
 
   const current = { ...input.current };
-  if (req.fromCash && req.mode === 'one_time') current.savings = Math.max(0, current.savings - req.amount);
+  if (req.fromCash && req.mode !== 'monthly') current.savings = Math.max(0, current.savings - req.amount);
   const ctx: Ctx = { req, prices: input.prices, today, withEth: false };
   const needs = safetyNeeds(req);
-  const r = req.mode === 'monthly' ? monthly(ctx, current, mix, needs) : oneTime(ctx, current, mix, needs);
+  const r =
+    req.mode === 'monthly'
+      ? monthly(ctx, current, mix, needs, req.amount)
+      : req.mode === 'both'
+        ? both(ctx, current, mix, needs)
+        : oneTime(ctx, current, mix, needs);
   const investable = sum(r.alloc);
 
   const curTotal = sum(current);
@@ -495,10 +541,16 @@ export function planDeployment(input: PlanInput): DeploymentPreview {
   }
 
   const notes = [...(input.notes ?? [])];
-  if (req.mode === 'one_time' && req.tranches > 1 && investable > 0) {
+  if (req.mode !== 'monthly' && req.tranches > 1 && investable > 0) {
     notes.push(
       'Chia đợt giảm rủi ro mua đúng đỉnh và giảm hối tiếc; nói thật thì khi thị trường đi lên, bỏ tiền một lần ' +
         'thường lãi hơn. Đợt đến hạn thì mua theo lịch, không chờ giảm mới mua.',
+    );
+  }
+  if (req.mode === 'both') {
+    notes.push(
+      `Vốn ban đầu chia đợt như giải ngân một lần; từ tháng sau góp ${trieu(req.monthlyAmount ?? 0)} mỗi tháng, ` +
+        `lịch lập trước ${MONTHLY_MONTHS} tháng đầu và chia theo phần đang thiếu của danh mục sau khi đã có vốn ban đầu.`,
     );
   }
   if (investable === 0 && r.safety.length) {
@@ -511,6 +563,7 @@ export function planDeployment(input: PlanInput): DeploymentPreview {
 
   return {
     amount: req.amount,
+    monthlyAmount: req.mode === 'both' ? (req.monthlyAmount ?? null) : null,
     mode: req.mode,
     horizon: req.horizon,
     needBy: req.needBy,

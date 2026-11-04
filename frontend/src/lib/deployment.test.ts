@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DeploymentSetup, DeployStepPreview } from './types'
-import { buildDeployRequest, groupSteps, horizonFor, initialForm, money, parseDeployParams, stepAction, stepMix, stepPreset } from './deployment'
+import { amountText, buildDeployRequest, groupSteps, horizonFor, initialForm, money, parseDeployParams, stepAction, stepMix, stepPreset } from './deployment'
 
 const setup = (over: Partial<NonNullable<DeploymentSetup['profile']>> = {}): DeploymentSetup => ({
   profile: {
@@ -15,7 +15,9 @@ const setup = (over: Partial<NonNullable<DeploymentSetup['profile']>> = {}): Dep
   },
   cashVnd: 0,
   holdingsTotal: 0,
-  goals: [{ id: 'g1', name: 'Mua xe', targetDate: '2028-06-01', targetAmount: 5e8 }],
+  goals: [
+    { id: 'g1', name: 'Mua xe', kind: 'amount', targetDate: '2028-06-01', targetAmount: 5e8, monthlyContribution: 1e7, monthlyExpense: null, safetyMonths: null },
+  ],
   etfOptions: [],
   activePlanId: null,
 })
@@ -71,6 +73,34 @@ describe('kế hoạch giải ngân: form → yêu cầu', () => {
       mode: 'monthly' as const,
     }
     expect(buildDeployRequest(f, s)!.fromCash).toBe(false)
+  })
+
+  it('mục tiêu đã chọn được gửi kèm; không chọn thì null', () => {
+    const s = setup()
+    expect(buildDeployRequest({ ...initialForm(s), amount: 1e8, goalId: 'g1' }, s)).toMatchObject({ goalId: 'g1' })
+    expect(buildDeployRequest({ ...initialForm(s), amount: 1e8 }, s)).toMatchObject({ goalId: null })
+  })
+
+  it('vốn ban đầu + mỗi tháng: cần cả hai số, gửi monthlyAmount, vẫn dùng được tiền mặt có sẵn', () => {
+    const s = setup()
+    const f = { ...initialForm(s), amount: 1e8, mode: 'both' as const, fromCash: true }
+    expect(buildDeployRequest(f, s)).toBeNull()
+    expect(buildDeployRequest({ ...f, monthlyAmount: 5e5 }, s)).toBeNull()
+    expect(buildDeployRequest({ ...f, monthlyAmount: 1e7 }, s)).toMatchObject({ mode: 'both', amount: 1e8, monthlyAmount: 1e7, fromCash: true })
+  })
+
+  it('mode khác không gửi monthlyAmount', () => {
+    const s = setup()
+    const r = buildDeployRequest({ ...initialForm(s), amount: 1e8, monthlyAmount: 1e7 }, s)!
+    expect(r).not.toHaveProperty('monthlyAmount')
+  })
+})
+
+describe('số tiền theo cách giải ngân', () => {
+  it('một lần, mỗi tháng, cả hai', () => {
+    expect(amountText('one_time', 1e8, null)).toBe('100 tr')
+    expect(amountText('monthly', 1e7, null)).toBe('10 tr mỗi tháng')
+    expect(amountText('both', 1e8, 1e7)).toBe('100 tr + 10 tr mỗi tháng')
   })
 })
 

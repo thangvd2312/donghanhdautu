@@ -260,3 +260,76 @@ describe('góp mỗi tháng', () => {
     for (const line of p.parts) expect(Math.abs(line.afterPct - line.targetPct)).toBeLessThan(3);
   });
 });
+
+describe('vốn ban đầu cộng góp mỗi tháng (mode both)', () => {
+  const both = (over: Partial<PlanRequest> = {}) =>
+    planDeployment(input({}, { mode: 'both', amount: 100_000_000, monthlyAmount: 20_000_000, ...over }));
+
+  it('tiền vào kế hoạch = vốn ban đầu + 6 tháng góp; không đụng chế độ cũ', () => {
+    const p = both();
+    expect(p.mode).toBe('both');
+    expect(p.amount).toBe(100_000_000);
+    expect(p.monthlyAmount).toBe(20_000_000);
+    expect(p.investable).toBe(100_000_000 + 6 * 20_000_000);
+    expect(sumOf(p.steps.map((s) => s.amount))).toBe(p.investable);
+    expect(planDeployment(input()).monthlyAmount).toBeNull();
+  });
+
+  it('vốn ban đầu chia đợt từ hôm nay; tháng góp bắt đầu từ tháng sau', () => {
+    const p = both();
+    const dates = [...new Set(p.steps.map((s) => s.dueDate))];
+    expect(dates[0]).toBe('2026-11-01');
+    // 3 đợt vốn ban đầu ở tháng 11, 12, 1; 6 tháng góp ở 12, 1, 2, 3, 4, 5
+    expect(dates).toEqual([
+      '2026-11-01',
+      '2026-12-01',
+      '2027-01-01',
+      '2027-02-01',
+      '2027-03-01',
+      '2027-04-01',
+      '2027-05-01',
+    ]);
+    // ngày hôm nay chỉ có đợt của vốn ban đầu: tiền gửi + vài phần đợt đầu, tổng nhỏ hơn cả vốn
+    const today = p.steps.filter((s) => s.dueDate === '2026-11-01');
+    expect(sumOf(today.map((s) => s.amount))).toBeLessThan(100_000_000);
+    expect(p.steps.some((s) => s.dueDate === '2026-12-01' && s.amount > 0)).toBe(true);
+  });
+
+  it('tháng góp tính trên danh mục đã có vốn ban đầu: phần đã đủ không nhận lại, tổng từng phần đúng tỷ trọng', () => {
+    const p = both();
+    const total = p.investable;
+    for (const line of p.parts) {
+      expect(line.afterPct).toBeCloseTo((line.afterValue / total) * 100, 1);
+      expect(Math.abs(line.afterPct - line.targetPct)).toBeLessThan(2);
+    }
+    const etf = p.parts.find((x) => x.part === 'etf')!;
+    expect(etf.how).toContain('Vốn ban đầu');
+    expect(etf.how).toContain('Góp mỗi tháng');
+  });
+
+  it('lớp an toàn: vốn ban đầu lấy trước; phần còn thiếu nối tiếp ở các tháng góp', () => {
+    const p = both({
+      amount: 10_000_000,
+      monthlyAmount: 5_000_000,
+      emergency: { monthlyExpense: 10_000_000, saved: 0, months: 3 },
+    });
+    const fund = p.safety.find((s) => s.kind === 'emergency_fund')!;
+    expect(fund.need).toBe(30_000_000);
+    expect(fund.amount).toBe(30_000_000);
+    const emergency = p.steps.filter((s) => s.kind === 'emergency');
+    expect(emergency[0]).toMatchObject({ dueDate: '2026-11-01', amount: 10_000_000 });
+    expect(sumOf(emergency.map((s) => s.amount))).toBe(30_000_000);
+  });
+
+  it('đã ghi vốn là tiền mặt trong danh mục: không cộng hai lần', () => {
+    const p = planDeployment(
+      input(
+        { current: { ...empty, savings: 100_000_000 } },
+        { mode: 'both', amount: 100_000_000, monthlyAmount: 10_000_000, fromCash: true },
+      ),
+    );
+    // 100 tr đã nằm trong danh mục là tiền mới của kế hoạch, không tính là tài sản đang có
+    expect(p.current.total).toBe(0);
+    expect(p.investable).toBe(100_000_000 + 6 * 10_000_000);
+  });
+});

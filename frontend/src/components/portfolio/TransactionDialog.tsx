@@ -11,11 +11,14 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { listGoals } from '../../api/goals'
 import { createTransaction, updateTransaction } from '../../api/portfolio'
 import { listJournalPlans } from '../../api/journal'
 import { useGoldOptions } from '../../hooks/useGoldOptions'
 import { fmtNum } from '../../lib/format'
 import { useMarket } from '../../lib/market-context'
+import { invalidateGoalData, qk } from '../../lib/query'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { parseNum, todayVn } from '../../lib/num'
 import { CASH_REASONS, isJournalTx } from '../../lib/journal'
@@ -84,6 +87,11 @@ export default function TransactionDialog({
   const [reason, setReason] = useState<JournalReason | null>(null)
   const [planId, setPlanId] = useState<string | null | undefined>(undefined)
   const [plans, setPlans] = useState<JournalPlanRef[] | null>(null)
+  // Mục tiêu (chỉ hỏi khi có từ 2 mục tiêu đang chạy: một mục tiêu thì mọi tài sản đã thuộc về nó)
+  const client = useQueryClient()
+  const goalsQuery = useQuery({ queryKey: qk.goals, queryFn: listGoals, enabled: open })
+  const activeGoals = (goalsQuery.data?.goals ?? []).filter((g) => g.status === 'active')
+  const [goalId, setGoalId] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -106,6 +114,7 @@ export default function TransactionDialog({
     setEmotion(t?.emotion ?? null)
     setReason(t?.reason ?? preset?.reason ?? null)
     setPlanId(t ? t.planId : undefined)
+    setGoalId(t?.goalId ?? preset?.goalId ?? '')
     setPortfolioId(
       t?.portfolioId ?? preset?.portfolioId ?? defaultPortfolioId ?? accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? '',
     )
@@ -179,12 +188,14 @@ export default function TransactionDialog({
       emotion,
       reason,
       linkedPlanId: linkedPlan?.id ?? null,
+      goalId: activeGoals.length >= 2 || goalId ? goalId || null : undefined,
     })
     if ('error' in built) return setError(built.error)
     const { body } = built
     setBusy(true)
     try {
       const saved = editing ? await updateTransaction(editing.id, body) : await createTransaction(body)
+      void invalidateGoalData(client)
       onSaved(saved)
       onClose()
     } catch (e) {
@@ -337,6 +348,17 @@ export default function TransactionDialog({
                   : `Để tính lãi/lỗ VND thực tế (theo tỷ giá lúc giao dịch). Bỏ trống thì chỉ có lãi theo USDT${snapshot?.usdt ? `, quy theo tỷ giá hiện tại ${fmtNum(snapshot.usdt.mid)} ₫` : ''}.`
               }
             />
+          )}
+
+          {(activeGoals.length >= 2 || (goalId && activeGoals.length > 0)) && (
+            <TextField select size="small" label="Mục tiêu" value={goalId} onChange={(e) => setGoalId(e.target.value)}>
+              <MenuItem value="">Chưa gắn mục tiêu</MenuItem>
+              {(goalsQuery.data?.goals ?? []).filter((g) => g.status === 'active' || g.id === goalId).map((g) => (
+                <MenuItem key={g.id} value={g.id}>
+                  {g.name}
+                </MenuItem>
+              ))}
+            </TextField>
           )}
 
           <TextField size="small" label="Ghi chú (tuỳ chọn)" value={note} onChange={(e) => setNote(e.target.value)} />

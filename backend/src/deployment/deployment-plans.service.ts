@@ -29,7 +29,9 @@ export class DeploymentPlansService {
         data: {
           userId,
           portfolioId: dto.portfolioId || null,
+          goalId: dto.goalId || null,
           amount: preview.amount,
+          monthlyAmount: preview.monthlyAmount,
           mode: preview.mode,
           horizon: preview.horizon,
           needBy: preview.needBy ? day(preview.needBy) : null,
@@ -37,7 +39,7 @@ export class DeploymentPlansService {
           inputs: JSON.parse(
             JSON.stringify({
               ...dto,
-              fromCash: preview.mode === 'one_time' && !!dto.fromCash,
+              fromCash: preview.mode !== 'monthly' && !!dto.fromCash,
               declaredAt: preview.startDate,
             }),
           ) as Prisma.InputJsonValue,
@@ -89,7 +91,7 @@ export class DeploymentPlansService {
 
   /** Đánh dấu đã làm; có giao dịch vừa ghi sổ thì gắn vào (phải là giao dịch của chính người dùng) */
   async stepDone(userId: string, planId: string, stepId: string, dto: StepDoneDto) {
-    await this.ownStep(userId, planId, stepId);
+    const { plan } = await this.ownStep(userId, planId, stepId);
     if (dto.transactionId) {
       const tx = await this.prisma.transaction.findFirst({
         where: { id: dto.transactionId, userId },
@@ -101,6 +103,13 @@ export class DeploymentPlansService {
       where: { id: stepId },
       data: { status: 'done', doneAt: new Date(), transactionId: dto.transactionId ?? null, skipReason: null },
     });
+    // Kế hoạch phục vụ một mục tiêu thì giao dịch của đợt này thuộc mục tiêu đó (nếu người dùng chưa gắn mục tiêu khác)
+    if (dto.transactionId && plan.goalId) {
+      await this.prisma.transaction.updateMany({
+        where: { id: dto.transactionId, userId, goalId: null },
+        data: { goalId: plan.goalId },
+      });
+    }
     return this.afterChange(userId, planId);
   }
 
@@ -134,6 +143,7 @@ export class DeploymentPlansService {
   private async ownStep(userId: string, planId: string, stepId: string) {
     const s = await this.prisma.deploymentStep.findFirst({
       where: { id: stepId, planId, plan: { userId, status: { in: ['active', 'done'] } } },
+      include: { plan: { select: { goalId: true } } },
     });
     if (!s) throw new NotFoundException('Không tìm thấy đợt này');
     return s;

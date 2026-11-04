@@ -17,7 +17,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useRef, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router-dom'
 import { cancelDeployment, explainDeployment, markStepDone, reopenStep, skipStep } from '../../api/deployment'
-import { ACTION_LABEL, dayLabel, groupSteps, money, PART_COLOR, stepAction, stepPreset, todayKey } from '../../lib/deployment'
+import { ACTION_LABEL, amountText, dayLabel, groupSteps, money, PART_COLOR, stepAction, stepPreset, todayKey } from '../../lib/deployment'
 import { fmtVnd } from '../../lib/format'
 import type { TxPreset } from '../../lib/tx'
 import type { DeploymentPlanView, DeployStep, PortfolioAccount } from '../../lib/types'
@@ -110,8 +110,8 @@ export default function ActivePlan({ view, accounts, onChange }: ActivePlanProps
       <StatTiles
         items={[
           {
-            label: view.plan.mode === 'monthly' ? 'Mỗi tháng' : 'Số tiền giải ngân',
-            value: money(view.plan.amount),
+            label: view.plan.mode === 'monthly' ? 'Mỗi tháng' : view.plan.mode === 'both' ? 'Vốn + mỗi tháng' : 'Số tiền giải ngân',
+            value: amountText(view.plan.mode, view.plan.amount, view.plan.monthlyAmount).replace(' mỗi tháng', '/tháng'),
             hint: `Lập ${dayLabel(view.createdAt.slice(0, 10), '')}`,
           },
           {

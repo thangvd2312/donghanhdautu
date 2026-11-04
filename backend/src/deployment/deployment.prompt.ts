@@ -41,7 +41,13 @@ Quy tắc bắt buộc:
 export function explainInput(p: Omit<DeploymentPreview, 'steps'>) {
   return {
     amount: p.amount,
-    mode: p.mode === 'monthly' ? 'góp mỗi tháng' : 'giải ngân một lần',
+    monthlyAmount: p.monthlyAmount,
+    mode:
+      p.mode === 'monthly'
+        ? 'góp mỗi tháng'
+        : p.mode === 'both'
+          ? 'vốn ban đầu cộng góp mỗi tháng'
+          : 'giải ngân một lần',
     horizon: { short: 'cần tiền trong vòng 1 năm', medium: 'cần tiền trong 1–3 năm', long: 'trên 3 năm' }[p.horizon],
     needBy: p.needBy,
     tranches: p.tranches,

@@ -12,7 +12,7 @@ Lợi suất trung bình mỗi năm khi giữ từ 5 năm, VND, trước thuế/
 
 | Phần | Thấp | Trung bình | Cao | Năm xấu | Nguồn |
 |---|---|---|---|---|---|
-| Tiền gửi 12 tháng | 5% | 6% | 7% | 0% | Lãi 12 tháng phổ biến ~7% (10/2026); dài hạn thấp hơn |
+| Tiền gửi 12 tháng | 4,5% | 5,5% | 6,5% | 0% | Lãi 12 tháng bình quân 4 ngân hàng nhà nước ~4,3% (mốc tham chiếu của quỹ DCBF, VFF, 9/2026); ngân hàng nhỏ ~6–7%. Sửa 04/11/2026 (trước: 5 / 6 / 7) |
 | Vàng | 3% | 7% | 11% | −15% | WGC: vàng ~9%/năm (USD) 20 năm tới 6/2026; WGC dự báo dài hạn thấp hơn |
 | Cổ phiếu lõi (ETF VN30) | 7% | 11% | 14% | −40% | VN-Index 100 (2000) → 1.784 (cuối 2025) ≈ 12%/năm giá; 2010–2019 chỉ ~6,4%/năm (FiinGroup); + cổ tức ~2%, − phí quỹ |
 | Cổ phiếu tự chọn | 4% | 11% | 17% | −40% | Như ETF, không giả định chọn mã giỏi hơn thị trường; biên rộng hơn |

@@ -10,6 +10,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import type {
@@ -55,11 +56,19 @@ const DEBT = { message: 'Số nợ phải là số không âm' };
 /** Đầu vào lập kế hoạch giải ngân (xem trước: không ghi gì) */
 export class DeploymentDto implements DeploymentRequest {
   @IsOptional() @IsString() @MaxLength(40) portfolioId?: string | null;
+  /** Mục tiêu kế hoạch phục vụ (phải là mục tiêu của người dùng) */
+  @IsOptional() @IsString() @MaxLength(40) goalId?: string | null;
   @IsNumber({}, { message: 'Số tiền phải là số' })
   @Min(MIN_AMOUNT, { message: 'Số tiền tối thiểu 1.000.000 ₫' })
   @Max(MAX_AMOUNT, { message: 'Số tiền quá lớn' })
   amount!: number;
-  @IsIn(['one_time', 'monthly'], { message: 'Chọn giải ngân một lần hay mỗi tháng' }) mode!: DeployMode;
+  /** Số góp mỗi tháng, bắt buộc khi mode = both */
+  @ValidateIf((o: DeploymentDto) => o.mode === 'both')
+  @IsNumber({}, { message: 'Số tiền góp mỗi tháng phải là số' })
+  @Min(MIN_AMOUNT, { message: 'Số tiền góp mỗi tháng tối thiểu 1.000.000 ₫' })
+  @Max(MAX_AMOUNT, { message: 'Số tiền góp mỗi tháng quá lớn' })
+  monthlyAmount?: number | null;
+  @IsIn(['one_time', 'monthly', 'both'], { message: 'Chọn giải ngân một lần, mỗi tháng hay cả hai' }) mode!: DeployMode;
   @IsIn(['short', 'medium', 'long'], { message: 'Chọn lúc nào cần dùng số tiền này' }) horizon!: DeployHorizon;
   @IsOptional() @IsDateKey() needBy?: string | null;
   @IsOptional() @IsBoolean() fromCash?: boolean;

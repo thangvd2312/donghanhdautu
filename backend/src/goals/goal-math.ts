@@ -1,78 +1,11 @@
-/** Tính toán thuần cho mục tiêu tài chính: tiến độ từ tài sản được gán, mô phỏng, kiểm tra phân bổ */
-import type { Goal, GoalAssetType } from '@dautu/contracts';
+/** Tính toán thuần cho mục tiêu tài chính: số tháng, mô phỏng giá trị dự kiến, số tháng tới đích */
+import type { GoalAssetType } from '@dautu/contracts';
 
 export const ASSET_TYPES: readonly GoalAssetType[] = ['stock', 'crypto', 'gold', 'cash'];
 export type { GoalAssetType };
 
-interface HoldingValue {
-  assetType: string;
-  symbol: string;
-  displayName: string;
-  /** Giá trị hiện tại (VND); null khi thiếu giá */
-  marketValue: number | null;
-  costValue: number;
-}
-
-export interface Allocation {
-  assetType: string;
-  symbol: string;
-  pct: number;
-}
-
 /** Mã tài sản chuẩn: cắt khoảng trắng và viết hoa, cùng quy tắc với mã lưu ở danh mục */
 export const normalizeSymbol = (symbol: string) => symbol.trim().toUpperCase();
-
-/** Chuẩn hóa mã một lần để dùng chung cho kiểm tra, lưu và đọc */
-export const normalizeAllocations = <T extends Allocation>(items: T[]): T[] =>
-  items.map((a) => ({ ...a, symbol: normalizeSymbol(a.symbol) }));
-
-/** Tiến độ: tổng giá trị phần tài sản được gán; thiếu giá thì tạm tính theo giá vốn và đánh dấu */
-export function goalProgress(
-  goal: { targetAmount: number; targetAllocation: Partial<Record<GoalAssetType, number>> | null },
-  allocations: Allocation[],
-  holdings: HoldingValue[],
-): Goal['progress'] {
-  let current = 0;
-  let isEstimate = false;
-  const byType: Record<string, number> = {};
-  const assets = allocations.map((a) => {
-    const h = holdings.find((x) => x.assetType === a.assetType && x.symbol === normalizeSymbol(a.symbol));
-    const base = h ? (h.marketValue ?? h.costValue) : 0;
-    if (h && h.marketValue === null) isEstimate = true;
-    const value = (base * a.pct) / 100;
-    current += value;
-    byType[a.assetType] = (byType[a.assetType] ?? 0) + value;
-    return {
-      assetType: a.assetType,
-      symbol: a.symbol,
-      pct: a.pct,
-      name: h?.displayName ?? a.symbol,
-      value,
-      held: !!h,
-    };
-  });
-  const actualAllocation = Object.fromEntries(
-    Object.entries(byType).map(([k, v]) => [k, current ? (v / current) * 100 : 0]),
-  ) as Record<string, number>;
-  const deviation = goal.targetAllocation
-    ? ASSET_TYPES.filter((t) => (goal.targetAllocation![t] ?? 0) > 0 || (actualAllocation[t] ?? 0) > 0).map((t) => ({
-        assetType: t,
-        target: goal.targetAllocation![t] ?? 0,
-        actual: actualAllocation[t] ?? 0,
-        diff: (actualAllocation[t] ?? 0) - (goal.targetAllocation![t] ?? 0),
-      }))
-    : null;
-  return {
-    current,
-    progressPct: goal.targetAmount > 0 ? (current / goal.targetAmount) * 100 : 0,
-    assets,
-    actualAllocation,
-    deviation,
-    isEstimate,
-    /** Tài sản đã gán nhưng không còn trong danh mục (đã bán hết) */
-    missingAssets: assets.filter((a) => !a.held).map((a) => a.name),
-  };
-}
 
 /** Số tháng (làm tròn xuống) từ hôm nay tới ngày đích */
 export function monthsUntil(today: string, target: string) {
@@ -101,42 +34,17 @@ export function requiredMonthly(current: number, target: number, annualPct: numb
   return ((target - grown) * r) / (Math.pow(1 + r, months) - 1);
 }
 
+/** Dự phóng tối đa 50 năm: xa hơn thì coi là không đạt */
+export const MAX_REACH_MONTHS = 600;
+
 /**
- * Kiểm tra phần trăm gán: mỗi % trong (0, 100] và tổng % của một tài sản qua mọi mục tiêu ≤ 100,
- * để không tính cùng một phần tài sản vào nhiều mục tiêu.
+ * Số tháng ít nhất để `current` cộng góp `monthly` mỗi tháng đạt `target` với lợi suất năm giả định; 0 nếu đã đủ;
+ * null nếu quá MAX_REACH_MONTHS (hoặc không bao giờ đạt).
  */
-export function validateAllocations(next: Allocation[], others: Allocation[], nameOf: (a: Allocation) => string) {
-  const errors: string[] = [];
-  const seen = new Set<string>();
-  for (const a of next) {
-    const key = `${a.assetType}:${normalizeSymbol(a.symbol)}`;
-    if (seen.has(key)) errors.push(`${nameOf(a)} được gán hai lần`);
-    seen.add(key);
-    if (!(a.pct > 0 && a.pct <= 100)) {
-      errors.push(`Phần trăm của ${nameOf(a)} phải trong khoảng 0–100`);
-      continue;
-    }
-    const used = others
-      .filter((o) => o.assetType === a.assetType && normalizeSymbol(o.symbol) === normalizeSymbol(a.symbol))
-      .reduce((s, o) => s + o.pct, 0);
-    if (used + a.pct > 100 + 1e-9) {
-      errors.push(`${nameOf(a)} đã gán ${round(used)}% cho mục tiêu khác, chỉ còn ${round(100 - used)}%`);
-    }
+export function monthsToReach(current: number, monthly: number, annualPct: number, target: number): number | null {
+  if (current >= target) return 0;
+  for (let m = 1; m <= MAX_REACH_MONTHS; m += 1) {
+    if (project(current, monthly, annualPct, m) >= target) return m;
   }
-  return errors;
-}
-
-export function validateTargetAllocation(t: Partial<Record<string, number>> | null | undefined) {
-  if (!t) return null;
-  const entries = Object.entries(t).filter(([, v]) => v !== undefined && v !== null);
-  if (entries.some(([k]) => !(ASSET_TYPES as readonly string[]).includes(k)))
-    return 'Loại tài sản trong tỷ trọng không hợp lệ';
-  if (entries.some(([, v]) => !(Number(v) >= 0 && Number(v) <= 100))) return 'Mỗi tỷ trọng phải trong khoảng 0–100%';
-  const sum = entries.reduce((s, [, v]) => s + Number(v), 0);
-  if (Math.abs(sum - 100) > 0.5) return `Tổng tỷ trọng mong muốn phải là 100% (hiện ${round(sum)}%)`;
   return null;
-}
-
-function round(v: number) {
-  return Math.round(v * 10) / 10;
 }

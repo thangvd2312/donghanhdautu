@@ -46,6 +46,15 @@ export class TransactionsService {
     return rows.map((t) => ({ ...this.present(t, t._count.revisions), portfolioName: t.portfolio?.name ?? null }));
   }
 
+  /** Cột mục tiêu cần ghi: bỏ trường = không đổi, null = gỡ, mã = phải là mục tiêu của chính người dùng */
+  private async goalColumn(db: Db, userId: string, goalId: string | null | undefined) {
+    if (goalId === undefined) return {};
+    if (goalId === null) return { goalId: null };
+    const goal = await db.goal.findFirst({ where: { id: goalId, userId }, select: { id: true } });
+    if (!goal) throw new NotFoundException('Không tìm thấy mục tiêu');
+    return { goalId: goal.id };
+  }
+
   /** Danh mục của người dùng; người chưa có thì tạo "Danh mục chính" */
   async portfolios(db: Db, userId: string) {
     const list = await db.portfolio.findMany({
@@ -85,7 +94,8 @@ export class TransactionsService {
     const result = await this.write(userId, async (db, txs) => {
       const portfolioId = await this.resolvePortfolio(db, userId, dto.portfolioId);
       const journal = await journalColumns(db, userId, data, dto);
-      const row = await db.transaction.create({ data: { ...data, ...journal, userId, portfolioId } });
+      const goal = await this.goalColumn(db, userId, dto.goalId);
+      const row = await db.transaction.create({ data: { ...data, ...journal, ...goal, userId, portfolioId } });
       return { result: this.present(row, 0), txs: [...txs, row] };
     });
     this.firstRealAsset(userId, 'manual');
@@ -103,7 +113,8 @@ export class TransactionsService {
         ? await this.resolvePortfolio(db, userId, dto.portfolioId)
         : before.portfolioId;
       const journal = await journalColumns(db, userId, { ...data, current: before }, dto);
-      const row = await db.transaction.update({ where: { id }, data: { ...data, ...journal, portfolioId } });
+      const goal = await this.goalColumn(db, userId, dto.goalId);
+      const row = await db.transaction.update({ where: { id }, data: { ...data, ...journal, ...goal, portfolioId } });
       return { result: this.present(row, 1), txs: txs.map((t) => (t.id === id ? row : t)) };
     });
   }
@@ -287,6 +298,7 @@ export class TransactionsService {
       reason: null,
       emotion: null,
       planId: null,
+      goalId: null,
     }));
   }
 
