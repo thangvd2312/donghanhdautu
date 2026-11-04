@@ -37,7 +37,7 @@ describe('pagePreview', () => {
   });
 
   it('các trang tính năng có tiêu đề riêng', () => {
-    for (const p of ['/events', '/screener', '/income', '/simulate', '/market', '/news', '/demo', '/register']) {
+    for (const p of ['/events', '/screener', '/income', '/compare', '/market', '/news', '/demo', '/register']) {
       expect(pagePreview(p)?.title).toBeTruthy();
     }
   });

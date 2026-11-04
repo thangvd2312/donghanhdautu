@@ -3,7 +3,6 @@ import { MarketService } from '../market/market.service';
 import { vnDateKey } from '../market/types';
 import { NewsReviewService } from '../news/news-review.service';
 import type { NewsItem } from '../news/news.service';
-import { addDays } from '../plans/plan-rules';
 import { reviewPoints } from '../home/today';
 import { HistoryService } from '../portfolio/history.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
@@ -21,9 +20,9 @@ Bảng số liệu đã được hệ thống tính sẵn và sẽ hiện ngay p
 - Không viết lại bảng, không tự tính hay đưa ra con số mới. Khi nhắc số, chỉ dùng đúng số có trong dữ liệu.
 - Tiền nạp/rút không phải lãi/lỗ; nếu tổng tài sản tăng chủ yếu do nạp tiền, nói rõ.
 - Giải thích ngắn tuần qua danh mục biến động vì đâu (tài sản nào, tin nào liên quan nếu có trong dữ liệu).
-- Nêu tối đa 3 việc nên xem lại tuần tới, dựa trên reviewPoints và plansDueSoon; phân biệt điều kiện người dùng tự đặt với nhận định của bạn.
+- Nêu tối đa 3 việc nên xem lại tuần tới, dựa trên reviewPoints; phân biệt mốc người dùng tự đặt với nhận định của bạn.
 - Nếu dữ liệu có phần ước tính / thiếu giá, nhắc ngắn gọn.
-- Không khuyến nghị mua/bán cụ thể ngoài việc nhắc người dùng đối chiếu với kế hoạch của chính họ.
+- Không khuyến nghị mua/bán cụ thể.
 - Tiếng Việt, xưng "tôi", gọi "bạn", markdown, tối đa khoảng 250 chữ. headline: một câu ngắn tóm tắt tuần.`;
 
 const SCHEMA = {
@@ -78,21 +77,18 @@ export class WeeklyBriefService {
   /** `force` = bỏ qua chống trùng (nút "Gửi thử"); bản chính thức mỗi tuần một lần theo ngày kết thúc kỳ */
   generate(userId: string, force = false, day = vnDateKey()) {
     const key = `brief:weekly:${day}${force ? `:${Date.now()}` : ''}`;
-    return this.runs.run(userId, key, () => this.build(userId, day));
+    return this.runs.run(userId, key, () => this.build(userId));
   }
 
   /** Bảng số liệu + nhận định AI của một tuần; null khi chưa có gì để tổng kết */
-  private async build(userId: string, today: string): Promise<BriefContent | null> {
+  private async build(userId: string): Promise<BriefContent | null> {
     await this.market.ensureFresh();
     const summary = await this.history.weekSummary(userId);
     if (!summary) return null;
     const table = weeklyTable(summary);
 
-    const [profile, plans, related, valuation] = await Promise.all([
+    const [profile, related, valuation] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
-      this.prisma.investmentPlan.findMany({
-        where: { userId, status: 'active', nextReviewAt: { lte: new Date(`${addDays(today, 7)}T00:00:00Z`) } },
-      }),
       this.relatedNews(userId),
       this.portfolio.valuation(userId),
     ]);
@@ -115,13 +111,6 @@ export class WeeklyBriefService {
               fomoProne: profile.fomoProne,
             }
           : 'chưa khảo sát',
-        plansDueSoon: plans.map((p) => ({
-          asset: p.symbol.replace(/USDT$/, ''),
-          nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10),
-          exitConditions: p.exitConditions,
-          stopPrice: p.stopPrice,
-          targetPrice: p.targetPrice,
-        })),
         reviewPoints: review,
         newsThisWeek: related,
       };

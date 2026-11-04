@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MarketService } from '../market/market.service';
 import { StockResearchService } from '../market/stock-research.service';
-import { GoalsService } from '../goals/goals.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REFERENCE_ALLOCATION, RISK_TYPE_LABEL } from '../profile/quiz';
@@ -18,20 +17,16 @@ export class AdvisorToolData {
     private research: StockResearchService,
     private portfolio: PortfolioService,
     private prisma: PrismaService,
-    private goals: GoalsService,
   ) {}
 
   async myPortfolio(userId: string) {
-    const [profile, valuation, user, performance, plans, goals] = await Promise.all([
+    const [profile, valuation, user, performance] = await Promise.all([
       this.prisma.investorProfile.findUnique({ where: { userId } }),
       this.portfolio.valuation(userId),
       this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } }),
       this.portfolio.performance(userId).catch(() => null),
-      this.prisma.investmentPlan.findMany({ where: { userId, status: 'active' } }),
-      this.goals.list(userId),
     ]);
     const accounts = await this.portfolio.listPortfolios(userId).catch(() => []);
-    const activeGoals = goals.goals.filter((g) => g.status === 'active');
     return {
       name: user.name,
       profile: profile
@@ -59,62 +54,11 @@ export class AdvisorToolData {
       // Từ sổ giao dịch: totalProfit = giá trị hiện tại − vốn đưa vào ròng (tiền nạp không phải lãi);
       // realized = lãi đã chốt khi bán, unrealized = lãi/lỗ chưa chốt của tài sản đang giữ
       performance: performance ?? 'Chưa tính được hiệu quả từ sổ giao dịch',
-      // Kế hoạch người dùng TỰ ĐẶT: đối chiếu lời khuyên với luận điểm và điều kiện của họ
-      investmentPlans: plans.length
-        ? plans.map((p) => ({
-            asset: p.assetType === 'crypto' ? p.symbol.replace(/USDT$/, '') : p.symbol,
-            assetType: p.assetType,
-            thesis: p.thesis,
-            horizon: p.horizon,
-            exitConditions: p.exitConditions,
-            targetPrice: p.targetPrice,
-            stopPrice: p.stopPrice,
-            nextReviewAt: p.nextReviewAt.toISOString().slice(0, 10),
-          }))
-        : 'Chưa có kế hoạch nào',
       // Các danh mục / tài khoản riêng (số liệu phía trên là gộp tất cả)
       accounts:
         accounts.length > 1
           ? accounts.map((a) => ({ name: a.name, totalValueVnd: Math.round(a.totalValue) }))
           : undefined,
-      financialGoals: activeGoals.length
-        ? activeGoals.map((g) => ({
-            name: g.name,
-            // amount: cần số tiền vào ngày · return: muốn lãi đều mỗi năm trên số vốn · safety: quỹ dự phòng N tháng chi tiêu
-            // (trang Mục tiêu đã gợi ý cách chia tiền)
-            kind: g.kind,
-            template: g.template,
-            // 1 quỹ dự phòng · 2 số tiền hạn cứng · 3 số tiền hạn mềm · 4 sinh lời / hưu trí
-            priority: g.priority,
-            ...(g.returnTarget
-              ? {
-                  capitalVnd: g.returnTarget.capital,
-                  wantedAnnualReturnPct: g.returnTarget.maxPct
-                    ? `${g.returnTarget.minPct}–${g.returnTarget.maxPct}`
-                    : `trên ${g.returnTarget.minPct}`,
-                  holdYears: g.returnTarget.holdYears,
-                  chosenOption:
-                    g.returnTarget.riskChoice === 'within'
-                      ? 'trong mức rủi ro đã khai'
-                      : g.returnTarget.riskChoice === 'target'
-                        ? 'đạt mức lãi mong muốn'
-                        : null,
-                }
-              : {}),
-            ...(g.kind === 'safety' ? { monthlyExpenseVnd: g.monthlyExpense, months: g.safetyMonths } : {}),
-            targetAmountVnd: g.targetAmount,
-            targetDate: g.targetDate,
-            monthlyContributionVnd: g.monthlyContribution,
-            // Tỷ trọng đích theo quy tắc của app (kiểu và thời gian còn lại) và phần đang thuộc mục tiêu này
-            // (tự tính từ giao dịch gắn mục tiêu): so hai cái này, không tự suy ra tỷ trọng khác
-            targetMixPct: g.targetMix,
-            actual: { valueVnd: g.actual.value, pct: g.actual.pct, isEstimate: g.actual.isEstimate },
-            progressPct: round(g.progress.progressPct),
-            // on_track kịp ngày đích · in_range trễ dưới 3 tháng · behind trễ từ 3 tháng · reached đã đủ
-            trackStatus: g.track.status,
-            delayMonths: g.track.delayMonths,
-          }))
-        : 'Chưa đặt mục tiêu tài chính',
     };
   }
 

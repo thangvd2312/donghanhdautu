@@ -4,7 +4,7 @@
  */
 import type { BenchmarkComparison, HistoryPoint, PeriodResult } from '@dautu/contracts';
 import { computeLedger, ledgerOfAll, LedgerResult, LedgerTx, sortTxs } from './ledger';
-import { addDays, daysBetween } from '../plans/plan-rules';
+import { addDays, daysBetween } from '../common/dates';
 
 export type { HistoryPoint, PeriodResult };
 

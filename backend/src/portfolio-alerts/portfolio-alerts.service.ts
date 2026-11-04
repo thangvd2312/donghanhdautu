@@ -8,7 +8,6 @@ import type {
   PortfolioAlertSettings,
   TargetSuggestion,
 } from '@dautu/contracts';
-import { GoalsService } from '../goals/goals.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RISK_TYPE_LABEL } from '../profile/quiz';
@@ -18,15 +17,7 @@ import type { PreviewRuleDto } from './dto/portfolio-alert.dto';
 import { evaluate } from './evaluators';
 import { notifyDecision } from './notify';
 import { checkOf, toPortfolioAlertRule } from './portfolio-alerts.presenter';
-import {
-  ALERT_KINDS,
-  defaultRule,
-  LIMITS,
-  normalizeTargets,
-  referenceTargets,
-  validateRule,
-  validateTargets,
-} from './rule-config';
+import { ALERT_KINDS, defaultRule, LIMITS, normalizeTargets, referenceTargets, validateRule } from './rule-config';
 import type { RuleConfig } from './rule-config';
 import { PortfolioAlertRuleStore } from './rule-store.service';
 import { toConfig } from './rule-row';
@@ -45,19 +36,12 @@ export class PortfolioAlertsService {
     private portfolio: PortfolioService,
     private store: PortfolioAlertRuleStore,
     private history: PortfolioAlertHistory,
-    private goals: GoalsService,
   ) {}
 
   async settings(userId: string): Promise<PortfolioAlertSettings> {
-    const [list, profile, goalTargets, deployment] = await Promise.all([
+    const [list, profile] = await Promise.all([
       this.store.configs(userId),
       this.prisma.investorProfile.findUnique({ where: { userId }, select: { riskType: true } }),
-      this.goals.combinedTargets(userId),
-      this.prisma.deploymentPlan.findFirst({
-        where: { userId, status: { in: ['active', 'done'] } },
-        orderBy: { createdAt: 'desc' },
-        select: { targetMix: true },
-      }),
     ]);
     const rules = await Promise.all(
       list.map(async ({ kind, row, config }) =>
@@ -65,20 +49,6 @@ export class PortfolioAlertsService {
       ),
     );
     const suggestions: TargetSuggestion[] = [];
-    if (deployment) {
-      // 5 phần của kế hoạch giải ngân → 4 nhóm của cảnh báo: ETF + tự chọn = cổ phiếu, tiền gửi = tiền mặt
-      const m = deployment.targetMix as Record<string, number>;
-      suggestions.push({
-        source: 'deployment',
-        label: 'Theo kế hoạch giải ngân',
-        targets: {
-          stock: (m.etf ?? 0) + (m.picks ?? 0),
-          crypto: m.crypto ?? 0,
-          gold: m.gold ?? 0,
-          cash: m.savings ?? 0,
-        },
-      });
-    }
     const ref = profile ? referenceTargets(profile.riskType) : null;
     if (profile && ref) {
       suggestions.push({
@@ -86,9 +56,6 @@ export class PortfolioAlertsService {
         label: `Tham khảo cho kiểu ${RISK_TYPE_LABEL[profile.riskType] ?? profile.riskType}`,
         targets: ref,
       });
-    }
-    if (goalTargets && !validateTargets(goalTargets.targets)) {
-      suggestions.push({ source: 'goal', label: goalTargets.label, targets: normalizeTargets(goalTargets.targets) });
     }
     return { rules, limits: LIMITS, suggestions };
   }

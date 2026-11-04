@@ -38,10 +38,6 @@ async function main() {
     console.log(
       `Nhập CSV 30 ngày: ${iq.imports} lần thành công, ${iq.rows_imported}/${iq.rows_in_files} dòng được nhập; ${iq.error_rows} dòng lỗi (${iq.errorRowPct ?? '–'}%); ${iq.rejected} lần không nhập được (${iq.rejectedBy.map((x) => `${x.reason} ${x.count}`).join(', ') || 'không có'})`,
     );
-    const pr = r.planReviews30Days;
-    console.log(
-      `Duy trì nhật ký: ${pr.users_reviewed}/${pr.users_with_plans} người có kế hoạch đã xem lại trong 30 ngày (${pr.reviewedPct ?? '–'}%); ${pr.overdue_plans} kế hoạch quá hạn xem lại > 7 ngày`,
-    );
     console.log(
       `Chất lượng dữ liệu: ${r.dataQuality30Days.okPct ?? '–'}% lượt mở danh mục có giá đầy đủ và mới (${r.dataQuality30Days.byStatus.map((q) => `${q.status} ${q.user_days}`).join(', ') || 'chưa có'})`,
     );

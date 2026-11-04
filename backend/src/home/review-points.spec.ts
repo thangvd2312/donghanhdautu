@@ -1,39 +1,5 @@
-import type { InvestmentPlan } from '@prisma/client';
 import type { ReviewPoint } from '@dautu/contracts';
-import { corporateActionReviewPoints, planReviewPoints, sortBySeverity } from './review-points';
-
-const plan = (over: Partial<InvestmentPlan>) =>
-  ({
-    id: 'p1',
-    assetType: 'stock',
-    symbol: 'FPT',
-    thesis: 'Tăng trưởng',
-    targetPrice: null,
-    stopPrice: 90_000,
-    nextReviewAt: new Date('2026-06-01T00:00:00Z'),
-    ...over,
-  }) as InvestmentPlan;
-
-describe('planReviewPoints', () => {
-  it('raises a high point when the price is at the stop and carries the thesis in the question', () => {
-    const [p] = planReviewPoints([plan({})], '2026-03-04', () => 85_000);
-    expect(p).toMatchObject({ id: 'plan-stop:p1', severity: 'high', link: '/plans/p1' });
-    expect(p.ask).toContain('Tăng trưởng');
-  });
-
-  it('raises a medium point without a question when a review is due', () => {
-    const [p] = planReviewPoints(
-      [plan({ stopPrice: null, nextReviewAt: new Date('2026-03-01T00:00:00Z') })],
-      '2026-03-04',
-      () => null,
-    );
-    expect(p).toMatchObject({ id: 'plan-due:p1', severity: 'medium', ask: null });
-  });
-
-  it('is empty when nothing is hit or due', () => {
-    expect(planReviewPoints([plan({})], '2026-03-04', () => 100_000)).toEqual([]);
-  });
-});
+import { corporateActionReviewPoints, sortBySeverity } from './review-points';
 
 describe('corporateActionReviewPoints', () => {
   it('summarises up to three missing events and counts them all', () => {

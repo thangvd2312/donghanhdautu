@@ -11,11 +11,11 @@ import { StatTiles } from '../page'
 import { InfoTip, Panel } from '../ui'
 
 const NOTE =
-  'Làm đúng kế hoạch và lãi / lỗ là hai chuyện khác nhau: lệnh đúng kế hoạch vẫn có thể lỗ, lệnh ngoài kế hoạch vẫn có thể lãi. Nhật ký chỉ giúp bạn nhìn ra thói quen.'
+  'Quyết định có lý do rõ ràng vẫn có thể lỗ, quyết định vội vàng vẫn có thể lãi: lãi / lỗ ngắn hạn không cho biết quyết định đúng hay sai. Nhật ký chỉ giúp bạn nhìn ra thói quen.'
 
-/** Bốn con số của tháng (đầu trang): lệnh, xem lại, ghi cảm xúc, ngoài kế hoạch; kèm so với tháng trước */
+/** Bốn con số của tháng (đầu trang): lệnh, lệnh có nhãn, ghi cảm xúc, lúc dễ bị cuốn theo; kèm so với tháng trước */
 export function MonthlyTiles({ s }: { s: JournalMonthSummary }) {
-  const prev = s.previous && (s.previous.trades > 0 || s.previous.reviews > 0) ? s.previous : null
+  const prev = s.previous && s.previous.trades > 0 ? s.previous : null
   const vs = (n?: number) => (n === undefined ? undefined : `Tháng trước: ${n}`)
   const join = (...parts: (string | false | 0 | undefined)[]) => parts.filter(Boolean).join(' · ')
   // Điện thoại: ô số chỉ còn nhãn + số, dòng giải thích hiện từ md
@@ -23,27 +23,21 @@ export function MonthlyTiles({ s }: { s: JournalMonthSummary }) {
   return (
     <StatTiles
       items={[
-        { label: 'Lệnh mua / bán', value: s.trades, hint: md(join(s.trades ? `${s.linked} gắn kế hoạch` : 'chưa có lệnh', vs(prev?.trades))) },
+        { label: 'Lệnh mua / bán', value: s.trades, hint: md(join(s.trades ? false : 'chưa có lệnh', vs(prev?.trades))) },
         {
-          label: 'Xem lại kế hoạch',
-          value: s.reviews,
-          hint: md(join(
-            s.reviews || s.decisions.edits
-              ? // "đổi" chỉ đếm lần xem lại không giữ nguyên; sửa nội dung kế hoạch đếm riêng (không vượt số lần xem lại)
-                join(s.reviews && `giữ ${s.kept} · đổi ${s.reviews - s.kept}`, s.decisions.edits && `sửa ${s.decisions.edits}`)
-              : 'chưa xem lại',
-            vs(prev?.reviews),
-          )),
+          label: 'Lệnh có nhãn',
+          value: s.tagged,
+          hint: md(s.trades ? `trên ${s.trades} lệnh, có lý do hoặc cảm xúc` : '—'),
         },
         {
           label: 'Có ghi cảm xúc',
           value: s.emotionTagged,
-          hint: md(join(s.emotionTagged ? `${s.pressured} lúc dễ bị cuốn theo` : 'chưa gắn nhãn', vs(prev?.emotionTagged))),
+          hint: md(join(s.emotionTagged ? false : 'chưa gắn nhãn', vs(prev?.emotionTagged))),
         },
         {
-          label: 'Lệnh ngoài kế hoạch',
-          value: s.unlinked,
-          hint: md(join(s.trades ? `trên ${s.trades} lệnh` : '—', vs(prev ? prev.trades - prev.linked : undefined))),
+          label: 'Lúc dễ bị cuốn theo',
+          value: s.pressured,
+          hint: md(join('sợ lỡ cơ hội, sợ lỗ, hưng phấn', vs(prev?.pressured))),
         },
       ]}
     />

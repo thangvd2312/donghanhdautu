@@ -5,7 +5,7 @@
  */
 import type { IncomeExpectedItem, IncomeItem, IncomeMonth, IncomeReceivedItem, IncomeResponse } from '@dautu/contracts';
 import type { CorporateEvent } from '../../market/providers/vietcap';
-import { addDays } from '../../plans/plan-rules';
+import { addDays } from '../../common/dates';
 import {
   cashActionKey,
   cashSiblings,

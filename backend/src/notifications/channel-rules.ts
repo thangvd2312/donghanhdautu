@@ -3,7 +3,6 @@
 export const KINDS = [
   'price_target',
   'price_move',
-  'plan_review',
   'brief',
   'news',
   'macro',
@@ -11,15 +10,12 @@ export const KINDS = [
   'portfolio_health',
   'journal_monthly',
   'crypto_brief',
-  'tip_review',
-  'deployment',
 ] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const KIND_LABEL: Record<Kind, string> = {
   price_target: 'Giá chạm mốc bạn đặt',
   price_move: 'Biến động mạnh của tài sản đang giữ',
-  plan_review: 'Nhắc xem lại kế hoạch',
   brief: 'Bản tin sáng / cuối phiên / tổng kết tuần',
   news: 'Tin về mã đang giữ / theo dõi (cổ phiếu, coin) và thông báo của Binance',
   macro: 'Tin vĩ mô quan trọng',
@@ -27,15 +23,12 @@ export const KIND_LABEL: Record<Kind, string> = {
   portfolio_health: 'Tình trạng danh mục',
   journal_monthly: 'Tổng kết nhật ký quyết định hằng tháng',
   crypto_brief: 'Bản tin coin 4 giờ một lần (cả cuối tuần)',
-  tip_review: 'Kết quả lời khuyên đã soi sau 30 / 90 ngày',
-  deployment: 'Đợt mua đến hạn và nhắc xem lại kế hoạch giải ngân',
 };
 
 /** Mặc định khi mới kết nối: chỉ những tin cần hành động; người dùng tự bật thêm */
 export const DEFAULT_KINDS: Record<Kind, boolean> = {
   price_target: true,
   price_move: true,
-  plan_review: true,
   brief: false,
   news: false,
   macro: false,
@@ -46,11 +39,18 @@ export const DEFAULT_KINDS: Record<Kind, boolean> = {
   journal_monthly: false,
   // Như bản tin sáng / chiều: luôn có trong app, gửi ra ngoài khi người dùng tự bật
   crypto_brief: false,
-  // Kết quả chấm lại lời khuyên đã soi: luôn có trong app, gửi ra ngoài khi người dùng tự bật
-  tip_review: false,
-  // Việc cần làm theo lịch người dùng tự lập: như nhắc xem lại kế hoạch
-  deployment: true,
 };
+
+/** Loại tin đang lưu + mặc định cho loại chưa lưu; bỏ khoá của loại tin không còn (vd tính năng đã gỡ) */
+export function storedKinds(stored: unknown): Record<Kind, boolean> {
+  const kinds = { ...DEFAULT_KINDS };
+  if (stored && typeof stored === 'object') {
+    for (const [k, v] of Object.entries(stored as Record<string, unknown>)) {
+      if ((KINDS as readonly string[]).includes(k) && typeof v === 'boolean') kinds[k as Kind] = v;
+    }
+  }
+  return kinds;
+}
 
 /** Tối đa số tin / giờ gửi cho một người */
 export const MAX_PER_HOUR = 10;
@@ -126,14 +126,11 @@ const GENERIC_TITLE: Record<string, string> = {
   price_move: 'Một tài sản bạn đang giữ biến động mạnh',
   news: 'Có tin mới liên quan tới mã bạn đang giữ hoặc theo dõi',
   macro: 'Có tin vĩ mô quan trọng',
-  plan_review: 'Đến hạn xem lại một kế hoạch đầu tư',
   price_target: 'Giá đã chạm mốc bạn đặt',
   event: 'Sắp có sự kiện quyền của mã bạn quan tâm',
   portfolio_health: 'Danh mục của bạn có điểm cần xem lại',
   journal_monthly: 'Tổng kết thói quen đầu tư tháng trước đã sẵn sàng',
   crypto_brief: 'Bản tin coin mới của bạn đã sẵn sàng',
-  tip_review: 'Đã có kết quả của một lời khuyên bạn từng soi',
-  deployment: 'Đến đợt mua hoặc hạn xem lại kế hoạch giải ngân',
 };
 
 function escapeHtml(s: string) {

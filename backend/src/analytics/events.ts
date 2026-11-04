@@ -103,42 +103,6 @@ export const EVENTS = {
     props: {},
     dedupe: 'Không chống trùng: mỗi câu bị từ chối một sự kiện',
   },
-  plan_created: {
-    source: 'server',
-    description: 'Lưu một kế hoạch đầu tư mới',
-    props: {},
-    dedupe: 'Không chống trùng',
-  },
-  plan_reviewed: {
-    source: 'server',
-    description: 'Ghi một lần xem lại kế hoạch',
-    props: { decision: 'keep | adjust | close' },
-    dedupe: 'Không chống trùng',
-  },
-  deployment_saved: {
-    source: 'server',
-    description: 'Lưu một kế hoạch giải ngân',
-    props: { mode: 'one_time | monthly', steps: 'số đợt', overridden: 'true khi tự chỉnh tỷ trọng' },
-    dedupe: 'Không chống trùng',
-  },
-  deployment_completed: {
-    source: 'server',
-    description: 'Kế hoạch giải ngân không còn đợt chưa làm (đã mua / bỏ qua hết)',
-    props: { steps: 'số đợt' },
-    dedupe: 'Không chống trùng',
-  },
-  tip_checked: {
-    source: 'server',
-    description: 'Soi xong một lời khuyên (phiếu đã phân tích)',
-    props: { assetType: 'stock | crypto', hotLevel: 'normal | hot | very_hot', ai: 'ok | off | failed | quota' },
-    dedupe: 'Một lần mỗi phiếu',
-  },
-  tip_decided: {
-    source: 'server',
-    description: 'Ghi quyết định sau khi soi lời khuyên',
-    props: { decision: 'ignore | watch | plan | practice' },
-    dedupe: 'Không chống trùng',
-  },
   demo_viewed: {
     source: 'client',
     description: 'Khách chưa đăng nhập xem danh mục mẫu (sample = true)',

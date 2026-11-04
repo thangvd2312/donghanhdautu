@@ -5,7 +5,7 @@ import { normalizeCrypto } from '../market/crypto-symbol';
 import { VndirectProvider } from '../market/providers/vndirect.provider';
 import type { AssetType } from '../market/market.service';
 import { vnDateKey } from '../market/types';
-import { addDays, daysBetween } from '../plans/plan-rules';
+import { addDays, daysBetween } from '../common/dates';
 import { PrismaService } from '../prisma/prisma.service';
 import { assetBreakdown, buildHistory, compareBenchmark, DayPrice, periodPerformance } from './history';
 import { ledgerOfAll } from './ledger';

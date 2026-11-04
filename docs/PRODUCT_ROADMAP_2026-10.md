@@ -108,8 +108,8 @@ Chưa đặt ngưỡng chuyển đổi hay giữ chân tuyệt đối khi chưa 
 
 - [Khảo sát hồ sơ](../backend/src/profile/quiz.ts).
 - [Schema kế hoạch và mục tiêu](../backend/prisma/schema.prisma).
-- [Dịch vụ viết nháp kế hoạch](../backend/src/plans/plan-draft.service.ts) và [prompt](../backend/src/plans/plan-draft.prompt.ts).
-- [Dịch vụ mục tiêu](../backend/src/goals/goals.service.ts), [phép tính](../backend/src/goals/goal-math.ts), [giao diện mục tiêu](../frontend/src/components/goals/GoalCard.tsx).
+- Dịch vụ viết nháp kế hoạch (`backend/src/plans/plan-draft.service.ts`, đã gỡ 11/2026) và prompt (`backend/src/plans/plan-draft.prompt.ts`, đã gỡ 11/2026).
+- Dịch vụ mục tiêu (`backend/src/goals/goals.service.ts`, đã gỡ 11/2026), phép tính (`backend/src/goals/goal-math.ts`, đã gỡ 11/2026), giao diện mục tiêu (`frontend/src/components/goals/GoalCard.tsx`, đã gỡ 11/2026).
 - [Điểm cần xem lại trên Hôm nay](../backend/src/home/home-review.service.ts).
 - [Sự kiện đo lường](../backend/src/analytics/events.ts).
 - [Báo cáo bàn giao](DEV_REPORT_2026-10.md).

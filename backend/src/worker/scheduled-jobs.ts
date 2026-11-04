@@ -10,13 +10,10 @@ import { MacroService } from '../macro/macro.service';
 import { MarketDataCache } from '../market/cache/market-data-cache';
 import { NewsIndexerService } from '../news/search/news-indexer.service';
 import { VN_TZ } from '../market/types';
-import { PlanReminderService } from '../plans/plan-reminder.service';
-import { DeploymentReminderService } from '../deployment/deployment-reminder.service';
 import { JournalService } from '../journal/journal.service';
 import { HistoryService } from '../portfolio/history.service';
 import { PortfolioAlertsRunner } from '../portfolio-alerts/portfolio-alerts.runner';
 import { JobRunner } from '../runtime/job-runner';
-import { TipReviewService } from '../tips/tip-review.service';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -31,14 +28,11 @@ const HOUR = 60 * MIN;
  * | briefs.closing          | 15:10 thứ 2-6           | BriefsService.closing (xếp hàng đợi) |
  * | briefs.weekly           | 9:00 thứ 7              | WeeklyBriefService.runAll            |
  * | briefs.crypto           | 0, 4, 8, 12, 16, 20 giờ, hằng ngày | CryptoBriefService.runAll (xếp hàng đợi) |
- * | plans.remindDue         | 8:00 hằng ngày          | PlanReminderService.remindDue        |
- * | deployment.remind       | 8:00 hằng ngày          | DeploymentReminderService (đợt mua đến hạn, xem lại 3 tháng) |
  * | journal.monthlyDigest   | 9:00 ngày 1 hằng tháng  | JournalService.monthlyDigest         |
  * | events.remind           | 8:00, 17:00 hằng ngày   | EventsService.remindDaily            |
  * | history.recordDaily     | 23:50 hằng ngày         | HistoryService.recordDaily           |
  * | portfolioAlerts.intraday| 9:00–14:30 mỗi 30 phút, thứ 2-6 | PortfolioAlertsRunner.runAll (tập trung, lệch tỷ trọng) |
  * | portfolioAlerts.daily   | 15:20 hằng ngày         | PortfolioAlertsRunner.runAll (cả giảm từ đỉnh) |
- * | tips.review             | 15:30 hằng ngày         | TipReviewService.runDue (chấm lại lời khuyên sau 30 / 90 ngày) |
  * | analytics.purge         | 3:30 hằng ngày          | AnalyticsService.purge               |
  * | market-cache.purge      | phút 17 mỗi giờ         | MarketDataCache.purgeExpiredJob      |
  * | alerts.prices           | mỗi 60 giây             | AlertsService.checkPrices            |
@@ -54,8 +48,6 @@ export class ScheduledJobs {
     private readonly briefs: BriefsService,
     private readonly weekly: WeeklyBriefService,
     private readonly cryptoBriefs: CryptoBriefService,
-    private readonly plans: PlanReminderService,
-    private readonly deployment: DeploymentReminderService,
     private readonly journal: JournalService,
     private readonly events: EventsService,
     private readonly history: HistoryService,
@@ -64,7 +56,6 @@ export class ScheduledJobs {
     private readonly cache: MarketDataCache,
     private readonly alerts: AlertsService,
     private readonly macro: MacroService,
-    private readonly tips: TipReviewService,
     private readonly newsIndexer: NewsIndexerService,
   ) {}
 
@@ -87,20 +78,6 @@ export class ScheduledJobs {
   @Cron('0 0,4,8,12,16,20 * * *', { timeZone: VN_TZ })
   briefsCrypto() {
     return this.jobs.run('briefs.crypto', () => this.cryptoBriefs.runAll());
-  }
-
-  @Cron('0 8 * * *', { timeZone: VN_TZ })
-  plansRemindDue() {
-    return this.jobs.run('plans.remindDue', () => this.plans.remindDue());
-  }
-
-  /** Kế hoạch giải ngân: nhắc đợt mua đến hạn, rồi nhắc xem lại kế hoạch đến hạn */
-  @Cron('0 8 * * *', { timeZone: VN_TZ })
-  deploymentRemind() {
-    return this.jobs.run('deployment.remind', async () => {
-      await this.deployment.remindDue();
-      await this.deployment.remindReview();
-    });
   }
 
   @Cron('0 9 1 * *', { timeZone: VN_TZ })
@@ -127,12 +104,6 @@ export class ScheduledJobs {
   @Cron('20 15 * * *', { timeZone: VN_TZ })
   portfolioAlertsDaily() {
     return this.jobs.run('portfolioAlerts.daily', () => this.portfolioAlerts.runAll({ drawdown: true }));
-  }
-
-  /** Sau phiên (giá đóng cửa đã chốt), cả cuối tuần cho coin: chấm lại lời khuyên đã soi đủ 30 / 90 ngày */
-  @Cron('30 15 * * *', { timeZone: VN_TZ })
-  tipsReview() {
-    return this.jobs.run('tips.review', () => this.tips.runDue());
   }
 
   @Cron('30 3 * * *', { timeZone: VN_TZ })

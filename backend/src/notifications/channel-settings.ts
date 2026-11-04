@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { ChannelSettingsRequest } from '@dautu/contracts';
-import { DEFAULT_KINDS, KINDS } from './channel-rules';
+import { KINDS, storedKinds } from './channel-rules';
 import type { Kind } from './channel-rules';
 
 interface StoredChannelSettings {
@@ -23,7 +23,7 @@ export function mergeChannelSettings(
   current: StoredChannelSettings | null,
   update: ChannelSettingsRequest,
 ): MergedChannelSettings {
-  const kinds = { ...DEFAULT_KINDS, ...((current?.kinds as Record<string, boolean> | undefined) ?? {}) };
+  const kinds = storedKinds(current?.kinds);
   for (const [k, v] of Object.entries(update.kinds ?? {})) {
     if ((KINDS as readonly string[]).includes(k) && typeof v === 'boolean') kinds[k as Kind] = v;
   }

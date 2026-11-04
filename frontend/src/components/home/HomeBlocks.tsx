@@ -1,8 +1,8 @@
 import AddOutlined from '@mui/icons-material/AddOutlined'
-import BalanceOutlined from '@mui/icons-material/BalanceOutlined'
-import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined'
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
 import CheckCircleOutlined from '@mui/icons-material/CheckCircleOutlined'
+import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined'
+import SummarizeOutlined from '@mui/icons-material/SummarizeOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -108,9 +108,9 @@ export function HomeQuickActions() {
           Icon: AutoAwesomeOutlined,
           primary: true,
         },
-        { label: 'Giải ngân', to: '/deployment', Icon: DonutSmallOutlined },
         { label: 'Ghi giao dịch', to: '/portfolio?tx=buy', Icon: AddOutlined },
-        { label: 'Tái cân bằng', to: '/rebalance', Icon: BalanceOutlined },
+        { label: 'Nhật ký', to: '/journal', Icon: MenuBookOutlined },
+        { label: 'Báo cáo', to: '/reports', Icon: SummarizeOutlined },
       ]}
     />
   )
@@ -189,7 +189,7 @@ export function AllocationCard({ d, demo }: { d: HomeToday; demo?: boolean }) {
   return (
     <Panel
       title={d.target ? 'Phân bổ so với mục tiêu' : 'Phân bổ'}
-      action={!demo && <CardLink to={d.target ? '/rebalance' : '/onboarding'}>{d.target ? 'Cân bằng' : 'Đặt mục tiêu'}</CardLink>}
+      action={!demo && <CardLink to={d.target ? '/portfolio-alerts' : '/onboarding'}>{d.target ? 'Nhắc khi lệch' : 'Đặt mục tiêu'}</CardLink>}
     >
       <Box sx={{ mb: 1.5, '&:empty': { display: 'none' } }}>
         <DataQualityAlert quality={d.dataQuality} />
@@ -199,7 +199,7 @@ export function AllocationCard({ d, demo }: { d: HomeToday; demo?: boolean }) {
   )
 }
 
-/** Link nhỏ ở góc phải tiêu đề thẻ ("Danh mục", "Cân bằng", "Kế hoạch") */
+/** Link nhỏ ở góc phải tiêu đề thẻ ("Danh mục", "Nhắc khi lệch") */
 export function CardLink({ to, children }: { to: string; children: ReactNode }) {
   return (
     <Link component={RouterLink} to={to} underline="hover" sx={{ fontSize: 13, fontWeight: 600, '&&': { py: { xs: 1, md: 0 } } }}>

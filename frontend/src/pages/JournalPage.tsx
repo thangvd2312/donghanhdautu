@@ -7,11 +7,9 @@ import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
-import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link as RouterLink, useSearchParams } from 'react-router-dom'
@@ -22,30 +20,23 @@ import { MonthlySummary, MonthlyTiles } from '../components/journal/MonthlySumma
 import { TagSheet } from '../components/journal/TagSheet'
 import { getJournalMonth, getJournalSummary } from '../api/journal'
 import { currentMonth, dayTitle, EMOTION_LABEL, EMOTIONS, groupByDay, isMonth, monthTitle, shiftMonth } from '../lib/journal'
-import type {
-  JournalEmotion,
-  JournalMonth,
-  JournalMonthSummary,
-  JournalReviewEntry,
-  JournalTradeEntry,
-} from '../lib/types'
+import type { JournalEmotion, JournalMonth, JournalMonthSummary, JournalTradeEntry } from '../lib/types'
 
 /**
- * Nhật ký quyết định: mỗi lần mua / bán, xem lại hay sửa kế hoạch trong tháng, kèm cảm xúc / lý do người dùng tự gắn,
- * và tổng kết thói quen. Không phán xét, không khuyên mua / bán; tách "làm đúng kế hoạch" khỏi "lãi hay lỗ".
- * Trạng thái (tháng, bộ lọc) nằm trên URL để link từ thông báo / trang kế hoạch mở đúng chỗ.
+ * Nhật ký quyết định: mỗi lần mua / bán (và nạp / rút có nhãn) trong tháng, kèm cảm xúc / lý do người dùng tự gắn,
+ * và tổng kết thói quen. Không phán xét, không khuyên mua / bán, không chấm điểm theo lãi hay lỗ.
+ * Trạng thái (tháng, bộ lọc) nằm trên URL để link từ thông báo mở đúng chỗ.
  */
 export default function JournalPage() {
   const [params, setParams] = useSearchParams()
   const thisMonth = currentMonth()
   const month = isMonth(params.get('month')) && params.get('month')! <= thisMonth ? params.get('month')! : thisMonth
   const emotion = (EMOTIONS as string[]).includes(params.get('emotion') ?? '') ? (params.get('emotion') as JournalEmotion) : null
-  const planId = params.get('plan') ?? ''
 
   const [data, setData] = useState<JournalMonth | null>(null)
   const [summary, setSummary] = useState<JournalMonthSummary | null>(null)
   const [error, setError] = useState('')
-  const [tagging, setTagging] = useState<JournalTradeEntry | JournalReviewEntry | null>(null)
+  const [tagging, setTagging] = useState<JournalTradeEntry | null>(null)
 
   const set = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
@@ -57,13 +48,13 @@ export default function JournalPage() {
   }
 
   const loadEntries = useCallback(() => {
-    return getJournalMonth(month, { emotion: emotion ?? undefined, planId })
+    return getJournalMonth(month, { emotion: emotion ?? undefined })
       .then((d) => {
         setData(d)
         setError('')
       })
       .catch((e: Error) => setError(e.message))
-  }, [month, emotion, planId])
+  }, [month, emotion])
 
   const loadSummary = useCallback(
     () =>
@@ -85,15 +76,14 @@ export default function JournalPage() {
   // Nhóm theo ngày, giữ thứ tự mới nhất trước
   const days = useMemo(() => groupByDay(data?.entries ?? []), [data])
 
-  const filtered = !!emotion || !!planId
-  const planName = data?.plans.find((p) => p.id === planId)?.displayName
+  const filtered = !!emotion
 
   return (
     <Stack spacing={2.5}>
       <PageHeader
-        eyebrow="Hành động"
+        eyebrow="Tài sản"
         title="Nhật ký quyết định"
-        description="Mỗi lần mua, bán hay xem lại kế hoạch: vì sao, và lúc đó bạn thấy thế nào. Không có đúng sai, chỉ để bạn tự nhận ra thói quen của mình."
+        description="Mỗi lần mua, bán: vì sao, và lúc đó bạn thấy thế nào. Không có đúng sai, chỉ để bạn tự nhận ra thói quen của mình."
         actions={
           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
             <IconButton aria-label="Tháng trước" onClick={() => set({ month: shiftMonth(month, -1) })} sx={{ width: 44, height: 44 }}>
@@ -117,51 +107,31 @@ export default function JournalPage() {
       {summary ? <MonthlyTiles s={summary} /> : <Skeleton variant="rounded" height={96} />}
 
       {/* Bộ lọc: một hàng, điện thoại cuộn ngang */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' } }}>
-        <Box sx={{ flex: 1, minWidth: 0 }} role="group" aria-label="Lọc theo cảm xúc">
-          <ScrollRow>
+      <Box sx={{ minWidth: 0 }} role="group" aria-label="Lọc theo cảm xúc">
+        <ScrollRow>
+          <Chip
+            label="Mọi cảm xúc"
+            clickable
+            aria-pressed={!emotion}
+            color={!emotion ? 'primary' : 'default'}
+            variant={!emotion ? 'filled' : 'outlined'}
+            onClick={() => set({ emotion: null })}
+            sx={{ height: 36 }}
+          />
+          {EMOTIONS.map((e) => (
             <Chip
-              label="Mọi cảm xúc"
+              key={e}
+              label={EMOTION_LABEL[e]}
               clickable
-              aria-pressed={!emotion}
-              color={!emotion ? 'primary' : 'default'}
-              variant={!emotion ? 'filled' : 'outlined'}
-              onClick={() => set({ emotion: null })}
+              aria-pressed={emotion === e}
+              color={emotion === e ? 'primary' : 'default'}
+              variant={emotion === e ? 'filled' : 'outlined'}
+              onClick={() => set({ emotion: emotion === e ? null : e })}
               sx={{ height: 36 }}
             />
-            {EMOTIONS.map((e) => (
-              <Chip
-                key={e}
-                label={EMOTION_LABEL[e]}
-                clickable
-                aria-pressed={emotion === e}
-                color={emotion === e ? 'primary' : 'default'}
-                variant={emotion === e ? 'filled' : 'outlined'}
-                onClick={() => set({ emotion: emotion === e ? null : e })}
-                sx={{ height: 36 }}
-              />
-            ))}
-          </ScrollRow>
-        </Box>
-        {data && data.plans.length > 0 && (
-          <TextField
-            select
-            size="small"
-            label="Kế hoạch"
-            value={data.plans.some((p) => p.id === planId) ? planId : ''}
-            onChange={(e) => set({ plan: e.target.value || null })}
-            sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">Mọi kế hoạch</MenuItem>
-            {data.plans.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.displayName}
-                {p.status === 'closed' ? ' (đã kết thúc)' : ''}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
-      </Stack>
+          ))}
+        </ScrollRow>
+      </Box>
 
       <PageGrid aside={summary ? <MonthlySummary s={summary} /> : <Skeleton variant="rounded" height={260} />}>
         {error && <Alert severity="error">{error}</Alert>}
@@ -174,13 +144,13 @@ export default function JournalPage() {
                 Icon={MenuBookOutlined}
                 title={
                   filtered
-                    ? `Không có quyết định nào${emotion ? ` lúc “${EMOTION_LABEL[emotion]}”` : ''}${planName ? ` của kế hoạch ${planName}` : ''} trong ${monthTitle(month).toLowerCase()}.`
+                    ? `Không có quyết định nào${emotion ? ` lúc “${EMOTION_LABEL[emotion]}”` : ''} trong ${monthTitle(month).toLowerCase()}.`
                     : `Chưa có quyết định nào trong ${monthTitle(month).toLowerCase()}`
                 }
                 action={
                   <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
                     {filtered && (
-                      <Button variant="outlined" onClick={() => set({ emotion: null, plan: null })} sx={{ borderRadius: 99 }}>
+                      <Button variant="outlined" onClick={() => set({ emotion: null })} sx={{ borderRadius: 99 }}>
                         Bỏ lọc
                       </Button>
                     )}
@@ -190,7 +160,7 @@ export default function JournalPage() {
                   </Stack>
                 }
               >
-                Ghi lệnh hoặc xem lại kế hoạch để gắn cảm xúc và lý do.
+                Ghi lệnh mua / bán để gắn cảm xúc và lý do.
               </EmptyState>
             ) : (
               <Stack divider={<Divider flexItem />}>
@@ -201,7 +171,7 @@ export default function JournalPage() {
                     </Typography>
                     <Stack divider={<Divider flexItem sx={{ ml: 8 }} />}>
                       {d.entries.map((e) => (
-                        <EntryRow key={`${e.kind}:${e.id}`} e={e} onTag={setTagging} />
+                        <EntryRow key={e.id} e={e} onTag={setTagging} />
                       ))}
                     </Stack>
                   </Box>
@@ -219,7 +189,6 @@ export default function JournalPage() {
 
       <TagSheet
         entry={tagging}
-        plans={data?.plans ?? []}
         onClose={() => setTagging(null)}
         onSaved={() => {
           void loadEntries()

@@ -46,15 +46,6 @@ export class TransactionsService {
     return rows.map((t) => ({ ...this.present(t, t._count.revisions), portfolioName: t.portfolio?.name ?? null }));
   }
 
-  /** Cột mục tiêu cần ghi: bỏ trường = không đổi, null = gỡ, mã = phải là mục tiêu của chính người dùng */
-  private async goalColumn(db: Db, userId: string, goalId: string | null | undefined) {
-    if (goalId === undefined) return {};
-    if (goalId === null) return { goalId: null };
-    const goal = await db.goal.findFirst({ where: { id: goalId, userId }, select: { id: true } });
-    if (!goal) throw new NotFoundException('Không tìm thấy mục tiêu');
-    return { goalId: goal.id };
-  }
-
   /** Danh mục của người dùng; người chưa có thì tạo "Danh mục chính" */
   async portfolios(db: Db, userId: string) {
     const list = await db.portfolio.findMany({
@@ -93,9 +84,8 @@ export class TransactionsService {
     const data = await this.normalize(dto);
     const result = await this.write(userId, async (db, txs) => {
       const portfolioId = await this.resolvePortfolio(db, userId, dto.portfolioId);
-      const journal = await journalColumns(db, userId, data, dto);
-      const goal = await this.goalColumn(db, userId, dto.goalId);
-      const row = await db.transaction.create({ data: { ...data, ...journal, ...goal, userId, portfolioId } });
+      const journal = journalColumns(data, dto);
+      const row = await db.transaction.create({ data: { ...data, ...journal, userId, portfolioId } });
       return { result: this.present(row, 0), txs: [...txs, row] };
     });
     this.firstRealAsset(userId, 'manual');
@@ -112,9 +102,8 @@ export class TransactionsService {
       const portfolioId = dto.portfolioId
         ? await this.resolvePortfolio(db, userId, dto.portfolioId)
         : before.portfolioId;
-      const journal = await journalColumns(db, userId, { ...data, current: before }, dto);
-      const goal = await this.goalColumn(db, userId, dto.goalId);
-      const row = await db.transaction.update({ where: { id }, data: { ...data, ...journal, ...goal, portfolioId } });
+      const journal = journalColumns({ ...data, current: before }, dto);
+      const row = await db.transaction.update({ where: { id }, data: { ...data, ...journal, portfolioId } });
       return { result: this.present(row, 1), txs: txs.map((t) => (t.id === id ? row : t)) };
     });
   }
@@ -297,8 +286,6 @@ export class TransactionsService {
       updatedAt: r.createdAt,
       reason: null,
       emotion: null,
-      planId: null,
-      goalId: null,
     }));
   }
 

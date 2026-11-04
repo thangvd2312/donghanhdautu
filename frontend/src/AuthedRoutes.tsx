@@ -11,25 +11,16 @@ import { lazyPage, pageLoaders, preloadPage } from './pages/loaders'
 // khách ở /login, /register, /demo không phải tải phần này.
 // Mỗi trang một chunk, tải khi mở: trang đăng nhập / trang chủ không phải tải biểu đồ, markdown… của trang khác
 const AdvisorPage = lazyPage(pageLoaders.AdvisorPage)
-const TipsPage = lazyPage(pageLoaders.TipsPage)
-const TipDetailPage = lazyPage(pageLoaders.TipDetailPage)
 const ComparePage = lazyPage(pageLoaders.ComparePage)
 const CryptoPage = lazyPage(pageLoaders.CryptoPage)
-const DeploymentPage = lazyPage(pageLoaders.DeploymentPage)
 const EventsPage = lazyPage(pageLoaders.EventsPage)
 const IncomePage = lazyPage(pageLoaders.IncomePage)
-const GoalsPage = lazyPage(pageLoaders.GoalsPage)
 const MarketPage = lazyPage(pageLoaders.MarketPage)
 const NewsPage = lazyPage(pageLoaders.NewsPage)
 const OnboardingPage = lazyPage(pageLoaders.OnboardingPage)
-const PlanDetailPage = lazyPage(pageLoaders.PlanDetailPage)
-const PlansPage = lazyPage(pageLoaders.PlansPage)
 const JournalPage = lazyPage(pageLoaders.JournalPage)
-const SimulatePage = lazyPage(pageLoaders.SimulatePage)
-const RebalancePage = lazyPage(pageLoaders.RebalancePage)
 const ScreenerPage = lazyPage(pageLoaders.ScreenerPage)
 const PortfolioPage = lazyPage(pageLoaders.PortfolioPage)
-const PracticePage = lazyPage(pageLoaders.PracticePage)
 const SettingsPage = lazyPage(pageLoaders.SettingsPage)
 const ReportsPage = lazyPage(pageLoaders.ReportsPage)
 const PortfolioAlertsPage = lazyPage(pageLoaders.PortfolioAlertsPage)
@@ -78,20 +69,11 @@ export default function AuthedRoutes() {
             <Route path="/stock/:symbol" element={page(<StockPage />)} />
             <Route path="/crypto/:symbol" element={page(<CryptoPage />)} />
             <Route path="/screener" element={page(<ScreenerPage />)} />
-            <Route path="/simulate" element={page(<SimulatePage />)} />
-            <Route path="/deployment" element={page(<DeploymentPage />)} />
-            <Route path="/rebalance" element={page(<RebalancePage />)} />
             <Route path="/compare" element={page(<ComparePage />)} />
             <Route path="/news" element={page(<NewsPage />)} />
-            <Route path="/plans" element={page(<PlansPage />)} />
-            <Route path="/plans/:id" element={page(<PlanDetailPage />)} />
-            <Route path="/tips" element={page(<TipsPage />)} />
-            <Route path="/tips/:id" element={page(<TipDetailPage />)} />
             <Route path="/journal" element={page(<JournalPage />)} />
             <Route path="/events" element={page(<EventsPage />)} />
             <Route path="/income" element={page(<IncomePage />)} />
-            <Route path="/goals" element={page(<GoalsPage />)} />
-            <Route path="/practice" element={page(<PracticePage />)} />
             <Route path="/settings" element={page(<SettingsPage />)} />
             <Route path="/reports" element={page(<ReportsPage />)} />
             <Route path="/portfolio-alerts" element={page(<PortfolioAlertsPage />)} />

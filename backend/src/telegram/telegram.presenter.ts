@@ -1,6 +1,6 @@
 import type { TelegramLink, TelegramDelivery, Notification } from '@prisma/client';
 import type { TelegramStatus } from '@dautu/contracts';
-import { DEFAULT_KINDS, KIND_LABEL } from '../notifications/channel-rules';
+import { KIND_LABEL, storedKinds } from '../notifications/channel-rules';
 
 type DeliveryRow = TelegramDelivery & { notification: Pick<Notification, 'title' | 'kind'> };
 
@@ -17,7 +17,7 @@ export function toTelegramStatus(
       ? {
           username: link.username,
           active: link.active,
-          kinds: { ...DEFAULT_KINDS, ...(link.kinds as Record<string, boolean>) },
+          kinds: storedKinds(link.kinds),
           quietStart: link.quietStart,
           quietEnd: link.quietEnd,
           showDetails: link.showDetails,

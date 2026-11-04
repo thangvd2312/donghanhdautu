@@ -60,13 +60,13 @@ test('mở link khi chưa đăng nhập → đăng nhập → về đúng trang,
 })
 
 test('sai mật khẩu giữ đích; đúng mật khẩu thì về đích', async ({ page }) => {
-  await page.goto('/goals')
+  await page.goto('/journal')
   await page.waitForURL(/\/login/)
   await login(page, onboarded.email, 'wrong-password-1')
   await expect(page.getByText('Sai email hoặc mật khẩu')).toBeVisible()
-  expect(path(page)).toBe('/login?next=%2Fgoals')
+  expect(path(page)).toBe('/login?next=%2Fjournal')
   await login(page, onboarded.email)
-  await page.waitForURL((u) => u.pathname === '/goals')
+  await page.waitForURL((u) => u.pathname === '/journal')
 })
 
 test('đích ra ngoài trang (//evil) bị chặn, về trang chủ', async ({ page }) => {
@@ -92,20 +92,20 @@ test('mở link khi chưa đăng nhập → Đăng ký → khảo sát giữ đ�
 test('chưa làm khảo sát, đăng nhập trên trình duyệt mới qua link → khảo sát giữ đích → "Để sau" → về đúng trang', async ({
   page,
 }) => {
-  await page.goto('/plans?tab=1')
+  await page.goto('/journal?emotion=fomo')
   await page.waitForURL(/\/login/)
   await login(page, skipped.email)
   await page.waitForURL(/\/onboarding/)
-  expect(path(page)).toBe('/onboarding?next=%2Fplans%3Ftab%3D1')
+  expect(path(page)).toBe('/onboarding?next=%2Fjournal%3Femotion%3Dfomo')
   await page.getByRole('button', { name: 'Để sau' }).click()
-  await page.waitForURL((u) => u.pathname === '/plans')
-  expect(path(page)).toBe('/plans?tab=1')
+  await page.waitForURL((u) => u.pathname === '/journal')
+  expect(path(page)).toBe('/journal?emotion=fomo')
 })
 
 test('đã đăng nhập mà mở /login?next=… thì đi thẳng tới đích', async ({ page, context }) => {
   await context.addInitScript((t) => localStorage.setItem('dautu_token', t), token)
-  await page.goto('/login?next=%2Fgoals')
-  await page.waitForURL((u) => u.pathname === '/goals')
+  await page.goto('/login?next=%2Fjournal')
+  await page.waitForURL((u) => u.pathname === '/journal')
 })
 
 test('trang cổ phiếu có khung "Lịch sử cổ tức"', async ({ page, context }) => {
@@ -116,4 +116,24 @@ test('trang cổ phiếu có khung "Lịch sử cổ tức"', async ({ page, con
   const panel = page.locator('.MuiPaper-root', { has: page.getByText('Lịch sử cổ tức', { exact: true }) }).last()
   await panel.waitFor({ timeout: 20_000 })
   await expect(panel.getByText('Cổ tức tiền mặt 12 tháng qua')).toBeVisible()
+})
+
+test('đường dẫn của các trang đã gỡ chuyển về trang chủ; thanh đáy và bảng "Thêm" chỉ có trang còn lại', async ({ page, context }) => {
+  await context.addInitScript((t) => localStorage.setItem('dautu_token', t), token)
+  // Mỗi đường dẫn một tab mới: lần chuyển hướng của tab trước không chen vào lần mở sau
+  for (const p of ['/goals', '/plans', '/deployment', '/tips', '/practice', '/rebalance', '/simulate']) {
+    const tab = await context.newPage()
+    await tab.goto(p)
+    await tab.waitForURL((u) => u.pathname === '/')
+    await tab.close()
+  }
+  await page.goto('/')
+  const bottom = page.locator('.MuiBottomNavigationAction-root')
+  await expect(bottom).toHaveText(['Hôm nay', 'Danh mục', 'Bảng giá', 'Cố vấn', 'Thêm'])
+  await bottom.filter({ hasText: 'Thêm' }).click()
+  const sheet = page.locator('.MuiDrawer-paper')
+  await expect(sheet.getByRole('region', { name: 'Tài sản' })).toBeVisible()
+  for (const gone of ['Mục tiêu', 'Giải ngân', 'Kế hoạch mã', 'Tái cân bằng', 'Soi lời khuyên', 'Thử kịch bản', 'Luyện tập']) {
+    await expect(sheet.getByText(gone, { exact: true })).toHaveCount(0)
+  }
 })

@@ -157,20 +157,6 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
   `,
   );
 
-  // Duy trì nhật ký: người có kế hoạch, bao nhiêu người xem lại ít nhất một lần trong 30 ngày; kế hoạch quá hạn
-  const [plans] = await prisma.$queryRaw<{ users_with_plans: number; users_reviewed: number; overdue_plans: number }[]>(
-    Prisma.sql`
-    SELECT
-      count(DISTINCT p."userId")::int AS users_with_plans,
-      count(DISTINCT p."userId") FILTER (WHERE EXISTS (
-        SELECT 1 FROM "PlanReview" r JOIN "InvestmentPlan" p2 ON p2.id = r."planId"
-        WHERE p2."userId" = p."userId" AND r."createdAt" >= ${ts(d30)} AND r."createdAt" <= ${ts(now)}))::int AS users_reviewed,
-      count(*) FILTER (WHERE p.status = 'active'
-        AND p."nextReviewAt" < (${ts(now)} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')::date - 7)::int AS overdue_plans
-    FROM "InvestmentPlan" p WHERE p."createdAt" <= ${ts(now)}
-  `,
-  );
-
   // Chất lượng dữ liệu: ngày-người theo trạng thái giá của danh mục (ok / thiếu giá / giá cũ)
   const quality = await prisma.$queryRaw<{ status: string; user_days: number }[]>(Prisma.sql`
     SELECT props->>'status' AS status, count(*)::int AS user_days FROM "AnalyticsEvent"
@@ -268,7 +254,6 @@ export async function usageReport(prisma: PrismaClient, opts: { weeks?: number; 
       errorRowPct: pct(imports.error_rows, imports.rows_in_files),
       rejectedBy,
     },
-    planReviews30Days: { ...plans, reviewedPct: pct(plans.users_reviewed, plans.users_with_plans) },
     dataQuality30Days: {
       byStatus: quality,
       okPct: pct(

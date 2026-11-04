@@ -52,7 +52,6 @@ export class DemoService {
       usdt: this.market.usdtVnd,
     });
 
-    const hpg = v.holdings.find((h) => h.symbol === 'HPG');
     const tickers = ['FPT', 'VCB', 'HPG'];
     return {
       sample: true,
@@ -87,17 +86,6 @@ export class DemoService {
         dayChangePct: h.dayChangePct,
       })),
       review: reviewPoints(v, SAMPLE_PROFILE, []),
-      plan: hpg
-        ? {
-            displayName: 'HPG',
-            thesis:
-              'Mua vì kỳ vọng giá thép phục hồi và nhu cầu xây dựng trong nước tăng trở lại. Dự định giữ 1–3 năm.',
-            exitConditions:
-              '- Lợi nhuận giảm 2 quý liên tiếp\n- Lỗ quá 15% so với giá vốn\n- Giá thép thế giới giảm tiếp 3 tháng',
-            stopPrice: Math.round((hpg.avgCost * (1 - SAMPLE_PROFILE.maxDrawdownPct / 100)) / 50) * 50,
-            nextReviewInDays: 14,
-          }
-        : null,
       news: await this.relatedNews(tickers),
     };
   }

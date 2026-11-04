@@ -1,7 +1,7 @@
 import type { MarketService } from '../../market/market.service';
 import type { CorporateEvent, VietcapEventsAdapter } from '../../market/providers/vietcap';
 import { vnDateKey } from '../../market/types';
-import { addDays } from '../../plans/plan-rules';
+import { addDays } from '../../common/dates';
 import { fakeMarket, testPrisma, testUser } from '../../test-utils/test-db';
 import { CorporateActionsService } from './corporate-actions.service';
 import { TransactionsService } from '../transactions.service';

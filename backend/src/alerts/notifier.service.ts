@@ -11,13 +11,10 @@ export interface NotificationInput {
     | 'macro'
     | 'brief'
     | 'price_target'
-    | 'plan_review'
     | 'event'
     | 'portfolio_health'
     | 'journal_monthly'
-    | 'crypto_brief'
-    | 'tip_review'
-    | 'deployment';
+    | 'crypto_brief';
   severity: 'info' | 'warning' | 'critical';
   title: string;
   body: string;

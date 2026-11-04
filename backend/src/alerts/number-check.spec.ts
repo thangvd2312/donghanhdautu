@@ -186,7 +186,6 @@ describe('unmatchedNumbers: cách viết khác vẫn không đảo được lỗ
     numbersTable: weeklyTable(week as unknown as Parameters<typeof weeklyTable>[0]),
     week,
     investor: { type: 'Cân bằng', maxDrawdownPct: 20 },
-    plansDueSoon: [{ asset: 'FPT', nextReviewAt: '2026-10-29', stopPrice: 50_000, targetPrice: 160_000 }],
   };
   const flagged = (text: string) => unmatchedNumbers(text, data).length > 0;
 
@@ -208,7 +207,6 @@ describe('unmatchedNumbers: cách viết khác vẫn không đảo được lỗ
     'HPG kéo danh mục thêm +250.000 ₫, FPT làm giảm 1,3 triệu.',
     'FPT giảm 4,2%, HPG tăng 1,2%.',
     'Mức lỗ bạn chấp nhận là 20%.',
-    'Mốc chốt lời FPT trong kế hoạch là 160.000 ₫.',
     'Giá trị danh mục giảm còn 50 triệu đồng.',
   ])('không báo nhầm: %s', (text) => expect(flagged(text)).toBe(false));
 });

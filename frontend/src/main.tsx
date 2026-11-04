@@ -28,8 +28,15 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+// Trang đang được tải lại / rời đi: các chunk đang tải dở bị trình duyệt huỷ, không phải do thiếu chunk
+let unloading = false
+window.addEventListener('beforeunload', () => {
+  unloading = true
+})
+
 // Mở bằng vỏ app cũ (cache) sau khi đã deploy: chunk của bản cũ có thể không còn trên máy chủ → tải lại một lần
 window.addEventListener('vite:preloadError', (e) => {
+  if (unloading) return
   try {
     if (sessionStorage.getItem('chunk-reload')) return
     sessionStorage.setItem('chunk-reload', '1')

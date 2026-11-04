@@ -1,7 +1,5 @@
 import { listConversations } from '../api/advisor'
-import { listGoals } from '../api/goals'
 import { getHomeFeed, getHomeReview, getHomeToday } from '../api/home'
-import { listPlans } from '../api/plans'
 import { getPerformance, getPortfolio, listPortfolios, listTransactions } from '../api/portfolio'
 import { pageLoaders, preloadPage } from '../pages/loaders'
 import { qk, queryClient } from './query'
@@ -26,8 +24,6 @@ const ROUTES: Record<string, { page?: Loader; data?: [readonly unknown[], Loader
       [qk.accounts, listPortfolios],
     ],
   },
-  '/plans': { page: pageLoaders.PlansPage, data: [[qk.plans, listPlans]] },
-  '/goals': { page: pageLoaders.GoalsPage, data: [[qk.goals, listGoals]] },
   '/advisor': { page: pageLoaders.AdvisorPage, data: [[qk.conversations, listConversations]] },
   '/market': { page: pageLoaders.MarketPage },
   '/news': { page: pageLoaders.NewsPage },

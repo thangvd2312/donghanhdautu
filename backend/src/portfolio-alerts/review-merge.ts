@@ -59,7 +59,7 @@ export function mergeReviewPoints(
           severity: 'info',
           title: `${it.label} ${fmt(it.value)}%, mục tiêu của bạn ${fmt(it.reference)}%`,
           reason: `${diff > 0 ? 'Cao' : 'Thấp'} hơn mục tiêu ${fmt(diff)} điểm, vượt ngưỡng lệch ${fmt(drift.thresholdPct)} điểm bạn đặt. Đây là mốc bạn tự đặt, không phải quy tắc bắt buộc.`,
-          link: '/rebalance',
+          link: '/portfolio',
           ask: `Tỷ trọng ${it.label.toLowerCase()} của tôi là ${fmt(it.value)}%, mục tiêu tôi đặt là ${fmt(it.reference)}%. Có nên cân đối lại không, và nếu có thì theo cách nào ít tốn phí nhất?`,
         });
       }

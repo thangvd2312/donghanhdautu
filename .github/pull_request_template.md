@@ -18,7 +18,7 @@
 - [ ] Danh mục: ghi giao dịch, nhập CSV, lịch sử, sự kiện quyền
 - [ ] Trang Hôm nay
 - [ ] Cố vấn AI (hỏi, huỷ, hết lượt)
-- [ ] Kế hoạch / mục tiêu / watchlist
+- [ ] Watchlist
 - [ ] Thông báo trong app, Telegram, Web Push
 - [ ] Bản tin (gửi thử, hàng đợi `npm run briefs:jobs`)
 

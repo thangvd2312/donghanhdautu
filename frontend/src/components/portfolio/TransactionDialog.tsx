@@ -1,7 +1,5 @@
-import FlagOutlined from '@mui/icons-material/FlagOutlined'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
@@ -11,21 +9,17 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { listGoals } from '../../api/goals'
+import { useQueryClient } from '@tanstack/react-query'
 import { createTransaction, updateTransaction } from '../../api/portfolio'
-import { listJournalPlans } from '../../api/journal'
 import { useGoldOptions } from '../../hooks/useGoldOptions'
 import { fmtNum } from '../../lib/format'
 import { useMarket } from '../../lib/market-context'
-import { invalidateGoalData, qk } from '../../lib/query'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { parseNum, todayVn } from '../../lib/num'
 import { CASH_REASONS, isJournalTx } from '../../lib/journal'
 import { buildTransactionBody, TX_LABEL, type TradeAsset, type TxPreset } from '../../lib/tx'
 import type {
   JournalEmotion,
-  JournalPlanRef,
   JournalReason,
   PortfolioAccount,
   Transaction,
@@ -81,22 +75,13 @@ export default function TransactionDialog({
   const gold = useGoldOptions(open)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  // Nhật ký quyết định (tuỳ chọn): cảm xúc, lý do, kế hoạch được gắn. planId undefined = tự gắn theo kế hoạch đang
-  // theo dõi của cùng tài sản (người dùng thấy và bỏ được); null = không gắn
+  // Nhật ký quyết định (tuỳ chọn): cảm xúc, lý do
   const [emotion, setEmotion] = useState<JournalEmotion | null>(null)
   const [reason, setReason] = useState<JournalReason | null>(null)
-  const [planId, setPlanId] = useState<string | null | undefined>(undefined)
-  const [plans, setPlans] = useState<JournalPlanRef[] | null>(null)
-  // Mục tiêu (chỉ hỏi khi có từ 2 mục tiêu đang chạy: một mục tiêu thì mọi tài sản đã thuộc về nó)
   const client = useQueryClient()
-  const goalsQuery = useQuery({ queryKey: qk.goals, queryFn: listGoals, enabled: open })
-  const activeGoals = (goalsQuery.data?.goals ?? []).filter((g) => g.status === 'active')
-  const [goalId, setGoalId] = useState('')
 
   useEffect(() => {
     if (!open) return
-    setPlans(null)
-    listJournalPlans().then(setPlans).catch(() => {})
     setError('')
     const t = editing
     setType(t?.type ?? preset?.type ?? 'buy')
@@ -113,8 +98,6 @@ export default function TransactionDialog({
     setNote(t?.note ?? preset?.note ?? '')
     setEmotion(t?.emotion ?? null)
     setReason(t?.reason ?? preset?.reason ?? null)
-    setPlanId(t ? t.planId : undefined)
-    setGoalId(t?.goalId ?? preset?.goalId ?? '')
     setPortfolioId(
       t?.portfolioId ?? preset?.portfolioId ?? defaultPortfolioId ?? accounts.find((a) => a.isDefault)?.id ?? accounts[0]?.id ?? '',
     )
@@ -136,13 +119,7 @@ export default function TransactionDialog({
   const gross = trade && qtyN > 0 && priceN >= 0 ? qtyN * priceN : null
 
   const journal = isJournalTx(type) && !cashOpening
-  const linkable = type === 'buy' || type === 'sell'
-  const planSymbol = assetType === 'crypto' ? `${symbol.trim().toUpperCase().replace(/USDT$/, '')}USDT` : symbol.trim().toUpperCase()
-  const samePlans = linkable && symbol.trim() ? (plans ?? []).filter((p) => p.assetType === assetType && p.symbol === planSymbol) : []
-  const activePlan = samePlans.find((p) => p.status === 'active') ?? null
-  const linkedPlan = samePlans.find((p) => p.id === (planId === undefined ? activePlan?.id : planId)) ?? null
-  /** Kế hoạch hiện trên chip: kế hoạch đã gắn, hoặc kế hoạch đang theo dõi để gắn */
-  const chipPlan = linkedPlan ?? activePlan
+  const buySell = type === 'buy' || type === 'sell'
 
   // Giao dịch coin / USDT hôm nay: điền sẵn tỷ giá hiện tại để tính được lãi VND thực tế. Đổi sang ngày khác thì bỏ
   // giá trị tự điền (tỷ giá hôm nay không đúng cho ngày cũ), người dùng tự nhập tỷ giá lúc đó.
@@ -184,18 +161,16 @@ export default function TransactionDialog({
       trade,
       journal,
       editing: !!editing,
-      plansLoaded: !!plans,
       emotion,
       reason,
-      linkedPlanId: linkedPlan?.id ?? null,
-      goalId: activeGoals.length >= 2 || goalId ? goalId || null : undefined,
     })
     if ('error' in built) return setError(built.error)
     const { body } = built
     setBusy(true)
     try {
       const saved = editing ? await updateTransaction(editing.id, body) : await createTransaction(body)
-      void invalidateGoalData(client)
+      // Trang Hôm nay tính từ sổ giao dịch
+      void client.invalidateQueries({ queryKey: ['home'] })
       onSaved(saved)
       onClose()
     } catch (e) {
@@ -350,17 +325,6 @@ export default function TransactionDialog({
             />
           )}
 
-          {(activeGoals.length >= 2 || (goalId && activeGoals.length > 0)) && (
-            <TextField select size="small" label="Mục tiêu" value={goalId} onChange={(e) => setGoalId(e.target.value)}>
-              <MenuItem value="">Chưa gắn mục tiêu</MenuItem>
-              {(goalsQuery.data?.goals ?? []).filter((g) => g.status === 'active' || g.id === goalId).map((g) => (
-                <MenuItem key={g.id} value={g.id}>
-                  {g.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-
           <TextField size="small" label="Ghi chú (tuỳ chọn)" value={note} onChange={(e) => setNote(e.target.value)} />
 
           {journal && (
@@ -369,21 +333,7 @@ export default function TransactionDialog({
               reason={reason}
               onEmotion={setEmotion}
               onReason={setReason}
-              reasons={linkable ? undefined : CASH_REASONS}
-              footer={
-                chipPlan && (
-                  <Chip
-                    icon={<FlagOutlined />}
-                    label={linkedPlan ? `Thuộc kế hoạch ${chipPlan.displayName}` : `Gắn vào kế hoạch ${chipPlan.displayName}`}
-                    clickable
-                    aria-pressed={!!linkedPlan}
-                    color={linkedPlan ? 'primary' : 'default'}
-                    variant={linkedPlan ? 'filled' : 'outlined'}
-                    onClick={() => setPlanId(linkedPlan ? null : chipPlan.id)}
-                    sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
-                  />
-                )
-              }
+              reasons={buySell ? undefined : CASH_REASONS}
             />
           )}
 

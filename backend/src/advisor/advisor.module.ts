@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { LlmService } from '../alerts/llm.service';
-import { DeploymentModule } from '../deployment/deployment.module';
-import { GoalsModule } from '../goals/goals.module';
 import { MacroModule } from '../macro/macro.module';
 import { MarketModule } from '../market/market.module';
 import { NewsModule } from '../news/news.module';
@@ -16,7 +14,7 @@ import { VerifierService } from './verifier.service';
 import { WebService } from './web.service';
 
 @Module({
-  imports: [MarketModule, PortfolioModule, NewsModule, MacroModule, DeploymentModule, GoalsModule],
+  imports: [MarketModule, PortfolioModule, NewsModule, MacroModule],
   controllers: [AdvisorController],
   providers: [
     AdvisorService,

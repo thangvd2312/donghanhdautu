@@ -41,11 +41,6 @@ const STATIC: Record<string, Omit<PagePreview, 'path'>> = {
     title: 'Thu nhập cổ tức',
     description: 'Cổ tức đã nhận và sắp nhận theo tháng, ghi rõ căn cứ tính và mức chắc chắn.',
   },
-  '/simulate': {
-    title: 'Thử kịch bản',
-    description:
-      'Nếu cổ phiếu, vàng, crypto hay tỷ giá thay đổi thì danh mục của bạn thay đổi bao nhiêu — chỉ là mô phỏng.',
-  },
   '/compare': {
     title: 'So sánh cổ phiếu',
     description: 'Đặt 2–4 cổ phiếu cạnh nhau: diễn biến giá cùng mốc, hiệu suất và chỉ tiêu cơ bản cùng kỳ.',
@@ -53,7 +48,7 @@ const STATIC: Record<string, Omit<PagePreview, 'path'>> = {
   '/demo': { title: 'Trải nghiệm thử', description: 'Xem thử ứng dụng với danh mục mẫu, không cần đăng ký.' },
   '/register': {
     title: 'Đăng ký',
-    description: 'Tạo tài khoản miễn phí để theo dõi danh mục, cổ tức và kế hoạch đầu tư.',
+    description: 'Tạo tài khoản miễn phí để theo dõi danh mục, cổ tức và nhật ký đầu tư.',
   },
 };
 

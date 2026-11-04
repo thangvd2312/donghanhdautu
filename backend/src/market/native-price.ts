@@ -4,7 +4,7 @@ type PriceSource = Pick<MarketService, 'stocksFor' | 'binance' | 'goldQuotes'>;
 
 /**
  * Live price in the asset's own unit: VND per share, USDT per coin, VND per luong of gold. Gold is quoted on the shop's
- * sell price for price targets (what you pay) and on its buy price for plans (what you would get).
+ * sell price for price targets (what you pay) or on its buy price (what you would get).
  */
 export function nativePrice(
   market: PriceSource,

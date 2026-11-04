@@ -1,8 +1,8 @@
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
-import BalanceOutlined from '@mui/icons-material/BalanceOutlined'
-import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined'
+import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined'
 import NotificationsActiveOutlined from '@mui/icons-material/NotificationsActiveOutlined'
-import TuneOutlined from '@mui/icons-material/TuneOutlined'
+import PaidOutlined from '@mui/icons-material/PaidOutlined'
+import SummarizeOutlined from '@mui/icons-material/SummarizeOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
@@ -25,7 +25,7 @@ interface PortfolioSummaryProps {
   portfolioId: string
 }
 
-/** Thẻ đầu trang Danh mục: tổng tài sản, lãi / lỗ, vốn, chất lượng dữ liệu, phân bổ và lối tắt (cố vấn, kịch bản, tái cân bằng) */
+/** Thẻ đầu trang Danh mục: tổng tài sản, lãi / lỗ, vốn, chất lượng dữ liệu, phân bổ và lối tắt (cảnh báo, báo cáo, cổ tức, nhật ký) */
 export default function PortfolioSummary({ p, perf, accounts, portfolioId: pf }: PortfolioSummaryProps) {
   return (
     <Paper sx={{ overflow: 'hidden' }}>
@@ -98,20 +98,18 @@ export default function PortfolioSummary({ p, perf, accounts, portfolioId: pf }:
             ].join('\n\n')}
           </InfoTip>
         </Stack>
-        <Box sx={{ mt: 2 }}>
-          <QuickActions
-            items={
-              p && p.holdings.length > 0
-                ? [
-                    { label: 'Thử kịch bản', to: pf ? `/simulate?p=${encodeURIComponent(pf)}` : '/simulate', Icon: TuneOutlined },
-                    { label: 'Tái cân bằng', to: pf ? `/rebalance?p=${encodeURIComponent(pf)}` : '/rebalance', Icon: BalanceOutlined },
-                    { label: 'Cảnh báo', to: '/portfolio-alerts', Icon: NotificationsActiveOutlined },
-                    { label: 'Giải ngân', to: '/deployment', Icon: DonutSmallOutlined },
-                  ]
-                : [{ label: 'Có tiền mới? Lập kế hoạch giải ngân', to: '/deployment', Icon: DonutSmallOutlined }]
-            }
-          />
-        </Box>
+        {p && p.holdings.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <QuickActions
+              items={[
+                { label: 'Cảnh báo', to: '/portfolio-alerts', Icon: NotificationsActiveOutlined },
+                { label: 'Báo cáo', to: '/reports', Icon: SummarizeOutlined },
+                { label: 'Cổ tức', to: '/income', Icon: PaidOutlined },
+                { label: 'Nhật ký', to: '/journal', Icon: MenuBookOutlined },
+              ]}
+            />
+          </Box>
+        )}
       </Box>
     </Paper>
   )

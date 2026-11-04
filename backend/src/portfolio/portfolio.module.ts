@@ -8,8 +8,8 @@ import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
 
 /**
- * Lõi danh mục: định giá, sổ giao dịch, nhập CSV, lịch sử. Mô phỏng (analysis/) và cổ tức (dividends/)
- * là module riêng phụ thuộc vào module này, nên module này không import ngược lại chúng.
+ * Lõi danh mục: định giá, sổ giao dịch, nhập CSV, lịch sử. Cổ tức (dividends/)
+ * là module riêng phụ thuộc vào module này, nên module này không import ngược lại nó.
  */
 @Module({
   imports: [MarketModule],

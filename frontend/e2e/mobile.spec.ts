@@ -49,21 +49,6 @@ const scenarios: Scenario[] = [
   { name: 'portfolio-import', path: '/portfolio', act: (p) => click(p, 'Nhập từ CSV') },
   { name: 'portfolio-edit-tx', path: '/portfolio', act: async (p) => { await click(p, 'Tuỳ chọn giao dịch'); await click(p, 'Sửa', 'menuitem') } },
   { name: 'portfolio-delete-tx', path: '/portfolio', act: async (p) => { await click(p, 'Tuỳ chọn giao dịch'); await click(p, 'Huỷ giao dịch', 'menuitem') } },
-  { name: 'plans', path: '/plans' },
-  { name: 'plans-new', path: '/plans', act: (p) => click(p, 'Lập kế hoạch') },
-  { name: 'plan-detail', path: '/plans', act: async (p) => { await p.locator('a[href^="/plans/"]').first().click(); await p.waitForTimeout(2500) } },
-  { name: 'plan-edit', path: '/plans', act: async (p) => { await p.locator('a[href^="/plans/"]').first().click(); await p.waitForTimeout(2500); await click(p, /^Sửa$/) } },
-  {
-    name: 'plan-review-tags',
-    path: '/plans',
-    act: async (p) => {
-      // Ghi lần xem lại: chip cảm xúc / lý do (tuỳ chọn) ngay trong form
-      await p.locator('a[href^="/plans/"]').first().click()
-      await p.getByTestId('journal-tags').first().scrollIntoViewIfNeeded()
-      await p.getByRole('button', { name: 'Bình tĩnh' }).first().click()
-      await p.waitForTimeout(500)
-    },
-  },
   {
     name: 'portfolio-new-tx-tags',
     path: '/portfolio',
@@ -105,16 +90,6 @@ const scenarios: Scenario[] = [
       if (await b.count()) await click(p, /^(Gắn nhãn|Sửa nhãn)$/)
     },
   },
-  { name: 'tips', path: '/tips' },
-  { name: 'tips-need-symbol', path: '/tips', act: async (p) => { await p.getByLabel('Nội dung lời khuyên').fill('Mai thị trường bùng nổ, múc đi anh em'); await click(p, /^Soi$/); await p.getByLabel('Mã cổ phiếu hoặc coin').waitFor({ timeout: 25_000 }) } },
-  { name: 'tip-detail', path: '/tips', act: async (p) => { await p.locator('a[href^="/tips/"]').first().click(); await p.getByText('Mức nóng / 100').waitFor({ timeout: 25_000 }) } },
-  { name: 'tip-watch-sheet', path: '/tips', act: async (p) => { await p.locator('a[href^="/tips/"]').first().click(); await p.getByText('Mức nóng / 100').waitFor({ timeout: 25_000 }); await click(p, 'Theo dõi'); await p.waitForTimeout(600) } },
-  { name: 'tip-plan-editor', path: '/tips', act: async (p) => { await p.locator('a[href^="/tips/"]').first().click(); await p.getByText('Mức nóng / 100').waitFor({ timeout: 25_000 }); await click(p, 'Viết kế hoạch trước khi mua'); await p.waitForTimeout(800) } },
-  { name: 'goals', path: '/goals' },
-  { name: 'goals-new', path: '/goals', act: (p) => click(p, 'Thêm mục tiêu') },
-  { name: 'goals-template-form', path: '/goals', act: async (p) => { await click(p, 'Thêm mục tiêu'); await click(p, /Mua nhà/) } },
-  { name: 'goals-levers', path: '/goals', act: async (p) => { const b = p.getByRole('button', { name: 'Tới đích sớm hơn' }).first(); if (await b.count()) { await b.click(); await p.waitForTimeout(1200) } } },
-  { name: 'goals-contribution', path: '/goals', act: async (p) => { const b = p.getByRole('button', { name: 'Góp tháng này' }).first(); if (await b.count()) { await b.click(); await p.waitForTimeout(2000) } } },
   { name: 'events', path: '/events' },
   { name: 'events-quarter', path: '/events', act: (p) => click(p, '3 tháng') },
   {
@@ -141,92 +116,6 @@ const scenarios: Scenario[] = [
     },
   },
   { name: 'income-24', path: '/income?past=24', act: async (p) => { await p.getByRole('button', { name: '24 tháng qua' }).waitFor({ timeout: 25_000 }); await p.waitForTimeout(1500) } },
-  {
-    name: 'simulate',
-    path: '/simulate?s=stock:-10',
-    act: async (p) => {
-      // Backend thật: kết quả (hoặc thông báo lỗi) phải hiện ra, không treo ở khung tải
-      await p.getByTestId('sim-result').or(p.getByRole('alert')).first().waitFor({ timeout: 25_000 })
-      await p.waitForTimeout(800)
-    },
-  },
-  {
-    name: 'simulate-override',
-    path: '/simulate?s=stock:-10',
-    act: async (p) => {
-      await click(p, /Đặt riêng theo mã/)
-      await p.getByRole('button', { name: 'FPT', exact: true }).click()
-      await p.getByTestId('sim-result').or(p.getByRole('alert')).first().waitFor({ timeout: 25_000 })
-      await p.waitForTimeout(800)
-    },
-  },
-  {
-    name: 'rebalance',
-    path: '/rebalance',
-    act: async (p) => {
-      // Backend thật: thêm tiền bổ sung để tính ngay từ tỷ trọng "giữ như hiện tại"; kết quả (hoặc thông báo lỗi) phải hiện ra
-      await p.getByTestId('rb-sum').waitFor({ timeout: 25_000 })
-      await click(p, '+5tr')
-      await p.getByTestId('rb-result').or(p.getByTestId('rb-error')).first().waitFor({ timeout: 25_000 })
-      await p.waitForTimeout(800)
-    },
-  },
-  {
-    name: 'rebalance-allow-sell',
-    path: '/rebalance',
-    act: async (p) => {
-      await p.getByTestId('rb-sum').waitFor({ timeout: 25_000 })
-      await click(p, 'Cho phép bán')
-      await click(p, '+10tr')
-      await p.getByTestId('rb-result').or(p.getByTestId('rb-error')).first().waitFor({ timeout: 25_000 })
-      await p.waitForTimeout(800)
-    },
-  },
-  {
-    name: 'deployment-preview',
-    path: '/deployment?new=1',
-    act: async (p) => {
-      // Kế hoạch giải ngân: chọn 100 tr → kết quả (hoặc thông báo lỗi) từ backend thật; mở phần chỉnh tỷ trọng
-      await p.getByTestId('dp-amount').waitFor({ timeout: 25_000 })
-      await click(p, '100 tr')
-      await p.getByTestId('dp-result').or(p.getByTestId('dp-error')).first().waitFor({ timeout: 25_000 })
-      await click(p, 'Chỉnh tỷ trọng')
-    },
-  },
-  {
-    name: 'deployment-saved',
-    path: '/deployment?new=1',
-    act: async (p) => {
-      // Lưu kế hoạch (thay kế hoạch cũ nếu có) → màn theo dõi các đợt
-      await p.getByTestId('dp-amount').waitFor({ timeout: 25_000 })
-      await click(p, '50 tr')
-      await p.getByTestId('dp-save').waitFor({ timeout: 25_000 })
-      await expect(p.getByTestId('dp-save')).toBeEnabled({ timeout: 25_000 })
-      await p.getByTestId('dp-save').click()
-      const replace = p.getByRole('button', { name: 'Lưu kế hoạch mới' })
-      if (await replace.isVisible({ timeout: 1500 }).catch(() => false)) await replace.click()
-      await p.getByTestId('dp-active').waitFor({ timeout: 25_000 })
-      await p.waitForTimeout(600)
-    },
-  },
-  {
-    name: 'deployment-details',
-    path: '/deployment',
-    act: async (p) => {
-      await p.getByTestId('dp-active').waitFor({ timeout: 25_000 })
-      await click(p, 'Tỷ trọng và lý do')
-      await p.getByTestId('dp-rationale').waitFor({ timeout: 10_000 })
-    },
-  },
-  {
-    name: 'deployment-skip-dialog',
-    path: '/deployment',
-    act: async (p) => {
-      await p.getByTestId('dp-active').waitFor({ timeout: 25_000 })
-      await click(p, 'Bỏ qua')
-      await p.getByRole('dialog').waitFor()
-    },
-  },
   { name: 'screener', path: '/screener' },
   { name: 'screener-picker', path: '/screener', act: (p) => click(p, 'Tự chọn điều kiện') },
   {
@@ -301,7 +190,7 @@ const scenarios: Scenario[] = [
     name: 'portfolio-alerts-targets',
     path: '/portfolio-alerts',
     act: async (p) => {
-      // Tỷ trọng mục tiêu: gợi ý theo hồ sơ / mục tiêu tài chính hoặc tự nhập
+      // Tỷ trọng mục tiêu: gợi ý theo hồ sơ (kiểu nhà đầu tư) hoặc tự nhập
       await p.getByTestId('palert-preview').first().waitFor({ timeout: 25_000 })
       const drift = p.getByTestId('palert-drift')
       const edit = drift.getByRole('button', { name: 'Sửa' })
@@ -313,33 +202,8 @@ const scenarios: Scenario[] = [
   },
   { name: 'stock', path: '/stock/FPT' },
   { name: 'stock-alert', path: '/stock/FPT', act: (p) => click(p, 'Cảnh báo giá') },
-  { name: 'stock-plan', path: '/stock/HPG', act: async (p) => { const b = p.getByRole('button', { name: 'Lập kế hoạch' }); if (await b.count()) await click(p, 'Lập kế hoạch') } },
   { name: 'crypto', path: '/crypto/BTC' },
   { name: 'crypto-alert', path: '/crypto/BTC', act: (p) => click(p, 'Cảnh báo giá') },
-  {
-    name: 'practice',
-    path: '/practice',
-    act: async (p) => {
-      // Backend thật (DB test): lần đầu mở tài khoản ảo, các lần sau vào thẳng tổng quan
-      const start = p.getByRole('button', { name: 'Bắt đầu', exact: true })
-      await start.or(p.getByTestId('practice-summary')).first().waitFor({ timeout: 25_000 })
-      if (await start.count()) await start.click()
-      await p.getByTestId('practice-summary').waitFor({ timeout: 25_000 })
-      await p.waitForTimeout(600)
-    },
-  },
-  {
-    name: 'practice-order',
-    path: '/practice',
-    act: async (p) => {
-      const start = p.getByRole('button', { name: 'Bắt đầu', exact: true })
-      await start.or(p.getByTestId('practice-summary')).first().waitFor({ timeout: 25_000 })
-      if (await start.count()) await start.click()
-      await p.getByRole('button', { name: 'Mua', exact: true }).click()
-      await p.getByTestId('practice-pick-symbol').waitFor()
-      await p.waitForTimeout(600)
-    },
-  },
   // Báo cáo danh mục theo kỳ: bản xem trước (hoặc báo cáo trống / lỗi) phải hiện ra
   {
     name: 'reports',

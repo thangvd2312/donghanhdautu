@@ -55,7 +55,7 @@ TWR, XIRR và benchmark **đã có code**, không còn thuộc nhóm chưa tri�
 | GOAL-01 | Phân bổ, tiến độ, mô phỏng, pause; validate/write cùng khóa theo người | Case race R4 đã có bản sửa; **còn N5:** chuẩn hóa mã khi kiểm tra khác dữ liệu lưu |
 | BIZ-01 | Báo cáo chi phí và quota tiếp tục phục vụ vận hành miễn phí | **Ngoài phạm vi:** không triển khai gói trả phí/định giá/thanh toán; không tính là việc chưa làm |
 
-Bằng chứng chính: [analytics/report.ts](../backend/src/analytics/report.ts), [ai-usage.service.ts](../backend/src/ai/ai-usage.service.ts), [watchlist.module.ts](../backend/src/watchlist/watchlist.module.ts), [transactions.ts](../backend/src/portfolio/transactions.ts), [plans.module.ts](../backend/src/plans/plans.module.ts), [App.tsx](../frontend/src/App.tsx).
+Bằng chứng chính: [analytics/report.ts](../backend/src/analytics/report.ts), [ai-usage.service.ts](../backend/src/ai/ai-usage.service.ts), [watchlist.module.ts](../backend/src/watchlist/watchlist.module.ts), [transactions.ts](../backend/src/portfolio/transactions.ts), plans.module.ts (`backend/src/plans/plans.module.ts`, đã gỡ 11/2026), [App.tsx](../frontend/src/App.tsx).
 
 ## 3. Trạng thái các vấn đề R1–R7
 
@@ -110,7 +110,7 @@ Các tình huống dưới đây đã được tái hiện ở lượt review c�
 
 ### N5 — P2 — GOAL-01 validate mã chuẩn hóa nhưng lưu mã gốc
 
-- Vị trí: [goals.module.ts](../backend/src/goals/goals.module.ts), validate dòng 207 so với create dòng 139/update dòng 153; [goal-math.ts](../backend/src/goals/goal-math.ts).
+- Vị trí: goals.module.ts (`backend/src/goals/goals.module.ts`, đã gỡ 11/2026), validate dòng 207 so với create dòng 139/update dòng 153; goal-math.ts (`backend/src/goals/goal-math.ts`, đã gỡ 11/2026).
 - Nguyên nhân: validate tạo bản sao uppercase, nhưng lưu dto.allocations gốc; đọc/kiểm tổng so symbol chính xác.
 - Tái hiện qua GoalsService với kho lưu giả lập: có holding FPT; tạo A dùng fpt 60%, rồi B dùng FPT 60%. Cả hai được chấp nhận, tổng cùng tài sản theo ý nghĩa **120%**; A còn bị tính tiến độ **0đ, held = false**.
 - Nghiệm thu: chuẩn hóa một lần và dùng cùng dữ liệu để validate/lưu/read, hoặc từ chối mã không hợp lệ. Kiểm dữ liệu cũ trước khi quyết định sửa. Thêm test DB thật cho lower/uppercase, create/update và đồng thời.
@@ -320,7 +320,7 @@ Gửi đồng thời hai yêu cầu tạo mục tiêu, mỗi yêu cầu dùng 60
 
 Trên PostgreSQL, **19/20 lần thử** (mỗi lần một tài khoản mới) cho tổng phân bổ vượt 100%. Lần còn lại có một yêu cầu bị từ chối đúng. Ở lần đối chứng gửi tuần tự, yêu cầu thứ hai bị chặn đúng với thông báo “FPT đã gán 60% cho mục tiêu khác, chỉ còn 40%”. Vậy quy tắc nghiệp vụ đúng, chỉ thiếu tuần tự hoá.
 
-Nguồn: [goals.module.ts](../backend/src/goals/goals.module.ts), dòng 135–151; kiểm tra nằm ngoài thao tác ghi được bảo vệ.
+Nguồn: goals.module.ts (`backend/src/goals/goals.module.ts`, đã gỡ 11/2026), dòng 135–151; kiểm tra nằm ngoài thao tác ghi được bảo vệ.
 
 **Yêu cầu sửa:** kiểm tra và ghi phân bổ trong cùng cơ chế tuần tự hóa theo người dùng; thêm test cạnh tranh ở DB thật. Cả tạo mới và sửa mục tiêu phải giữ tổng phần tài sản không vượt 100%.
 

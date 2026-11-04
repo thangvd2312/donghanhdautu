@@ -12,6 +12,4 @@ export const KIND_LABEL: Record<string, string> = {
   portfolio_health: 'Tình trạng danh mục',
   journal_monthly: 'Nhật ký',
   crypto_brief: 'Bản tin coin',
-  tip_review: 'Soi lời khuyên',
-  deployment: 'Kế hoạch giải ngân',
 }

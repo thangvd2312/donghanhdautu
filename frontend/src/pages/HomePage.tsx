@@ -1,8 +1,8 @@
 import ArrowForward from '@mui/icons-material/ArrowForward'
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
-import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined'
+import FilterAltOutlined from '@mui/icons-material/FilterAltOutlined'
+import NewspaperOutlined from '@mui/icons-material/NewspaperOutlined'
 import ShowChartOutlined from '@mui/icons-material/ShowChartOutlined'
-import ManageSearchOutlined from '@mui/icons-material/ManageSearchOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -27,7 +27,6 @@ import {
 import QuickActions from '../components/QuickActions'
 import { PageHeader } from '../components/page'
 import { InfoTip, Panel } from '../components/ui'
-import DeploymentHomeCard from '../components/deployment/DeploymentHomeCard'
 import UpcomingEvents from '../components/events/UpcomingEvents'
 import WatchlistPanel from '../components/watchlist/WatchlistPanel'
 import { getHomeFeed, getHomeReview, getHomeToday } from '../api/home'
@@ -122,9 +121,6 @@ export default function HomePage() {
               <MoversCard d={today.data} />
             </Slot>
           )}
-          <Slot order={8}>
-            <TipPrompt />
-          </Slot>
           <Slot order={9}>
             <Panel title="Tin về mã của bạn" subtitle="Cổ phiếu đang nắm giữ và đang theo dõi · 48 giờ qua">
               {feed.error && !feed.data ? (
@@ -139,9 +135,6 @@ export default function HomePage() {
         </Box>
 
         <Box sx={COL_SX}>
-          <Slot order={3}>
-            <DeploymentHomeCard />
-          </Slot>
           {today.data && holdings && (
             <Slot order={5}>
               <AllocationCard d={today.data} />
@@ -167,30 +160,6 @@ export default function HomePage() {
         </Box>
       </Box>
     </Stack>
-  )
-}
-
-/** Lối vào Soi lời khuyên: đúng lúc người dùng vừa nghe ai đó hô mã */
-function TipPrompt() {
-  return (
-    <Paper sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontWeight: 700 }}>Nghe được tin hô mã?</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
-          Dán vào để xem mức nóng và tác động lên danh mục trước khi mua.
-        </Typography>
-      </Box>
-      <Button
-        component={RouterLink}
-        to="/tips"
-        variant="outlined"
-        size="small"
-        endIcon={<ArrowForward />}
-        sx={{ borderRadius: 99, flexShrink: 0 }}
-      >
-        Soi lời khuyên
-      </Button>
-    </Paper>
   )
 }
 
@@ -220,9 +189,9 @@ function GettingStarted() {
             Icon: AutoAwesomeOutlined,
             primary: true,
           },
-          { label: 'Giải ngân', to: '/deployment', Icon: DonutSmallOutlined },
           { label: 'Bảng giá', to: '/market', Icon: ShowChartOutlined },
-          { label: 'Soi lời khuyên', to: '/tips', Icon: ManageSearchOutlined },
+          { label: 'Lọc cổ phiếu', to: '/screener', Icon: FilterAltOutlined },
+          { label: 'Tin tức', to: '/news', Icon: NewspaperOutlined },
         ]}
       />
     </Stack>

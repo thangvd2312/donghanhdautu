@@ -110,20 +110,9 @@ export interface Transaction {
   source: TxSource
   edited: boolean
   createdAt: string
-  /** Nhật ký quyết định (FREE-08): nhãn tuỳ chọn và kế hoạch được gắn */
+  /** Nhật ký quyết định (FREE-08): nhãn tuỳ chọn */
   reason: JournalReason | null
   emotion: JournalEmotion | null
-  planId: string | null
-  /** Mục tiêu giao dịch thuộc về (để tính tiến độ mục tiêu); null = chưa gắn */
-  goalId: string | null
-}
-
-/**
- * Gắn giao dịch vào mục tiêu khi ghi / sửa (POST/PUT /portfolio/transactions): phải là mục tiêu của người dùng.
- * Bỏ trường = giữ nguyên khi sửa; null = gỡ.
- */
-export interface TransactionGoalRequest {
-  goalId?: string | null
 }
 
 export interface TransactionRevision {

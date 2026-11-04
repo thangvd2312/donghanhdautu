@@ -14,7 +14,7 @@ import { NewsRow, ReviewList, TodayBlock } from '../components/home/HomeBlocks'
 import { PageGrid, PageHeader } from '../components/page'
 import { KV, Logo, Panel } from '../components/ui'
 import { getDemo } from '../api/demo'
-import { changeColor, fmtPct, fmtPrice, fmtVndShort } from '../lib/format'
+import { changeColor, fmtPct, fmtVndShort } from '../lib/format'
 import type { DemoResponse } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
 import { track } from '../lib/track'
@@ -113,14 +113,6 @@ export default function DemoPage() {
                         >
                           Đã có tài khoản
                         </Button>
-                        <Button
-                          component={RouterLink}
-                          to="/register?next=%2Fpractice"
-                          fullWidth
-                          onClick={() => track('demo_signup_clicked', { target: 'register' })}
-                        >
-                          Luyện tập tiền ảo
-                        </Button>
                       </Stack>
                     </Panel>
                     <Panel title="Danh mục mẫu" subtitle="Giá vốn là ví dụ; giá hiện tại là giá thật">
@@ -152,22 +144,6 @@ export default function DemoPage() {
                 <Panel title="Cần xem lại" subtitle="App tự tìm điểm đáng chú ý trong danh mục">
                   <ReviewList points={d.review} demo />
                 </Panel>
-
-                {d.plan && (
-                  <Panel title={`Kế hoạch mẫu: ${d.plan.displayName}`} subtitle="Ghi lý do mua và điều kiện bán từ đầu">
-                    <Typography variant="caption" color="text.secondary">
-                      Vì sao tôi mua
-                    </Typography>
-                    <Typography sx={{ mb: 1.5 }}>{d.plan.thesis}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Điều kiện để xem lại hoặc bán
-                    </Typography>
-                    <Typography sx={{ whiteSpace: 'pre-line', mb: 1.5 }}>{d.plan.exitConditions}</Typography>
-                    <Divider sx={{ mb: 1 }} />
-                    <KV k="Mốc cắt lỗ" v={fmtPrice(d.plan.stopPrice, 'VND')} />
-                    <KV k="Xem lại" v={`sau ${d.plan.nextReviewInDays} ngày — app sẽ nhắc`} />
-                  </Panel>
-                )}
 
                 <Panel title="Tin về các mã trong danh mục mẫu" subtitle="48 giờ qua">
                   {d.news.length ? (

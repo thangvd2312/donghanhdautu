@@ -37,7 +37,7 @@ Thành phần trong `frontend/src/components/page.tsx`:
 9. **Bộ lọc**: một hàng `ToggleButtonGroup` hoặc chip; trên điện thoại đặt trong `ScrollRow` (cuộn ngang). Vùng chạm ≥ 32px.
 10. **Điện thoại**: một cột, padding 16px, không tràn ngang; nút chính một mình thì rộng hết hàng.
 11. **Giữ nguyên hành vi**: dữ liệu, API, nhãn và `aria-label` mà `frontend/e2e/*.spec.ts` dùng.
-12. **Tầng thứ**: việc gấp / cảnh báo dùng hàng có **thanh màu 4px bên trái** (đỏ `price.down` = nghiêm trọng, `warning.main` = chú ý, `primary.main` = thông tin), như `ReviewList` trong `home/HomeBlocks.tsx`. Việc đến hạn: viền thẻ `hero.gold` + ô ngày kiểu lịch (`DeploymentHomeCard`). Thẻ phụ giữ viền nhạt.
+12. **Tầng thứ**: việc gấp / cảnh báo dùng hàng có **thanh màu 4px bên trái** (đỏ `price.down` = nghiêm trọng, `warning.main` = chú ý, `primary.main` = thông tin), như `ReviewList` trong `home/HomeBlocks.tsx`. Việc đến hạn: viền thẻ `hero.gold` + ô ngày kiểu lịch. Thẻ phụ giữ viền nhạt.
 13. **Link góc thẻ**: `CardLink` (`home/HomeBlocks.tsx`) đặt ở `Panel.action` ("Danh mục", "Cân bằng", "Kế hoạch") thay cho link "Xem tất cả" cuối thẻ hay câu link gạch chân.
 14. **Số và %**: % thay đổi dùng `ChangePill` (viên thuốc nền nhạt). Phân bổ so với mục tiêu dùng `portfolio/TargetAllocation` (vạch đậm = mục tiêu, vượt mục tiêu tô vàng).
 
@@ -51,8 +51,8 @@ Mục tiêu: mỗi màn hình đọc lướt được trong vài giây. Chữ gi
 - **Trạng thái trống**: tiêu đề + tối đa một câu ngắn (≤ 12 từ) + một nút. Viết lại câu cho ngắn, không cắt chữ giữa chừng.
 - **Danh sách**: dòng phụ một dòng (`WebkitLineClamp: 1` trên xs), cả hàng bấm được thay cho 2–3 nút chữ mỗi hàng; hành động phụ thành `IconButton` có `aria-label`.
 - **Nhiều nút chữ dài** → một nút chính + `QuickActions` (ô biểu tượng + nhãn 1–2 từ) hoặc gom vào menu.
-- **Nhãn nút** 1–3 từ ("Lập kế hoạch", không phải "Chưa biết mua gì? Lập kế hoạch giải ngân").
+- **Nhãn nút** 1–3 từ ("Ghi giao dịch", không phải "Có giao dịch mới? Ghi ngay vào sổ giao dịch").
 - Kiểm tra: `words` trên điện thoại (script chụp màn hình) phải giảm rõ so với trước; không đoạn nào bị cắt cụt vô nghĩa.
 
-Tham chiếu đã làm đúng: `pages/HomePage.tsx`, `components/home/HomeBlocks.tsx`, `components/deployment/DeploymentHomeCard.tsx`. Mockup gốc: https://claude.ai/artifact/3vq6q8FKNaFgL9LRSz5aEM (hướng A).
+Tham chiếu đã làm đúng: `pages/HomePage.tsx`, `components/home/HomeBlocks.tsx`. Mockup gốc: https://claude.ai/artifact/3vq6q8FKNaFgL9LRSz5aEM (hướng A).
 

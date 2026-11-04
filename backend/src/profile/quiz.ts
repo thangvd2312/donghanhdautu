@@ -150,8 +150,8 @@ export const RISK_TYPE_LABEL: Record<string, string> = {
 };
 
 /**
- * Tỷ trọng mục tiêu theo kiểu nhà đầu tư (%), chủ sản phẩm duyệt 01/11/2026 (docs/DESIGN_INVEST_PLAN.md §3 bước 2).
- * Nguồn duy nhất cho cả app: Kế hoạch giải ngân, mức tham khảo của cố vấn, "Cần xem lại" và gợi ý Cảnh báo danh mục.
+ * Tỷ trọng mục tiêu theo kiểu nhà đầu tư (%), chủ sản phẩm duyệt 01/11/2026.
+ * Nguồn duy nhất cho cả app: mức tham khảo của cố vấn, "Cần xem lại" và gợi ý Cảnh báo danh mục.
  * savings = tiền gửi / tiền mặt, etf = cổ phiếu lõi (ETF), picks = cổ phiếu tự chọn.
  */
 export const TARGET_MIX: Record<string, { savings: number; gold: number; etf: number; picks: number; crypto: number }> =

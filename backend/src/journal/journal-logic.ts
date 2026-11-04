@@ -1,9 +1,9 @@
 /**
- * Quy tắc thuần của nhật ký quyết định (FREE-08): bộ nhãn, khoảng tháng, mốc kế hoạch có hiệu lực theo ngày,
- * đối chiếu giá giao dịch với mốc và tổng kết tháng. Không đụng DB / mạng để test được bằng dữ liệu tay.
+ * Quy tắc thuần của nhật ký quyết định (FREE-08): bộ nhãn, khoảng tháng và tổng kết tháng. Không đụng DB / mạng để
+ * test được bằng dữ liệu tay.
  *
- * Nguyên tắc: "làm đúng kế hoạch" và "lãi hay lỗ" là hai trục tách rời. Tổng kết chỉ mô tả hành vi bằng lời trung tính;
- * diễn biến giá sau giao dịch được liệt kê riêng để đối chiếu, không dùng để chấm điểm quyết định, không khuyên mua / bán.
+ * Nguyên tắc: tổng kết chỉ mô tả hành vi bằng lời trung tính; diễn biến giá sau giao dịch được liệt kê riêng để đối chiếu,
+ * không dùng để chấm điểm quyết định, không khuyên mua / bán.
  */
 import type {
   JournalCount,
@@ -13,8 +13,6 @@ import type {
   JournalPressuredTrade,
   JournalReason,
   JournalTxType,
-  PlanDecision,
-  PlanLevelCheck,
 } from '@dautu/contracts';
 
 /** Bộ nhãn lý do: thứ tự là thứ tự hiện trên giao diện. Record bắt buộc đủ mọi khoá của hợp đồng */
@@ -42,9 +40,9 @@ export const EMOTION_LABEL: Record<JournalEmotion, string> = {
 export const JOURNAL_REASONS = Object.keys(REASON_LABEL) as JournalReason[];
 export const JOURNAL_EMOTIONS = Object.keys(EMOTION_LABEL) as JournalEmotion[];
 const JOURNAL_TX_TYPES: readonly JournalTxType[] = ['buy', 'sell', 'deposit', 'withdraw'];
-/** Loại giao dịch gắn được vào kế hoạch (có tài sản và giá) */
-export const PLAN_LINK_TX_TYPES: readonly JournalTxType[] = ['buy', 'sell'];
-/** Cảm xúc dễ cuốn người ta làm khác kế hoạch: được liệt kê riêng trong tổng kết */
+/** Loại giao dịch có tài sản và giá (để đối chiếu diễn biến giá sau đó) */
+export const TRADE_TX_TYPES: readonly JournalTxType[] = ['buy', 'sell'];
+/** Cảm xúc dễ cuốn người ta làm khác dự định: được liệt kê riêng trong tổng kết */
 const PRESSURED_EMOTIONS: readonly JournalEmotion[] = ['fomo', 'fear', 'greedy'];
 
 export const isJournalTxType = (t: string): t is JournalTxType => (JOURNAL_TX_TYPES as readonly string[]).includes(t);
@@ -62,7 +60,7 @@ export function shiftMonth(month: string, delta: number) {
 
 /**
  * Khoảng của tháng: `fromDate`/`toDate` (YYYY-MM-DD, nửa mở) cho cột ngày giao dịch theo lịch VN,
- * `fromTs`/`toTs` cho mốc thời gian (lần xem lại, phiên bản) tính theo giờ VN (UTC+7, không có giờ mùa hè).
+ * `fromTs`/`toTs` cho mốc thời gian tính theo giờ VN (UTC+7, không có giờ mùa hè).
  */
 export function monthRange(month: string) {
   const next = shiftMonth(month, 1);
@@ -80,43 +78,7 @@ export function monthLabel(month: string) {
   return `tháng ${Number(m)}/${y}`;
 }
 
-// ---------- Kế hoạch & mốc giá ----------
-
-export interface PlanLevels {
-  targetPrice: number | null;
-  stopPrice: number | null;
-}
-
-export interface PlanVersionLite {
-  /** Ngày sửa theo giờ VN (YYYY-MM-DD) */
-  date: string;
-  /** Nội dung kế hoạch TRƯỚC lần sửa đó */
-  snapshot: unknown;
-}
-
-const numOrNull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-
-/**
- * Mốc chốt lời / cắt lỗ có hiệu lực vào ngày giao dịch. Mỗi phiên bản lưu bản kế hoạch trước một lần sửa, nên mốc
- * của ngày D là bản trước lần sửa đầu tiên xảy ra SAU ngày D; không có lần sửa nào sau D thì là kế hoạch hiện tại.
- * Sửa cùng ngày giao dịch được coi là đã có hiệu lực (người dùng thường sửa rồi mới đặt lệnh).
- */
-export function levelsOn(current: PlanLevels, versions: PlanVersionLite[], date: string): PlanLevels {
-  const later = versions.filter((v) => v.date > date).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-  if (!later.length) return current;
-  const s = (later[0].snapshot ?? {}) as Record<string, unknown>;
-  return { targetPrice: numOrNull(s.targetPrice), stopPrice: numOrNull(s.stopPrice) };
-}
-
-/** Giá giao dịch nằm đâu so với mốc kế hoạch (cùng đơn vị giá gốc: VND/cp, USDT/coin, VND/lượng) */
-export function levelCheck(price: number | null, levels: PlanLevels): PlanLevelCheck | null {
-  if (price === null || !(price > 0)) return null;
-  const { targetPrice: target, stopPrice: stop } = levels;
-  if (target === null && stop === null) return 'no_levels';
-  if (target !== null && price >= target) return 'at_or_above_target';
-  if (stop !== null && price <= stop) return 'at_or_below_stop';
-  return 'within';
-}
+// ---------- Diễn biến giá ----------
 
 /** Giá hiện tại so với giá lúc giao dịch (%), làm tròn 0,1 */
 export function priceSincePct(tradePrice: number | null, currentPrice: number | null) {
@@ -133,23 +95,12 @@ export interface SummaryTrade {
   displayName: string | null;
   reason: JournalReason | null;
   emotion: JournalEmotion | null;
-  linked: boolean;
-  levelCheck: PlanLevelCheck | null;
   priceSincePct: number | null;
-}
-
-export interface SummaryReview {
-  decision: PlanDecision;
-  reason: JournalReason | null;
-  emotion: JournalEmotion | null;
 }
 
 export interface SummaryInput {
   month: string;
   trades: SummaryTrade[];
-  reviews: SummaryReview[];
-  /** Số lần sửa nội dung kế hoạch trong tháng */
-  edits: number;
 }
 
 const isTrade = (t: SummaryTrade) => t.type === 'buy' || t.type === 'sell';
@@ -165,26 +116,18 @@ function countBy<K extends string>(values: (K | null)[], order: readonly K[]): J
 }
 
 export function monthTotals(input: SummaryInput): JournalMonthTotals {
-  const trades = input.trades.filter(isTrade);
-  const emotions = [...input.trades.map((t) => t.emotion), ...input.reviews.map((r) => r.emotion)];
+  const emotions = input.trades.map((t) => t.emotion);
   return {
     month: input.month,
-    trades: trades.length,
-    linked: trades.filter((t) => t.linked).length,
+    trades: input.trades.filter(isTrade).length,
     emotionTagged: emotions.filter((e) => e !== null).length,
     pressured: emotions.filter(pressured).length,
-    reviews: input.reviews.length,
-    kept: input.reviews.filter((r) => r.decision === 'keep').length,
-    changed: input.reviews.filter((r) => r.decision !== 'keep').length + input.edits,
   };
 }
 
 export function summarize(input: SummaryInput, previous: JournalMonthTotals | null): JournalMonthSummary {
   const totals = monthTotals(input);
   const trades = input.trades.filter(isTrade);
-  const linked = trades.filter((t) => t.linked);
-  const sells = linked.filter((t) => t.type === 'sell');
-  const buys = linked.filter((t) => t.type === 'buy');
   const pressuredTrades: JournalPressuredTrade[] = input.trades
     .filter((t) => pressured(t.emotion))
     .map((t) => ({
@@ -197,26 +140,13 @@ export function summarize(input: SummaryInput, previous: JournalMonthTotals | nu
     }));
   const summary: JournalMonthSummary = {
     ...totals,
-    unlinked: trades.length - linked.length,
     tagged: trades.filter((t) => t.reason !== null || t.emotion !== null).length,
-    levels: {
-      sellsAtLevel: sells.filter((t) => t.levelCheck === 'at_or_above_target' || t.levelCheck === 'at_or_below_stop')
-        .length,
-      sellsBeforeLevel: sells.filter((t) => t.levelCheck === 'within').length,
-      buysOutsideRange: buys.filter((t) => t.levelCheck === 'at_or_above_target' || t.levelCheck === 'at_or_below_stop')
-        .length,
-      buysWithinRange: buys.filter((t) => t.levelCheck === 'within').length,
-      noLevels: linked.filter((t) => t.levelCheck === 'no_levels').length,
-    },
-    decisions: {
-      keep: input.reviews.filter((r) => r.decision === 'keep').length,
-      adjust: input.reviews.filter((r) => r.decision === 'adjust').length,
-      close: input.reviews.filter((r) => r.decision === 'close').length,
-      edits: input.edits,
-    },
-    reasons: countBy([...input.trades.map((t) => t.reason), ...input.reviews.map((r) => r.reason)], JOURNAL_REASONS),
+    reasons: countBy(
+      input.trades.map((t) => t.reason),
+      JOURNAL_REASONS,
+    ),
     emotions: countBy(
-      [...input.trades.map((t) => t.emotion), ...input.reviews.map((r) => r.emotion)],
+      input.trades.map((t) => t.emotion),
       JOURNAL_EMOTIONS,
     ),
     pressuredTrades,
@@ -238,42 +168,26 @@ const versus = (prev: number | undefined) => (prev === undefined ? '' : ` (thán
  */
 export function insights(s: JournalMonthSummary, cashEntries = 0): string[] {
   const out: string[] = [];
-  const prev = s.previous && (s.previous.trades > 0 || s.previous.reviews > 0) ? s.previous : null;
-  if (s.trades === 0 && s.reviews === 0 && s.decisions.edits === 0) {
+  const prev = s.previous && s.previous.trades > 0 ? s.previous : null;
+  if (s.trades === 0) {
     out.push(
       cashEntries
-        ? `Tháng này chưa có lệnh mua / bán hay lần xem lại kế hoạch nào, chỉ có ${cashEntries} khoản nạp / rút tiền (ở dòng thời gian bên dưới).`
-        : 'Tháng này chưa có lệnh mua / bán hay lần xem lại kế hoạch nào được ghi.',
+        ? `Tháng này chưa có lệnh mua / bán nào, chỉ có ${cashEntries} khoản nạp / rút tiền (ở dòng thời gian bên dưới).`
+        : 'Tháng này chưa có lệnh mua / bán nào được ghi.',
     );
     return out;
   }
-  if (s.trades > 0) {
-    out.push(
-      s.linked === s.trades
-        ? `Cả ${s.trades} lệnh mua / bán đều gắn với một kế hoạch đã viết${versus(prev?.trades)}.`
-        : s.linked === 0
-          ? `Có ${s.trades} lệnh mua / bán, chưa lệnh nào gắn với kế hoạch${versus(prev?.trades)}.`
-          : `Có ${s.trades} lệnh mua / bán, ${s.linked} lệnh gắn với kế hoạch và ${s.unlinked} lệnh ngoài kế hoạch${versus(prev?.trades)}.`,
-    );
+  out.push(
+    s.tagged === s.trades
+      ? `Cả ${s.trades} lệnh mua / bán đều có ghi lý do hoặc cảm xúc${versus(prev?.trades)}.`
+      : s.tagged === 0
+        ? `Có ${s.trades} lệnh mua / bán${versus(prev?.trades)}.`
+        : `Có ${s.trades} lệnh mua / bán, ${s.tagged} lệnh có ghi lý do hoặc cảm xúc${versus(prev?.trades)}.`,
+  );
+  if (s.reasons.length) {
+    const top = s.reasons[0];
+    out.push(`Lý do bạn ghi nhiều nhất: ${quote(REASON_LABEL[top.key])} (${top.count} lần).`);
   }
-  const lv = s.levels;
-  if (lv.sellsAtLevel) out.push(`${lv.sellsAtLevel} lần bán diễn ra khi giá đã tới mốc chốt lời hoặc cắt lỗ bạn đặt.`);
-  if (lv.sellsBeforeLevel)
-    out.push(
-      `${lv.sellsBeforeLevel} lần bán khi giá còn nằm giữa hai mốc của kế hoạch — ghi lại lý do sẽ giúp bạn đối chiếu về sau.`,
-    );
-  if (lv.buysOutsideRange)
-    out.push(`${lv.buysOutsideRange} lần mua ở mức giá nằm ngoài khoảng giữa mốc cắt lỗ và mốc chốt lời của kế hoạch.`);
-  const d = s.decisions;
-  if (s.reviews > 0) {
-    const parts = [
-      d.keep && `giữ nguyên ${d.keep}`,
-      d.adjust && `điều chỉnh ${d.adjust}`,
-      d.close && `kết thúc ${d.close}`,
-    ].filter(Boolean);
-    out.push(`Bạn xem lại kế hoạch ${s.reviews} lần: ${parts.join(', ')}${versus(prev?.reviews)}.`);
-  }
-  if (d.edits) out.push(`Nội dung kế hoạch được sửa ${d.edits} lần; bản cũ vẫn được lưu để so.`);
   if (s.emotions.length) {
     const top = s.emotions[0];
     out.push(`Cảm xúc bạn ghi nhiều nhất: ${quote(EMOTION_LABEL[top.key])} (${top.count} lần).`);
@@ -289,7 +203,7 @@ export function insights(s: JournalMonthSummary, cashEntries = 0): string[] {
       `Tháng này không có quyết định nào được ghi lúc sợ lỡ cơ hội, sợ lỗ hay hưng phấn (tháng trước ${prev.pressured}).`,
     );
   }
-  if (s.trades > 0 && s.tagged === 0) {
+  if (s.tagged === 0) {
     out.push('Chưa lệnh nào có nhãn lý do / cảm xúc. Gắn nhãn ngay khi ghi giao dịch giúp tổng kết tháng sau rõ hơn.');
   }
   return out;

@@ -2,7 +2,6 @@ import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import type { ReactNode } from 'react'
 import { EMOTION_LABEL, EMOTIONS, REASON_LABEL, REASONS } from '../../lib/journal'
 import type { JournalEmotion, JournalReason } from '../../lib/types'
 
@@ -17,7 +16,6 @@ export default function JournalTagPicker({
   onReason,
   reasons = REASONS,
   emotionLabel = 'Lúc này bạn thấy',
-  footer,
 }: {
   emotion: JournalEmotion | null
   reason: JournalReason | null
@@ -25,8 +23,6 @@ export default function JournalTagPicker({
   onReason: (v: JournalReason | null) => void
   reasons?: JournalReason[]
   emotionLabel?: string
-  /** Thêm một hàng bên dưới (vd gắn kế hoạch) */
-  footer?: ReactNode
 }) {
   return (
     <Stack spacing={1} role="group" aria-label="Nhật ký quyết định (tuỳ chọn)" data-testid="journal-tags">
@@ -38,7 +34,6 @@ export default function JournalTagPicker({
         onChange={onEmotion}
       />
       <TagRow label="Vì sao" options={reasons} labels={REASON_LABEL} value={reason} onChange={onReason} />
-      {footer}
     </Stack>
   )
 }

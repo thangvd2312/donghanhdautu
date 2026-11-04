@@ -2,10 +2,8 @@ import ArrowForward from '@mui/icons-material/ArrowForward'
 import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
-import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import { Link as RouterLink } from 'react-router-dom'
 import { SUGGESTIONS } from './suggestions'
 
 /** Màn hình trống của cuộc trò chuyện mới: giới thiệu + câu hỏi gợi ý dạng thẻ */
@@ -34,16 +32,6 @@ export default function AdvisorWelcome({ busy, onPick }: { busy: boolean; onPick
           <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
             {' '}
             Không hô mã, không hứa lãi, chỉ giúp bạn quyết định tỉnh táo hơn.
-          </Box>
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Nhận tin hô mã?{' '}
-          <Link component={RouterLink} to="/tips" sx={{ fontWeight: 600 }}>
-            Soi lời khuyên
-          </Link>
-          <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
-            {' '}
-            để xem mức nóng và dữ liệu thật trước khi mua.
           </Box>
         </Typography>
       </Stack>

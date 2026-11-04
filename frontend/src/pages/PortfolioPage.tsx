@@ -7,7 +7,7 @@ import Collapse from "@mui/material/Collapse";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
-import { Link as RouterLink, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import CorporateActionsPanel from "../components/portfolio/CorporateActionsPanel";
 import HistoryPanel from "../components/portfolio/HistoryPanel";
 import HoldingForm from "../components/portfolio/HoldingForm";
@@ -173,16 +173,6 @@ export default function PortfolioPage() {
             plain
             Icon={AccountBalanceWalletOutlined}
             title="Chưa có tài sản nào"
-            action={
-              <Button
-                component={RouterLink}
-                to="/practice"
-                variant="outlined"
-                sx={{ borderRadius: 99 }}
-              >
-                Muốn tập trước? Thử mua bán bằng tiền ảo
-              </Button>
-            }
           >
             Ghi giao dịch đầu tiên hoặc khai báo tài sản bạn đã có để bắt đầu
             theo dõi.

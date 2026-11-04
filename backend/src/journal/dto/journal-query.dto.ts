@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, Matches } from 'class-validator';
 import type { JournalEmotion } from '@dautu/contracts';
 import { vnDateKey } from '../../market/types';
 import { JOURNAL_EMOTIONS } from '../journal-logic';
@@ -12,7 +12,6 @@ export class MonthQuery {
 
 export class EntriesQuery extends MonthQuery {
   @IsOptional() @IsIn(JOURNAL_EMOTIONS, { message: 'Cảm xúc không hợp lệ' }) emotion?: JournalEmotion;
-  @IsOptional() @IsString() @MaxLength(40) planId?: string;
 }
 
 export const monthOf = (q: MonthQuery) => q.month ?? vnDateKey().slice(0, 7);

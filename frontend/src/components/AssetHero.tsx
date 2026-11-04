@@ -9,10 +9,9 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { ReactNode } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import type { Plan } from '../lib/types'
+import type { TrackedAssetType } from '../lib/types'
 import AssetAvatar from './AssetAvatar'
 import { HERO_SX } from './home/HomeBlocks'
-import PlanButton from './plans/PlanButton'
 import { ChangePill, QuickAction } from './ui'
 import WatchButton from './watchlist/WatchButton'
 
@@ -38,10 +37,10 @@ export default function AssetHero({
   onAlert,
   compareSymbol,
 }: {
-  assetType: Plan['assetType']
+  assetType: TrackedAssetType
   /** Mã hiển thị: FPT, BTC */
   symbol: string
-  /** Mã chuẩn hoá cho theo dõi / kế hoạch: FPT, BTCUSDT */
+  /** Mã chuẩn hoá cho theo dõi: FPT, BTCUSDT */
   watchSymbol: string
   tags: string[]
   name?: string
@@ -95,7 +94,6 @@ export default function AssetHero({
               state={{ pick: true }}
             />
           )}
-          <PlanButton tile assetType={assetType} symbol={watchSymbol} label={symbol} />
         </Stack>
 
         <Stack

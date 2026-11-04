@@ -6,8 +6,6 @@ import type { HistoryService } from '../portfolio/history.service';
 import type { PortfolioService } from '../portfolio/portfolio.service';
 import { JobRunner, NoAdvisoryLock } from '../runtime/job-runner';
 import { testPrisma, testUser } from '../test-utils/test-db';
-import { GoalsContextService } from '../goals/goals-context.service';
-import { GoalsService } from '../goals/goals.service';
 import { PortfolioAlertHistory } from './alert-history.service';
 import { PortfolioAlertsRunner } from './portfolio-alerts.runner';
 import { PortfolioAlertsService } from './portfolio-alerts.service';
@@ -59,12 +57,7 @@ const history = {
 
 const store = new PortfolioAlertRuleStore(prisma);
 const historyCache = new PortfolioAlertHistory(history);
-// Mục tiêu cần định giá có số lượng và tỷ giá: dùng định giá giả riêng, danh mục trống
-const emptyPortfolio = {
-  valuation: () => Promise.resolve({ holdings: [], usdtVnd: 26_000 }),
-} as unknown as PortfolioService;
-const goals = new GoalsService(prisma, emptyPortfolio, new GoalsContextService(prisma, emptyPortfolio));
-const service = new PortfolioAlertsService(prisma, portfolio, store, historyCache, goals);
+const service = new PortfolioAlertsService(prisma, portfolio, store, historyCache);
 const runner = new PortfolioAlertsRunner(prisma, market, portfolio, store, historyCache, notifier);
 const jobs = new JobRunner(new NoAdvisoryLock(), 1000);
 const run = (drawdown: boolean) => jobs.run('portfolioAlerts.test', () => runner.runAll({ drawdown }));
@@ -215,24 +208,23 @@ describe('cảnh báo theo tình trạng danh mục — lượt kiểm tra của
     ]);
   });
 
-  it('gợi ý tỷ trọng lệch lấy từ tỷ trọng đích gộp của các mục tiêu đang chạy', async () => {
-    const u = await testUser(prisma, 'pa-goal-suggestion');
-    expect((await service.settings(u.id)).suggestions.some((x) => x.source === 'goal')).toBe(false);
-    await prisma.goal.create({
+  it('gợi ý tỷ trọng lệch lấy từ mức tham khảo theo kiểu nhà đầu tư (chưa có hồ sơ thì không gợi ý)', async () => {
+    const u = await testUser(prisma, 'pa-profile-suggestion');
+    expect((await service.settings(u.id)).suggestions).toEqual([]);
+    await prisma.investorProfile.create({
       data: {
         userId: u.id,
-        name: 'Quỹ dự phòng',
-        kind: 'safety',
-        template: 'emergency',
-        priority: 1,
-        targetAmount: 60_000_000,
-        targetDate: new Date('2030-01-01T00:00:00Z'),
-        monthlyExpense: 10_000_000,
-        safetyMonths: 6,
+        answers: {},
+        riskScore: 50,
+        riskType: 'balanced',
+        goal: 'accumulate',
+        horizon: 'long',
+        maxDrawdownPct: 20,
+        fomoProne: false,
       },
     });
-    const goal = (await service.settings(u.id)).suggestions.find((x) => x.source === 'goal')!;
-    expect(goal.label).toBe('Theo mục tiêu "Quỹ dự phòng"');
-    expect(goal.targets).toEqual({ stock: 0, crypto: 0, gold: 0, cash: 100 });
+    const [s] = (await service.settings(u.id)).suggestions;
+    expect(s).toMatchObject({ source: 'profile', label: 'Tham khảo cho kiểu Cân bằng' });
+    expect(Object.values(s.targets).reduce((a, b) => a + b, 0)).toBe(100);
   });
 });

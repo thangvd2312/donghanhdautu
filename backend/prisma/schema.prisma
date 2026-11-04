@@ -25,10 +25,7 @@ model User {
   priceAlerts         PriceAlert[]
   feedback            AnswerFeedback[]
   transactions        Transaction[]
-  plans               InvestmentPlan[]
   importBatches       ImportBatch[]
-  goals               Goal[]
-  goalContributions   GoalContribution[]
   telegram            TelegramLink?
   pushSettings        PushSettings?
   pushSubscriptions   PushSubscription[]
@@ -37,10 +34,7 @@ model User {
   dismissedActions    DismissedAction[]
   eventReminder       EventReminderSetting?
   savedScreens        SavedScreen[]
-  paperAccount        PaperAccount?
   portfolioAlertRules PortfolioAlertRule[]
-  tipChecks           TipCheck[]
-  deploymentPlans     DeploymentPlan[]
 }
 
 /// Kết quả bài khảo sát tính cách đầu tư lúc onboarding
@@ -337,18 +331,10 @@ model Transaction {
   reason        String?
   /// Cảm xúc lúc quyết định: calm | confident | unsure | anxious | fomo | fear | greedy
   emotion       String?
-  /// Kế hoạch người dùng gắn giao dịch vào (cùng tài sản); null = giao dịch không theo kế hoạch nào
-  planId        String?
-  plan          InvestmentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
-  /// Mục tiêu giao dịch này thuộc về (để tính tiến độ mục tiêu); null = chưa gắn
-  goalId        String?
-  goal          Goal?                 @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
-  @@index([userId, goalId])
   @@index([importBatchId])
   @@index([portfolioId])
-  @@index([planId])
 }
 
 model TransactionRevision {
@@ -362,72 +348,6 @@ model TransactionRevision {
   createdAt     DateTime    @default(now())
 
   @@index([transactionId])
-}
-
-/// Kế hoạch đầu tư cho một tài sản (đang giữ hoặc đang theo dõi): người dùng tự đặt, AI chỉ hỗ trợ viết nháp
-model InvestmentPlan {
-  id              String        @id @default(cuid())
-  userId          String
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// stock | crypto | gold
-  assetType       String
-  symbol          String
-  /// Luận điểm: vì sao mua / nắm giữ
-  thesis          String
-  /// Dự định nắm giữ bao lâu, vd "1–3 năm"
-  horizon         String?
-  /// Điều kiện cho thấy luận điểm sai / cần xem lại hoặc bán
-  exitConditions  String
-  /// Mốc chốt lời / cắt lỗ theo đơn vị giá gốc (VND/cp, USDT/coin, VND/lượng giá mua vào)
-  targetPrice     Float?
-  stopPrice       Float?
-  /// Chu kỳ xem lại (ngày) để tự đặt ngày xem lại tiếp theo
-  reviewEveryDays Int?
-  nextReviewAt    DateTime      @db.Date
-  /// active | closed
-  status          String        @default("active")
-  closedReason    String?
-  closedAt        DateTime?
-  /// Ngày xem lại đã nhắc gần nhất, để không nhắc trùng
-  remindedFor     DateTime?     @db.Date
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  versions        PlanVersion[]
-  reviews         PlanReview[]
-  transactions    Transaction[]
-
-  @@index([userId, status])
-  @@index([status, nextReviewAt])
-}
-
-/// Bản trước của kế hoạch, lưu mỗi lần sửa
-model PlanVersion {
-  id        String         @id @default(cuid())
-  planId    String
-  plan      InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  snapshot  Json
-  createdAt DateTime       @default(now())
-
-  @@index([planId])
-}
-
-/// Một lần xem lại kế hoạch: quyết định giữ / điều chỉnh / kết thúc và lý do
-model PlanReview {
-  id             String         @id @default(cuid())
-  planId         String
-  plan           InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  /// keep | adjust | close
-  decision       String
-  note           String?
-  /// Dữ kiện lúc xem lại (để đối chiếu sau này)
-  priceAtReview  Float?
-  pnlPctAtReview Float?
-  /// Nhật ký quyết định (FREE-08), tuỳ chọn: cùng bộ lý do / cảm xúc với Transaction
-  reason         String?
-  emotion        String?
-  createdAt      DateTime       @default(now())
-
-  @@index([planId])
 }
 
 /// Một lần nhập giao dịch từ file CSV. Cùng nội dung (hash) chỉ nhập một lần; hoàn tác = huỷ mọi giao dịch của đợt
@@ -460,70 +380,6 @@ model PriceDaily {
   createdAt DateTime @default(now())
 
   @@id([assetType, symbol, date])
-}
-
-/// Mục tiêu tài chính: số tiền đích, ngày đích, tài sản được gán (theo %), tỷ trọng mong muốn
-model Goal {
-  id                     String             @id @default(cuid())
-  userId                 String
-  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name                   String
-  /// VND. Kiểu return: giá trị dự kiến của phương án đang dùng; kiểu safety: chi tiêu tháng × số tháng
-  targetAmount           Float
-  targetDate             DateTime           @db.Date
-  /// Dự định góp thêm mỗi tháng (VND); khi góp theo khoảng "20–30 tr" đây là mức thấp (lịch dùng mức này)
-  monthlyContribution    Float              @default(0)
-  /// Mức góp cao của khoảng; null = góp đúng một mức
-  monthlyContributionMax Float?
-  /// Ngày góp tiền mỗi tháng (1–28); null = mặc định 5
-  contributionDay        Int?
-  /// active | paused | achieved
-  status                 String             @default("active")
-  note                   String?
-  /// amount: có số tiền vào ngày · return: sinh lời đều mỗi năm · safety: quỹ dự phòng (docs/DESIGN_GOALS_V3.md)
-  kind                   String             @default("amount")
-  /// Mẫu chỉ để điền sẵn: house | car | education | retirement | emergency | grow | custom
-  template               String?
-  /// 1 safety · 2 amount hạn cứng · 3 amount hạn mềm · 4 return / hưu trí; server tính từ kiểu + mẫu
-  priority               Int                @default(4)
-  /// Mốc bắt đầu của lộ trình và của việc đếm tháng góp tiền
-  startedAt              DateTime           @default(now()) @db.Date
-  /// Kiểu return: số vốn (VND), mức lãi mong muốn (%/năm; max null = "trên min"), số năm giữ
-  capital                Float?
-  returnMinPct           Float?
-  returnMaxPct           Float?
-  holdYears              Int?
-  /// Kiểu return khi phải chọn: within (trong mức rủi ro) | target (đạt mức mong muốn); null = chưa chọn
-  riskChoice             String?
-  /// Kiểu safety: chi tiêu thiết yếu mỗi tháng (VND) và số tháng muốn dự phòng
-  monthlyExpense         Float?
-  safetyMonths           Int?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-  transactions           Transaction[]
-  deploymentPlans        DeploymentPlan[]
-
-  @@index([userId])
-}
-
-/// Tháng góp tiền của một người dùng: tổng tiền, cách chia cho từng mục tiêu (kèm các dòng mua) và đã làm chưa
-model GoalContribution {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// Ngày 1 của tháng
-  month      DateTime  @db.Date
-  /// Tổng tiền góp tháng này (VND)
-  amount     Float
-  /// [{ goalId, amount, shortfall, lines: [{ part, label, assetType, symbol, amount, reason }] }]
-  split      Json
-  /// planned | done | skipped
-  status     String    @default("planned")
-  skipReason String?
-  createdAt  DateTime  @default(now())
-  doneAt     DateTime?
-
-  @@unique([userId, month])
 }
 
 /// Liên kết Telegram do người dùng chủ động tạo (bấm Start với mã một lần). Không có liên kết = không gửi gì ra ngoài
@@ -687,7 +543,7 @@ model AnalyticsEvent {
 model AiUsage {
   id               String   @id @default(cuid())
   userId           String?
-  /// chat | verifier | brief_morning | brief_closing | brief_weekly | alert | news_tag | plan_draft | eval
+  /// chat | verifier | brief_morning | brief_closing | brief_weekly | alert | news_tag | holding_draft | eval
   feature          String
   model            String
   inputTokens      Int?
@@ -712,7 +568,7 @@ model AiUsage {
 model AiRequest {
   id         String    @id @default(cuid())
   userId     String
-  /// chat | brief_test | plan_draft
+  /// chat | brief_test | holding_draft
   kind       String
   /// running | done
   status     String    @default("running")
@@ -786,42 +642,6 @@ model SavedScreen {
   @@index([userId, updatedAt])
 }
 
-/// Tài khoản luyện tập bằng tiền ảo (FREE-07): tách hẳn khỏi danh mục thật (Holding/Transaction). Mỗi người một tài khoản
-model PaperAccount {
-  id        String       @id @default(cuid())
-  userId    String       @unique
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  startCash Decimal      @db.Decimal(30, 2)
-  cash      Decimal      @db.Decimal(30, 2)
-  startedAt DateTime     @default(now())
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  trades    PaperTrade[]
-}
-
-/// Lệnh giả lập đã khớp. Vị thế được suy ra từ các lệnh này (bình quân giá vốn), không lưu riêng
-model PaperTrade {
-  id          String       @id @default(cuid())
-  accountId   String
-  account     PaperAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  /// 'stock' | 'crypto'
-  assetType   String
-  /// Mã cổ phiếu, hoặc cặp coin dạng BTCUSDT
-  symbol      String
-  /// 'buy' | 'sell'
-  side        String
-  quantity    Decimal      @db.Decimal(30, 10)
-  /// VND / đơn vị tại lúc khớp
-  price       Decimal      @db.Decimal(30, 10)
-  priceSource String
-  fee         Decimal      @db.Decimal(30, 2)
-  tax         Decimal      @db.Decimal(30, 2)
-  cashAfter   Decimal      @db.Decimal(30, 2)
-  executedAt  DateTime     @default(now())
-
-  @@index([accountId, executedAt])
-}
-
 /// Bộ nhớ đệm dữ liệu thị trường (không phải thời gian thực), bền qua lần khởi động lại. Khoá có không gian tên và phiên bản,
 /// vd. `vietcap:v1:ratios:FPT`; đổi cách ánh xạ dữ liệu thì tăng phiên bản để bỏ qua bản cũ.
 model MarketCache {
@@ -871,135 +691,4 @@ model PortfolioAlertRule {
 
   @@unique([userId, kind])
   @@index([enabled])
-}
-
-/// Soi lời khuyên: tin "hô mã" người dùng dán vào, lời khuyên bóc tách, phiếu kiểm chứng, quyết định và kết quả chấm lại.
-/// Kế hoạch / cảnh báo tạo từ phiếu chỉ lưu id (không khoá ngoại) để xoá chúng không bị chặn.
-model TipCheck {
-  id               String    @id @default(cuid())
-  userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// Tin gốc (tối đa 4.000 ký tự)
-  text             String
-  /// Tên nguồn do người dùng ghi, vd "Nhóm VIP anh T"; thống kê theo nguồn gộp theo chữ thường
-  sourceName       String?
-  /// zalo | telegram | facebook | broker | friend | other
-  sourceKind       String?
-  /// stock | crypto
-  assetType        String
-  /// HPG, BTCUSDT
-  symbol           String
-  /// Lời khuyên bóc tách: direction, targetPrice, stopPrice, horizonDays, reasons, promises, citesSource, candidates
-  claims           Json
-  /// Số tiền giả định (VND) người dùng nhập; null = app tự giả định
-  amountVnd        Float?
-  /// Giá lúc soi theo đơn vị gốc (VND/cp, USDT/coin)
-  priceAtCheck     Float?
-  priceSource      String?
-  /// VNINDEX | BTC
-  benchmark        String?
-  benchmarkAtCheck Float?
-  /// Mức nóng 0–100 và từng phần cộng điểm (kèm số liệu lúc soi)
-  score            Int?
-  scoreParts       Json?
-  /// Với riêng bạn: tỷ trọng, lỗ nếu cắt lỗ, đang giữ, kế hoạch, tiền mặt
-  personal         Json?
-  /// Phần đọc dữ liệu: dataSays, missing, unverifiable, verdict, questions, sources, trạng thái AI
-  report           Json?
-  /// extracted | analyzed
-  status           String    @default("extracted")
-  /// ignore | watch | plan | practice
-  decision         String?
-  decidedAt        DateTime?
-  /// Mua thật mã này trong 7 ngày sau khi soi (tự phát hiện từ sổ)
-  boughtAt         DateTime?
-  planId           String?
-  priceAlertId     String?
-  conversationId   String?
-  /// Kết quả chấm lại sau 30 / 90 ngày
-  review30         Json?
-  review90         Json?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  @@index([userId, createdAt])
-  @@index([status, createdAt])
-}
-
-/// Kế hoạch giải ngân (docs/DESIGN_INVEST_PLAN.md): có X tiền thì chia vào đâu, mua gì, mấy đợt. Mỗi người một kế hoạch
-/// đang chạy; lưu kế hoạch mới thì kế hoạch cũ chuyển sang cancelled.
-model DeploymentPlan {
-  id                String           @id @default(cuid())
-  userId            String
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  portfolioId       String?
-  /// Mục tiêu kế hoạch phục vụ; null = không gắn
-  goalId            String?
-  goal              Goal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
-  /// VND: một lần (vốn ban đầu khi mode = both), hoặc mỗi tháng khi mode = monthly
-  amount            Float
-  /// VND mỗi tháng khi mode = both
-  monthlyAmount     Float?
-  /// one_time | monthly | both (vốn ban đầu + mỗi tháng)
-  mode              String
-  /// short | medium | long (đã suy từ needBy nếu có)
-  horizon           String
-  needBy            DateTime?        @db.Date
-  /// Yêu cầu đã chốt (DeploymentRequest: quỹ dự phòng, nợ, số đợt, ETF, tỷ trọng tự chỉnh), kèm ngày khai
-  inputs            Json
-  /// Tỷ trọng 5 phần đang dùng, và gợi ý theo hồ sơ lúc lập
-  targetMix         Json
-  suggestedMix      Json
-  /// Kết quả lúc lập (DeploymentPreview không kèm các đợt): phần, kịch bản xấu, điều chỉnh, ghi chú
-  snapshot          Json
-  /// Lời giải thích của AI (bước 4); null = dùng câu mẫu của quy tắc
-  rationale         Json?
-  /// active | done | cancelled
-  status            String           @default("active")
-  nextReviewAt      DateTime         @db.Date
-  /// Ngày xem lại đã nhắc gần nhất, để không nhắc trùng
-  remindedReviewFor DateTime?        @db.Date
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  steps             DeploymentStep[]
-
-  @@index([userId, status])
-  @@index([status, nextReviewAt])
-  @@index([goalId])
-}
-
-/// Một đợt của kế hoạch giải ngân: trả nợ, quỹ dự phòng, hoặc mua một sản phẩm
-model DeploymentStep {
-  id            String         @id @default(cuid())
-  planId        String
-  plan          DeploymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  /// Thứ tự trong kế hoạch (theo ngày, cùng ngày: lớp an toàn rồi 5 phần)
-  seq           Int
-  dueDate       DateTime       @db.Date
-  /// savings | gold | etf | picks | crypto | debt | emergency
-  kind          String
-  /// stock | gold | crypto | cash; null = trả nợ
-  assetType     String?
-  /// E1VFVN30, mã vàng, BTCUSDT, VND; null = trả nợ / tự chọn chưa có mã
-  symbol        String?
-  label         String
-  /// VND
-  amount        Float
-  tranche       Int
-  tranches      Int
-  /// Giá lúc lập (VND/đơn vị) và số lượng ước tính
-  price         Float?
-  quantity      Float?
-  hint          String?
-  /// pending | done | skipped
-  status        String         @default("pending")
-  skipReason    String?
-  /// Giao dịch đã ghi sổ cho đợt này (không ràng buộc khoá ngoại: xoá giao dịch không làm mất lịch sử đợt)
-  transactionId String?
-  doneAt        DateTime?
-  /// Đã nhắc đến hạn (ngày nhắc), để không nhắc trùng
-  remindedAt    DateTime?
-
-  @@index([planId])
-  @@index([status, dueDate])
 }

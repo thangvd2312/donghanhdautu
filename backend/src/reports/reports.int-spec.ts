@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import type { MarketService } from '../market/market.service';
 import type { VndirectProvider } from '../market/providers/vndirect.provider';
 import { vnDateKey } from '../market/types';
-import { addDays, daysBetween } from '../plans/plan-rules';
+import { addDays, daysBetween } from '../common/dates';
 import { HistoryService } from '../portfolio/history.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionsService } from '../portfolio/transactions.service';

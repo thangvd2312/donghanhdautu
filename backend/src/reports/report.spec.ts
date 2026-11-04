@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { PortfolioReport } from '@dautu/contracts';
-import { addDays } from '../plans/plan-rules';
+import { addDays } from '../common/dates';
 import { buildHistory, periodPerformance } from '../portfolio/history';
 import { ledgerOfAll, performance } from '../portfolio/ledger';
 import type { LedgerTx } from '../portfolio/ledger';

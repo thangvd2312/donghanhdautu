@@ -4,14 +4,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AiModule } from '../ai/ai.module';
 import { AlertsModule } from '../alerts/alerts.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
-import { DeploymentModule } from '../deployment/deployment.module';
 import { EventsModule } from '../events/events.module';
 import { MacroModule } from '../macro/macro.module';
 import { MarketCacheModule } from '../market/cache/market-cache.module';
 import { MarketModule } from '../market/market.module';
 import { NewsModule } from '../news/news.module';
-import { PlansModule } from '../plans/plans.module';
-import { TipsModule } from '../tips/tips.module';
 import { JournalModule } from '../journal/journal.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
 import { PortfolioAlertsModule } from '../portfolio-alerts/portfolio-alerts.module';
@@ -41,9 +38,6 @@ import { WorkerLifecycle } from './worker-lifecycle';
     PortfolioModule,
     PortfolioAlertsModule,
     AlertsModule,
-    PlansModule,
-    DeploymentModule,
-    TipsModule,
     JournalModule,
     EventsModule,
     TelegramModule,

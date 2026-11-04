@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react'
 import { emptyTargets, GROUP_LABEL, GROUPS, targetsOf, targetSum, type Draft } from '../../lib/portfolioAlerts'
 import type { PortfolioAlertSettings } from '../../lib/types'
 
-/** Tỷ trọng mục tiêu theo nhóm: gợi ý từ hồ sơ / mục tiêu tài chính, hoặc tự nhập */
+/** Tỷ trọng mục tiêu theo nhóm: gợi ý theo hồ sơ (kiểu nhà đầu tư), hoặc tự nhập */
 export default function TargetsEditor({
   draft,
   settings,

@@ -32,12 +32,12 @@ Phụ thuộc đi một chiều: tầng dưới không import tầng trên.
 | Định danh | `AuthModule` | JWT, Google login; export `JwtAuthGuard`, `OptionalJwtAuthGuard`, `CurrentUser` |
 | Dữ liệu thị trường | `MarketModule` (+ `VietcapModule`, `MarketCacheModule`), `MacroModule`, `NewsModule`, `LogosModule` | không phụ thuộc module nghiệp vụ nào |
 | Lõi danh mục | `PortfolioModule` | định giá, sổ giao dịch, nhập CSV, lịch sử. Import `MarketModule` |
-| Phân tích danh mục | `AnalysisModule` (mô phỏng, tái cân bằng), `DividendsModule` (cổ tức, sự kiện quyền) | phụ thuộc `PortfolioModule`, không import ngược |
-| Tính năng người dùng | `ProfileModule`, `WatchlistModule`, `GoalsModule`, `PlansModule`, `JournalModule`, `PracticeModule`, `ScreenerModule`, `ReportsModule`, `HomeModule`, `DemoModule`, `EventsModule` | |
+| Cổ tức | `DividendsModule` (cổ tức, sự kiện quyền) | phụ thuộc `PortfolioModule`, không import ngược |
+| Tính năng người dùng | `ProfileModule`, `WatchlistModule`, `JournalModule`, `ScreenerModule`, `ReportsModule`, `HomeModule`, `DemoModule`, `EventsModule` | |
 | Thông báo | `AlertsModule` (giá, tin, bản tin, inbox), `PortfolioAlertsModule`, `TelegramModule`, `PushModule` | `AlertsModule` ghi `Notification` và xếp hàng gửi; Telegram / Push chỉ gửi |
 | Cố vấn AI | `AdvisorModule` | công cụ (`tools.ts`) đọc dữ liệu qua các service ở trên |
 
-Ranh giới cần giữ: `MarketModule` không biết người dùng; `PortfolioModule` không import `AnalysisModule` / `DividendsModule`; Telegram / Push không import `AlertsModule` (đọc bảng `Notification` qua Prisma); module nào cũng đi qua service của module khác, không đọc bảng của module khác tuỳ tiện khi đã có service cho việc đó.
+Ranh giới cần giữ: `MarketModule` không biết người dùng; `PortfolioModule` không import `DividendsModule`; Telegram / Push không import `AlertsModule` (đọc bảng `Notification` qua Prisma); module nào cũng đi qua service của module khác, không đọc bảng của module khác tuỳ tiện khi đã có service cho việc đó.
 
 ## 3. Quy ước thư mục theo module
 
@@ -103,7 +103,7 @@ web: NewsSearchService ─ GET /api/news: OpenSearch; chưa cấu hình / lỗi 
 - **`JobRunner`** (`runtime/job-runner.ts`): mỗi lượt giành **khoá tư vấn PostgreSQL** theo tên việc (`pg_try_advisory_xact_lock`, gắn với một giao dịch nên tự nhả khi commit / kết nối chết). Hai worker (hoặc worker cũ + mới lúc `pm2 reload`) không bao giờ chạy trùng một việc; ai không giành được thì bỏ lượt. Có hạn tối đa mỗi lượt, và chờ việc đang chạy khi tắt (`WORKER_SHUTDOWN_GRACE_MS`, mặc định 25 giây).
 - **Heartbeat** (`runtime/heartbeat.service.ts`): worker ghi bảng `WorkerHeartbeat` mỗi 30 giây; quá 90 giây là chết. `GET /api/health` trả `worker` từ đây; bước deploy chạy `worker-check-cli` để chắc worker **mới** đã sống (khởi động sau mốc reload, nhịp còn mới).
 - Hàng đợi bản tin (`BriefQueueService`: `UPDATE … FOR UPDATE SKIP LOCKED`, việc `running` của process đã chết được đưa lại hàng đợi) và gửi Telegram / Web Push không cần khoá `JobRunner`: mỗi tin được nhận bằng cập nhật có điều kiện (`pending → sending`).
-- Mọi việc định kỳ: xem bảng ở đầu `worker/scheduled-jobs.ts` (bản tin sáng / chiều / tuần, nhắc kế hoạch, tổng kết nhật ký tháng, nhắc sự kiện, ghi giá cuối ngày, cảnh báo danh mục, dọn analytics và cache, cảnh báo giá mỗi phút, tin mỗi 10 phút, lưu tin vào kho + OpenSearch mỗi 5 phút, macro mỗi 2 giờ).
+- Mọi việc định kỳ: xem bảng ở đầu `worker/scheduled-jobs.ts` (bản tin sáng / chiều / tuần, bản tin coin, tổng kết nhật ký tháng, nhắc sự kiện, ghi giá cuối ngày, cảnh báo danh mục, dọn analytics và cache, cảnh báo giá mỗi phút, tin mỗi 10 phút, lưu tin vào kho + OpenSearch mỗi 5 phút, macro mỗi 2 giờ).
 
 ## 7. Kiểm thử và database
 
@@ -157,14 +157,14 @@ Quy tắc phụ thuộc (một chiều): `pages` → `components` → `hooks` �
 
 - **Trang = container**: lấy tham số URL, gọi hook dữ liệu, giữ vài state giao diện (sheet nào đang mở, tab nào), ghép các thành phần. Không có URL API, không có công thức, không có bảng nhãn nghiệp vụ trong file trang. Mức tham khảo: một trang dưới ~300 dòng; lớn hơn thì tìm đường nối (panel, bảng, form, hook).
 - **`components/<domain>/`**: thành phần có nghiệp vụ của miền đó (`portfolio/HoldingsTable`, `income/DismissSheet`, `screener/ResultsPanel`...). Nhận dữ liệu và callback qua props, hoặc gọi hook / `api/` nếu là panel tự tải (`stock/StockFundamentals`, `portfolio/HistoryPanel`). Có từ 2 thành phần trở lên của cùng một miền thì lập thư mục; thành phần dùng ở nhiều miền (`AssetAvatar`, `SearchDialog`, `PriceChart`, `Sheet`, `ui.tsx`) nằm ở gốc `components/`.
-- **`hooks/`**: `useResource` (tải GET + `error` / `reload` / làm mới định kỳ), `useAssetDetail`, `usePortfolioData`, `useHeldPortfolio`, `useSimulation`, `useRebalance`, `useScreenRun`, ... Hook gọi `api/` và trả `{ data, loading, error, ... }`; không dựng JSX.
-- **`lib/<domain>.ts`**: hàm thuần có thể test không cần DOM (`lib/tx.ts: buildTransactionBody`, `lib/goals.ts: buildGoalRequest`, `lib/portfolioAlerts.ts: draftError`, `lib/simulate.ts`, `lib/rebalance.ts`). Logic kiểm tra form và dựng thân request nằm ở đây, component chỉ gọi.
+- **`hooks/`**: `useResource` (tải GET + `error` / `reload` / làm mới định kỳ), `useAssetDetail`, `usePortfolioData`, `useScreenRun`, `usePortfolioAlertsForm`, ... Hook gọi `api/` và trả `{ data, loading, error, ... }`; không dựng JSX.
+- **`lib/<domain>.ts`**: hàm thuần có thể test không cần DOM (`lib/tx.ts: buildTransactionBody`, `lib/portfolioAlerts.ts: draftError`, `lib/holdingDrafts.ts`, `lib/screener.ts`). Logic kiểm tra form và dựng thân request nằm ở đây, component chỉ gọi.
 
 ### Tầng dữ liệu `src/api`
 
 - `client.ts`: `api` / `post` / `put` / `patch` / `del`, `streamPost` (SSE), `ApiError`, `getToken` / `setToken`. Gắn `Authorization`, gặp 401 thì xoá token và chuyển tới `/login?next=...`. Đây là chỗ **duy nhất** gọi `fetch` tới `/api` cho JSON; endpoint trả file dùng `files.ts` (`fetchFile`, `saveBlob`), `analytics.ts` gửi sự kiện bằng `keepalive`.
 - `query.ts`: `qs({...})` dựng query, bỏ giá trị rỗng. Dựng URL / mã hoá tham số **chỉ ở `api/`**.
-- Mỗi file `api/<domain>.ts` export một hàm cho mỗi endpoint, kiểu request / response lấy từ `@dautu/contracts` (qua `lib/types.ts`): `portfolio` (sổ, vị thế, giao dịch, nhập CSV, thu nhập, sự kiện quyền), `market`, `search`, `gold`, `events`, `screener`, `analysis` (mô phỏng, tái cân bằng), `goals`, `plans`, `alerts`, `portfolioAlerts`, `journal`, `reports`, `practice`, `watchlist`, `notifications`, `channels` (Telegram, Web Push), `auth` (+ hồ sơ, khảo sát), `advisor`, `advisorChat` (SSE), `home`, `news`, `demo`, `analytics`.
+- Mỗi file `api/<domain>.ts` export một hàm cho mỗi endpoint, kiểu request / response lấy từ `@dautu/contracts` (qua `lib/types.ts`): `portfolio` (sổ, vị thế, giao dịch, nhập CSV, thu nhập, sự kiện quyền), `market`, `search`, `gold`, `events`, `screener`, `alerts`, `portfolioAlerts`, `journal`, `reports`, `holdingDrafts`, `watchlist`, `notifications`, `channels` (Telegram, Web Push), `auth` (+ hồ sơ, khảo sát), `advisor`, `advisorChat` (SSE), `home`, `news`, `demo`, `analytics`.
 - Tách `search`, `gold`, `advisorChat` khỏi `market`, `portfolio`, `advisor` là có chủ đích: chúng được dùng trong chunk vỏ app (`AuthedRoutes`), các hàm còn lại chỉ dùng trong chunk của từng trang. Nếu gom chung một module thì Rollup kéo cả module vào chunk vỏ và tăng JS tải đầu. Khi thêm hàm `api/` mới, kiểm tra sizes của `index` / `AuthedRoutes` sau `vite build`.
 - Component và trang **không** import `api` / `post` thô; chỉ `ApiError` được import từ `api/client` để phân biệt mã lỗi.
 

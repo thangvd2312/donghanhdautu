@@ -35,7 +35,6 @@ describe('đo hành vi (PostgreSQL)', () => {
     const past = { lt: new Date('2021-01-01') };
     await prisma.analyticsEvent.deleteMany({ where: { createdAt: past } });
     await prisma.aiUsage.deleteMany({ where: { createdAt: past } });
-    await prisma.investmentPlan.deleteMany({ where: { createdAt: past } });
     await prisma.user.deleteMany({ where: { createdAt: past } });
     // Một tuần ngẫu nhiên trong quá khứ để không lẫn dữ liệu của lần chạy khác
     const monday = new Date(Date.UTC(2001, 0, 1) + Math.floor(Math.random() * 1000) * 7 * DAY);
@@ -107,22 +106,6 @@ describe('đo hành vi (PostgreSQL)', () => {
     });
     // Thời gian tới giá trị đầu tiên: A có giao dịch thật ngày 2, xem danh mục ngày 3 → 72 giờ
     await ev(a.id, 'portfolio_viewed', 3, 'portfolio_viewed:d3');
-    // Kế hoạch: A xem lại trong 30 ngày, B có kế hoạch quá hạn
-    const planOf = (userId: string, nextReview: number) =>
-      prisma.investmentPlan.create({
-        data: {
-          userId,
-          assetType: 'stock',
-          symbol: 'FPT',
-          thesis: 't',
-          exitConditions: 'e',
-          nextReviewAt: at(nextReview),
-          createdAt: at(1),
-        },
-      });
-    const pa = await planOf(a.id, 90);
-    await planOf(b.id, 40);
-    await prisma.planReview.create({ data: { planId: pa.id, decision: 'keep', createdAt: at(55) } });
     // Chất lượng dữ liệu: 3 ngày đủ giá, 1 ngày thiếu giá
     for (const [i, status] of (['ok', 'ok', 'ok', 'partial'] as const).entries()) {
       await ev(a.id, 'portfolio_valued', 50 + i, `pv:${i}`, { status });
@@ -153,12 +136,6 @@ describe('đo hành vi (PostgreSQL)', () => {
 
     const full = await usageReport(prisma, { weeks: 10, now: at(62) });
     expect(full.timeToFirstValue).toMatchObject({ users: 1, median_hours: 72 });
-    expect(full.planReviews30Days).toEqual({
-      users_with_plans: 2,
-      users_reviewed: 1,
-      overdue_plans: 1,
-      reviewedPct: 50,
-    });
     expect(full.dataQuality30Days.okPct).toBe(75);
     expect(full.aiQuality30Days).toMatchObject({
       questions: 4,

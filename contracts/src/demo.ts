@@ -14,14 +14,6 @@ export interface DemoHolding {
   dayChangePct: number | null
 }
 
-export interface DemoPlan {
-  displayName: string
-  thesis: string
-  exitConditions: string
-  stopPrice: number
-  nextReviewInDays: number
-}
-
 /** Tin liên quan tới mã trong danh mục mẫu (khác tin ở trang chủ: không có `aboutHolding`) */
 export interface DemoNews extends HomeNews {
   tickers: string[]
@@ -33,6 +25,5 @@ export interface DemoResponse {
   today: HomeToday
   holdings: DemoHolding[]
   review: ReviewPoint[]
-  plan: DemoPlan | null
   news: DemoNews[]
 }

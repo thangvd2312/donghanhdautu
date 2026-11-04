@@ -1,7 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { ReportPeriod } from '@dautu/contracts';
-import { isDateKey } from '../common/dates';
-import { daysBetween } from '../plans/plan-rules';
+import { daysBetween, isDateKey } from '../common/dates';
 
 /** Kỳ tự chọn dài nhất (ngày), như phạm vi "Tất cả" của màn Lịch sử */
 const MAX_REPORT_DAYS = 1100;

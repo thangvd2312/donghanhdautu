@@ -5,7 +5,7 @@
  */
 import type { MissingAction as MissingActionView } from '@dautu/contracts';
 import type { CorporateEvent } from '../../market/providers/vietcap';
-import { addDays } from '../../plans/plan-rules';
+import { addDays } from '../../common/dates';
 import { computeLedger, sortTxs } from '../ledger';
 import type { LedgerTx } from '../ledger';
 

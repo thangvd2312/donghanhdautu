@@ -25,8 +25,6 @@ export const REASON_LABEL: Record<JournalReason, string> = {
 
 export const EMOTIONS = Object.keys(EMOTION_LABEL) as JournalEmotion[]
 export const REASONS = Object.keys(REASON_LABEL) as JournalReason[]
-/** Lý do hợp với một lần xem lại kế hoạch (không có "tích luỹ định kỳ") */
-export const REVIEW_REASONS: JournalReason[] = ['plan', 'price_level', 'thesis_changed', 'news', 'rebalance', 'need_cash', 'tip']
 /** Lý do hợp với nạp / rút tiền */
 export const CASH_REASONS: JournalReason[] = ['plan', 'dca', 'rebalance', 'need_cash', 'news', 'tip']
 

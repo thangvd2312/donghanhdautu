@@ -68,8 +68,6 @@ export function toTransactionView(t: Transaction, revisionCount: number, goldNam
     createdAt: t.createdAt.toISOString(),
     reason: t.reason as TransactionView['reason'],
     emotion: t.emotion as TransactionView['emotion'],
-    planId: t.planId,
-    goalId: t.goalId,
   };
 }
 

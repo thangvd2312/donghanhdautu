@@ -74,48 +74,11 @@ async function main() {
       { userId: user.id, assetType: 'crypto', symbol: 'SOLUSDT' },
     ],
   });
-  const plan = await prisma.investmentPlan.create({
-    data: {
-      userId: user.id,
-      assetType: 'stock',
-      symbol: 'FPT',
-      thesis: 'Doanh nghiệp công nghệ đầu ngành, tăng trưởng lợi nhuận đều.',
-      horizon: 'Trên 3 năm',
-      exitConditions: 'Tăng trưởng lợi nhuận dưới 10% hai quý liên tiếp',
-      targetPrice: 160_000,
-      stopPrice: 100_000,
-      reviewEveryDays: 30,
-      nextReviewAt: new Date(`${addDays(today, 3)}T00:00:00Z`),
-    },
-  });
-  // Nhật ký quyết định (FREE-08): vài lệnh có nhãn cảm xúc / lý do, một lệnh gắn kế hoạch, một lần xem lại có nhãn
+  // Nhật ký quyết định (FREE-08): vài lệnh có nhãn cảm xúc / lý do
   const tag = (symbol, type, data) => prisma.transaction.updateMany({ where: { userId: user.id, symbol, type }, data });
-  await tag('FPT', 'buy', { planId: plan.id, emotion: 'calm', reason: 'plan' });
+  await tag('FPT', 'buy', { emotion: 'calm', reason: 'plan' });
   await tag('ETHUSDT', 'buy', { emotion: 'fomo', reason: 'tip' });
   await tag('HPG', 'sell', { emotion: 'anxious', reason: 'need_cash' });
-  await prisma.planReview.create({
-    data: {
-      planId: plan.id,
-      decision: 'keep',
-      note: 'Kết quả kinh doanh quý vẫn tăng đều, giữ nguyên kế hoạch.',
-      reason: 'plan',
-      emotion: 'calm',
-      priceAtReview: 120_000,
-    },
-  });
-  const goal = await prisma.goal.create({
-    data: {
-      userId: user.id,
-      name: 'Quỹ mua nhà',
-      template: 'house',
-      priority: 2,
-      targetAmount: 1_500_000_000,
-      targetDate: new Date(`${addDays(today, 5 * 365)}T00:00:00Z`),
-      monthlyContribution: 10_000_000,
-    },
-  });
-  // Mục tiêu v3: tài sản thuộc mục tiêu theo giao dịch gắn mục tiêu (FPT thuộc quỹ mua nhà)
-  await prisma.transaction.updateMany({ where: { userId: user.id, symbol: 'FPT' }, data: { goalId: goal.id } });
   await prisma.conversation.create({
     data: {
       userId: user.id,
@@ -130,132 +93,6 @@ async function main() {
   });
   await prisma.priceAlert.create({
     data: { userId: user.id, assetType: 'stock', symbol: 'FPT', direction: 'above', targetPrice: 200_000 },
-  });
-  // Soi lời khuyên: một phiếu đã phân tích sẵn (không gọi AI) cho audit màn sổ / phiếu / thanh quyết định
-  await prisma.tipCheck.create({
-    data: {
-      userId: user.id,
-      text: 'HPG múc ngay anh em, target 35, ăn chắc 30% trong tháng. Nghe nói sắp ký hợp đồng lớn!',
-      sourceName: 'Nhóm Zalo VIP',
-      sourceKind: 'zalo',
-      assetType: 'stock',
-      symbol: 'HPG',
-      status: 'analyzed',
-      claims: {
-        direction: 'buy',
-        targetPrice: 35_000,
-        stopPrice: null,
-        horizonDays: 30,
-        reasons: ['Sắp ký hợp đồng lớn'],
-        promises: ['ăn chắc 30% trong tháng'],
-        citesSource: false,
-        candidates: [
-          { assetType: 'stock', symbol: 'HPG', displayName: 'HPG' },
-          { assetType: 'stock', symbol: 'FPT', displayName: 'FPT' },
-        ],
-        extractedBy: 'ai',
-      },
-      priceAtCheck: 26_000,
-      priceSource: 'Vietcap',
-      benchmark: 'VNINDEX',
-      benchmarkAtCheck: 1_300,
-      score: 45,
-      scoreParts: [
-        { key: 'urgency', label: 'Lời lẽ hối thúc', points: 10, detail: '"múc", "ăn chắc"' },
-        { key: 'no_stop', label: 'Thiếu', points: 10, detail: 'Không có điểm cắt lỗ' },
-        { key: 'no_numbers', label: 'Thiếu', points: 10, detail: 'Lý do không kèm số liệu nào' },
-        { key: 'no_source', label: 'Thiếu', points: 5, detail: 'Không dẫn nguồn cho thông tin đưa ra' },
-        { key: 'overpromise', label: 'Hứa quá', points: 10, detail: 'Mục tiêu cao hơn giá hiện tại 34,6% trong 30 ngày' },
-      ],
-      personal: {
-        amountVnd: 6_000_000,
-        amountAssumed: true,
-        totalValueVnd: 60_000_000,
-        weightAfterPct: 22.5,
-        maxWeightPct: 15,
-        overWeight: true,
-        stopPct: 15,
-        stopFromTip: false,
-        lossIfStopVnd: 900_000,
-        lossIfStopPctOfTotal: 1.5,
-        maxDrawdownPct: 20,
-        held: { quantity: 300, pnlPct: -3.5, weightPct: 13, exceedsMaxLoss: false },
-        plan: null,
-        cash: { currency: 'VND', available: 9_000_000, enough: true },
-        riskType: 'balanced',
-      },
-      report: {
-        ai: 'ok',
-        aiMessage: null,
-        dataSays: [
-          { point: 'Giá đã tăng 1,7% trong 1 tuần và còn thấp hơn đỉnh 52 tuần 21,2%.', source: 'Vietcap' },
-          { point: 'P/E hiện tại 7,6 lần, thấp hơn trung vị 8 năm 11,1 lần của chính HPG.', source: 'Vietcap' },
-        ],
-        missing: ['Không có điểm cắt lỗ', 'Lý do không kèm số liệu nào', 'Không dẫn nguồn cho thông tin đưa ra'],
-        unverifiable: ['Thông tin "sắp ký hợp đồng lớn" chưa kiểm chứng được.'],
-        verdict: 'Định giá không đắt nhưng lý do của tin chưa có số liệu; mua thêm sẽ đưa HPG lên 22,5% tài sản, vượt mức 15%.',
-        questions: ['Nếu giá giảm 15% sau khi mua, bạn sẽ làm gì?', 'Bạn có chấp nhận HPG chiếm 22,5% tài sản không?'],
-        news: [],
-        droppedPoints: 0,
-        facts: [
-          { label: 'Giá lúc soi', value: '26.000 ₫', source: 'Vietcap' },
-          { label: 'RSI14', value: '50,9', source: 'Vietcap' },
-        ],
-      },
-    },
-  });
-  // Phiếu cũ đã chấm 30 ngày: audit bảng "Theo nguồn" và kết quả chấm lại
-  await prisma.tipCheck.create({
-    data: {
-      userId: user.id,
-      text: 'FPT target 150 trong tháng, vào ngay kẻo lỡ tàu!',
-      sourceName: 'Nhóm Zalo VIP',
-      sourceKind: 'zalo',
-      assetType: 'stock',
-      symbol: 'FPT',
-      status: 'analyzed',
-      claims: {
-        direction: 'buy',
-        targetPrice: 150_000,
-        stopPrice: null,
-        horizonDays: 30,
-        reasons: [],
-        promises: [],
-        citesSource: false,
-        candidates: [{ assetType: 'stock', symbol: 'FPT', displayName: 'FPT' }],
-        extractedBy: 'ai',
-      },
-      priceAtCheck: 120_000,
-      priceSource: 'Vietcap',
-      benchmark: 'VNINDEX',
-      benchmarkAtCheck: 1_280,
-      score: 65,
-      scoreParts: [{ key: 'urgency', label: 'Lời lẽ hối thúc', points: 10, detail: '"vào ngay", "lỡ tàu"' }],
-      report: {
-        ai: 'off',
-        aiMessage: null,
-        dataSays: [],
-        missing: ['Không có điểm cắt lỗ'],
-        unverifiable: [],
-        verdict: null,
-        questions: [],
-        news: [],
-        droppedPoints: 0,
-        facts: [{ label: 'Giá lúc soi', value: '120.000 ₫', source: 'Vietcap' }],
-      },
-      decision: 'ignore',
-      decidedAt: new Date(Date.now() - 40 * 86_400_000),
-      review30: {
-        at: new Date(Date.now() - 10 * 86_400_000).toISOString(),
-        price: 108_000,
-        changePct: -10,
-        benchmarkChangePct: 1.5,
-        hitTarget: false,
-        hitStop: false,
-        outcome: 'wrong',
-      },
-      createdAt: new Date(Date.now() - 40 * 86_400_000),
-    },
   });
   await prisma.$disconnect();
   process.stdout.write(jwt.sign({ sub: user.id, email }, process.env.JWT_SECRET, { expiresIn: '1d' }));

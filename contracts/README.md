@@ -9,10 +9,10 @@ src/
   common.ts       AssetType, Currency, PriceStatus, PriceMeta, DataQuality, OkResponse…
   market.ts       báo giá, snapshot, chi tiết cổ phiếu / coin, nến, chỉ báo kỹ thuật, cổ tức
   portfolio.ts    định giá, giao dịch, hiệu quả, lịch sử, nhập CSV
-  analysis.ts     thử kịch bản, tái cân bằng        dividends.ts   sự kiện quyền, lịch thu nhập
-  events.ts       lịch sự kiện + nhắc               screener.ts    lọc cổ phiếu, bộ lọc đã lưu
-  compare.ts      so sánh cổ phiếu                  practice.ts    luyện tập tiền ảo
-  notifications.ts, watchlist.ts, plans.ts, goals.ts, home.ts, demo.ts, auth.ts,
+  dividends.ts    sự kiện quyền, lịch thu nhập      events.ts      lịch sự kiện + nhắc
+  screener.ts     lọc cổ phiếu, bộ lọc đã lưu       compare.ts     so sánh cổ phiếu
+  journal.ts      nhật ký quyết định                reports.ts     báo cáo
+  notifications.ts, watchlist.ts, home.ts, demo.ts, auth.ts, portfolio-alerts.ts, holding-draft.ts,
   channels.ts (Telegram / Web Push), news.ts, advisor.ts (gồm sự kiện SSE), health.ts, analytics.ts
   index.ts        export * của tất cả
 ```

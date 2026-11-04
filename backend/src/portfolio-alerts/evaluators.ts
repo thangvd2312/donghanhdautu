@@ -18,7 +18,7 @@ import type {
   PortfolioAlertStatus,
   PriceStatus,
 } from '@dautu/contracts';
-import { addDays } from '../plans/plan-rules';
+import { addDays } from '../common/dates';
 import { DEFAULT_WINDOW_DAYS, fmt, GROUP_LABEL, GROUPS } from './rule-config';
 import type { RuleConfig } from './rule-config';
 
@@ -190,7 +190,7 @@ export function evaluateDrift(v: ValuationLite, targets: GroupTargets | null, th
     ...base,
     status: 'firing',
     headline: `${GROUP_LABEL[top.g]} ${fmt(top.actual)}% (mục tiêu ${fmt(top.target)}%)${over.length > 1 ? ` và ${over.length - 1} nhóm khác` : ''}`,
-    reason: `Tỷ trọng lệch từ ${fmt(thresholdPts)} điểm % so với mục tiêu bạn tự đặt. Tái cân bằng hay chưa là quyết định của bạn; có thể dùng trang Tái cân bằng để xem phương án.`,
+    reason: `Tỷ trọng lệch từ ${fmt(thresholdPts)} điểm % so với mục tiêu bạn tự đặt. Cân đối lại hay chưa là quyết định của bạn.`,
     items,
   };
 }

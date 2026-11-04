@@ -53,11 +53,14 @@ export default function Layout() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  // Trang mã cổ phiếu / coin thuộc Bảng giá (có trên thanh đáy)
   const bottomValue =
     BOTTOM.find((n) => matches(loc.pathname, n.to))?.to ??
-    (MORE.some((n) => matches(loc.pathname, n.to)) || loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto')
-      ? 'more'
-      : false)
+    (loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto')
+      ? '/market'
+      : MORE.some((n) => matches(loc.pathname, n.to))
+        ? 'more'
+        : false)
   const pageTitle =
     [...BOTTOM, ...MORE].find((n) => matches(loc.pathname, n.to))?.label ??
     (loc.pathname.startsWith('/stock') || loc.pathname.startsWith('/crypto') ? 'Bảng giá' : undefined)

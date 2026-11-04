@@ -1,6 +1,6 @@
 import type { Notification, PushDelivery, PushSettings, PushSubscription } from '@prisma/client';
 import type { PushStatus } from '@dautu/contracts';
-import { DEFAULT_KINDS, KIND_LABEL } from '../notifications/channel-rules';
+import { KIND_LABEL, storedKinds } from '../notifications/channel-rules';
 
 type DeviceRow = Pick<PushSubscription, 'endpoint' | 'userAgent' | 'createdAt'>;
 type DeliveryRow = PushDelivery & { notification: Pick<Notification, 'title'> };
@@ -15,7 +15,7 @@ export function toPushStatus(
     publicKey,
     kindLabels: KIND_LABEL,
     settings: {
-      kinds: { ...DEFAULT_KINDS, ...((settings?.kinds as Record<string, boolean> | undefined) ?? {}) },
+      kinds: storedKinds(settings?.kinds),
       quietStart: settings?.quietStart ?? null,
       quietEnd: settings?.quietEnd ?? null,
       showDetails: settings?.showDetails ?? false,
