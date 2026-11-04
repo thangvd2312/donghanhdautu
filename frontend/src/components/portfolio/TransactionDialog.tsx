@@ -34,6 +34,7 @@ import TxAssetField from './TxAssetField'
 import { DialogHeader } from '../ui'
 
 const QTY_LABEL: Record<TradeAsset, string> = { stock: 'Số cổ phiếu', crypto: 'Số coin', gold: 'Số lượng (lượng)' }
+const QTY_DECIMALS: Record<TradeAsset, number> = { stock: 0, crypto: 8, gold: 4 }
 const PRICE_UNIT: Record<TradeAsset, string> = { stock: '₫ / cp', crypto: 'USDT', gold: '₫ / lượng' }
 
 /**
@@ -258,13 +259,13 @@ export default function TransactionDialog({
           />
 
           {cashOpening ? (
-            <NumField label={`Tiền mặt ${editing?.symbol} đầu kỳ`} value={quantity} onChange={setQuantity} unit={editing?.symbol ?? ''} />
+            <NumField label={`Tiền mặt ${editing?.symbol} đầu kỳ`} value={quantity} onChange={setQuantity} unit={editing?.symbol ?? ''} decimals={editing?.symbol === 'USDT' ? 2 : 0} />
           ) : isBonus ? (
-            <NumField label="Số cổ phiếu nhận thêm" value={quantity} onChange={setQuantity} />
+            <NumField label="Số cổ phiếu nhận thêm" value={quantity} onChange={setQuantity} decimals={0} />
           ) : trade ? (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <NumField label={QTY_LABEL[assetType]} value={quantity} onChange={setQuantity} />
+                <NumField label={QTY_LABEL[assetType]} value={quantity} onChange={setQuantity} decimals={QTY_DECIMALS[assetType]} />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <NumField
@@ -272,6 +273,7 @@ export default function TransactionDialog({
                   value={price}
                   onChange={setPrice}
                   unit={PRICE_UNIT[assetType]}
+                  decimals={assetType === 'crypto' ? 8 : 0}
                 />
               </Grid>
             </Grid>
@@ -283,6 +285,7 @@ export default function TransactionDialog({
                   value={amount}
                   onChange={setAmount}
                   unit={unit}
+                  decimals={usdt ? 2 : 0}
                 />
               </Grid>
               {cashOnly && (
@@ -306,7 +309,7 @@ export default function TransactionDialog({
           {type !== 'fee' && !cashOpening && !isBonus && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 6 }}>
-                <NumField label="Phí" value={fee} onChange={setFee} unit={usdt ? 'USDT' : '₫'} />
+                <NumField label="Phí" value={fee} onChange={setFee} unit={usdt ? 'USDT' : '₫'} decimals={usdt ? 4 : 0} />
               </Grid>
               <Grid size={{ xs: 6 }}>
                 <NumField
@@ -314,6 +317,7 @@ export default function TransactionDialog({
                   value={tax}
                   onChange={setTax}
                   unit={usdt ? 'USDT' : '₫'}
+                  decimals={usdt ? 4 : 0}
                   helper={type === 'sell' && assetType === 'stock' ? 'Bán cổ phiếu: 0,1% giá trị bán' : undefined}
                 />
               </Grid>
@@ -326,6 +330,7 @@ export default function TransactionDialog({
               value={fxRate}
               onChange={setFxRate}
               unit="₫ / USDT"
+              decimals={2}
               helper={
                 fxRate && fxRate === autoFx
                   ? 'Đã điền tỷ giá hiện tại. Dùng để tính lãi/lỗ VND thực tế; sửa nếu bạn đổi USDT ở giá khác.'

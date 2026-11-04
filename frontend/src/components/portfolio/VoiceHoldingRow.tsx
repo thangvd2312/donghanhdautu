@@ -16,6 +16,7 @@ import { useState } from 'react'
 import { fmtVndShort } from '../../lib/format'
 import { fmtDraftNumber, holdingRowError, parseDraftNum, type EditableHoldingDraft } from '../../lib/holdingDrafts'
 import type { AssetType, GoldOption } from '../../lib/types'
+import NumberField from '../NumberField'
 
 const TYPES = { stock: 'Cổ phiếu', crypto: 'Crypto', gold: 'Vàng', cash: 'Tiền mặt' }
 const UNITS = { stock: 'cp', crypto: 'coin', gold: 'lượng', cash: '' }
@@ -89,16 +90,18 @@ export default function VoiceHoldingRow({ row, index, gold, disabled, onChange, 
         </Collapse>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: row.assetType === 'cash' ? 12 : 6 }}>
-            <TextField fullWidth disabled={disabled} label={row.assetType === 'cash' ? 'Số tiền (VND)' : row.assetType === 'gold' ? 'Số lượng (lượng)' : 'Số lượng'} value={row.quantity}
-              onChange={(e) => change({ quantity: e.target.value })} onBlur={() => row.quantity !== tidy(row.quantity) && change({ quantity: tidy(row.quantity) })} error={quantityError}
+            <NumberField fullWidth disabled={disabled} label={row.assetType === 'cash' ? 'Số tiền (VND)' : row.assetType === 'gold' ? 'Số lượng (lượng)' : 'Số lượng'} value={row.quantity}
+              decimals={row.assetType === 'crypto' ? 8 : row.assetType === 'gold' ? 4 : 0}
+              onValueChange={(v) => change({ quantity: v })} onBlur={() => row.quantity !== tidy(row.quantity) && change({ quantity: tidy(row.quantity) })} error={quantityError}
               helperText={quantityError ? 'Nhập số lớn hơn 0' : row.assetType === 'cash' && quantity >= 1e6 ? `≈ ${fmtVndShort(quantity)}` : row.assetType === 'gold' ? '1 lượng = 10 chỉ' : undefined}
-              slotProps={{ htmlInput: { inputMode: 'decimal', autoComplete: 'off' } }} />
+              />
           </Grid>
           {row.assetType !== 'cash' && <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField fullWidth disabled={disabled} label={`Giá vốn TB (${row.assetType === 'crypto' ? 'USDT/coin' : row.assetType === 'gold' ? 'VND/lượng' : 'VND/cp'})`} value={row.avgCost}
-              onChange={(e) => change({ avgCost: e.target.value })} onBlur={() => row.avgCost !== tidy(row.avgCost) && change({ avgCost: tidy(row.avgCost) })} error={costError}
+            <NumberField fullWidth disabled={disabled} label={`Giá vốn TB (${row.assetType === 'crypto' ? 'USDT/coin' : row.assetType === 'gold' ? 'VND/lượng' : 'VND/cp'})`} value={row.avgCost}
+              decimals={row.assetType === 'crypto' ? 8 : 0}
+              onValueChange={(v) => change({ avgCost: v })} onBlur={() => row.avgCost !== tidy(row.avgCost) && change({ avgCost: tidy(row.avgCost) })} error={costError}
               helperText={costError ? 'Bổ sung giá vốn của bạn' : undefined}
-              slotProps={{ htmlInput: { inputMode: 'decimal', autoComplete: 'off' } }} />
+              />
           </Grid>}
         </Grid>
         {total !== null && (

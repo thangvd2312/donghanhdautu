@@ -3,7 +3,6 @@ import Button from '@mui/material/Button'
 import InputAdornment from '@mui/material/InputAdornment'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
@@ -12,6 +11,7 @@ import { parseNum } from '../../lib/num'
 import { amountError } from '../../lib/tips'
 import { RISK_LABEL, type TipCheck } from '../../lib/types'
 import { KV, Panel } from '../ui'
+import NumberField from '../NumberField'
 
 /**
  * Với riêng bạn: nếu mua theo lời khuyên với số tiền giả định thì tỷ trọng, mức lỗ khi chạm cắt lỗ, tiền mặt ra sao.
@@ -68,15 +68,15 @@ export default function PersonalImpact({
           void submit(parseNum(text))
         }}
       >
-        <TextField
+        <NumberField
           size="small"
           label="Số tiền định mua"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onValueChange={setText}
           error={!!error}
           helperText={error || ' '}
           slotProps={{
-            htmlInput: { inputMode: 'decimal', style: { fontSize: 16 } },
+            htmlInput: { style: { fontSize: 16 } },
             input: { endAdornment: <InputAdornment position="end">₫</InputAdornment> },
           }}
           sx={{ flex: 1 }}

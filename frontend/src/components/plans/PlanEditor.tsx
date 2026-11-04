@@ -21,6 +21,7 @@ import { parseNum } from '../../lib/num'
 import type { Plan, PlanRequest } from '../../lib/types'
 import StockSearch from '../StockSearch'
 import { DialogHeader } from '../ui'
+import NumberField from '../NumberField'
 
 type PlanAsset = Plan['assetType']
 const UNIT: Record<PlanAsset, string> = { stock: '₫ / cp', crypto: 'USDT', gold: '₫ / lượng' }
@@ -252,28 +253,28 @@ export default function PlanEditor({
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <NumberField
                 size="small"
                 fullWidth
                 label="Mốc chốt lời (tuỳ chọn)"
                 value={targetPrice}
-                onChange={(e) => setTargetPrice(e.target.value)}
+                onValueChange={setTargetPrice}
+                decimals={assetType === 'crypto' ? 8 : 0}
                 slotProps={{
                   input: { endAdornment: <InputAdornment position="end">{UNIT[assetType]}</InputAdornment> },
-                  htmlInput: { inputMode: 'decimal' },
                 }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <NumberField
                 size="small"
                 fullWidth
                 label="Mốc cắt lỗ (tuỳ chọn)"
                 value={stopPrice}
-                onChange={(e) => setStopPrice(e.target.value)}
+                onValueChange={setStopPrice}
+                decimals={assetType === 'crypto' ? 8 : 0}
                 slotProps={{
                   input: { endAdornment: <InputAdornment position="end">{UNIT[assetType]}</InputAdornment> },
-                  htmlInput: { inputMode: 'decimal' },
                 }}
               />
             </Grid>

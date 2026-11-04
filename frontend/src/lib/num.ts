@@ -1,8 +1,11 @@
-/** Chấp nhận cả "1.000.000", "1,000,000", "0.05", "0,05" */
+/** Chấp nhận cả "1.000.000", "1,000,000", "0.05", "0,05", "1.234,5" (ô NumberField) */
 export function parseNum(s: string) {
   const t = s.trim().replace(/\s/g, '')
   if (!t) return NaN
-  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g, ''))
+  // Nhóm nghìn không bắt đầu bằng 0: "0,050" là 0,05 chứ không phải 50
+  if (/^[1-9]\d{0,2}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g, ''))
+  // Kiểu Việt Nam có phần lẻ: "1.234,5"
+  if (/^\d{1,3}(\.\d{3})+,\d+$/.test(t)) return Number(t.replace(/\./g, '').replace(',', '.'))
   return Number(t.replace(',', '.'))
 }
 

@@ -11,7 +11,6 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import Switch from '@mui/material/Switch'
-import TextField from '@mui/material/TextField'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
@@ -45,6 +44,7 @@ import { KV } from '../ui'
 import { VirtualBadge } from './PracticeParts'
 import { virtualButton } from '../../lib/practiceStyle'
 import { useIsMobile } from '../../lib/useIsMobile'
+import NumberField from '../NumberField'
 
 export interface OrderPreset {
   side: PracticeSide
@@ -301,12 +301,13 @@ function OrderForm({
 
       {symbol && (
         <Box>
-          <TextField
+          <NumberField
             id="practice-qty"
             label={assetType === 'stock' ? 'Số cổ phiếu' : 'Số lượng'}
             value={text}
-            onChange={(e) => {
-              setText(e.target.value)
+            decimals={assetType === 'stock' ? 0 : 8}
+            onValueChange={(v) => {
+              setText(v)
               setTouched(true)
               setApiError('')
             }}
@@ -314,7 +315,6 @@ function OrderForm({
             fullWidth
             slotProps={{
               htmlInput: {
-                inputMode: assetType === 'stock' ? 'numeric' : 'decimal',
                 autoComplete: 'off',
                 'aria-invalid': !!err,
                 'aria-describedby': err ? 'practice-qty-err' : undefined,

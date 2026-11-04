@@ -17,6 +17,7 @@ import { fmtNum } from '../../lib/format'
 import { useIsMobile } from '../../lib/useIsMobile'
 import StockSearch from '../StockSearch'
 import { DialogHeader } from '../ui'
+import NumberField from '../NumberField'
 
 type AlertAsset = 'stock' | 'crypto' | 'gold'
 
@@ -146,15 +147,15 @@ export default function PriceAlertDialog({
             <ToggleButton value="below">Khi giá ≤ mốc</ToggleButton>
             <ToggleButton value="above">Khi giá ≥ mốc</ToggleButton>
           </ToggleButtonGroup>
-          <TextField
+          <NumberField
             size="small"
             label="Mốc giá"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onValueChange={setPrice}
+            decimals={assetType === 'crypto' ? 8 : 0}
             autoFocus={!!fixed}
             slotProps={{
               input: { endAdornment: <InputAdornment position="end">{UNIT[assetType]}</InputAdornment> },
-              htmlInput: { inputMode: 'decimal' },
             }}
           />
           <TextField

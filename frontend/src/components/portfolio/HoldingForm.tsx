@@ -14,6 +14,7 @@ import { fmtVnd } from '../../lib/format'
 import { parseNum } from '../../lib/num'
 import type { AssetType } from '../../lib/types'
 import StockSearch from '../StockSearch'
+import NumberField from '../NumberField'
 
 const TYPES: { value: AssetType; label: string }[] = [
   { value: 'stock', label: 'Cổ phiếu' },
@@ -162,26 +163,26 @@ export default function HoldingForm({
             </Grid>
           )}
           <Grid size={{ xs: 12, sm: 4 }}>
-            <TextField
+            <NumberField
               label={QTY_LABEL[assetType]}
               size="small"
               fullWidth
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onValueChange={setQuantity}
+              decimals={assetType === 'crypto' ? 8 : assetType === 'gold' ? 4 : 0}
               helperText={assetType === 'gold' ? '1 lượng = 10 chỉ' : undefined}
-              slotProps={{ htmlInput: { inputMode: 'decimal' } }}
             />
           </Grid>
           {assetType !== 'cash' && (
             <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
+              <NumberField
                 label={COST_LABEL[assetType]}
                 size="small"
                 fullWidth
                 value={avgCost}
-                onChange={(e) => setAvgCost(e.target.value)}
+                onValueChange={setAvgCost}
+                decimals={assetType === 'crypto' ? 8 : 0}
                 helperText={assetType === 'gold' && goldSell ? `Giá bán ra hiện tại: ${fmtVnd(goldSell)}` : undefined}
-                slotProps={{ htmlInput: { inputMode: 'decimal' } }}
               />
             </Grid>
           )}

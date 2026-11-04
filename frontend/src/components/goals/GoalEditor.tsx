@@ -18,6 +18,7 @@ import type { Goal, GoalAsset, GoalAssetType } from '../../lib/types'
 import { useIsMobile } from '../../lib/useIsMobile'
 import AssetAvatar from '../AssetAvatar'
 import { DialogHeader } from '../ui'
+import NumberField from '../NumberField'
 
 export default function GoalEditor({
   open,
@@ -87,13 +88,13 @@ export default function GoalEditor({
           <TextField size="small" label="Tên mục tiêu" placeholder="VD: Quỹ dự phòng, Mua nhà 2030" value={name} onChange={(e) => setName(e.target.value)} />
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <NumberField
                 size="small"
                 fullWidth
                 label="Số tiền mục tiêu"
                 value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                slotProps={{ input: { endAdornment: <InputAdornment position="end">₫</InputAdornment> }, htmlInput: { inputMode: 'decimal' } }}
+                onValueChange={setTarget}
+                slotProps={{ input: { endAdornment: <InputAdornment position="end">₫</InputAdornment> } }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -108,13 +109,13 @@ export default function GoalEditor({
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <NumberField
                 size="small"
                 fullWidth
                 label="Dự định góp mỗi tháng"
                 value={monthly}
-                onChange={(e) => setMonthly(e.target.value)}
-                slotProps={{ input: { endAdornment: <InputAdornment position="end">₫</InputAdornment> }, htmlInput: { inputMode: 'decimal' } }}
+                onValueChange={setMonthly}
+                slotProps={{ input: { endAdornment: <InputAdornment position="end">₫</InputAdornment> } }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>

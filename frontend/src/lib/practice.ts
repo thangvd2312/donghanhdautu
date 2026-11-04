@@ -1,4 +1,5 @@
 /** Luyện tập (tiền ảo, FREE-07): hằng số và phép tính ước lượng lệnh phía giao diện (máy chủ mới là nơi khớp thật); kiểu API ở contracts/ */
+import { parseNumInput } from './numInput'
 
 import type { PracticeAssetType, PracticePriceStatus, PracticeSide } from './types'
 
@@ -53,8 +54,8 @@ export function parseQty(text: string, assetType: PracticeAssetType): number {
   const t = text.trim().replace(/\s/g, '')
   if (!t) return NaN
   if (assetType === 'stock') return /^[\d.,]+$/.test(t) ? Number(t.replace(/[.,]/g, '')) : NaN
-  if (!/^\d*[.,]?\d*$/.test(t) || t === '.' || t === ',') return NaN
-  return Number(t.replace(',', '.'))
+  if (t === '.' || t === ',') return NaN
+  return parseNumInput(t)
 }
 
 const floorTo = (v: number, dp: number) => Math.floor(v * 10 ** dp + 1e-9) / 10 ** dp
