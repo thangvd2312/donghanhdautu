@@ -101,6 +101,39 @@ export const MORE: NavItemWithIcon[] = [
   { to: '/settings', label: 'Cài đặt & thông báo', Icon: SettingsOutlined },
 ]
 
+/** Bảng "Thêm" trên điện thoại: lưới icon chia nhóm, nhãn ngắn (các trang không có ở thanh đáy) */
+export const MORE_GROUPS: { title: string; items: NavItemWithIcon[] }[] = [
+  {
+    title: 'Tài sản',
+    items: [
+      { to: '/goals', label: 'Mục tiêu', Icon: SavingsOutlined },
+      { to: '/income', label: 'Cổ tức', Icon: PaidOutlined },
+      { to: '/reports', label: 'Báo cáo', Icon: SummarizeOutlined },
+      { to: '/journal', label: 'Nhật ký', Icon: MenuBookOutlined },
+    ],
+  },
+  {
+    title: 'Hành động',
+    items: [
+      { to: '/deployment', label: 'Giải ngân', Icon: DonutSmallOutlined },
+      { to: '/rebalance', label: 'Tái cân bằng', Icon: BalanceOutlined },
+      { to: '/tips', label: 'Soi lời khuyên', Icon: FactCheckOutlined },
+      { to: '/simulate', label: 'Thử kịch bản', Icon: TuneOutlined },
+    ],
+  },
+  {
+    title: 'Thị trường & công cụ',
+    items: [
+      { to: '/market', label: 'Bảng giá', Icon: ShowChartOutlined },
+      { to: '/news', label: 'Tin tức', Icon: NewspaperOutlined },
+      { to: '/events', label: 'Lịch sự kiện', Icon: EventOutlined },
+      { to: '/screener', label: 'Lọc cổ phiếu', Icon: FilterAltOutlined },
+      { to: '/compare', label: 'So sánh', Icon: CompareArrowsOutlined },
+      { to: '/practice', label: 'Luyện tập', Icon: SchoolOutlined },
+    ],
+  },
+]
+
 /** Menu tài khoản trên desktop: các trang không có trên sidebar */
 const IN_SIDEBAR = new Set(NAV.map((n) => n.to))
 export const USER_MENU: NavItemWithIcon[] = MORE.filter((n) => !IN_SIDEBAR.has(n.to))
@@ -110,6 +143,9 @@ export const SIDEBAR_WIDTH = 236
 
 /** Chiều cao thanh đáy (chưa tính vùng an toàn của iPhone) */
 export const BOTTOM_NAV_HEIGHT = 60
+
+/** Bản ngắn một dòng (bảng "Thêm" trên điện thoại) */
+export const DISCLAIMER_SHORT = 'Chỉ để tham khảo, không phải khuyến nghị đầu tư được cấp phép.'
 
 export const DISCLAIMER =
   'Dữ liệu: Vietcap, DNSE, Binance, vang.today, Vietcombank, CafeF, VnExpress. Phân tích của cố vấn chỉ mang tính tham khảo, không phải khuyến nghị đầu tư được cấp phép — quyết định cuối cùng là của bạn.'

@@ -94,7 +94,7 @@ export default function Layout() {
         anchor="bottom"
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
-        slotProps={{ paper: { sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, pb: 'env(safe-area-inset-bottom)' } } }}
+        slotProps={{ paper: { sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, pb: 'env(safe-area-inset-bottom)', maxHeight: '88dvh' } } }}
       >
         <Suspense fallback={null}>
           <MoreSheet onClose={() => setMoreOpen(false)} />
