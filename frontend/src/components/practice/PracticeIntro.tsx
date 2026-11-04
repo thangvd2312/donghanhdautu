@@ -9,7 +9,9 @@ import { useState } from 'react'
 import { ApiError } from '../../api/client'
 import { startPractice } from '../../api/practice'
 import { DEFAULT_START_CASH, FALLBACK_RULES, type PracticeState } from '../../lib/practice'
+import { useIsMobile } from '../../lib/useIsMobile'
 import { virtualButton, virtualColor } from '../../lib/practiceStyle'
+import { InfoTip } from '../ui'
 import { RulesPanel, StartCashPicker } from './PracticeParts'
 
 const INTRO_POINTS = [
@@ -20,6 +22,7 @@ const INTRO_POINTS = [
 
 /** Chưa mở tài khoản: giải thích, quy tắc và chọn vốn ban đầu */
 export default function PracticeIntro({ onStarted }: { onStarted: (s: PracticeState) => void }) {
+  const mobile = useIsMobile()
   const [cash, setCash] = useState(DEFAULT_START_CASH)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -44,15 +47,12 @@ export default function PracticeIntro({ onStarted }: { onStarted: (s: PracticeSt
               Tập mua bán với tiền ảo
             </Typography>
           </Stack>
-          <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.75, lineHeight: 1.5 } }}>
-            {INTRO_POINTS.map((t) => (
-              <li key={t}>
-                <Typography variant="body2" component="span">
-                  {t}
-                </Typography>
-              </li>
-            ))}
-          </Box>
+          <Typography variant="body2" color="text.secondary">
+            Tiền ảo, riêng hẳn với danh mục thật. Chỉ để học.
+            <Box component="span" sx={{ ml: 1.5 }}>
+              <InfoTip label="Về tài khoản ảo">{INTRO_POINTS.join('\n\n')}</InfoTip>
+            </Box>
+          </Typography>
           <Typography variant="subtitle2" component="h3" sx={{ pt: 0.5 }}>
             Chọn vốn ảo ban đầu
           </Typography>
@@ -65,12 +65,12 @@ export default function PracticeIntro({ onStarted }: { onStarted: (s: PracticeSt
           <Button variant="contained" size="large" fullWidth disabled={busy} onClick={() => void start()} sx={{ minHeight: 48, ...virtualButton }}>
             {busy ? 'Đang mở…' : 'Bắt đầu'}
           </Button>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
             Bạn có thể đặt lại bất cứ lúc nào từ menu ⋮.
           </Typography>
         </Stack>
       </Paper>
-      <RulesPanel rules={FALLBACK_RULES} defaultOpen />
+      <RulesPanel rules={FALLBACK_RULES} defaultOpen={!mobile} />
     </Stack>
   )
 }

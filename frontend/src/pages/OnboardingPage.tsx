@@ -13,6 +13,7 @@ import Stepper from '@mui/material/Stepper'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { HERO_SX } from '../components/home/HomeBlocks'
 import HoldingForm from '../components/portfolio/HoldingForm'
 import { Logo } from '../components/ui'
 import { getQuiz, submitQuiz } from '../api/auth'
@@ -25,13 +26,13 @@ import { RISK_LABEL, type InvestorProfile, type Portfolio, type QuizQuestion } f
 
 const RISK_DESC: Record<string, string> = {
   conservative:
-    'Bạn ưu tiên giữ tiền hơn là kiếm lời nhanh. Cố vấn sẽ hướng bạn tới tài sản ít biến động, cổ phiếu cơ bản vững, và cảnh báo sớm khi rủi ro tăng.',
+    'Bạn ưu tiên giữ tiền hơn kiếm lời nhanh. Cố vấn hướng tới tài sản ít biến động và cảnh báo sớm khi rủi ro tăng.',
   balanced:
-    'Bạn chấp nhận biến động vừa phải để tài sản tăng trưởng đều. Cố vấn sẽ giúp giữ danh mục cân đối giữa cổ phiếu, vàng và tiền gửi.',
+    'Bạn chấp nhận biến động vừa phải để tăng trưởng đều. Cố vấn giúp giữ danh mục cân đối cổ phiếu, vàng, tiền gửi.',
   growth:
-    'Bạn sẵn sàng chịu biến động lớn để đổi lấy tăng trưởng dài hạn. Cố vấn sẽ tập trung vào chất lượng doanh nghiệp và định giá hợp lý.',
+    'Bạn chịu biến động lớn để đổi lấy tăng trưởng dài hạn. Cố vấn tập trung vào chất lượng doanh nghiệp và định giá.',
   aggressive:
-    'Bạn chịu rủi ro cao. Cố vấn sẽ đặc biệt nhắc kỷ luật: tỷ trọng tối đa mỗi mã, điểm cắt lỗ, và không dùng tiền cần cho cuộc sống.',
+    'Bạn chịu rủi ro cao. Cố vấn nhắc kỷ luật: tỷ trọng tối đa mỗi mã, điểm cắt lỗ, không dùng tiền sinh hoạt.',
 }
 
 const STEPS = ['Khảo sát khẩu vị', 'Kết quả', 'Tài sản đang có']
@@ -88,11 +89,11 @@ export default function OnboardingPage() {
   return (
     <Box sx={{ minHeight: '100vh', py: { xs: 3, md: 6 } }}>
       <Container maxWidth="md" sx={{ maxWidth: { md: 760 } }}>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 4 }}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: { xs: 2, md: 4 } }}>
           <Logo size={28} />
           <Typography sx={{ fontWeight: 700 }}>Đồng Hành Đầu Tư</Typography>
         </Stack>
-        <Stepper activeStep={stage} alternativeLabel sx={{ mb: 4 }}>
+        <Stepper activeStep={stage} alternativeLabel sx={{ mb: { xs: 2.5, md: 4 }, '& .MuiStepLabel-label': { fontSize: { xs: 12, md: 14 } } }}>
           {STEPS.map((s) => (
             <Step key={s}>
               <StepLabel>{s}</StepLabel>
@@ -107,8 +108,7 @@ export default function OnboardingPage() {
             ) : (
               <>
                 <Typography variant="body2" color="text.secondary">
-                  Chào {me?.name}. Trả lời thật lòng — không có đáp án đúng sai, chỉ có lời khuyên hợp hay không hợp với
-                  bạn.
+                  Chào {me?.name}. Trả lời thật lòng, không có đáp án sai.
                 </Typography>
                 <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mt: 3 }}>
                   <LinearProgress
@@ -173,25 +173,26 @@ export default function OnboardingPage() {
         )}
 
         {stage === 1 && profile && (
-          <Paper sx={{ p: { xs: 2.5, sm: 4 } }}>
-            <Typography variant="overline" color="text.secondary">
-              Kiểu nhà đầu tư của bạn
-            </Typography>
+          <Paper sx={{ ...HERO_SX, border: 'none', borderRadius: '20px', p: { xs: 2.5, sm: 4 } }}>
+            <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>Kiểu nhà đầu tư của bạn</Typography>
             <Stack useFlexGap direction="row" spacing={2} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <Typography component="h1" color="primary" sx={{ fontSize: { xs: 28, md: 34 }, fontWeight: 700, letterSpacing: '-0.02em' }}>
+              <Typography component="h1" sx={{ color: 'hero.gold', fontSize: { xs: 28, md: 34 }, fontWeight: 700, letterSpacing: '-0.02em' }}>
                 {RISK_LABEL[profile.riskType]}
               </Typography>
-              <Chip size="small" label={`Điểm chịu rủi ro ${profile.riskScore}/100`} />
+              <Chip size="small" label={`Điểm chịu rủi ro ${profile.riskScore}/100`} sx={{ bgcolor: 'rgba(255,255,255,0.12)', color: 'hero.ink' }} />
             </Stack>
-            <Typography sx={{ mt: 2 }}>{RISK_DESC[profile.riskType]}</Typography>
+            <Typography sx={{ mt: 2, color: 'hero.ink' }}>{RISK_DESC[profile.riskType]}</Typography>
             {profile.fomoProne && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                Bạn có xu hướng mua theo đám đông. Cố vấn sẽ chủ động hỏi lại lý do mỗi khi bạn định mua một mã đang tăng
-                nóng — không phải làm khó bạn, mà để giữ tiền cho bạn.
+              <Alert severity="warning" variant="outlined" sx={{ mt: 2, color: 'hero.ink', '& .MuiAlert-icon': { color: 'hero.gold' } }}>
+                Bạn hay mua theo đám đông. Cố vấn sẽ hỏi lại lý do khi bạn mua mã đang tăng nóng.
               </Alert>
             )}
             <Stack direction="row" sx={{ mt: 3, justifyContent: 'flex-end' }}>
-              <Button variant="contained" onClick={() => setStage(2)} sx={{ borderRadius: 99, px: 3 }}>
+              <Button
+                variant="contained"
+                onClick={() => setStage(2)}
+                sx={{ borderRadius: 99, px: 3, bgcolor: 'hero.gold', color: 'hero.bg', '&:hover': { bgcolor: 'hero.gold', opacity: 0.9 } }}
+              >
                 Tiếp tục
               </Button>
             </Stack>
@@ -204,8 +205,7 @@ export default function OnboardingPage() {
               Bạn đang nắm giữ những gì?
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
-              Nhập cổ phiếu, vàng, coin và tiền mặt. Cố vấn dựa vào đây để nhận xét danh mục và báo khi có biến động. Có
-              thể bỏ qua và nhập sau ở trang Danh mục.
+              Nhập cổ phiếu, vàng, coin, tiền mặt. Bỏ qua và nhập sau cũng được.
             </Typography>
             <HoldingForm onDone={() => void loadPortfolio()} />
             {portfolio && portfolio.holdings.length > 0 && (

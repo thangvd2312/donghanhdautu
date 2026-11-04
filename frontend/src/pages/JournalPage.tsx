@@ -175,7 +175,7 @@ export default function JournalPage() {
                 title={
                   filtered
                     ? `Không có quyết định nào${emotion ? ` lúc “${EMOTION_LABEL[emotion]}”` : ''}${planName ? ` của kế hoạch ${planName}` : ''} trong ${monthTitle(month).toLowerCase()}.`
-                    : `Chưa có quyết định nào trong ${monthTitle(month).toLowerCase()}.`
+                    : `Chưa có quyết định nào trong ${monthTitle(month).toLowerCase()}`
                 }
                 action={
                   <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -190,14 +190,13 @@ export default function JournalPage() {
                   </Stack>
                 }
               >
-                Khi ghi lệnh mua / bán trong sổ giao dịch hoặc xem lại một kế hoạch, bạn có thể gắn cảm xúc và lý do. Nhật ký chỉ lấy từ những gì
-                bạn tự ghi, không suy ra từ các cuộc trò chuyện với cố vấn.
+                Ghi lệnh hoặc xem lại kế hoạch để gắn cảm xúc và lý do.
               </EmptyState>
             ) : (
               <Stack divider={<Divider flexItem />}>
                 {days.map((d) => (
                   <Box key={d.date} component="section" aria-label={dayTitle(d.date)}>
-                    <Typography variant="caption" component="h2" sx={{ px: 2, pt: 1.25, fontWeight: 700, color: 'text.secondary', display: 'block' }}>
+                    <Typography variant="caption" component="h2" sx={{ px: 2, pt: 1.5, fontWeight: 700, color: 'text.secondary', display: 'block' }}>
                       {dayTitle(d.date)}
                     </Typography>
                     <Stack divider={<Divider flexItem sx={{ ml: 8 }} />}>
@@ -211,7 +210,7 @@ export default function JournalPage() {
             )}
             {data.truncated && (
               <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 2, py: 1 }}>
-                Tháng này có quá nhiều mục, chỉ hiện những mục mới nhất. Lọc theo cảm xúc hoặc kế hoạch để xem kỹ hơn.
+                Chỉ hiện các mục mới nhất. Lọc để xem kỹ hơn.
               </Typography>
             )}
           </Paper>

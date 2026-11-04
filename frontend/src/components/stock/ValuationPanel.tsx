@@ -8,7 +8,7 @@ import { ColorType, createChart, LineSeries, LineStyle, type UTCTimestamp } from
 import { useEffect, useRef, useState } from 'react'
 import { fmtNum } from '../../lib/format'
 import type { StockFundamentals as Data, ValuationBand } from '../../lib/types'
-import { Panel } from '../ui'
+import { InfoTip, Panel } from '../ui'
 
 // ───────────────────────── Định giá so với lịch sử ─────────────────────────
 
@@ -28,7 +28,7 @@ export default function ValuationPanel({ v }: { v: Data['valuationHistory'] }) {
 
   return (
     <Panel
-      title="Định giá so với lịch sử của chính doanh nghiệp"
+      title="Định giá so với lịch sử"
       subtitle={`${v.period} · ${band.quarters} quý · nguồn Vietcap`}
       sx={{ height: '100%' }}
       action={
@@ -53,6 +53,9 @@ export default function ValuationPanel({ v }: { v: Data['valuationHistory'] }) {
           <Typography variant="caption" color="text.secondary">
             Trung vị {fmtNum(band.median, 1)}
           </Typography>
+          <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1.5 }}>
+            <InfoTip>{label} theo lợi nhuận 4 quý gần nhất tại từng quý. Dải lịch sử là mốc tham chiếu, không phải giá trị hợp lý.</InfoTip>
+          </Box>
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {current != null && band.currentPercentile != null && (
@@ -77,7 +80,7 @@ export default function ValuationPanel({ v }: { v: Data['valuationHistory'] }) {
         </Box>
       </Stack>
       <ValuationChart series={v.series} metric={m} band={band} />
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
+      <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5, display: { xs: 'none', md: 'block' } }}>
         {label} theo lợi nhuận 4 quý gần nhất tại từng quý. Đường đứt nét là trung vị, đường chấm là mốc 25% và 75%.
         {v.excludedQuarters[m] > 0 && ` ${v.excludedQuarters[m]} quý thua lỗ hoặc lợi nhuận gần 0 bị loại.`} Dải lịch sử là
         mốc tham chiếu, không phải giá trị hợp lý: định giá thấp có thể do lợi nhuận đang ở đỉnh chu kỳ hoặc thị trường lo

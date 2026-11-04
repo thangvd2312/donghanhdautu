@@ -3,7 +3,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { fmtNum, fmtPct } from '../../lib/format'
 import type { StockFundamentals as Data } from '../../lib/types'
-import { KV, Panel } from '../ui'
+import { InfoTip, KV, Panel } from '../ui'
 
 // ───────────────────────── Cổ đông và giao dịch nội bộ ─────────────────────────
 
@@ -15,8 +15,8 @@ export default function OwnershipPanel({ sh, it }: { sh: Data['majorShareholders
           <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1 }}>
             Top {sh.top.length} cổ đông nắm {fmtPct(sh.top10TotalPct, 1, false)} · công bố mới nhất {fmtDate(sh.latestDisclosure)}
           </Typography>
-          {sh.top.slice(0, 5).map((r) => (
-            <Box key={r.name} sx={{ py: 0.5 }}>
+          {sh.top.slice(0, 5).map((r, idx) => (
+            <Box key={r.name} sx={{ py: 0.5, display: { xs: idx < 3 ? 'block' : 'none', md: 'block' } }}>
               <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
                 <Typography variant="body2" noWrap title={r.name} sx={{ minWidth: 0 }}>
                   {r.name}
@@ -39,6 +39,9 @@ export default function OwnershipPanel({ sh, it }: { sh: Data['majorShareholders
 
       <Typography variant="subtitle2" sx={{ mt: 2.5, mb: 0.5 }}>
         Giao dịch nội bộ {it?.period ?? '12 tháng gần nhất'}
+        <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1 }}>
+          <InfoTip>Chỉ tính giao dịch đã hoàn tất, không tính cổ phiếu thưởng/ESOP. Tín hiệu tham khảo, không phải lý do mua bán.</InfoTip>
+        </Box>
       </Typography>
       {it && it.count > 0 ? (
         <>
@@ -47,7 +50,7 @@ export default function OwnershipPanel({ sh, it }: { sh: Data['majorShareholders
           <KV k="Ròng" v={`${it.net > 0 ? '+' : ''}${fmtNum(it.net)}`} />
           <Stack spacing={1} sx={{ mt: 1.5 }}>
             {it.recent.slice(0, 4).map((r, i) => (
-              <Box key={i}>
+              <Box key={i} sx={{ display: { xs: i < 2 ? 'block' : 'none', md: 'block' } }}>
                 <Typography variant="body2">
                   <Box
                     component="span"
@@ -64,7 +67,7 @@ export default function OwnershipPanel({ sh, it }: { sh: Data['majorShareholders
               </Box>
             ))}
           </Stack>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5 }}>
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1.5, display: { xs: 'none', md: 'block' } }}>
             Chỉ tính giao dịch đã hoàn tất, không tính cổ phiếu thưởng/ESOP
             {it.withoutVolume > 0 ? `; ${it.withoutVolume} giao dịch chưa ghi nhận khối lượng` : ''}. Tín hiệu tham khảo, không
             phải lý do mua bán.

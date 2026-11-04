@@ -1,16 +1,28 @@
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
 import { changeColor, fmtNum, fmtPct, fmtPrice, fmtVndShort, timeAgo } from '../../lib/format'
 import type { PlanDetail } from '../../lib/types'
 import { PriceStatusChip } from '../DataStatus'
-import { KV, Panel } from '../ui'
+import { InfoTip, KV, Panel } from '../ui'
 import PriceRange from './PriceRange'
 
 /** Dữ kiện hiện tại của tài sản trong kế hoạch: giá, khoảng cách tới mốc, vị thế đang giữ (có nguồn, không phải nhận định) */
 export default function CurrentDataPanel({ p }: { p: PlanDetail }) {
   return (
-    <Panel title="Dữ liệu hiện tại" subtitle="Dữ kiện có nguồn, không phải nhận định">
+    <Panel
+      title="Dữ liệu hiện tại"
+      subtitle="Dữ kiện có nguồn, không phải nhận định"
+      action={
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          <InfoTip label="Nguồn giá">
+            Nguồn: {p.price.source}
+            {p.price.asOf && ` · ${timeAgo(p.price.asOf)}`}
+          </InfoTip>
+        </Box>
+      }
+    >
       {p.stopPrice != null && p.targetPrice != null && p.price.value != null && (
         <PriceRange stop={p.stopPrice} target={p.targetPrice} price={p.price.value} fmt={(v) => fmtPrice(v, p.currency)} />
       )}
@@ -45,10 +57,10 @@ export default function CurrentDataPanel({ p }: { p: PlanDetail }) {
         </>
       ) : (
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Bạn chưa nắm giữ tài sản này trong sổ giao dịch.
+          Chưa có trong sổ giao dịch.
         </Typography>
       )}
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
+      <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1, display: { xs: 'none', md: 'block' } }}>
         Nguồn: {p.price.source}
         {p.price.asOf && ` · ${timeAgo(p.price.asOf)}`}
       </Typography>

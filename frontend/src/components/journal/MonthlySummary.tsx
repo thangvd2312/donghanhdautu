@@ -8,37 +8,42 @@ import { EMOTION_LABEL, monthTitle, REASON_LABEL } from '../../lib/journal'
 import { TX_LABEL } from '../../lib/tx'
 import type { JournalMonthSummary } from '../../lib/types'
 import { StatTiles } from '../page'
-import { Panel } from '../ui'
+import { InfoTip, Panel } from '../ui'
+
+const NOTE =
+  'Làm đúng kế hoạch và lãi / lỗ là hai chuyện khác nhau: lệnh đúng kế hoạch vẫn có thể lỗ, lệnh ngoài kế hoạch vẫn có thể lãi. Nhật ký chỉ giúp bạn nhìn ra thói quen.'
 
 /** Bốn con số của tháng (đầu trang): lệnh, xem lại, ghi cảm xúc, ngoài kế hoạch; kèm so với tháng trước */
 export function MonthlyTiles({ s }: { s: JournalMonthSummary }) {
   const prev = s.previous && (s.previous.trades > 0 || s.previous.reviews > 0) ? s.previous : null
   const vs = (n?: number) => (n === undefined ? undefined : `Tháng trước: ${n}`)
   const join = (...parts: (string | false | 0 | undefined)[]) => parts.filter(Boolean).join(' · ')
+  // Điện thoại: ô số chỉ còn nhãn + số, dòng giải thích hiện từ md
+  const md = (t: string) => <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>{t}</Box>
   return (
     <StatTiles
       items={[
-        { label: 'Lệnh mua / bán', value: s.trades, hint: join(s.trades ? `${s.linked} gắn kế hoạch` : 'chưa có lệnh', vs(prev?.trades)) },
+        { label: 'Lệnh mua / bán', value: s.trades, hint: md(join(s.trades ? `${s.linked} gắn kế hoạch` : 'chưa có lệnh', vs(prev?.trades))) },
         {
           label: 'Xem lại kế hoạch',
           value: s.reviews,
-          hint: join(
+          hint: md(join(
             s.reviews || s.decisions.edits
               ? // "đổi" chỉ đếm lần xem lại không giữ nguyên; sửa nội dung kế hoạch đếm riêng (không vượt số lần xem lại)
                 join(s.reviews && `giữ ${s.kept} · đổi ${s.reviews - s.kept}`, s.decisions.edits && `sửa ${s.decisions.edits}`)
               : 'chưa xem lại',
             vs(prev?.reviews),
-          ),
+          )),
         },
         {
           label: 'Có ghi cảm xúc',
           value: s.emotionTagged,
-          hint: join(s.emotionTagged ? `${s.pressured} lúc dễ bị cuốn theo` : 'chưa gắn nhãn', vs(prev?.emotionTagged)),
+          hint: md(join(s.emotionTagged ? `${s.pressured} lúc dễ bị cuốn theo` : 'chưa gắn nhãn', vs(prev?.emotionTagged))),
         },
         {
           label: 'Lệnh ngoài kế hoạch',
           value: s.unlinked,
-          hint: join(s.trades ? `trên ${s.trades} lệnh` : '—', vs(prev ? prev.trades - prev.linked : undefined)),
+          hint: md(join(s.trades ? `trên ${s.trades} lệnh` : '—', vs(prev ? prev.trades - prev.linked : undefined))),
         },
       ]}
     />
@@ -49,7 +54,15 @@ export function MonthlyTiles({ s }: { s: JournalMonthSummary }) {
 export function MonthlySummary({ s }: { s: JournalMonthSummary }) {
   const maxEmotion = Math.max(1, ...s.emotions.map((e) => e.count))
   return (
-    <Panel title={`Nhìn lại ${monthTitle(s.month).toLowerCase()}`} data-testid="journal-summary">
+    <Panel
+      title={`Nhìn lại ${monthTitle(s.month).toLowerCase()}`}
+      data-testid="journal-summary"
+      action={
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          <InfoTip label="Lưu ý khi đọc nhật ký">{NOTE}</InfoTip>
+        </Box>
+      }
+    >
       {s.emotions.length > 0 && (
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -99,7 +112,7 @@ export function MonthlySummary({ s }: { s: JournalMonthSummary }) {
       {s.pressuredTrades.length > 0 && (
         <Box sx={{ mt: 2.5 }} data-testid="journal-pressured">
           <Typography variant="subtitle2">Quyết định lúc dễ bị cuốn theo</Typography>
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1, display: { xs: 'none', md: 'block' } }}>
             Giá sau đó chỉ để bạn đối chiếu: biến động ngắn hạn không cho biết quyết định đúng hay sai.
           </Typography>
           <Stack divider={<Divider flexItem />} spacing={0.75}>
@@ -121,9 +134,8 @@ export function MonthlySummary({ s }: { s: JournalMonthSummary }) {
         </Box>
       )}
 
-      <Alert severity="info" icon={false} sx={{ mt: 2.5, py: 0.25 }}>
-        Làm đúng kế hoạch và lãi / lỗ là hai chuyện khác nhau: lệnh đúng kế hoạch vẫn có thể lỗ, lệnh ngoài kế hoạch vẫn có
-        thể lãi. Nhật ký chỉ giúp bạn nhìn ra thói quen.
+      <Alert severity="info" icon={false} sx={{ mt: 2.5, py: 0.25, display: { xs: 'none', md: 'flex' } }}>
+        {NOTE}
       </Alert>
     </Panel>
   )

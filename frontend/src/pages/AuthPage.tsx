@@ -113,17 +113,25 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'grid', placeItems: 'center', p: 3 }}>
-        <Paper sx={{ width: '100%', maxWidth: 440, p: { xs: 3, sm: 4 }, boxShadow: { md: 'none' }, border: { md: 0 } }}>
-          <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 3, display: { md: 'none' } }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Điện thoại: dải navy có logo thay cho cột thương hiệu */}
+        <Stack
+          direction="row"
+          spacing={1.25}
+          sx={{ display: { md: 'none' }, alignItems: 'center', px: 2, py: 1.75, bgcolor: 'hero.bg', color: 'hero.ink' }}
+        >
+          <Box sx={{ color: 'hero.gold', display: 'flex' }}>
             <Logo size={28} />
-            <Typography sx={{ fontWeight: 700 }}>Đồng Hành Đầu Tư</Typography>
-          </Stack>
-          <Typography component="h1" sx={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.015em' }}>
+          </Box>
+          <Typography sx={{ fontWeight: 700, color: 'hero.ink' }}>Đồng Hành Đầu Tư</Typography>
+        </Stack>
+        <Box sx={{ flex: 1, display: 'grid', placeItems: { xs: 'start center', md: 'center' }, p: { xs: 2, md: 3 } }}>
+        <Paper sx={{ width: '100%', maxWidth: 440, p: { xs: 2.5, sm: 4 }, boxShadow: { md: 'none' }, border: { md: 0 } }}>
+          <Typography component="h1" sx={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.015em', mb: { xs: mode === 'register' ? 2 : 0, md: 0 } }}>
             {mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 3 }}>
-            {mode === 'login' ? 'Chào mừng bạn quay lại.' : 'Mất khoảng 2 phút, gồm cả bài khảo sát khẩu vị rủi ro.'}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: { xs: 2, md: 3 }, display: mode === 'register' ? { xs: 'none', md: 'block' } : 'block' }}>
+            {mode === 'login' ? 'Chào mừng bạn quay lại.' : 'Mất khoảng 2 phút, gồm khảo sát khẩu vị rủi ro.'}
           </Typography>
 
           {googleClientId !== null && (
@@ -199,10 +207,11 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           </Typography>
           <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
             <Link component={RouterLink} to="/demo">
-              Xem thử với danh mục mẫu, không cần đăng ký →
+              Xem thử, không cần đăng ký →
             </Link>
           </Typography>
         </Paper>
+        </Box>
       </Box>
     </Box>
   )

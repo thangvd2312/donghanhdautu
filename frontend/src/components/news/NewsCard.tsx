@@ -2,6 +2,7 @@ import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import IconButton from '@mui/material/IconButton'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -31,6 +32,35 @@ const tagSx = {
   letterSpacing: 0.3,
 } as const
 
+/** Hỏi cố vấn: nút chữ từ md, điện thoại chỉ còn biểu tượng để dòng tin gọn */
+function AskButton({ n, className, outlined, part }: { n: NewsHit; className?: string; outlined?: boolean; part?: 'text' | 'icon' }) {
+  return (
+    <>
+      {part !== 'icon' && <Button
+        size="small"
+        variant={outlined ? 'outlined' : 'text'}
+        component={RouterLink}
+        to={advisorLink(n)}
+        className={className}
+        startIcon={<AutoAwesomeOutlined sx={{ fontSize: '16px !important' }} />}
+        sx={{ display: { xs: 'none', md: 'inline-flex' }, mt: outlined ? 1.5 : 0.5, ml: outlined ? 0 : -0.75, fontSize: 12.5 }}
+      >
+        Tin này ảnh hưởng gì tới tôi?
+      </Button>}
+      {part !== 'text' && <IconButton
+        component={RouterLink}
+        to={advisorLink(n)}
+        aria-label="Tin này ảnh hưởng gì tới tôi?"
+        size="small"
+        color="primary"
+        sx={{ display: { xs: 'inline-flex', md: 'none' }, flexShrink: 0 }}
+      >
+        <AutoAwesomeOutlined fontSize="small" />
+      </IconButton>}
+    </>
+  )
+}
+
 /** Dòng nguồn · chủ đề · thời gian + mã liên quan (mã trùng từ khoá được tô) */
 function Meta({ n, terms }: { n: NewsHit; terms: string[] }) {
   const hit = (t: string) => terms.includes(t.toLowerCase())
@@ -49,14 +79,14 @@ function Meta({ n, terms }: { n: NewsHit; terms: string[] }) {
           EN
         </Box>
       )}
-      {tickers.map((t) => (
+      {tickers.map((t, i) => (
         <Chip
           key={t}
           label={t}
           size="small"
           variant={hit(t) ? 'filled' : 'outlined'}
           color={hit(t) ? 'warning' : 'default'}
-          sx={{ height: 20, fontSize: 11, fontWeight: 600 }}
+          sx={{ height: 20, fontSize: 11, fontWeight: 600, display: { xs: i < 2 ? 'inline-flex' : 'none', md: 'inline-flex' } }}
         />
       ))}
     </Stack>
@@ -71,7 +101,7 @@ export function NewsRow({ n, terms }: { n: NewsHit; terms: string[] }) {
       component="article"
       data-testid="news-row"
       sx={{
-        py: 1.75,
+        py: { xs: 1.5, md: 1.75 },
         // Desktop: cả dòng sáng lên khi rê chuột, nút hỏi cố vấn chỉ nổi màu ở tin đang rê (đỡ một cột link xanh)
         mx: { sm: -2.5 },
         px: { sm: 2.5 },
@@ -84,31 +114,32 @@ export function NewsRow({ n, terms }: { n: NewsHit; terms: string[] }) {
       }}
     >
       <Meta n={n} terms={terms} />
-      <Link
-        href={n.url}
-        target="_blank"
-        rel="noreferrer"
-        underline="hover"
-        color="text.primary"
-        sx={{ display: 'block', mt: 0.75, fontWeight: 600, fontSize: { xs: 15.5, md: 16.5 }, lineHeight: 1.4 }}
-      >
-        <Highlight parts={n.titleParts} text={n.title} />
-      </Link>
-      {(n.snippetParts || n.summary) && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, ...(searching && n.snippetParts ? {} : clamp(2)) }}>
-          {n.snippetParts ? <Highlight parts={n.snippetParts} text={n.summary} /> : n.summary}
-        </Typography>
-      )}
-      <Button
-        size="small"
-        component={RouterLink}
-        to={advisorLink(n)}
-        className="news-ask"
-        startIcon={<AutoAwesomeOutlined sx={{ fontSize: '16px !important' }} />}
-        sx={{ mt: 0.5, ml: -0.75, fontSize: 12.5 }}
-      >
-        Tin này ảnh hưởng gì tới tôi?
-      </Button>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', mt: 0.75 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Link
+            href={n.url}
+            target="_blank"
+            rel="noreferrer"
+            underline="hover"
+            color="text.primary"
+            sx={{ fontWeight: 600, fontSize: { xs: 15, md: 16.5 }, lineHeight: 1.4, ...clamp(3) }}
+          >
+            <Highlight parts={n.titleParts} text={n.title} />
+          </Link>
+          {/* Điện thoại: chỉ tiêu đề + nguồn / giờ; đoạn trích chỉ hiện khi đang tìm (để thấy vì sao khớp) */}
+          {(n.snippetParts || n.summary) && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.5, ...(searching && n.snippetParts ? {} : clamp(2)), display: { xs: searching && n.snippetParts ? 'block' : 'none', md: searching && n.snippetParts ? 'block' : '-webkit-box' } }}
+            >
+              {n.snippetParts ? <Highlight parts={n.snippetParts} text={n.summary} /> : n.summary}
+            </Typography>
+          )}
+          <AskButton n={n} className="news-ask" part="text" />
+        </Box>
+        <AskButton n={n} part="icon" />
+      </Stack>
     </Box>
   )
 }
@@ -130,7 +161,7 @@ export function FeaturedNews({ n }: { n: NewsHit }) {
       }}
     >
       <Typography variant="overline" color="primary" sx={{ fontWeight: 700, letterSpacing: 0.8, lineHeight: 1 }}>
-        Tin đáng chú ý 24 giờ qua
+        Đáng chú ý 24 giờ qua
       </Typography>
       <Box sx={{ mt: 1 }}>
         <Meta n={n} terms={[]} />
@@ -146,20 +177,11 @@ export function FeaturedNews({ n }: { n: NewsHit }) {
         {n.title}
       </Link>
       {n.summary && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, ...clamp(3) }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, ...clamp(3), display: { xs: 'none', md: '-webkit-box' } }}>
           {n.summary}
         </Typography>
       )}
-      <Button
-        size="small"
-        variant="outlined"
-        component={RouterLink}
-        to={advisorLink(n)}
-        startIcon={<AutoAwesomeOutlined />}
-        sx={{ mt: 1.5 }}
-      >
-        Tin này ảnh hưởng gì tới tôi?
-      </Button>
+      <AskButton n={n} outlined />
     </Box>
   )
 }

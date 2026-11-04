@@ -14,10 +14,10 @@ import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useState } from 'react'
-import { Link as RouterLink } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link as RouterLink, useSearchParams } from 'react-router-dom'
 import { cancelDeployment, explainDeployment, markStepDone, reopenStep, skipStep } from '../../api/deployment'
-import { dayLabel, groupSteps, money, PART_COLOR, stepAction, stepPreset, todayKey } from '../../lib/deployment'
+import { ACTION_LABEL, dayLabel, groupSteps, money, PART_COLOR, stepAction, stepPreset, todayKey } from '../../lib/deployment'
 import { fmtVnd } from '../../lib/format'
 import type { TxPreset } from '../../lib/tx'
 import type { DeploymentPlanView, DeployStep, PortfolioAccount } from '../../lib/types'
@@ -27,13 +27,6 @@ import { DialogHeader, Panel } from '../ui'
 import DeployResult from './DeployResult'
 
 const SKIP_REASONS = ['Chưa đủ tiền', 'Cần tiền cho việc khác', 'Muốn xem lại kế hoạch']
-
-const ACTION_LABEL = {
-  done: 'Đã xong',
-  deposit: 'Đã gửi',
-  buy: 'Đã mua',
-  pick: 'Đã mua',
-} as const
 
 interface ActivePlanProps {
   view: DeploymentPlanView
@@ -89,6 +82,28 @@ export default function ActivePlan({ view, accounts, onChange }: ActivePlanProps
     if (preset) setRecording({ step: s, preset })
     else void done(s)
   }
+
+  // Từ thẻ "Đợt giải ngân tới" ở Hôm nay (?step=<id>): mở form ghi giao dịch của đợt đó, một lần
+  const [params, setParams] = useSearchParams()
+  const openedStep = useRef(false)
+  useEffect(() => {
+    const id = params.get('step')
+    if (!id || openedStep.current) return
+    openedStep.current = true
+    // Chỉ mở form ghi giao dịch; đợt không cần ghi sổ thì để người dùng tự bấm (không đánh dấu xong từ một link)
+    const s = view.steps.find((x) => x.id === id && x.status === 'pending')
+    const preset = s && stepAction(s, view.fromCash) !== 'done' ? stepPreset(s, view.portfolioId) : null
+    if (s && preset) setRecording({ step: s, preset })
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('step')
+        return next
+      },
+      { replace: true },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params])
 
   return (
     <Stack spacing={2.5} data-testid="dp-active">

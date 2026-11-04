@@ -7,7 +7,10 @@ import { Link as RouterLink } from 'react-router-dom'
 import { usePortfolioAlertsForm } from '../../hooks/usePortfolioAlertsForm'
 import { draftError, KINDS, sameDraft } from '../../lib/portfolioAlerts'
 import RuleRow from './RuleRow'
-import { Panel } from '../ui'
+import { InfoTip, Panel } from '../ui'
+
+const CHECK_NOTE =
+  'Kiểm tra mỗi 30 phút trong phiên và lúc 15:20 hằng ngày; giảm từ đỉnh chỉ kiểm tra sau phiên. Khi giá thiếu hoặc cũ, ứng dụng bỏ qua lượt đó thay vì báo. Thông báo luôn có trong app; gửi qua Telegram / thông báo đẩy khi bạn bật mục “Tình trạng danh mục” ở phần kênh nhận tin.'
 
 /**
  * Cảnh báo theo tình trạng danh mục: mỗi quy tắc một dòng (bật/tắt, ngưỡng, tần suất nhắc lại) và dòng "Hiện tại"
@@ -68,9 +71,13 @@ export default function PortfolioAlertsPanel({ standalone }: { standalone?: bool
             />
           ))}
           <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 2, py: 1.5, m: 0 }}>
-            Kiểm tra mỗi 30 phút trong phiên và lúc 15:20 hằng ngày; giảm từ đỉnh chỉ kiểm tra sau phiên. Khi giá thiếu
-            hoặc cũ, ứng dụng bỏ qua lượt đó thay vì báo. Thông báo luôn có trong app; gửi qua Telegram / thông báo đẩy
-            khi bạn bật mục “Tình trạng danh mục” ở phần kênh nhận tin.
+            <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+              {CHECK_NOTE}
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+              Khi nào kiểm tra?{' '}
+              <InfoTip label="Khi nào kiểm tra">{CHECK_NOTE}</InfoTip>
+            </Box>
           </Typography>
         </>
       )}

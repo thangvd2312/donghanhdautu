@@ -28,7 +28,7 @@ import { PriceStatusChip } from '../DataStatus'
 import PriceAlertDialog from '../alerts/PriceAlertDialog'
 import StockSearch from '../StockSearch'
 import { EmptyState } from '../page'
-import { Panel } from '../ui'
+import { InfoTip, Panel } from '../ui'
 import AssetAvatar from '../AssetAvatar'
 
 type WatchType = WatchItem['assetType']
@@ -149,11 +149,16 @@ export default function WatchlistPanel() {
               </Button>
             }
           >
-            Thêm cổ phiếu, coin hoặc loại vàng bạn quan tâm để xem giá và đặt cảnh báo mà không cần nhập vào danh mục.
+            Xem giá và đặt cảnh báo mà chưa cần mua.
           </EmptyState>
         )
       )}
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 2, py: 1 }}>
+      <Box sx={{ px: 2, py: 1.25, display: { md: 'none' } }}>
+        <Typography variant="caption" color="text.secondary">
+          Ghi chú giá <InfoTip>Vàng: giá mua vào của cửa hàng. Coin: giá theo USDT trên Binance.</InfoTip>
+        </Typography>
+      </Box>
+      <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 2, py: 1, display: { xs: 'none', md: 'block' } }}>
         Vàng: giá mua vào của cửa hàng. Coin: giá theo USDT trên Binance.
       </Typography>
       <PriceAlertDialog

@@ -22,6 +22,10 @@ export interface HomeToday {
   totalPnl: number | null
   totalPnlPct: number | null
   allocationPct: Record<string, number>
+  /**
+   * Tỷ trọng mục tiêu theo khẩu vị rủi ro (TARGET_MIX), cùng khoá với allocationPct. null khi chưa làm khảo sát rủi ro.
+   */
+  target: { riskLabel: string; pct: Record<string, number> } | null
   day: {
     changeVnd: number | null
     changePct: number | null

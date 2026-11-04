@@ -162,6 +162,14 @@ export function money(n: number) {
 /** Nút chính của một đợt: xong luôn (trả nợ, quỹ dự phòng, tiền đã có sẵn), ghi nạp tiền, ghi mua, hay chọn mã trước */
 export type StepAction = 'done' | 'deposit' | 'buy' | 'pick'
 
+/** Nhãn nút chính của một đợt theo việc cần làm */
+export const ACTION_LABEL = {
+  done: 'Đã xong',
+  deposit: 'Đã gửi',
+  buy: 'Đã mua',
+  pick: 'Đã mua',
+} as const
+
 export function stepAction(s: Pick<DeployStepPreview, 'kind'>, fromCash: boolean): StepAction {
   if (s.kind === 'debt' || s.kind === 'emergency') return 'done'
   if (s.kind === 'savings') return fromCash ? 'done' : 'deposit'

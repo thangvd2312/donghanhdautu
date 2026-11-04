@@ -1,6 +1,7 @@
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
@@ -9,6 +10,8 @@ import IconButton from '@mui/material/IconButton'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import Switch from '@mui/material/Switch'
 import Tooltip from '@mui/material/Tooltip'
@@ -21,7 +24,7 @@ import { useAuth } from '../../lib/auth-context'
 import { fmtNum, timeAgo } from '../../lib/format'
 import type { InvestorProfile, PriceAlert, PriceAlertListItem } from '../../lib/types'
 import PriceAlertDialog from './PriceAlertDialog'
-import { Panel } from '../ui'
+import { InfoTip, Panel } from '../ui'
 
 const UNIT: Record<PriceAlert['assetType'], string> = { stock: '₫', crypto: 'USDT', gold: '₫/lượng' }
 
@@ -56,7 +59,11 @@ export function PriceAlertsPanel() {
     >
       {alerts?.length === 0 && (
         <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-          Chưa có mốc nào. Ví dụ: báo khi FPT về dưới vùng giá bạn muốn mua, hoặc khi BTC vượt mốc bạn định chốt lời.
+          Chưa có mốc nào.
+          <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+            {' '}
+            Ví dụ: báo khi FPT về dưới vùng giá bạn muốn mua, hoặc khi BTC vượt mốc bạn định chốt lời.
+          </Box>
         </Typography>
       )}
       <List dense disablePadding>
@@ -120,6 +127,7 @@ export function NotificationSettingsPanel() {
   const profile = me?.profile
   const [sending, setSending] = useState<'' | 'morning' | 'closing' | 'weekly' | 'crypto'>('')
   const [error, setError] = useState('')
+  const [menu, setMenu] = useState<HTMLElement | null>(null)
 
   if (!profile) return null
 
@@ -184,20 +192,29 @@ export function NotificationSettingsPanel() {
         />
       </Stack>
       <Divider sx={{ my: 1.5 }} />
-      <Stack useFlexGap direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
-        <Button size="small" variant="outlined" disabled={!!sending} onClick={() => void sendNow('morning')}>
-          {sending === 'morning' ? 'Đang viết bản tin…' : 'Gửi thử bản tin sáng'}
-        </Button>
-        <Button size="small" variant="outlined" disabled={!!sending} onClick={() => void sendNow('closing')}>
-          {sending === 'closing' ? 'Đang viết bản tin…' : 'Gửi thử tổng kết phiên'}
-        </Button>
-        <Button size="small" variant="outlined" disabled={!!sending} onClick={() => void sendNow('weekly')}>
-          {sending === 'weekly' ? 'Đang viết bản tin…' : 'Gửi thử tổng kết tuần'}
-        </Button>
-        <Button size="small" variant="outlined" disabled={!!sending} onClick={() => void sendNow('crypto')}>
-          {sending === 'crypto' ? 'Đang viết bản tin…' : 'Gửi thử bản tin coin'}
-        </Button>
-      </Stack>
+      <Button size="small" variant="outlined" disabled={!!sending} onClick={(e) => setMenu(e.currentTarget)} aria-haspopup="menu" sx={{ borderRadius: 99 }}>
+        {sending ? 'Đang viết bản tin…' : 'Gửi thử bản tin'}
+      </Button>
+      <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
+        {(
+          [
+            ['morning', 'Bản tin sáng'],
+            ['closing', 'Tổng kết phiên'],
+            ['weekly', 'Tổng kết tuần'],
+            ['crypto', 'Bản tin coin'],
+          ] as const
+        ).map(([k, label]) => (
+          <MenuItem
+            key={k}
+            onClick={() => {
+              setMenu(null)
+              void sendNow(k)
+            }}
+          >
+            Gửi thử {label.toLowerCase()}
+          </MenuItem>
+        ))}
+      </Menu>
       {error && (
         <Alert severity="error" sx={{ mt: 1.5 }}>
           {error}
@@ -212,8 +229,12 @@ function Setting({ title, desc }: { title: string; desc: string }) {
     <Stack sx={{ py: 0.5 }}>
       <Typography variant="body2" sx={{ fontWeight: 600 }}>
         {title}
+        {/* Điện thoại: mô tả thu vào ⓘ */}
+        <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1 }}>
+          <InfoTip label={`Giải thích: ${title}`}>{desc}</InfoTip>
+        </Box>
       </Typography>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
         {desc}
       </Typography>
     </Stack>

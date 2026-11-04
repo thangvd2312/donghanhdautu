@@ -14,7 +14,7 @@ import AssetAvatar from '../components/AssetAvatar'
 import SourceStats from '../components/tips/SourceStats'
 import TipComposer from '../components/tips/TipComposer'
 import { EmptyState, PageGrid, PageHeader, StatTiles } from '../components/page'
-import { Panel } from '../components/ui'
+import { ChangePill, Panel } from '../components/ui'
 import { changeColor, fmtPct, timeAgo } from '../lib/format'
 import { DECISION_LABEL, DIRECTION_LABEL, HOT, OUTCOME_LABEL } from '../lib/tips'
 import type { TipListItem, TipSourceStat } from '../lib/types'
@@ -88,7 +88,7 @@ export default function TipsPage() {
       <PageGrid asideFirst aside={<TipComposer onCreated={(t) => nav(`/tips/${t.id}`)} />}>
         <SourceStats stats={sources} />
 
-        <Panel title="Sổ lời khuyên" subtitle="Mọi lời khuyên bạn đã soi, quyết định của bạn và kết quả sau 30 / 90 ngày" noPadding>
+        <Panel title="Sổ lời khuyên" subtitle="Lời khuyên đã soi, quyết định của bạn và kết quả sau 30 / 90 ngày" noPadding>
           {error && (
             <Alert
               severity="error"
@@ -105,7 +105,7 @@ export default function TipsPage() {
           {!items && !error && <Skeleton variant="rounded" height={120} sx={{ m: 2 }} />}
           {items?.length === 0 && (
             <EmptyState plain Icon={FactCheckOutlined} title="Chưa soi lời khuyên nào">
-              Lần tới nghe ai đó hô mã, dán vào ô soi trước khi mua.
+              Nghe ai hô mã, dán vào đây trước khi mua.
             </EmptyState>
           )}
           {items?.map((t, i) => <TipRow key={t.id} t={t} first={i === 0} />)}
@@ -151,7 +151,11 @@ function TipRow({ t, first }: { t: TipListItem; first?: boolean }) {
             {t.sourceName}
           </Typography>
         )}
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, overflowWrap: 'anywhere' }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mt: 0.25, overflowWrap: 'anywhere', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: { xs: 1, md: 3 }, overflow: 'hidden' }}
+        >
           {t.excerpt}
         </Typography>
         <Stack direction="row" spacing={1} sx={{ mt: 0.75, flexWrap: 'wrap', rowGap: 0.5 }}>
@@ -162,9 +166,9 @@ function TipRow({ t, first }: { t: TipListItem; first?: boolean }) {
         </Stack>
       </Box>
       {t.changeSinceCheckPct !== null && (
-        <Typography className="num" variant="body2" sx={{ color: changeColor(t.changeSinceCheckPct), fontWeight: 700, flexShrink: 0 }}>
+        <ChangePill color={changeColor(t.changeSinceCheckPct)} small>
           {fmtPct(t.changeSinceCheckPct, 1)}
-        </Typography>
+        </ChangePill>
       )}
     </ButtonBase>
   )

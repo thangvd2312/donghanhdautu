@@ -11,7 +11,7 @@ import { SUGGESTIONS } from './suggestions'
 /** Màn hình trống của cuộc trò chuyện mới: giới thiệu + câu hỏi gợi ý dạng thẻ */
 export default function AdvisorWelcome({ busy, onPick }: { busy: boolean; onPick: (text: string) => void }) {
   return (
-    <Box sx={{ py: { xs: 1, md: 5 } }}>
+    <Box sx={{ py: { xs: 0, md: 5 } }}>
       <Stack spacing={1.25} sx={{ alignItems: 'center', textAlign: 'center' }}>
         <Box
           sx={{
@@ -30,34 +30,40 @@ export default function AdvisorWelcome({ busy, onPick }: { busy: boolean; onPick
           Hỏi cố vấn của bạn
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 560, fontSize: { xs: 14, md: 15 } }}>
-          Cố vấn đọc hồ sơ, danh mục của bạn và dữ liệu thị trường thật; mọi nhận định đều kèm nguồn. Không
-          hô mã, không hứa lãi — chỉ giúp bạn quyết định tỉnh táo hơn.
+          Cố vấn đọc hồ sơ, danh mục và dữ liệu thật; nhận định kèm nguồn.
+          <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+            {' '}
+            Không hô mã, không hứa lãi, chỉ giúp bạn quyết định tỉnh táo hơn.
+          </Box>
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Vừa nhận tin hô mã trong nhóm?{' '}
+          Nhận tin hô mã?{' '}
           <Link component={RouterLink} to="/tips" sx={{ fontWeight: 600 }}>
-            Dán vào Soi lời khuyên
-          </Link>{' '}
-          để xem mức nóng và dữ liệu thật trước khi mua.
+            Soi lời khuyên
+          </Link>
+          <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+            {' '}
+            để xem mức nóng và dữ liệu thật trước khi mua.
+          </Box>
         </Typography>
       </Stack>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: { xs: 2, md: 3 }, mb: 1, fontWeight: 600 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' }, mt: 3, mb: 1, fontWeight: 600 }}>
         Gợi ý câu hỏi
       </Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
-        {SUGGESTIONS.map((s) => (
+      <Box sx={{ mt: { xs: 1.5, md: 0 }, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
+        {SUGGESTIONS.map((s, i) => (
           <ButtonBase
             key={s}
             disabled={busy}
             onClick={() => onPick(s)}
             sx={{
-              display: 'flex',
+              display: i >= 4 ? { xs: 'none', sm: 'flex' } : 'flex',
               alignItems: 'flex-start',
               justifyContent: 'space-between',
               gap: 1,
               textAlign: 'left',
               px: 1.75,
-              py: { xs: 1, md: 1.5 },
+              py: { xs: 0.75, md: 1.5 },
               minHeight: { xs: 44, md: 56 },
               borderRadius: '12px',
               border: 1,

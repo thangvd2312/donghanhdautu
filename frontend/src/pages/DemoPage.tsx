@@ -87,10 +87,9 @@ export default function DemoPage() {
                 aside={
                   <>
                     {/* Lời mời đăng ký dính bên phải khi cuộn; điện thoại: nằm cuối trang */}
-                    <Panel title="Làm điều này với danh mục của bạn">
+                    <Panel title="Làm với danh mục của bạn">
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Nhập tài sản đang có hoặc ghi từng giao dịch; app tính lãi/lỗ đúng sau khi tách tiền nạp, nhắc khi cần
-                        xem lại, và cố vấn AI trả lời có dẫn nguồn.
+                        Nhập tài sản, app tính lãi/lỗ đúng, nhắc khi cần xem lại và cố vấn AI trả lời có nguồn.
                       </Typography>
                       <Stack spacing={1}>
                         <Button
@@ -112,7 +111,7 @@ export default function DemoPage() {
                           sx={{ borderRadius: 99 }}
                           onClick={() => track('demo_signup_clicked', { target: 'login' })}
                         >
-                          Tôi đã có tài khoản
+                          Đã có tài khoản
                         </Button>
                         <Button
                           component={RouterLink}
@@ -120,7 +119,7 @@ export default function DemoPage() {
                           fullWidth
                           onClick={() => track('demo_signup_clicked', { target: 'register' })}
                         >
-                          Tự luyện tập với tiền ảo
+                          Luyện tập tiền ảo
                         </Button>
                       </Stack>
                     </Panel>
@@ -150,12 +149,12 @@ export default function DemoPage() {
                   </>
                 }
               >
-                <Panel title="Cần xem lại" subtitle="App tự tìm những điểm đáng chú ý trong danh mục">
+                <Panel title="Cần xem lại" subtitle="App tự tìm điểm đáng chú ý trong danh mục">
                   <ReviewList points={d.review} demo />
                 </Panel>
 
                 {d.plan && (
-                  <Panel title={`Kế hoạch mẫu: ${d.plan.displayName}`} subtitle="Ghi lý do mua và điều kiện bán ngay từ đầu">
+                  <Panel title={`Kế hoạch mẫu: ${d.plan.displayName}`} subtitle="Ghi lý do mua và điều kiện bán từ đầu">
                     <Typography variant="caption" color="text.secondary">
                       Vì sao tôi mua
                     </Typography>
@@ -185,14 +184,17 @@ export default function DemoPage() {
                     </Stack>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
-                      Chưa có tin mới về FPT, VCB, HPG trong 48 giờ qua.
+                      Chưa có tin mới trong 48 giờ qua.
                     </Typography>
                   )}
                 </Panel>
               </PageGrid>
-              <Typography variant="caption" color="text.secondary">
-                Phân tích chỉ mang tính tham khảo, không phải khuyến nghị đầu tư. Dữ liệu: Vietcap, Binance, vang.today,
-                Vietcombank, CafeF, VnExpress.
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.
+                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                  {' '}
+                  Dữ liệu: Vietcap, Binance, vang.today, Vietcombank, CafeF, VnExpress.
+                </Box>
               </Typography>
             </>
           )}

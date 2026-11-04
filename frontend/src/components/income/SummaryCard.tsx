@@ -5,6 +5,7 @@ import { fmtPct } from '../../lib/format'
 import { vnd } from '../../lib/income'
 import type { IncomeResponse } from '../../lib/types'
 import { InfoTip } from '../ui'
+import { HERO_SX } from '../home/HomeBlocks'
 
 /** Tổng đã nhận, khoản sắp nhận (ước tính) và lợi suất trên giá vốn */
 export default function SummaryCard({ data, past }: { data: IncomeResponse; past: number }) {
@@ -13,8 +14,11 @@ export default function SummaryCard({ data, past }: { data: IncomeResponse; past
   const upcoming = s.expectedNet - s.overdueNet
   const unavailable = data.unavailable
   return (
-    <Paper data-testid="income-summary" sx={{ p: 2.5 }}>
-      <Typography variant="body2" color="text.secondary">
+    <Paper
+      data-testid="income-summary"
+      sx={{ ...HERO_SX, borderRadius: '20px', border: 0, '& .MuiIconButton-root': { color: 'hero.muted' } }}
+    >
+      <Typography variant="body2" sx={{ color: 'hero.muted' }}>
         {past} tháng qua đã nhận
             <Box component="span" sx={{ ml: 1 }}>
               <InfoTip label="Giải thích khoản đã nhận">Tiền cổ tức thực nhận sau thuế, tính từ các giao dịch cổ tức bạn đã ghi trong sổ.</InfoTip>
@@ -24,9 +28,9 @@ export default function SummaryCard({ data, past }: { data: IncomeResponse; past
         {vnd(s.receivedNet)}
       </Typography>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: s.yieldOnCostPct !== null ? '1fr 1fr' : '1fr', gap: 2, mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: s.yieldOnCostPct !== null ? '1fr 1fr' : '1fr', gap: 2, mt: 2, pt: 2, borderTop: 1, borderColor: 'rgba(255,255,255,0.14)' }}>
         <Box>
-          <Typography variant="caption" color="text.secondary" component="div">
+          <Typography variant="caption" sx={{ color: 'hero.muted' }} component="div">
             Sắp nhận
             <Box component="span" sx={{ ml: 1 }}>
               <InfoTip label="Giải thích khoản sắp nhận">
@@ -37,7 +41,7 @@ export default function SummaryCard({ data, past }: { data: IncomeResponse; past
           <Typography className="num" sx={{ fontWeight: 700, fontSize: { xs: 19, sm: 20 }, lineHeight: 1.3 }}>
             {unavailable ? 'Chưa có số liệu' : `~ ${vnd(upcoming)}`}
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="div">
+          <Typography variant="caption" sx={{ color: 'hero.muted' }} component="div">
             {unavailable
               ? 'Chưa lấy được lịch sự kiện'
               : s.expectedNet === 0
@@ -49,7 +53,7 @@ export default function SummaryCard({ data, past }: { data: IncomeResponse; past
         </Box>
         {s.yieldOnCostPct !== null && (
           <Box>
-            <Typography variant="caption" color="text.secondary" component="div">
+            <Typography variant="caption" sx={{ color: 'hero.muted' }} component="div">
               Lợi suất trên giá vốn
               <Box component="span" sx={{ ml: 1 }}>
                 <InfoTip label="Giải thích lợi suất trên giá vốn">
@@ -60,7 +64,7 @@ export default function SummaryCard({ data, past }: { data: IncomeResponse; past
             <Typography className="num" sx={{ fontWeight: 700, fontSize: { xs: 19, sm: 20 }, lineHeight: 1.3 }}>
               {fmtPct(s.yieldOnCostPct, 2, false)}
             </Typography>
-            <Typography variant="caption" color="text.secondary" component="div">
+            <Typography variant="caption" sx={{ color: 'hero.muted' }} component="div">
               trên số tiền bạn đã bỏ ra
             </Typography>
           </Box>

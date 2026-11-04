@@ -13,7 +13,7 @@ export default function DeltaLine({ r, big }: { r: SimulateResponse; big?: boole
   return (
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
       {v !== 0 && <Icon fontSize={big ? 'medium' : 'small'} aria-hidden />}
-      <Typography className="num" sx={{ fontWeight: 700, fontSize: big ? 18 : 14 }}>
+      <Typography className="num" sx={{ fontWeight: 700, fontSize: big ? 18 : 14, color: big ? 'hero.ink' : undefined }}>
         {v === 0 ? 'Không đổi' : signedVnd(v)}
         {r.delta.pct !== null && v !== 0 ? ` (${fmtPct(r.delta.pct, 1)})` : ''}
       </Typography>

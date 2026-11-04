@@ -28,7 +28,8 @@ export function Panel({
   children: ReactNode
   noPadding?: boolean
 } & Omit<PaperProps, 'title'>) {
-  const longSub = typeof subtitle === 'string' && subtitle.length > 40
+  // Điện thoại: phụ đề chữ thu vào ⓘ cạnh tiêu đề để màn hình bớt chữ (phụ đề là phần tử tuỳ biến thì giữ nguyên)
+  const longSub = typeof subtitle === 'string' && subtitle.length > 24
   return (
     <Paper {...rest}>
       {(title || action) && (

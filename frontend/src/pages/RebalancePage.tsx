@@ -254,8 +254,13 @@ export default function RebalancePage() {
           </Box>
 
           <Typography variant="caption" color="text.secondary" sx={{ pb: 1 }}>
-            Chỉ là tính toán theo lựa chọn của bạn, không tạo giao dịch và không phải khuyến nghị mua bán.
-            {res ? ` Giá tính đến ${fmtDate(res.asOf)}.` : ''}
+            <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+              Chỉ là tính toán theo lựa chọn của bạn, không tạo giao dịch và không phải khuyến nghị mua bán.{' '}
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+              Chỉ là tính toán, không phải khuyến nghị.{' '}
+            </Box>
+            {res ? `Giá tính đến ${fmtDate(res.asOf)}.` : ''}
           </Typography>
         </>
       )}

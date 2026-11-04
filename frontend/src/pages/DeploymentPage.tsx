@@ -140,8 +140,7 @@ export default function DeploymentPage() {
             </Button>
           }
         >
-          Kế hoạch chia tiền dựa trên việc bạn chịu được lỗ bao nhiêu, bao lâu nữa cần tiền và kinh nghiệm của bạn. Bài khảo sát mất khoảng
-          2 phút.
+Khảo sát mất khoảng 2 phút.
         </EmptyState>
       ) : (
         form && (
@@ -156,8 +155,7 @@ export default function DeploymentPage() {
                   </Button>
                 }
               >
-                Bạn đang có một kế hoạch giải ngân
-                {runningPlan ? ' đang chạy' : ''}. Lưu kế hoạch mới sẽ thay kế hoạch đó.
+                Đang có kế hoạch{runningPlan ? ' chạy' : ''}. Lưu mới sẽ thay kế hoạch đó.
               </Alert>
             )}
             {/* Desktop: nhập bên trái, kết quả bên phải; điện thoại: nhập trước rồi tới kết quả */}
@@ -222,7 +220,7 @@ export default function DeploymentPage() {
                     >
                       {saving ? 'Đang lưu…' : 'Lưu kế hoạch và nhắc theo lịch'}
                     </Button>
-                    <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: { xs: 'none', md: 'block' } }}>
                       App nhắc 8:00 ngày đến hạn từng đợt. Không tự ghi giao dịch: bạn bấm "Đã mua" rồi xác nhận mới ghi sổ.
                     </Typography>
                   </>
@@ -231,9 +229,9 @@ export default function DeploymentPage() {
                     <Box data-testid="dp-placeholder">
                       <EmptyState
                         Icon={PaymentsOutlined}
-                        title={computing ? 'Đang lập kế hoạch…' : 'Nhập số tiền (từ 1 triệu) để xem kế hoạch.'}
+                        title={computing ? 'Đang lập kế hoạch…' : 'Nhập số tiền từ 1 triệu'}
                       >
-                        {computing ? undefined : 'Kết quả hiện ngay ở đây: chia vào đâu, mua gì, mấy đợt và vì sao.'}
+                        {computing ? undefined : 'Kế hoạch hiện ở đây: chia vào đâu, mua gì, mấy đợt.'}
                       </EmptyState>
                     </Box>
                   )
@@ -245,9 +243,14 @@ export default function DeploymentPage() {
       )}
 
       <Typography variant="caption" color="text.secondary" sx={{ pb: 1 }}>
-        Kế hoạch tham khảo theo hồ sơ của bạn, không phải khuyến nghị mua bán; quyết định là của bạn. App không chọn mã cổ phiếu riêng lẻ
-        thay bạn.
-        {res && (building || !plan) ? ` Giá tính đến ${fmtDate(res.asOf)}.` : ''}
+        <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+          Kế hoạch tham khảo theo hồ sơ của bạn, không phải khuyến nghị mua bán; quyết định là của bạn. App không chọn mã cổ phiếu riêng
+          lẻ thay bạn.{' '}
+        </Box>
+        <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+          Chỉ để tham khảo, không phải khuyến nghị.{' '}
+        </Box>
+        {res && (building || !plan) ? `Giá tính đến ${fmtDate(res.asOf)}.` : ''}
       </Typography>
 
       <Dialog open={confirmReplace} onClose={() => setConfirmReplace(false)} fullWidth maxWidth="xs">

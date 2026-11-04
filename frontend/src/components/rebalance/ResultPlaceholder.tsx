@@ -21,8 +21,8 @@ interface ResultPlaceholderProps {
 export default function ResultPlaceholder({ touched, hasHoldings, money, sumOk, diff, portfolioLink }: ResultPlaceholderProps) {
   return !touched ? (
     <Box data-testid="rb-hint">
-      <EmptyState Icon={BalanceOutlined} title="Chỉnh tỷ trọng hoặc nhập tiền bổ sung">
-        Kết quả hiện ngay ở đây khi tổng đạt 100%, và không thay đổi sổ của bạn.
+      <EmptyState Icon={BalanceOutlined} title="Chỉnh tỷ trọng để xem kết quả">
+        Kết quả hiện khi tổng đạt 100%.
       </EmptyState>
     </Box>
   ) : !hasHoldings && money <= 0 ? (
@@ -36,7 +36,7 @@ export default function ResultPlaceholder({ touched, hasHoldings, money, sumOk, 
           </Button>
         }
       >
-        Danh mục của bạn chưa có tài sản. Nhập một khoản tiền bổ sung, hoặc ghi tài sản vào danh mục.
+        Nhập tiền bổ sung hoặc ghi tài sản vào danh mục.
       </EmptyState>
     </Box>
   ) : !sumOk ? (

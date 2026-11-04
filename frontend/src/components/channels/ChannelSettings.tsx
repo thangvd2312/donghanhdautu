@@ -6,7 +6,10 @@ import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { ChannelPrefs } from '../../lib/types'
+import { InfoTip } from '../ui'
 
+const QUIET_NOTE = 'Tin phát sinh trong giờ yên lặng được gửi khi hết giờ. Tối đa 10 tin mỗi giờ.'
+const DETAIL_NOTE = 'Tắt (mặc định): chỉ hiện tiêu đề chung, không lộ số liệu danh mục trên màn hình khoá.'
 const HOURS = Array.from({ length: 24 }, (_, h) => h)
 
 /** Cài đặt chung cho một kênh gửi ra ngoài app (Telegram, thông báo trình duyệt): loại tin, giờ yên lặng, chi tiết */
@@ -32,7 +35,12 @@ export default function ChannelSettings({
         />
       ))}
       <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
-        <Typography variant="body2">Giờ yên lặng</Typography>
+        <Typography variant="body2">
+          Giờ yên lặng
+          <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1 }}>
+            <InfoTip label="Giải thích giờ yên lặng">{QUIET_NOTE}</InfoTip>
+          </Box>
+        </Typography>
         <TextField
           select
           size="small"
@@ -66,16 +74,21 @@ export default function ChannelSettings({
           </TextField>
         )}
       </Stack>
-      <Typography variant="caption" color="text.secondary">
-        Tin phát sinh trong giờ yên lặng được gửi khi hết giờ. Tối đa 10 tin mỗi giờ.
+      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+        {QUIET_NOTE}
       </Typography>
       <FormControlLabel
         control={<Switch size="small" checked={prefs.showDetails} onChange={(_, v) => onChange({ showDetails: v })} />}
         label={
           <Box>
-            <Typography variant="body2">Hiện nội dung chi tiết</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Tắt (mặc định): chỉ hiện tiêu đề chung, không lộ số liệu danh mục trên màn hình khoá.
+            <Typography variant="body2">
+              Hiện nội dung chi tiết
+              <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1 }}>
+                <InfoTip label="Giải thích nội dung chi tiết">{DETAIL_NOTE}</InfoTip>
+              </Box>
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+              {DETAIL_NOTE}
             </Typography>
           </Box>
         }

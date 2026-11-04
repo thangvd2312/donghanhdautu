@@ -2,7 +2,10 @@ import AddIcon from '@mui/icons-material/Add'
 import FlagOutlined from '@mui/icons-material/FlagOutlined'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
+import Box from '@mui/material/Box'
+import LinearProgress from '@mui/material/LinearProgress'
 import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -11,9 +14,10 @@ import { Link as RouterLink } from 'react-router-dom'
 import { listGoals } from '../api/goals'
 import GoalCard from '../components/goals/GoalCard'
 import GoalEditor from '../components/goals/GoalEditor'
-import { EmptyState, PageGrid, PageHeader, StatTiles } from '../components/page'
-import { Panel } from '../components/ui'
-import { fmtVndShort } from '../lib/format'
+import { EmptyState, PageGrid, PageHeader } from '../components/page'
+import { CardLink, HERO_SX } from '../components/home/HomeBlocks'
+import { InfoTip, Panel } from '../components/ui'
+import { fmtNum, fmtVndShort } from '../lib/format'
 import { useResource } from '../hooks/useResource'
 import { qk } from '../lib/query'
 import type { Goal } from '../lib/types'
@@ -27,6 +31,7 @@ export default function GoalsPage() {
   const active = goals.filter((g) => g.status === 'active')
   const sumCurrent = active.reduce((t, g) => t + g.progress.current, 0)
   const sumTarget = active.reduce((t, g) => t + g.targetAmount, 0)
+  const pct = sumTarget > 0 ? Math.min(100, (sumCurrent / sumTarget) * 100) : 0
 
   return (
     <Stack spacing={2.5}>
@@ -45,20 +50,40 @@ export default function GoalsPage() {
       {!data && !error && <Skeleton variant="rounded" height={200} />}
 
       {active.length > 0 && (
-        <StatTiles
-          items={[
-            { label: 'Mục tiêu đang theo', value: active.length },
-            { label: 'Đã có', value: fmtVndShort(sumCurrent), hint: 'từ tài sản đã gán' },
-            { label: 'Cần đạt', value: fmtVndShort(sumTarget) },
-            { label: 'Tiến độ chung', value: sumTarget > 0 ? `${Math.min(100, Math.round((sumCurrent / sumTarget) * 100))}%` : '—' },
-          ]}
-        />
+        <Paper sx={{ ...HERO_SX, border: 'none', borderRadius: '20px', p: { xs: 2, md: 2.5 } }}>
+          <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>
+                Đã có cho {active.length} mục tiêu
+                <Box component="span" sx={{ ml: 0.75, '& button': { color: 'hero.muted' } }}>
+                  <InfoTip>Tiến độ = giá trị hiện tại của phần tài sản đã gán so với số tiền cần đạt.</InfoTip>
+                </Box>
+              </Typography>
+              <Typography className="num" sx={{ fontSize: { xs: 30, sm: 36 }, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                {fmtVndShort(sumCurrent)}
+                <Box component="span" sx={{ fontSize: 16, fontWeight: 500, color: 'hero.muted' }}>
+                  {' '}
+                  / {fmtVndShort(sumTarget)}
+                </Box>
+              </Typography>
+            </Box>
+            <Typography className="num" sx={{ fontSize: 22, fontWeight: 700, color: 'hero.gold' }}>
+              {fmtNum(pct, 1)}%
+            </Typography>
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={pct}
+            aria-label="Tiến độ chung"
+            sx={{ mt: 1.75, height: 8, borderRadius: 4, bgcolor: 'hero.chip', '& .MuiLinearProgress-bar': { bgcolor: 'hero.gold', borderRadius: 4 } }}
+          />
+        </Paper>
       )}
 
       <PageGrid
         aside={
           data && (
-            <Panel title="Cách tính tiến độ">
+            <Panel title="Cách tính tiến độ" action={<CardLink to="/portfolio">Danh mục</CardLink>} sx={{ display: { xs: 'none', md: 'block' } }}>
               <Stack spacing={1.25}>
                 <Typography variant="body2" color="text.secondary">
                   Mỗi mục tiêu được gán một số tài sản trong danh mục; tiến độ là giá trị hiện tại của phần đã gán so với số tiền cần đạt.
@@ -66,9 +91,6 @@ export default function GoalsPage() {
                 <Typography variant="body2" color="text.secondary">
                   Mở "Thử thay đổi mức góp" ở từng mục tiêu để xem kết quả theo mức góp và lợi suất giả định. Đây là mô phỏng, không phải dự báo.
                 </Typography>
-                <Link component={RouterLink} to="/portfolio" variant="body2" sx={{ fontWeight: 600 }}>
-                  Xem danh mục
-                </Link>
               </Stack>
             </Panel>
           )
@@ -79,15 +101,15 @@ export default function GoalsPage() {
             Icon={FlagOutlined}
             title="Chưa có mục tiêu nào"
           >
-            Ví dụ: "Quỹ dự phòng 6 tháng chi tiêu — 120 triệu trong 1 năm", gán phần tiền mặt và tiết kiệm cho nó.
+            Ví dụ: quỹ dự phòng 120 triệu trong 1 năm.
             {!data.assets.length && (
               <>
                 {' '}
-                Bạn cần có tài sản trong{' '}
+                Cần có tài sản trong{' '}
                 <Link component={RouterLink} to="/portfolio">
                   danh mục
-                </Link>{' '}
-                để gán cho mục tiêu.
+                </Link>
+                .
               </>
             )}
           </EmptyState>

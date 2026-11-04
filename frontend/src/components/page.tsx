@@ -20,20 +20,30 @@ export function PageHeader({
   description,
   actions,
   titleOnMobile,
+  descriptionOnMobile,
 }: {
   eyebrow?: ReactNode
   title: ReactNode
   description?: ReactNode
   actions?: ReactNode
   titleOnMobile?: boolean
+  /** Giữ mô tả trên điện thoại (chỉ khi câu mô tả là thông tin cần thiết, không phải lời giới thiệu) */
+  descriptionOnMobile?: boolean
 }) {
+  // Điện thoại không còn gì để hiện (tiêu đề, mô tả ẩn, không có nút): bỏ cả khối để không thừa khoảng trống đầu trang
+  const emptyOnMobile = !titleOnMobile && !(descriptionOnMobile && description) && !actions
   return (
     <Stack
       direction={{ xs: 'column', md: 'row' }}
       useFlexGap
-      sx={{ gap: { xs: 1.5, md: 3 }, alignItems: { md: 'flex-end' }, justifyContent: 'space-between' }}
+      sx={{
+        display: { xs: emptyOnMobile ? 'none' : 'flex', md: 'flex' },
+        gap: { xs: 1.5, md: 3 },
+        alignItems: { md: 'flex-end' },
+        justifyContent: 'space-between',
+      }}
     >
-      <Box sx={{ minWidth: 0, maxWidth: 760 }}>
+      <Box sx={{ minWidth: 0, maxWidth: 760, display: { xs: titleOnMobile || descriptionOnMobile ? 'block' : 'none', md: 'block' } }}>
         {eyebrow && (
           <Typography
             sx={{
@@ -63,7 +73,12 @@ export function PageHeader({
           {title}
         </Typography>
         {description && (
-          <Typography color="text.secondary" component="div" sx={{ mt: { md: 0.75 }, fontSize: { xs: 14, md: 15 }, lineHeight: 1.55 }}>
+          <Typography
+            color="text.secondary"
+            component="div"
+            // Điện thoại: thanh trên đã có tên trang, bỏ đoạn mô tả để nội dung chính lên đầu màn hình
+            sx={{ display: { xs: descriptionOnMobile ? 'block' : 'none', md: 'block' }, mt: { md: 0.75 }, fontSize: { xs: 14, md: 15 }, lineHeight: 1.55 }}
+          >
             {description}
           </Typography>
         )}

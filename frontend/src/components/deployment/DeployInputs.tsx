@@ -70,7 +70,7 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
         />
         <Box>
           <Segmented<DeployHorizon>
-            label="Bao lâu nữa bạn có thể cần số tiền này?"
+            label="Bao lâu nữa cần dùng tiền?"
             value={form.horizon}
             onChange={(horizon) => onChange({ horizon, goalId: null })}
             options={(['short', 'medium', 'long'] as const).map((h) => ({
@@ -111,7 +111,7 @@ export function AmountPanel({ form, setup, onChange }: { form: DeployForm; setup
             control={<Checkbox checked={form.fromCash} onChange={(e) => onChange({ fromCash: e.target.checked })} />}
             label={
               <Typography variant="body2">
-                Số tiền này đã ghi trong Danh mục là tiền mặt (đang ghi {fmtVnd(setup.cashVnd)})
+                Đã ghi là tiền mặt trong Danh mục ({fmtVnd(setup.cashVnd)})
               </Typography>
             }
           />
@@ -174,7 +174,7 @@ export function SafetyPanel({ form, setup, onChange }: { form: DeployForm; setup
           <Box>
             <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.25 }}>Quỹ dự phòng</Typography>
             <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1.25 }}>
-              Khảo sát của bạn ghi là chưa có. Nhập chi tiêu thiết yếu mỗi tháng để app để riêng phần này trước.
+              Khảo sát ghi bạn chưa có. Nhập chi tiêu thiết yếu mỗi tháng.
             </Typography>
             <Stack spacing={1.5}>
               <MoneyField

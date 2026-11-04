@@ -67,6 +67,8 @@ export const REPORT_CSS = `
 .rpt-empty{padding:16px 0;color:var(--muted)}
 .rpt-foot{margin-top:18px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
 @media (min-width:600px){.rpt-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.rpt-tx{grid-template-columns:80px minmax(0,1fr) auto}}
+/* Xem trước trên điện thoại: bớt dòng phụ; bản in / PDF (media print) vẫn đủ */
+@media screen and (max-width:599.95px){.rpt-row .k small,.rpt-tx .s,.rpt-note.method{display:none}}
 .rpt-print-root{display:none}
 @media print{
   @page{size:A4;margin:12mm 12mm 14mm}
@@ -334,7 +336,7 @@ export default function ReportDocument({ r }: { r: PortfolioReport }) {
         ) : (
           <p className="rpt-note">Không có ghi chú: giá đầy đủ trong cả kỳ.</p>
         )}
-        {s && <p className="rpt-note">{s.method}</p>}
+        {s && <p className="rpt-note method">{s.method}</p>}
       </Section>
 
       <footer className="rpt-foot">{r.disclaimer} Báo cáo chỉ được tạo khi bạn yêu cầu; app không tự chia sẻ danh mục của bạn.</footer>

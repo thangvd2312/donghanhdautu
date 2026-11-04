@@ -1,8 +1,8 @@
 import type { HomeToday, ReviewPoint } from '@dautu/contracts';
 import type { AssetType } from '../market/market.service';
-import { REFERENCE_ALLOCATION, RISK_TYPE_LABEL } from '../profile/quiz';
+import { REFERENCE_ALLOCATION, RISK_TYPE_LABEL, targetByAssetType } from '../profile/quiz';
 import type { LedgerTx } from '../portfolio/ledger';
-import type { Valuation } from '../portfolio/valuation';
+import { TYPE_LABEL, type Valuation } from '../portfolio/valuation';
 
 /** Thay đổi "hôm nay" mỗi loại tài sản được tính so với mốc nào */
 const DAY_BASIS: Record<AssetType, string> = {
@@ -357,4 +357,14 @@ export function reviewPoints(v: Valuation, profile: ProfileLite | null, alerts: 
 
 function sum(xs: number[]) {
   return xs.reduce((a, b) => a + b, 0);
+}
+
+/** Tỷ trọng mục tiêu theo khẩu vị rủi ro, cùng khoá với allocationPct, cho thanh "Phân bổ so với mục tiêu" */
+export function targetAllocation(riskType: string): HomeToday['target'] {
+  const t = targetByAssetType(riskType);
+  if (!t) return null;
+  return {
+    riskLabel: RISK_TYPE_LABEL[riskType] ?? riskType,
+    pct: Object.fromEntries((Object.keys(t) as AssetType[]).map((type) => [TYPE_LABEL[type], t[type]])),
+  };
 }

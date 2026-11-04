@@ -31,6 +31,9 @@ function levelText(e: JournalTradeEntry): string | null {
   return map[e.levelCheck]
 }
 
+/** Điện thoại: ghi chú dài chỉ hiện một dòng */
+const CLAMP1 = { display: '-webkit-box', WebkitLineClamp: { xs: 1, md: 'none' }, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as const
+
 // ---------- Tổng kết tháng ----------
 
 export function EntryRow({ e, onTag }: { e: JournalEntry; onTag: (e: JournalTradeEntry | JournalReviewEntry) => void }) {
@@ -43,7 +46,7 @@ export function EntryRow({ e, onTag }: { e: JournalEntry; onTag: (e: JournalTrad
             kế hoạch {e.plan.displayName}
           </Link>
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
           Bản trước được lưu để so
         </Typography>
       </Row>
@@ -63,7 +66,7 @@ export function EntryRow({ e, onTag }: { e: JournalEntry; onTag: (e: JournalTrad
           : {DECISION[e.decision].toLowerCase()}
         </Typography>
         {e.note && (
-          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line', ...CLAMP1 }}>
             {e.note}
           </Typography>
         )}
@@ -95,13 +98,13 @@ export function EntryRow({ e, onTag }: { e: JournalEntry; onTag: (e: JournalTrad
         </Typography>
       </Stack>
       {e.note && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={CLAMP1}>
           {e.note}
         </Typography>
       )}
       <Tags emotion={e.emotion} reason={e.reason} plan={e.plan} />
       {(level || e.beforePlan || e.priceSincePct !== null) && (
-        <Typography variant="caption" color="text.secondary" component="div">
+        <Typography variant="caption" color="text.secondary" component="div" sx={{ display: { xs: 'none', md: 'block' } }}>
           {[level, e.beforePlan && 'Lệnh trước ngày lập kế hoạch', e.priceSincePct !== null && `Giá đến nay ${fmtPct(e.priceSincePct, 1)}`]
             .filter(Boolean)
             .join(' · ')}

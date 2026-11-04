@@ -12,6 +12,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { useState, type ReactNode } from 'react'
 import { fmtNum, fmtVnd } from '../../lib/format'
+import { InfoTip } from '../ui'
 import {
   actionTitle,
   approxVnd,
@@ -122,6 +123,9 @@ export function Segmented<T extends string>({
     <Box>
       <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 0.75 }} id={`seg-${label}`}>
         {label}
+        <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 0.75 }}>
+          <InfoTip label={`Giải thích: ${label}`}>{options.map((o) => `${o.label}: ${o.desc}`).join('\n\n')}</InfoTip>
+        </Box>
       </Typography>
       <ToggleButtonGroup
         exclusive
@@ -138,7 +142,7 @@ export function Segmented<T extends string>({
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
-      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.75 }}>
+      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.75, display: { xs: 'none', md: 'block' } }}>
         {options.find((o) => o.value === value)?.desc}
       </Typography>
     </Box>
@@ -188,7 +192,7 @@ export function FeesEditor({ value, onChange }: { value: FeeText; onChange: (v: 
           })}
           <Box sx={{ gridColumn: '1 / -1' }}>
             <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
                 Phí thật tuỳ công ty chứng khoán và sàn; đây chỉ là giả định để tính.
               </Typography>
               {custom && (
@@ -217,10 +221,15 @@ export function ActionRow({ a }: { a: RebalanceAction }) {
             {approxVnd(a.net)}
           </Typography>
         </Stack>
-        <Typography variant="caption" color="text.secondary" component="div">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          component="div"
+          sx={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: { xs: 1, md: 'unset' }, overflow: 'hidden' }}
+        >
           {a.reason}
         </Typography>
-        <Typography variant="caption" color="text.secondary" className="num" component="div">
+        <Typography variant="caption" color="text.secondary" className="num" component="div" sx={{ display: { xs: 'none', md: 'block' } }}>
           Giá giả định {fmtVnd(a.price)}/{a.unit}
           {cost > 0 ? ` · phí ${a.tax > 0 ? 'và thuế ' : ''}${fmtVnd(cost)}` : ''}
         </Typography>

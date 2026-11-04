@@ -9,6 +9,7 @@ import { fmtVnd } from '../../lib/format'
 import { describeScenario, type ShockState } from '../../lib/simulate'
 import type { SimulateResponse } from '../../lib/types'
 import { CompositionBars, HoldingImpactRow } from './SimulateParts'
+import { HERO_SX } from '../home/HomeBlocks'
 import { Panel } from '../ui'
 import DeltaLine from './DeltaLine'
 
@@ -33,32 +34,29 @@ export default function SimulationResult({ res, shocks, loading, headRef, showAl
   const notes = res.notes.filter((n) => !/dự báo/i.test(n))
   return (
     <Stack spacing={1.5} sx={{ opacity: loading ? 0.5 : 1, transition: 'opacity .15s' }} aria-busy={loading} data-testid="sim-result" data-loading={loading}>
-      <Paper ref={headRef} sx={{ p: 2.5 }} data-testid="sim-total">
-        <Typography variant="body2" color="text.secondary">
-          Hiện tại
-        </Typography>
-        <Typography className="num" sx={{ fontWeight: 600, fontSize: 18, lineHeight: 1.3 }}>
-          {fmtVnd(res.before.total)}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-          Sau kịch bản
-        </Typography>
-        <Typography className="num" sx={{ fontWeight: 800, fontSize: { xs: 28, sm: 32 }, lineHeight: 1.2 }} aria-live="polite">
+      <Paper ref={headRef} sx={{ ...HERO_SX, border: 'none', borderRadius: '20px', p: { xs: 2, md: 2.5 } }} data-testid="sim-total">
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>Sau kịch bản</Typography>
+          <Typography className="num" sx={{ fontSize: 13, color: 'hero.muted' }}>
+            Hiện tại {fmtVnd(res.before.total)}
+          </Typography>
+        </Stack>
+        <Typography className="num" sx={{ fontWeight: 700, fontSize: { xs: 30, sm: 36 }, letterSpacing: '-0.02em', lineHeight: 1.15, mt: 0.5 }} aria-live="polite">
           {fmtVnd(res.after.total)}
         </Typography>
-        <Box sx={{ mt: 0.5 }}>
+        <Box sx={{ mt: 0.75 }}>
           <DeltaLine r={res} big />
         </Box>
-        <Typography variant="body2" sx={{ mt: 1.5 }} data-testid="sim-sentence">
+        <Typography variant="body2" sx={{ mt: 1.5, color: 'hero.muted' }} data-testid="sim-sentence">
           {describeScenario(shocks, res.delta)}
         </Typography>
       </Paper>
 
-      <Panel title="Cơ cấu danh mục trước và sau" subtitle="Tỷ trọng từng nhóm trên tổng tài sản">
+      <Panel title="Cơ cấu trước và sau" subtitle="Tỷ trọng từng nhóm trên tổng tài sản">
         <CompositionBars before={res.before} after={res.after} />
       </Panel>
 
-      <Panel title="Tài sản bị ảnh hưởng nhiều nhất" subtitle={`${res.holdings.length} khoản, sắp theo mức thay đổi`} noPadding>
+      <Panel title="Ảnh hưởng nhiều nhất" subtitle={`${res.holdings.length} khoản, sắp theo mức thay đổi`} noPadding>
         <Box sx={{ px: 2, '& > *:not(:last-child)': { borderBottom: 1, borderColor: 'divider' } }}>
           {top.map((h) => (
             <HoldingImpactRow key={`${h.assetType}:${h.symbol}`} h={h} />
@@ -74,11 +72,9 @@ export default function SimulationResult({ res, shocks, loading, headRef, showAl
       {res.missing.length > 0 && (
         <Alert severity="info" variant="outlined" data-testid="sim-missing">
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            Một số tài sản chưa có giá mới
+            Một số mã chưa có giá mới
           </Typography>
-          <Typography variant="body2">
-            Giá cũ hoặc thiếu giá: các mã này được tính theo giá đang hiển thị ở Danh mục, nên kết quả chỉ mang tính tham khảo.
-          </Typography>
+          <Typography variant="body2">Giá cũ hoặc thiếu: tính theo giá ở Danh mục, chỉ để tham khảo.</Typography>
           <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
             {res.missing.map((m) => (
               <li key={`${m.assetType}:${m.symbol}`}>
@@ -92,7 +88,7 @@ export default function SimulationResult({ res, shocks, loading, headRef, showAl
       )}
 
       {notes.length > 0 && (
-        <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary' }} data-testid="sim-notes">
+        <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary', display: { xs: 'none', md: 'block' } }} data-testid="sim-notes">
           {notes.map((n) => (
             <li key={n}>
               <Typography variant="caption" component="span">

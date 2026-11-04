@@ -2,7 +2,7 @@ import type { PriceInfo } from '../market/freshness';
 import { HoldingInput, valuePortfolio } from '../portfolio/valuation';
 import { Prisma } from '@prisma/client';
 import type { LedgerTx } from '../portfolio/ledger';
-import { dayChange, dayIncomeOf, reviewPoints } from './today';
+import { dayChange, dayIncomeOf, reviewPoints, targetAllocation } from './today';
 import type { DayLedger, DayTrade } from './today';
 
 const holding = (id: string, assetType: string, symbol: string, quantity: number, avgCost: number): HoldingInput => ({
@@ -421,5 +421,17 @@ describe('reviewPoints', () => {
   it('nhắc khi có tài sản thiếu giá', () => {
     const v = valuation([holding('1', 'stock', 'XYZ', 100, 100_000)], {});
     expect(reviewPoints(v, balanced, []).find((p) => p.id === 'data')?.reason).toContain('XYZ');
+  });
+});
+
+describe('targetAllocation', () => {
+  it('maps the risk type mix to portfolio allocation labels (stocks = ETF + picks)', () => {
+    expect(targetAllocation('balanced')).toEqual({
+      riskLabel: 'Cân bằng',
+      pct: { 'Cổ phiếu': 50, Vàng: 15, Crypto: 5, 'Tiền mặt / tiết kiệm': 30 },
+    });
+  });
+  it('is null for an unknown risk type', () => {
+    expect(targetAllocation('nope')).toBeNull();
   });
 });

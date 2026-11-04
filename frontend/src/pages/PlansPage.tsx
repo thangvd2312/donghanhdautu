@@ -19,6 +19,7 @@ import { changeColor, fmtDate, fmtPct, fmtPrice } from '../lib/format'
 import type { PlanListItem } from '../lib/types'
 import AssetAvatar from '../components/AssetAvatar'
 import { EmptyState, PageHeader, StatTiles } from '../components/page'
+import { HERO_SX } from '../components/home/HomeBlocks'
 import { ChangePill } from '../components/ui'
 
 /** Danh sách kế hoạch: đang theo dõi (ưu tiên cái đến hạn / chạm mốc) và đã kết thúc */
@@ -39,7 +40,7 @@ export default function PlansPage() {
   const holding = active.filter((p) => p.held).length
   const dueSoon = active.filter((p) => !p.signals.length && new Date(p.nextReviewAt).getTime() <= Date.now()).length
   const newBtn = (
-    <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} sx={{ whiteSpace: 'nowrap', borderRadius: 99 }}>
+    <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} sx={{ whiteSpace: 'nowrap', borderRadius: 99, width: { xs: '100%', md: 'auto' } }}>
       Lập kế hoạch
     </Button>
   )
@@ -58,35 +59,63 @@ export default function PlansPage() {
 
       {plans && !plans.length && (
         <EmptyState Icon={FlagOutlined} title="Chưa có kế hoạch nào" action={newBtn}>
-          Bắt đầu với một mã bạn đang giữ hoặc đang định mua. Có thể nhờ AI viết nháp từ dữ liệu, rồi sửa theo ý bạn.
+          Bắt đầu với một mã bạn giữ hoặc định mua. AI có thể viết nháp giúp.
         </EmptyState>
       )}
 
       {plans && plans.length > 0 && (
-        <StatTiles
-          items={[
-            { label: 'Đang theo dõi', value: active.length },
-            {
-              label: 'Cần chú ý',
-              value: alerting,
-              hint: alerting ? 'chạm mốc cắt lỗ / chốt lời' : 'chưa có mã nào chạm mốc',
-              color: alerting ? 'warning.main' : undefined,
-            },
-            { label: 'Đến hạn xem lại', value: dueSoon },
-            {
-              label: 'Đang nắm giữ',
-              value: holding,
-              hint: closed.length ? `${closed.length} kế hoạch đã kết thúc` : undefined,
-            },
-          ]}
-        />
+        <>
+          <Paper sx={{ ...HERO_SX, border: 'none', borderRadius: '20px', p: { xs: 2, md: 2.5 }, display: { xs: 'block', md: 'none' } }}>
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+              <Box>
+                <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>Cần chú ý</Typography>
+                <Typography className="num" sx={{ fontSize: 34, fontWeight: 700, lineHeight: 1.15, color: alerting ? 'hero.gold' : 'hero.ink' }}>
+                  {alerting}
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={2.5} sx={{ textAlign: 'right' }}>
+                {[
+                  ['Theo dõi', active.length],
+                  ['Đến hạn', dueSoon],
+                  ['Đang giữ', holding],
+                ].map(([l, v]) => (
+                  <Box key={l}>
+                    <Typography sx={{ fontSize: 12, color: 'hero.muted' }}>{l}</Typography>
+                    <Typography className="num" sx={{ fontSize: 18, fontWeight: 700 }}>
+                      {v}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Stack>
+          </Paper>
+          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+            <StatTiles
+              items={[
+                { label: 'Đang theo dõi', value: active.length },
+                {
+                  label: 'Cần chú ý',
+                  value: alerting,
+                  hint: alerting ? 'chạm mốc cắt lỗ / chốt lời' : 'chưa có mã nào chạm mốc',
+                  color: alerting ? 'warning.main' : undefined,
+                },
+                { label: 'Đến hạn xem lại', value: dueSoon },
+                {
+                  label: 'Đang nắm giữ',
+                  value: holding,
+                  hint: closed.length ? `${closed.length} kế hoạch đã kết thúc` : undefined,
+                },
+              ]}
+            />
+          </Box>
+        </>
       )}
 
       {active.length > 0 && <PlanGrid plans={active} />}
 
       {closed.length > 0 && (
         <Stack spacing={1.25}>
-          <Typography sx={{ fontWeight: 700, fontSize: 16 }}>Đã kết thúc</Typography>
+          <Typography sx={{ fontWeight: 700, fontSize: 16 }}>Đã kết thúc ({closed.length})</Typography>
           <PlanGrid plans={closed} />
         </Stack>
       )}
@@ -118,19 +147,25 @@ function PlanGrid({ plans }: { plans: PlanListItem[] }) {
 }
 
 function PlanCard({ p }: { p: PlanListItem }) {
+  const stop = p.signals.some((s) => s.kind === 'stop')
+  const bar = p.signals.length ? (stop ? 'price.down' : 'warning.main') : null
   return (
     <Paper
       component={RouterLink}
       to={`/plans/${p.id}`}
       sx={{
         p: 2,
+        pl: bar ? 2.5 : 2,
         display: 'block',
+        position: 'relative',
+        overflow: 'hidden',
         textDecoration: 'none',
         color: 'inherit',
         height: '100%',
         '&:hover': { borderColor: 'primary.main' },
       }}
     >
+      {bar && <Box aria-hidden sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: bar }} />}
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
         <AssetAvatar assetType={p.assetType} symbol={p.symbol} size={40} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -139,7 +174,7 @@ function PlanCard({ p }: { p: PlanListItem }) {
           </Typography>
           <Typography variant="caption" color="text.secondary" component="div" noWrap>
             {p.status === 'active' ? `Xem lại ${fmtDate(p.nextReviewAt)}` : `Kết thúc ${p.closedAt ? fmtDate(p.closedAt) : ''}`}
-            {p.held ? ' · đang nắm giữ' : ''}
+            {p.held ? ' · đang giữ' : ''}
           </Typography>
         </Box>
         <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
@@ -159,7 +194,7 @@ function PlanCard({ p }: { p: PlanListItem }) {
         sx={{
           mt: 1.25,
           display: '-webkit-box',
-          WebkitLineClamp: 2,
+          WebkitLineClamp: { xs: 1, md: 2 },
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
         }}
@@ -192,6 +227,10 @@ function PlanCard({ p }: { p: PlanListItem }) {
             sx={{
               color: s.kind === 'stop' ? 'error.main' : 'warning.main',
               fontWeight: 500,
+              display: '-webkit-box',
+              WebkitLineClamp: { xs: 1, md: 3 },
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
             }}
           >
             {s.message}

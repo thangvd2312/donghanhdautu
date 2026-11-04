@@ -136,7 +136,7 @@ export default function EventsPage() {
       )
     return (
       <EmptyBox
-        title={`Chưa có sự kiện nào được công bố cho các mã của bạn trong ${rangePhrase} tới`}
+        title={`Chưa có sự kiện trong ${rangePhrase} tới`}
         actions={
           range !== 'quarter' ? (
             <Button variant="outlined" onClick={() => setRange('quarter')}>
@@ -145,8 +145,7 @@ export default function EventsPage() {
           ) : undefined
         }
       >
-        Công ty thường chỉ công bố cổ tức, quyền mua trước ngày GDKHQ khoảng 2–7 ngày, nên lịch có thể còn trống. Khi có công bố mới, sự
-        kiện sẽ tự hiện ở đây.
+        Công ty thường công bố 2–7 ngày trước ngày GDKHQ.
       </EmptyBox>
     )
   }
@@ -159,7 +158,7 @@ export default function EventsPage() {
         description="Lịch cho mã bạn giữ và theo dõi, để nắm thông tin chứ không phải tín hiệu mua bán."
         actions={
           <Button variant="outlined" component={RouterLink} to="/income" sx={{ borderRadius: 99 }}>
-            Xem thu nhập cổ tức
+            Thu nhập cổ tức
           </Button>
         }
       />
@@ -207,13 +206,13 @@ export default function EventsPage() {
               </Button>
             }
           >
-            Chưa lấy được dữ liệu sự kiện từ nguồn, thử lại.
-            {items.length > 0 && ' Đang hiển thị dữ liệu đã lưu trước đó.'}
+            Chưa lấy được dữ liệu mới.
+            {items.length > 0 && ' Đang hiện dữ liệu đã lưu.'}
           </Alert>
         )}
         {focusMissing && (
           <Alert severity="info" variant="outlined" onClose={() => setFocusMissing(false)}>
-            Không tìm thấy sự kiện này nữa. Có thể công ty đã đổi lịch hoặc sự kiện đã qua lâu.
+            Không còn thấy sự kiện này, có thể đã đổi lịch.
           </Alert>
         )}
         {unknownSymbol && symbolParam && (
@@ -226,7 +225,7 @@ export default function EventsPage() {
               </Button>
             }
           >
-            {symbolParam} chưa nằm trong danh mục hoặc danh sách theo dõi của bạn nên lịch chưa quét mã này.
+            Chưa theo dõi {symbolParam} nên lịch chưa có mã này.
           </Alert>
         )}
 
@@ -234,7 +233,7 @@ export default function EventsPage() {
           <ListSkeleton />
         ) : !data ? null : symbols.length === 0 && !data.unavailable ? (
           <EmptyBox
-            title="Chưa có mã nào để theo dõi lịch"
+            title="Chưa có mã nào để theo dõi"
             actions={
               <>
                 <Button variant="contained" component={RouterLink} to="/">
@@ -246,7 +245,7 @@ export default function EventsPage() {
               </>
             }
           >
-            Thêm cổ phiếu vào danh mục hoặc danh sách theo dõi, lịch cổ tức và đại hội của các mã đó sẽ hiện ở đây.
+            Thêm mã vào danh mục hoặc theo dõi để thấy lịch.
           </EmptyBox>
         ) : (
           <Stack spacing={1} aria-busy={loading} sx={{ opacity: loading ? 0.55 : 1, transition: 'opacity .15s' }}>
@@ -275,7 +274,7 @@ export default function EventsPage() {
               </Box>
             )}
 
-            <Typography variant="caption" color="text.secondary" className="num" sx={{ pt: 1.5, textAlign: 'center' }}>
+            <Typography variant="caption" color="text.secondary" className="num" sx={{ pt: 1.5, textAlign: 'center', display: { xs: 'none', md: 'block' } }}>
               Nguồn {data.source} · cập nhật {fmtClock(data.fetchedAt)}
             </Typography>
           </Stack>

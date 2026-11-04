@@ -89,7 +89,7 @@ export function PresetCard({ title, desc, onClick }: { title: string; desc: stri
         textAlign: 'left',
         width: '100%',
         p: 1.75,
-        minHeight: 84,
+        minHeight: { xs: 56, md: 84 },
         borderRadius: 2,
         border: 1,
         borderColor: 'divider',
@@ -98,7 +98,7 @@ export function PresetCard({ title, desc, onClick }: { title: string; desc: stri
     >
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography sx={{ fontWeight: 700, fontSize: 16, lineHeight: 1.35 }}>{title}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, display: { xs: '-webkit-box', md: 'block' }, WebkitLineClamp: { xs: 1, md: 'unset' }, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {desc}
         </Typography>
       </Box>

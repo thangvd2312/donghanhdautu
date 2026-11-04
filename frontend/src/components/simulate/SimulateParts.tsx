@@ -39,11 +39,11 @@ export function PresetCard({ p, active, onPick }: { p: Preset; active: boolean; 
         border: 1,
         borderColor: active ? 'primary.main' : 'divider',
         bgcolor: active ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)' : 'background.paper',
-        minHeight: 72,
+        minHeight: { xs: 64, md: 72 },
       }}
     >
       <Typography sx={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>{p.title}</Typography>
-      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.25, lineHeight: 1.35 }}>
+      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.25, lineHeight: 1.35, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: { xs: 1, md: 3 }, overflow: 'hidden' }}>
         {p.desc}
       </Typography>
     </ButtonBase>

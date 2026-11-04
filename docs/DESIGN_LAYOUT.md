@@ -33,7 +33,26 @@ Thành phần trong `frontend/src/components/page.tsx`:
 5. **Chữ**: chỉ `PageHeader` có tiêu đề cấp trang. Không dùng `variant="h4"/"h5"` trong trang. Tiêu đề khối qua `Panel`.
 6. **Nút**: nút chính của trang nằm trong `PageHeader.actions`, `variant="contained"`, bo tròn `borderRadius: 99`. Nút phụ `outlined`. Link chữ chỉ dùng trong câu.
 7. **Màu**: chỉ dùng token theme (`primary`, `text.secondary`, `divider`, `price.up/down`, `hero.*`). Thẻ nền navy (`HERO_SX` trong `home/HomeBlocks.tsx`) tối đa một thẻ mỗi trang, cho con số quan trọng nhất. Màu riêng chỉ cho chuỗi dữ liệu biểu đồ.
-8. **Bo góc**: `shape.borderRadius` = 8 và `sx.borderRadius: n` nhân với nó. Bo mới viết bằng px (`'12px'`).
+8. **Bo góc**: thẻ (Paper/Panel) 16px qua theme; thẻ navy 20px. `shape.borderRadius` vẫn = 8 và `sx.borderRadius: n` nhân với nó, nên bo mới viết bằng px (`'12px'`).
 9. **Bộ lọc**: một hàng `ToggleButtonGroup` hoặc chip; trên điện thoại đặt trong `ScrollRow` (cuộn ngang). Vùng chạm ≥ 32px.
 10. **Điện thoại**: một cột, padding 16px, không tràn ngang; nút chính một mình thì rộng hết hàng.
 11. **Giữ nguyên hành vi**: dữ liệu, API, nhãn và `aria-label` mà `frontend/e2e/*.spec.ts` dùng.
+12. **Tầng thứ**: việc gấp / cảnh báo dùng hàng có **thanh màu 4px bên trái** (đỏ `price.down` = nghiêm trọng, `warning.main` = chú ý, `primary.main` = thông tin), như `ReviewList` trong `home/HomeBlocks.tsx`. Việc đến hạn: viền thẻ `hero.gold` + ô ngày kiểu lịch (`DeploymentHomeCard`). Thẻ phụ giữ viền nhạt.
+13. **Link góc thẻ**: `CardLink` (`home/HomeBlocks.tsx`) đặt ở `Panel.action` ("Danh mục", "Cân bằng", "Kế hoạch") thay cho link "Xem tất cả" cuối thẻ hay câu link gạch chân.
+14. **Số và %**: % thay đổi dùng `ChangePill` (viên thuốc nền nhạt). Phân bổ so với mục tiêu dùng `portfolio/TargetAllocation` (vạch đậm = mục tiêu, vượt mục tiêu tô vàng).
+
+## Điện thoại: bớt chữ (11/2026, người dùng phàn nàn "nhiều text quá")
+
+Mục tiêu: mỗi màn hình đọc lướt được trong vài giây. Chữ giải thích không mất đi, chỉ chuyển sang chỗ chạm mới thấy.
+
+- **Mô tả trang** (`PageHeader.description`) tự ẩn trên điện thoại. Chỉ dùng `descriptionOnMobile` khi câu đó là dữ liệu cần thiết.
+- **Phụ đề khối** dạng chữ tự thu vào ⓘ trên điện thoại (`Panel`).
+- **Đoạn giải thích, chú thích nguồn, lưu ý pháp lý, ghi chú cách tính** → `InfoTip` (ⓘ) cạnh tiêu đề / con số liên quan, hoặc chỉ hiện từ md (`display: { xs: 'none', md: 'block' }`). Không để đoạn văn > 1 câu đứng trơ trên điện thoại.
+- **Trạng thái trống**: tiêu đề + tối đa một câu ngắn (≤ 12 từ) + một nút. Viết lại câu cho ngắn, không cắt chữ giữa chừng.
+- **Danh sách**: dòng phụ một dòng (`WebkitLineClamp: 1` trên xs), cả hàng bấm được thay cho 2–3 nút chữ mỗi hàng; hành động phụ thành `IconButton` có `aria-label`.
+- **Nhiều nút chữ dài** → một nút chính + `QuickActions` (ô biểu tượng + nhãn 1–2 từ) hoặc gom vào menu.
+- **Nhãn nút** 1–3 từ ("Lập kế hoạch", không phải "Chưa biết mua gì? Lập kế hoạch giải ngân").
+- Kiểm tra: `words` trên điện thoại (script chụp màn hình) phải giảm rõ so với trước; không đoạn nào bị cắt cụt vô nghĩa.
+
+Tham chiếu đã làm đúng: `pages/HomePage.tsx`, `components/home/HomeBlocks.tsx`, `components/deployment/DeploymentHomeCard.tsx`. Mockup gốc: https://claude.ai/artifact/3vq6q8FKNaFgL9LRSz5aEM (hướng A).
+

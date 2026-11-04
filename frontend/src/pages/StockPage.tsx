@@ -8,6 +8,7 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import Button from '@mui/material/Button'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
@@ -21,7 +22,8 @@ import { StatementTable } from '../components/stock/FinancialStatements'
 import StockFundamentals from '../components/stock/StockFundamentals'
 import TechnicalsPanel from '../components/TechnicalsPanel'
 import { PageGrid, StatTiles } from '../components/page'
-import { KV, Panel } from '../components/ui'
+import { ChangePill, InfoTip, KV, Panel } from '../components/ui'
+import { useIsMobile } from '../lib/useIsMobile'
 import { getStock, getStockHistory } from '../api/market'
 import { useAssetDetail } from '../hooks/useAssetDetail'
 import { changeColor, fmtNum, fmtPct, fmtStockPrice, fmtVnd, stockPriceColor } from '../lib/format'
@@ -45,6 +47,8 @@ const RATIO_ROWS: [string, string, 'x' | '%'][] = [
   ['dividendYield', 'Tỷ suất cổ tức', '%'],
 ]
 
+type Section = 'overview' | 'finance' | 'technical'
+
 const HIGHLIGHT = /Lợi nhuận gộp|Doanh thu thuần|Cổ đông của Công ty mẹ|Thu nhập lãi thuần|Tổng thu nhập/
 
 export default function StockPage() {
@@ -55,6 +59,9 @@ export default function StockPage() {
   const { detail: d, candles, error } = useAssetDetail(loadDetail, loadCandles)
   const [incomeView, setIncomeView] = useState<'years' | 'quarters'>('years')
   const [alertOpen, setAlertOpen] = useState(false)
+  const isMobile = useIsMobile()
+  const [section, setSection] = useState<Section>('overview')
+  const [moreProfile, setMoreProfile] = useState(false)
 
   if (error) return <Alert severity="error">{error}</Alert>
   if (!d)
@@ -69,6 +76,8 @@ export default function StockPage() {
   const q = snapshot?.stocks.find((s) => s.symbol === d.quote.symbol) ?? d.quote
   const c = d.company
   const ratioCols = d.ratios.slice(-5)
+  /** Điện thoại: mỗi lần một mục; desktop: hiện hết */
+  const show = (x: Section) => !isMobile || section === x
   const income = d.income?.[incomeView] ?? []
   const color = stockPriceColor(q)
   /** Chỉ số tài chính gần nhất (TTM theo quý) */
@@ -136,9 +145,12 @@ export default function StockPage() {
         items={[
           { label: 'Vốn hoá', value: c ? `${fmtNum(c.marketCapBn)} tỷ` : '—' },
           {
-            label: 'P/E',
+            label: (
+              <>
+                P/E <InfoTip>TTM theo quý gần nhất</InfoTip>
+              </>
+            ),
             value: latest('pe') === undefined ? '—' : `${fmtNum(latest('pe'), 1)}x`,
-            hint: 'TTM theo quý gần nhất',
           },
           {
             label: 'P/B',
@@ -148,17 +160,44 @@ export default function StockPage() {
         ]}
       />
 
+      {isMobile && (
+        <ToggleButtonGroup
+          fullWidth
+          exclusive
+          size="small"
+          color="primary"
+          aria-label="Mục hiển thị"
+          value={section}
+          onChange={(_, v: Section | null) => v && setSection(v)}
+          sx={{ bgcolor: 'background.paper' }}
+        >
+          <ToggleButton value="overview" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 40 }}>
+            Tổng quan
+          </ToggleButton>
+          <ToggleButton value="finance" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 40 }}>
+            Tài chính
+          </ToggleButton>
+          <ToggleButton value="technical" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 40 }}>
+            Kỹ thuật
+          </ToggleButton>
+        </ToggleButtonGroup>
+      )}
+
       <PageGrid
         aside={
+          show('technical') || show('overview') ? (
           <>
+            {show('technical') && (
             <Panel title="Kỹ thuật">
               <TechnicalsPanel t={d.technicals} priceFmt={fmtStockPrice} />
             </Panel>
+            )}
 
+            {show('overview') && (
             <Panel title="Doanh nghiệp">
               {c ? (
                 <>
-                  <KV k="Vốn hoá" v={`${fmtNum(c.marketCapBn)} tỷ`} />
+                  {!isMobile && <KV k="Vốn hoá" v={`${fmtNum(c.marketCapBn)} tỷ`} />}
                   <KV k="GT khớp TB 1 tháng" v={`${fmtNum(c.avgMatchValue1mBn)} tỷ`} />
                   <KV
                     k="Sở hữu nước ngoài / room"
@@ -166,23 +205,23 @@ export default function StockPage() {
                   />
                   <KV k="Sở hữu nhà nước" v={fmtPct(c.stateOwnershipPct, 1, false)} />
                   <KV k="Free float" v={fmtPct(c.freeFloatPct, 1, false)} />
-                  <KV k="KL hôm nay" v={fmtNum(q.volume)} />
+                  {!isMobile && <KV k="KL hôm nay" v={fmtNum(q.volume)} />}
                   <KV k="NN mua / bán" v={`${fmtNum(q.foreignBuyVol)} / ${fmtNum(q.foreignSellVol)}`} />
                   {c.analystView && (
-                    <Alert severity="info" variant="outlined" icon={false} sx={{ mt: 2 }}>
+                    <Box sx={{ mt: 2, p: 1.5, borderRadius: '12px', borderLeft: 4, borderColor: 'primary.main', bgcolor: 'action.hover' }}>
                       <Typography variant="caption" color="text.secondary">
-                        Khuyến nghị {c.analystView.source} ({c.analystView.ratingAsOf})
+                        Khuyến nghị {c.analystView.source} ({c.analystView.ratingAsOf}){' '}
+                        <InfoTip>Khuyến nghị của bên thứ ba, chỉ để tham khảo.</InfoTip>
                       </Typography>
-                      <Typography sx={{ fontWeight: 700 }}>
-                        {c.analystView.rating} · mục tiêu {fmtVnd(c.analystView.targetPrice)}{' '}
-                        <Box component="span" sx={{ color: changeColor(c.analystView.upsidePct) }}>
-                          ({fmtPct(c.analystView.upsidePct, 1)})
-                        </Box>
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Khuyến nghị của bên thứ ba, chỉ để tham khảo.
-                      </Typography>
-                    </Alert>
+                      <Stack direction="row" useFlexGap sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Typography sx={{ fontWeight: 700 }}>
+                          {c.analystView.rating} · mục tiêu {fmtVnd(c.analystView.targetPrice)}
+                        </Typography>
+                        <ChangePill small color={changeColor(c.analystView.upsidePct)}>
+                          {fmtPct(c.analystView.upsidePct, 1)}
+                        </ChangePill>
+                      </Stack>
+                    </Box>
                   )}
                   {c.profile && (
                     <Typography
@@ -192,7 +231,7 @@ export default function StockPage() {
                       sx={{
                         mt: 2,
                         display: '-webkit-box',
-                        WebkitLineClamp: 6,
+                        WebkitLineClamp: moreProfile ? 'unset' : isMobile ? 3 : 6,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
                       }}
@@ -200,14 +239,22 @@ export default function StockPage() {
                       {c.profile}
                     </Typography>
                   )}
+                  {c.profile && isMobile && (
+                    <Button size="small" onClick={() => setMoreProfile((v) => !v)} sx={{ mt: 0.5, ml: -1 }}>
+                      {moreProfile ? 'Thu gọn' : 'Xem thêm'}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <Typography color="text.secondary">Không có dữ liệu</Typography>
               )}
             </Panel>
+            )}
           </>
+          ) : undefined
         }
       >
+        {show('overview') && (
         <Panel title="Biểu đồ giá" subtitle="Nến ngày, 400 phiên gần nhất">
           {candles.length ? (
             <PriceChart candles={candles} priceFormatter={fmtStockPrice} />
@@ -217,14 +264,17 @@ export default function StockPage() {
             </Typography>
           )}
         </Panel>
+        )}
+        {show('finance') && (
+        <>
         <Panel title="Chỉ số tài chính" subtitle="TTM theo quý · nguồn Vietcap" noPadding>
           <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Chỉ số</TableCell>
-                  {ratioCols.map((r) => (
-                    <TableCell key={String(r.period)} align="right">
+                  {ratioCols.map((r, ci) => (
+                    <TableCell key={String(r.period)} align="right" sx={ci < ratioCols.length - 3 ? { display: { xs: 'none', md: 'table-cell' } } : undefined}>
                       {r.period}
                     </TableCell>
                   ))}
@@ -234,10 +284,10 @@ export default function StockPage() {
                 {RATIO_ROWS.filter(([k]) => ratioCols.some((r) => r[k] !== undefined)).map(([k, label, unit]) => (
                   <TableRow key={k} hover>
                     <TableCell sx={{ color: 'text.secondary' }}>{label}</TableCell>
-                    {ratioCols.map((r) => {
+                    {ratioCols.map((r, ci) => {
                       const v = r[k] as number | undefined
                       return (
-                        <TableCell key={String(r.period)} align="right">
+                        <TableCell key={String(r.period)} align="right" sx={ci < ratioCols.length - 3 ? { display: { xs: 'none', md: 'table-cell' } } : undefined}>
                           {v === undefined ? '—' : unit === '%' ? `${fmtNum(v * 100, 1)}%` : fmtNum(v, 2)}
                         </TableCell>
                       )
@@ -272,6 +322,8 @@ export default function StockPage() {
         )}
 
         <StockFundamentals symbol={q.symbol} />
+        </>
+        )}
       </PageGrid>
     </Stack>
   )

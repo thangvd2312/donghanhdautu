@@ -2,12 +2,11 @@ import LogoutOutlined from '@mui/icons-material/LogoutOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
-import Divider from '@mui/material/Divider'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import InputAdornment from '@mui/material/InputAdornment'
-import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -18,7 +17,8 @@ import PortfolioAlertsPanel from '../components/portfolio-alerts/PortfolioAlerts
 import PushPanel from '../components/channels/PushPanel'
 import TelegramPanel from '../components/channels/TelegramPanel'
 import { PageGrid, PageHeader } from '../components/page'
-import { KV, Panel } from '../components/ui'
+import { HERO_SX } from '../components/home/HomeBlocks'
+import { InfoTip, Panel } from '../components/ui'
 import { updateProfileSettings } from '../api/auth'
 import { useAuth } from '../lib/auth-context'
 import { RISK_LABEL } from '../lib/types'
@@ -120,51 +120,81 @@ function ProfilePanel() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  return (
-    <Panel
-      title="Hồ sơ nhà đầu tư"
-      action={
-        <Link component={RouterLink} to="/onboarding" variant="body2">
-          Làm lại khảo sát
-        </Link>
-      }
-    >
-      {profile ? (
-        <>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
-            <Typography component="div" color="primary" sx={{ fontSize: 20, fontWeight: 700 }}>
-              {RISK_LABEL[profile.riskType]}
-            </Typography>
-            {profile.fomoProne && <Chip size="small" color="warning" variant="outlined" label="Dễ FOMO" />}
-          </Stack>
-          <KV k="Mục tiêu" v={GOAL[profile.goal]} />
-          <KV k="Khung thời gian" v={HORIZON[profile.horizon]} />
-          <KV k="Chịu lỗ tối đa" v={`${profile.maxDrawdownPct}%`} />
-          <Divider sx={{ my: 1.5 }} />
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-            <TextField
-              size="small"
-              type="number"
-              label="Ngưỡng cảnh báo biến động"
-              value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
-              helperText="Coin dùng ngưỡng ×2, vàng ÷2 (tối thiểu 1%)"
-              slotProps={{
-                input: { endAdornment: <InputAdornment position="end">%</InputAdornment> },
-                htmlInput: { min: 1, max: 20, step: 0.5, inputMode: 'decimal' },
-              }}
-              sx={{ flex: 1 }}
-            />
-            <Button variant="outlined" onClick={() => void save()} sx={{ mt: 0.25 }}>
-              {saved ? 'Đã lưu' : 'Lưu'}
-            </Button>
-          </Stack>
-        </>
-      ) : (
+  if (!profile) {
+    return (
+      <Panel title="Hồ sơ nhà đầu tư">
         <Button component={RouterLink} to="/onboarding" variant="contained" sx={{ borderRadius: 99 }}>
           Làm khảo sát
         </Button>
-      )}
-    </Panel>
+      </Panel>
+    )
+  }
+
+  return (
+    <Stack spacing={2.5}>
+      <Paper sx={{ ...HERO_SX, border: 'none', borderRadius: '20px', p: { xs: 2, md: 2.5 } }}>
+        <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>Hồ sơ nhà đầu tư</Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
+              <Typography component="div" sx={{ fontSize: { xs: 26, sm: 30 }, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                {RISK_LABEL[profile.riskType]}
+              </Typography>
+              {profile.fomoProne && <Chip size="small" label="Dễ FOMO" sx={{ bgcolor: 'hero.chip', color: 'hero.gold', fontWeight: 600 }} />}
+            </Stack>
+          </Box>
+          <Button
+            component={RouterLink}
+            to="/onboarding"
+            size="small"
+            variant="outlined"
+            sx={{ borderRadius: 99, flexShrink: 0, color: 'hero.ink', borderColor: 'hero.muted' }}
+          >
+            Làm lại
+          </Button>
+        </Stack>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1, mt: 2 }}>
+          {[
+            ['Mục tiêu', GOAL[profile.goal]],
+            ['Khung thời gian', HORIZON[profile.horizon]],
+            ['Chịu lỗ tối đa', `${profile.maxDrawdownPct}%`],
+          ].map(([l, v]) => (
+            <Box key={l} sx={{ bgcolor: 'hero.chip', borderRadius: '12px', px: 1.25, py: 1, minWidth: 0 }}>
+              <Typography sx={{ fontSize: 12, color: 'hero.muted' }} noWrap>
+                {l}
+              </Typography>
+              <Typography className="num" sx={{ fontSize: 14, fontWeight: 600 }}>
+                {v}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+      <Panel
+        title="Ngưỡng cảnh báo biến động"
+        action={
+          <InfoTip label="Giải thích ngưỡng cảnh báo">Báo khi giá một mã biến động vượt ngưỡng trong ngày. Coin dùng ngưỡng ×2, vàng ÷2 (tối thiểu 1%).</InfoTip>
+        }
+      >
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+          <TextField
+            size="small"
+            type="number"
+            label="Ngưỡng cảnh báo biến động"
+            value={threshold}
+            onChange={(e) => setThreshold(e.target.value)}
+            slotProps={{
+              input: { endAdornment: <InputAdornment position="end">%</InputAdornment> },
+              htmlInput: { min: 1, max: 20, step: 0.5, inputMode: 'decimal' },
+            }}
+            sx={{ flex: 1 }}
+          />
+          <Button variant="outlined" onClick={() => void save()} sx={{ mt: 0.25, borderRadius: 99 }}>
+            {saved ? 'Đã lưu' : 'Lưu'}
+          </Button>
+        </Stack>
+      </Panel>
+    </Stack>
   )
 }

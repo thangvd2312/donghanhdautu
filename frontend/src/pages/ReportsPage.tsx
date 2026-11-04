@@ -147,7 +147,7 @@ export default function ReportsPage() {
       <PageGrid
         asideFirst
         aside={
-          <Panel title="Tuỳ chọn báo cáo">
+          <Panel title="Tuỳ chọn báo cáo" action={<Box sx={{ display: { xs: 'block', md: 'none' } }}><InfoTip label="Cách lưu PDF">{iosStandalone() ? 'Trên iPhone: nếu không thấy bảng in, mở trang này bằng Safari rồi chọn Chia sẻ → In → Lưu vào Tệp.' : 'Lưu PDF mở hộp thoại in: chọn "Lưu dưới dạng PDF" (máy tính, Android) hoặc chia sẻ / lưu vào Tệp (iPhone).'}</InfoTip></Box>}>
             <Stack spacing={1.75}>
               <Box>
               <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.75, fontWeight: 600 }}>
@@ -210,7 +210,7 @@ export default function ReportsPage() {
             </Stack>
 
 
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
               {iosStandalone()
                 ? 'Trên iPhone: nếu không thấy bảng in, mở trang này bằng Safari rồi chọn Chia sẻ → In → Lưu vào Tệp.'
                 : 'Lưu PDF mở hộp thoại in: chọn "Lưu dưới dạng PDF" (máy tính, Android) hoặc chia sẻ / lưu vào Tệp (iPhone).'}

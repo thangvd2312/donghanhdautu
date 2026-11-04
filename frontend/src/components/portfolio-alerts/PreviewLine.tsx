@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import { InfoTip } from '../ui'
 import { shortDate } from '../../lib/portfolioAlerts'
 import type { PortfolioAlertPreviewItem } from '../../lib/types'
 
@@ -59,9 +60,14 @@ export default function PreviewLine({
             → {outcome}
           </Box>
         )}
+        {preview.reason && (
+          <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1.25 }}>
+            <InfoTip label="Cách đo">{preview.reason}</InfoTip>
+          </Box>
+        )}
       </Typography>
       {preview.reason && (
-        <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.25 }}>
+        <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.25, display: { xs: 'none', md: 'block' } }}>
           {preview.reason}
         </Typography>
       )}

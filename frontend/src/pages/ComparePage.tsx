@@ -15,7 +15,7 @@ import SearchDialog from '../components/SearchDialog'
 import ComparePrompt from '../components/compare/ComparePrompt'
 import CompareSkeleton from '../components/compare/CompareSkeleton'
 import { PageHeader } from '../components/page'
-import { Panel } from '../components/ui'
+import { InfoTip, Panel } from '../components/ui'
 import { COMPARE_RANGES, DEFAULT_RANGE, fmtClock, MAX_COMPARE, parseRange, parseSymbols, reconcileSlots, sameSlots } from '../lib/compare'
 import { fmtDate } from '../lib/format'
 import { useMarket } from '../lib/market-context'
@@ -172,11 +172,16 @@ export default function ComparePage() {
             {data.chart.points.length && data.chart.start ? (
               <CompareChart chart={data.chart} symbols={stocks.map((s) => s.symbol)} slots={slots} height={mobile ? 240 : 340} />
             ) : (
-              <Typography color="text.secondary">Các mã này chưa có ngày giao dịch chung trong {rangePhrase} qua nên chưa vẽ được biểu đồ. Thử chọn khoảng dài hơn hoặc đổi mã.</Typography>
+              <Typography color="text.secondary">Chưa có ngày giao dịch chung trong {rangePhrase} qua. Thử khoảng dài hơn.</Typography>
             )}
             <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1 }}>
-              Chỉ tính giá đóng cửa, chưa gồm cổ tức nhận được.
-              {data.chart.start && ` Mốc 100 tại ${fmtDate(data.chart.start)}.`}
+              {data.chart.start && `Mốc 100 tại ${fmtDate(data.chart.start)}. `}
+              <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                Chỉ tính giá đóng cửa, chưa gồm cổ tức nhận được.
+              </Box>
+              <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+                <InfoTip>Chỉ tính giá đóng cửa, chưa gồm cổ tức nhận được.</InfoTip>
+              </Box>
             </Typography>
             {data.chart.note && (
               <Alert severity="info" variant="outlined" sx={{ mt: 1.25 }}>
@@ -213,7 +218,11 @@ export default function ComparePage() {
 
           <Typography variant="caption" color="text.secondary" component="p" sx={{ m: 0, pb: 1 }} data-testid="compare-source">
             Nguồn {data.source}
-            {fmtClock(data.asOf) && ` · cập nhật ${fmtClock(data.asOf)}`}. Số liệu để tham khảo, không phải khuyến nghị mua bán.
+            {fmtClock(data.asOf) && ` · cập nhật ${fmtClock(data.asOf)}`}.
+            <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+              {' '}
+              Số liệu để tham khảo, không phải khuyến nghị mua bán.
+            </Box>
           </Typography>
         </Stack>
       )}

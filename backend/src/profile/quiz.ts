@@ -162,6 +162,13 @@ export const TARGET_MIX: Record<string, { savings: number; gold: number; etf: nu
     aggressive: { savings: 10, gold: 5, etf: 40, picks: 30, crypto: 15 },
   };
 
+/** TARGET_MIX theo 4 nhóm tài sản, khoá là nhãn nhóm của danh mục (allocationPct): thanh "Phân bổ so với mục tiêu" ở trang chủ */
+export function targetByAssetType(riskType: string): Record<'stock' | 'crypto' | 'gold' | 'cash', number> | null {
+  const m = TARGET_MIX[riskType];
+  if (!m) return null;
+  return { stock: m.etf + m.picks, gold: m.gold, crypto: m.crypto, cash: m.savings };
+}
+
 /**
  * TARGET_MIX theo 4 nhóm tài sản của danh mục (cổ phiếu = ETF + tự chọn), khoá là nhãn tiếng Việt để cố vấn đọc được.
  * Điểm xuất phát để so sánh, không phải chân lý.

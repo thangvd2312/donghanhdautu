@@ -50,7 +50,7 @@ export default function TargetsPanel({
     >
       {!hasHoldings && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Danh mục đang trống. Nhập tiền bổ sung và thêm cổ phiếu để xem cách phân bổ.
+          Danh mục trống. Thêm cổ phiếu và tiền bổ sung.
         </Typography>
       )}
       <Box sx={{ mt: -0.5, '& > *:not(:last-child)': { borderBottom: 1, borderColor: 'divider' } }}>

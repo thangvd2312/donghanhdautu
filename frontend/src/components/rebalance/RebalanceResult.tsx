@@ -10,7 +10,8 @@ import type { Ref } from 'react'
 import { fmtNum, fmtVnd } from '../../lib/format'
 import type { RebalanceResponse } from '../../lib/types'
 import { ActionRow, TargetBars } from './RebalanceParts'
-import { InfoTip, KV, Panel } from '../ui'
+import { HERO_SX } from '../home/HomeBlocks'
+import { InfoTip, Panel } from '../ui'
 
 interface RebalanceResultProps {
   res: RebalanceResponse
@@ -23,30 +24,41 @@ interface RebalanceResultProps {
   onToggleNotes: () => void
 }
 
+function HeroStat({ label, value }: { label: string; value: string }) {
+  return (
+    <Box sx={{ bgcolor: 'hero.chip', border: 1, borderColor: 'hero.line', borderRadius: '12px', px: 1.5, py: 1, minWidth: 0 }}>
+      <Typography noWrap sx={{ fontSize: 11.5, color: 'hero.muted', lineHeight: 1.3 }}>
+        {label}
+      </Typography>
+      <Typography className="num" noWrap sx={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4 }}>
+        {value}
+      </Typography>
+    </Box>
+  )
+}
+
 /** Kết quả tái cân bằng: lệch lớn nhất, dòng tiền, cảnh báo, các bước mua / bán, tỷ trọng trước và sau, giả định */
 export default function RebalanceResult({ res, stale, loading, headRef, notesOpen, onToggleNotes }: RebalanceResultProps) {
   return (
       <Stack spacing={1.5} sx={{ opacity: loading || stale ? 0.5 : 1, transition: 'opacity .15s' }} aria-busy={loading} data-testid="rb-result" data-loading={loading}>
         {stale && (
           <Typography variant="caption" color="text.secondary" role="status">
-            Đây là kết quả của lần tính trước. Đưa tổng về 100% để cập nhật.
+            Kết quả cũ. Đưa tổng về 100% để cập nhật.
           </Typography>
         )}
-        <Paper ref={headRef} sx={{ p: 2.5 }} data-testid="rb-summary">
-          <Typography variant="body2" color="text.secondary">
-            Lệch lớn nhất so với mục tiêu
-          </Typography>
-          <Typography className="num" sx={{ fontWeight: 800, fontSize: { xs: 24, sm: 28 }, lineHeight: 1.25 }} aria-live="polite" data-testid="rb-deviation">
-            {fmtNum(res.maxDeviationPct.before, 1)} <Box component="span" aria-label="thành" sx={{ color: 'text.secondary' }}>→</Box> {fmtNum(res.maxDeviationPct.after, 1)}
-            <Box component="span" sx={{ fontSize: 15, fontWeight: 600, ml: 0.75, color: 'text.secondary' }}>
+        <Paper ref={headRef} sx={{ ...HERO_SX, borderRadius: '20px', overflow: 'hidden' }} data-testid="rb-summary">
+          <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>Lệch lớn nhất so với mục tiêu</Typography>
+          <Typography className="num" sx={{ fontWeight: 700, fontSize: { xs: 30, sm: 36 }, letterSpacing: '-0.02em', lineHeight: 1.15, mt: 0.5 }} aria-live="polite" data-testid="rb-deviation">
+            {fmtNum(res.maxDeviationPct.before, 1)} <Box component="span" aria-label="thành" sx={{ opacity: 0.6 }}>→</Box> {fmtNum(res.maxDeviationPct.after, 1)}
+            <Box component="span" sx={{ fontSize: 15, fontWeight: 600, ml: 0.75, opacity: 0.7 }}>
               điểm %
             </Box>
           </Typography>
-          <Box sx={{ mt: 1.5, pt: 1, borderTop: 1, borderColor: 'divider' }}>
-            {res.cash.fromSales > 0 && <KV k="Tiền từ bán" v={fmtVnd(res.cash.fromSales)} />}
-            <KV k="Tiền dùng để mua" v={fmtVnd(res.cash.spent)} />
-            <KV k="Phí và thuế giả định" v={fmtVnd(res.cash.fees)} />
-            <KV k="Tiền mặt còn lại" v={fmtVnd(res.cash.left)} />
+          <Box sx={{ mt: 1.75, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+            {res.cash.fromSales > 0 && <HeroStat label="Tiền từ bán" value={fmtVnd(res.cash.fromSales)} />}
+            <HeroStat label="Tiền dùng để mua" value={fmtVnd(res.cash.spent)} />
+            <HeroStat label="Phí và thuế giả định" value={fmtVnd(res.cash.fees)} />
+            <HeroStat label="Tiền mặt còn lại" value={fmtVnd(res.cash.left)} />
           </Box>
         </Paper>
 
@@ -87,7 +99,7 @@ export default function RebalanceResult({ res, stale, loading, headRef, notesOpe
           )}
         </Panel>
 
-        <Panel title="Tỷ trọng trước và sau" subtitle="Vạch đứng là mục tiêu bạn đặt">
+        <Panel title="Tỷ trọng trước và sau" subtitle="Vạch đứng là mục tiêu">
           <TargetBars before={res.before.rows} after={res.after.rows} />
         </Panel>
 

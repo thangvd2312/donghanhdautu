@@ -15,7 +15,7 @@ import MonthlyChartPanel from '../components/income/MonthlyChartPanel'
 import SummaryCard from '../components/income/SummaryCard'
 import TransactionDialog from '../components/portfolio/TransactionDialog'
 import { PageGrid, PageHeader } from '../components/page'
-import { Panel } from '../components/ui'
+import { InfoTip, Panel } from '../components/ui'
 import { useIncome } from '../hooks/useIncome'
 import { useResource } from '../hooks/useResource'
 import { qk } from '../lib/query'
@@ -24,6 +24,9 @@ import { fmtClock, todayVN } from '../lib/events'
 import { currentMonth, dividendPreset, monthAnchorId, parsePast, PAST_OPTIONS, splitSections } from '../lib/income'
 import type { TxPreset } from '../lib/tx'
 import type { IncomeExpectedItem } from '../lib/types'
+
+const NOTE =
+  'Khoản dự kiến là ước tính, không phải cam kết của công ty. Chỉ tính cổ tức tiền mặt, cổ phiếu thưởng không nằm trong số tiền này. Thuế TNCN 5% là giả định.'
 
 /**
  * Thu nhập cổ tức: tổng đã nhận, khoản sắp nhận (ước tính), biểu đồ theo tháng và danh sách các khoản.
@@ -122,8 +125,14 @@ export default function IncomePage() {
             </Stack>
           )}
           <Typography variant="caption" color="text.secondary" className="num">
-            Nguồn {data.source} · cập nhật {fmtClock(data.asOf)}. Khoản dự kiến là ước tính, không phải cam kết của công ty. Chỉ tính cổ tức tiền mặt, cổ phiếu
-            thưởng không nằm trong số tiền này. Thuế TNCN 5% là giả định.
+            Nguồn {data.source} · cập nhật {fmtClock(data.asOf)}.
+            <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+              {' '}
+              {NOTE}
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1 }}>
+              <InfoTip label="Lưu ý về số liệu">{NOTE}</InfoTip>
+            </Box>
           </Typography>
         </Stack>
       </Panel>
@@ -181,19 +190,18 @@ export default function IncomePage() {
             </Button>
           }
         >
-          Khi bạn ghi mua cổ phiếu vào danh mục, cổ tức tiền mặt đã nhận và sắp nhận của các mã đó sẽ hiện ở đây.
+          Ghi mua cổ phiếu, cổ tức của các mã đó sẽ hiện ở đây.
         </EmptyBox>
       ) : empty ? (
         <EmptyBox
-          title={data.unavailable ? 'Chưa có khoản cổ tức nào để hiển thị' : `Chưa có cổ tức tiền mặt nào trong ${past} tháng qua`}
+          title={data.unavailable ? 'Chưa có khoản cổ tức nào để hiển thị' : `Chưa có cổ tức trong ${past} tháng qua`}
           actions={
             <Button variant="outlined" component={RouterLink} to="/events" sx={{ borderRadius: 99 }}>
               Xem lịch sự kiện
             </Button>
           }
         >
-          Không phải cổ phiếu nào cũng chia cổ tức bằng tiền, và công ty thường chỉ công bố trước ngày GDKHQ khoảng 2–7 ngày. Khi có
-          khoản mới, bạn không cần làm gì, nó sẽ tự hiện ở đây.
+          Khoản mới sẽ tự hiện ở đây khi công ty công bố.
         </EmptyBox>
       ) : (
         <PageGrid asideFirst aside={asideBlocks}>

@@ -1,9 +1,9 @@
-/** Câu hỏi gợi ý trên màn hình trống */
+/** Câu hỏi gợi ý trên màn hình trống (ngắn để vừa một dòng trên điện thoại) */
 export const SUGGESTIONS = [
-  'Nhận xét danh mục hiện tại của tôi và cho tôi lời khuyên',
-  'Thị trường hôm nay thế nào? Có gì tôi cần chú ý?',
-  'Trong rổ VN30, cổ phiếu ngân hàng nào đáng đầu tư dài hạn nhất lúc này? Vì sao?',
-  'Giá vàng SJC đang chênh thế giới bao nhiêu, có nên mua vàng lúc này không?',
-  'Tôi có 100 triệu nhàn rỗi, nên phân bổ thế nào cho hợp với tôi?',
-  'Bạn bè trong nhóm đang hô một mã, làm sao để biết có nên theo không?',
+  'Nhận xét danh mục của tôi',
+  'Hôm nay thị trường có gì cần chú ý?',
+  'Ngân hàng nào đáng giữ dài hạn?',
+  'Có nên mua vàng SJC lúc này không?',
+  '100 triệu nhàn rỗi nên chia thế nào?',
+  'Bạn bè hô một mã, có nên theo không?',
 ]

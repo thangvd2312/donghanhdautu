@@ -14,6 +14,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { getStockDividends } from '../../api/market'
 import { useResource } from '../../hooks/useResource'
 import { fmtDate, fmtNum } from '../../lib/format'
+import { useIsMobile } from '../../lib/useIsMobile'
 import { KV, Panel } from '../ui'
 
 const PREVIEW = 8
@@ -27,7 +28,7 @@ function EventsLink({ symbol }: { symbol: string }) {
       startIcon={<EventOutlined />}
       sx={{ m: 1, minHeight: 40 }}
     >
-      Xem lịch sự kiện của {symbol}
+      Lịch sự kiện {symbol}
     </Button>
   )
 }
@@ -38,6 +39,7 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
   const { data: d, error } = useResource(fetchData, { key: ['stock', symbol, 'dividends'] })
   const failed = !!error
   const [all, setAll] = useState(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     setAll(false)
@@ -53,7 +55,8 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
   }
   if (!d) return null
 
-  const rows = all ? d.items : d.items.slice(0, PREVIEW)
+  const preview = isMobile ? 4 : PREVIEW
+  const rows = all ? d.items : d.items.slice(0, preview)
   return (
     <Panel
       title="Lịch sử cổ tức"
@@ -66,7 +69,7 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
           v={d.trailingCashPerShare > 0 ? `${fmtNum(d.trailingCashPerShare)} ₫ / cổ phiếu` : 'Không trả'}
         />
         {d.trailingAdjusted && (
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: { xs: 'none', md: 'block' } }}>
             Đã quy về số cổ phiếu hiện tại: khoản trả trước đợt cổ tức cổ phiếu / thưởng được chia theo tỷ lệ chia.
           </Typography>
         )}
@@ -122,7 +125,7 @@ export default function DividendPanel({ symbol }: { symbol: string }) {
           Chưa ghi nhận lần trả cổ tức nào từ năm {d.since}.
         </Typography>
       )}
-      {d.items.length > PREVIEW && (
+      {d.items.length > preview && (
         <Button size="small" onClick={() => setAll((v) => !v)} sx={{ m: 1 }}>
           {all ? 'Thu gọn' : `Xem tất cả ${d.items.length} lần`}
         </Button>

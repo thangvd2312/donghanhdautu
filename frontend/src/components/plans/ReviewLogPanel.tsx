@@ -24,7 +24,7 @@ export default function ReviewLogPanel({ p }: { p: PlanDetail }) {
           to={`/journal?plan=${p.id}`}
           sx={{ borderRadius: 99, minHeight: 32 }}
         >
-          Xem trong nhật ký
+          Nhật ký
         </Button>
       }
     >

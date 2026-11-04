@@ -111,6 +111,8 @@ test('đã đăng nhập mà mở /login?next=… thì đi thẳng tới đích'
 test('trang cổ phiếu có khung "Lịch sử cổ tức"', async ({ page, context }) => {
   await context.addInitScript((t) => localStorage.setItem('dautu_token', t), token)
   await page.goto('/stock/FPT')
+  // Điện thoại: cổ tức nằm ở mục "Tài chính"
+  await page.getByRole('button', { name: 'Tài chính', exact: true }).click()
   const panel = page.locator('.MuiPaper-root', { has: page.getByText('Lịch sử cổ tức', { exact: true }) }).last()
   await panel.waitFor({ timeout: 20_000 })
   await expect(panel.getByText('Cổ tức tiền mặt 12 tháng qua')).toBeVisible()

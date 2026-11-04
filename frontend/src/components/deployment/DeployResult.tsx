@@ -12,7 +12,8 @@ import type { Ref } from 'react'
 import { fmtNum, fmtVnd } from '../../lib/format'
 import { dayLabel, groupSteps, MIX_STEP, money, PART_COLOR, PART_SHORT, PARTS, stepMix } from '../../lib/deployment'
 import type { DeployMix, DeploymentPreview, DeployRationale } from '../../lib/types'
-import { Panel } from '../ui'
+import { HERO_SX } from '../home/HomeBlocks'
+import { InfoTip, Panel } from '../ui'
 
 /** Thanh ngang xếp chồng theo 5 phần (100%) */
 function MixBar({ mix, label }: { mix: DeployMix; label: string }) {
@@ -21,7 +22,7 @@ function MixBar({ mix, label }: { mix: DeployMix; label: string }) {
     .join(', ')
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-      <Typography variant="caption" color="text.secondary" sx={{ width: 64, flexShrink: 0 }}>
+      <Typography variant="caption" sx={{ width: 64, flexShrink: 0, color: 'hero.muted' }}>
         {label}
       </Typography>
       <Stack
@@ -33,7 +34,7 @@ function MixBar({ mix, label }: { mix: DeployMix; label: string }) {
           height: 14,
           borderRadius: '7px',
           overflow: 'hidden',
-          bgcolor: 'action.hover',
+          bgcolor: 'hero.chip',
           gap: '2px',
         }}
       >
@@ -61,7 +62,7 @@ const Dot = ({ color }: { color: string }) => (
 /** Chỉnh tay 5 phần theo bước 5 điểm; tiền gửi là phần "còn lại" */
 function MixEditor({ mix, suggested, onChange }: { mix: DeployMix; suggested: DeployMix; onChange: (m: DeployMix | null) => void }) {
   return (
-    <Box data-testid="dp-mix-editor" sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+    <Box data-testid="dp-mix-editor" sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: 'background.paper' }}>
       {PARTS.map((p) => (
         <Stack key={p} direction="row" spacing={1} sx={{ alignItems: 'center', py: 0.25 }}>
           <Dot color={PART_COLOR[p]} />
@@ -150,25 +151,19 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
 
   return (
     <Stack spacing={1.5} sx={{ opacity: stale ? 0.55 : 1, transition: 'opacity .2s' }} data-testid="dp-result">
-      <Paper ref={headRef} sx={{ p: 2 }}>
-        <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+      <Paper ref={headRef} sx={{ ...HERO_SX, borderRadius: '20px', overflow: 'hidden' }}>
+        <Typography sx={{ fontSize: 13, color: 'hero.muted' }} noWrap>
           Kế hoạch tham khảo · kiểu {res.profile.planLabel}
         </Typography>
-        <Typography
-          sx={{
-            fontWeight: 800,
-            fontSize: { xs: 20, sm: 22 },
-            lineHeight: 1.3,
-          }}
-        >
-          {res.mode === 'monthly' ? `${money(res.amount)} mỗi tháng` : `Giải ngân ${money(res.amount)}`}
+        <Typography className="num" sx={{ fontSize: { xs: 30, sm: 36 }, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, mt: 0.5 }}>
+          {res.mode === 'monthly' ? `${money(res.amount)} mỗi tháng` : money(res.amount)}
         </Typography>
-        <Stack spacing={1} sx={{ mt: 1.5 }}>
+        <Stack spacing={1} sx={{ mt: 2 }}>
           {hasCurrent && <MixBar mix={fill(currentMix)} label="Hiện tại" />}
           <MixBar mix={res.mix} label="Mục tiêu" />
           {hasCurrent && <MixBar mix={fill(afterMix)} label="Sau khi mua" />}
         </Stack>
-        <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5, mt: 1.25 }}>
+        <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5, mt: 1.5 }}>
           {PARTS.filter((p) => res.mix[p] > 0).map((p) => (
             <Stack key={p} direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
               <Dot color={PART_COLOR[p]} />
@@ -181,21 +176,26 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
         {edit && (
           <Button
             size="small"
-            variant={edit.editing ? 'contained' : 'outlined'}
+            variant="outlined"
             startIcon={<TuneOutlined />}
             onClick={edit.onToggle}
-            sx={{ mt: 1.5, borderRadius: 99, minHeight: 36 }}
+            sx={{ mt: 1.5, borderRadius: 99, minHeight: 36, color: edit.editing ? 'hero.bg' : 'hero.ink', bgcolor: edit.editing ? 'hero.ink' : 'transparent', borderColor: 'hero.line', '&:hover': { borderColor: 'hero.ink', bgcolor: edit.editing ? 'hero.ink' : 'hero.chip' } }}
           >
             {edit.editing ? 'Xong' : 'Chỉnh tỷ trọng'}
           </Button>
         )}
-        {edit?.editing && <MixEditor mix={res.mix} suggested={res.suggestedMix} onChange={edit.onMix} />}
-        {res.warnings.map((w) => (
-          <Alert key={w} severity="warning" variant="outlined" sx={{ mt: 1.5 }}>
-            {w}
-          </Alert>
-        ))}
+        {edit?.editing && (
+          <Box sx={{ color: 'text.primary' }}>
+            <MixEditor mix={res.mix} suggested={res.suggestedMix} onChange={edit.onMix} />
+          </Box>
+        )}
       </Paper>
+
+      {res.warnings.map((w) => (
+        <Alert key={w} severity="warning" variant="outlined">
+          {w}
+        </Alert>
+      ))}
 
       {res.safety.length > 0 && (
         <Panel title="Làm trước khi đầu tư">
@@ -210,7 +210,7 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
                     {fmtVnd(s.amount)}
                   </Typography>
                 </Stack>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: { xs: 2, md: 'unset' }, overflow: 'hidden' }}>
                   {s.text}
                   {s.amount < s.need ? ` Kế hoạch này mới dùng được ${fmtVnd(s.amount)} trên ${fmtVnd(s.need)} cần.` : ''}
                 </Typography>
@@ -248,14 +248,24 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
               </Stack>
               <Box sx={{ pl: 2.25, mt: 0.5 }}>
                 <Typography variant="body2">
-                  <b>Mua:</b> {p.instrument}
+                  <Box component="b" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                    Mua:{' '}
+                  </Box>
+                  {p.instrument}
+                  <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 0.75 }}>
+                    <InfoTip label={`Cách mua và lý do: ${p.label}`}>
+                      {`Cách mua: ${p.how}\n\n${rationale?.parts[p.part] ?? p.why}`}
+                    </InfoTip>
+                  </Box>
                 </Typography>
-                <Typography variant="body2">
-                  <b>Cách mua:</b> {p.how}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                  {rationale?.parts[p.part] ?? p.why}
-                </Typography>
+                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                  <Typography variant="body2">
+                    <b>Cách mua:</b> {p.how}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                    {rationale?.parts[p.part] ?? p.why}
+                  </Typography>
+                </Box>
                 {p.note && (
                   <Typography variant="body2" sx={{ mt: 0.25, color: 'warning.main' }}>
                     {p.note}
@@ -336,7 +346,7 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
                         )}
                       </Typography>
                       {s.hint && (
-                        <Typography variant="caption" color="text.secondary" component="div">
+                        <Typography variant="caption" color="text.secondary" component="div" sx={{ display: { xs: 'none', md: 'block' } }}>
                           {s.hint}
                         </Typography>
                       )}
@@ -352,7 +362,7 @@ export default function DeployResult({ res, stale = false, edit, headRef, ration
         </Panel>
       )}
 
-      <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+      <Box component="ul" sx={{ m: 0, pl: 2.5, display: { xs: 'none', md: 'block' } }}>
         {res.notes.map((n) => (
           <Typography component="li" variant="caption" color="text.secondary" key={n}>
             {n}

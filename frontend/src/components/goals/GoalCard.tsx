@@ -1,3 +1,4 @@
+import Button from '@mui/material/Button'
 import MoreVert from '@mui/icons-material/MoreVert'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -5,7 +6,6 @@ import Collapse from '@mui/material/Collapse'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import IconButton from '@mui/material/IconButton'
-import Link from '@mui/material/Link'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
@@ -18,7 +18,7 @@ import { changeColor, fmtDate, fmtNum, fmtVndShort } from '../../lib/format'
 import { project, requiredMonthly } from '../../lib/goalMath'
 import { STATUS_LABEL, TYPE_LABEL } from '../../lib/goals'
 import type { Goal } from '../../lib/types'
-import { KV } from '../ui'
+import { ChangePill, InfoTip, KV } from '../ui'
 import ProgressRing from './ProgressRing'
 
 export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: () => void; onChanged: () => void }) {
@@ -27,9 +27,12 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
   const [monthly, setMonthly] = useState(g.monthlyContribution)
   const [ret, setRet] = useState(g.expectedReturnPct)
   const [error, setError] = useState('')
+  // Điện thoại: tỷ trọng và giả định thu gọn sau nút "Chi tiết"
+  const [detail, setDetail] = useState(false)
   const p = g.progress
   const projected = project(p.current, monthly, ret, g.monthsLeft)
   const need = requiredMonthly(p.current, g.targetAmount, ret, g.monthsLeft)
+  const warn = g.status === 'active' && !g.simulation.onTrack
 
   const setStatus = async (status: Goal['status']) => {
     setError('')
@@ -47,7 +50,8 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
   }
 
   return (
-    <Paper sx={{ p: 2.5, opacity: g.status === 'active' ? 1 : 0.8 }}>
+    <Paper sx={{ p: { xs: 2, md: 2.5 }, pl: warn ? { xs: 2.5, md: 3 } : undefined, position: 'relative', overflow: 'hidden', opacity: g.status === 'active' ? 1 : 0.8 }}>
+      {warn && <Box aria-hidden sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: 'warning.main' }} />}
       <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
         <ProgressRing value={p.progressPct} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -66,9 +70,11 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
             {g.status !== 'active' ? `${STATUS_LABEL[g.status]} · ` : ''}còn {g.monthsLeft} tháng · hạn {fmtDate(g.targetDate)}
           </Typography>
           {g.status === 'active' && (
-            <Typography variant="caption" sx={{ color: g.simulation.onTrack ? 'success.main' : 'warning.main', fontWeight: 600 }}>
-              {g.simulation.onTrack ? '● Đúng hướng' : '● Chưa đủ'} theo giả định
-            </Typography>
+            <Box sx={{ mt: 0.5 }}>
+              <ChangePill small color={g.simulation.onTrack ? 'success.main' : 'warning.main'}>
+                {g.simulation.onTrack ? 'Đúng hướng' : 'Chưa đủ'}
+              </ChangePill>
+            </Box>
           )}
         </Box>
         <IconButton aria-label="Tuỳ chọn mục tiêu" onClick={(e) => setMenu(e.currentTarget)} sx={{ alignSelf: 'flex-start' }}>
@@ -113,7 +119,7 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
         </Menu>
       </Stack>
       <Box sx={{ mt: 1.5 }} />
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="text.secondary" component="div" sx={{ display: { xs: '-webkit-box', md: 'block' }, WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {fmtNum(p.progressPct, 1)}% · từ{' '}
         {p.assets.length ? p.assets.map((a) => `${a.pct}% ${a.name.replace(/(.)USDT$/, '$1')}`).join(', ') : 'chưa gán tài sản nào'}
       </Typography>
@@ -128,7 +134,15 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
         </Typography>
       )}
 
-      <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
+      <Button
+        size="small"
+        onClick={() => setDetail((v) => !v)}
+        aria-expanded={detail}
+        sx={{ display: { xs: 'inline-flex', md: 'none' }, mt: 1, ml: -1, fontWeight: 600, textTransform: 'none' }}
+      >
+        {detail ? 'Thu gọn' : 'Chi tiết'}
+      </Button>
+      <Grid container spacing={2.5} sx={{ mt: 0.5, display: { xs: detail ? 'flex' : 'none', md: 'flex' } }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
             Tỷ trọng hiện tại / mong muốn
@@ -156,18 +170,27 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
           <KV k="Lợi suất năm giả định" v={`${fmtNum(g.expectedReturnPct, 1)}%`} />
           <KV k="Dự kiến tới hạn" v={fmtVndShort(g.simulation.projected)} color={changeColor(g.simulation.projected - g.targetAmount)} />
           <KV k="Cần góp mỗi tháng để đạt" v={fmtVndShort(g.simulation.requiredMonthly)} />
-          <Link component="button" variant="body2" onClick={() => setSimOpen((v) => !v)} sx={{ mt: 0.5 }}>
-            {simOpen ? 'Ẩn mô phỏng' : 'Thử thay đổi mức góp / lợi suất'}
-          </Link>
         </Grid>
       </Grid>
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={() => setSimOpen((v) => !v)}
+        aria-expanded={simOpen}
+        sx={{ mt: 1.5, display: 'flex', fontWeight: 600, textTransform: 'none', minHeight: 36 }}
+      >
+        {simOpen ? 'Ẩn mô phỏng' : 'Thử thay đổi mức góp / lợi suất'}
+      </Button>
 
       <Collapse in={simOpen} unmountOnExit>
         <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" component="div" sx={{ display: { xs: 'none', md: 'block' } }}>
             Mô phỏng với giả định do bạn chọn, không phải kết quả được đảm bảo. Lợi suất thực tế có thể âm.
           </Typography>
-          <Typography variant="body2" sx={{ mt: 1.5 }}>
+          <Box sx={{ display: { xs: 'block', md: 'none' }, float: 'right' }}>
+            <InfoTip>Mô phỏng với giả định do bạn chọn, không phải kết quả được đảm bảo. Lợi suất thực tế có thể âm.</InfoTip>
+          </Box>
+          <Typography variant="body2" sx={{ mt: { md: 1.5 } }}>
             Góp mỗi tháng: <b>{fmtVndShort(monthly)}</b>
           </Typography>
           <Slider
@@ -188,7 +211,7 @@ export default function GoalCard({ g, onEdit, onChanged }: { g: Goal; onEdit: ()
         </Box>
       </Collapse>
       {g.note && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, display: { xs: 'none', md: 'block' } }}>
           {g.note}
         </Typography>
       )}

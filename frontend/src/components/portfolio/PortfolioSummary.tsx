@@ -62,8 +62,12 @@ export default function PortfolioSummary({ p, perf, accounts, portfolioId: pf }:
               color={changeColor(perf.unrealized)}
               size="sm"
             />
-            <Stat label="Cổ tức đã nhận" value={fmtVndShort(perf.dividends)} size="sm" />
-            <Stat label="Phí + thuế đã trả" value={fmtVndShort(perf.feesAndTaxes)} size="sm" />
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <Stat label="Cổ tức đã nhận" value={fmtVndShort(perf.dividends)} size="sm" />
+            </Box>
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <Stat label="Phí + thuế đã trả" value={fmtVndShort(perf.feesAndTaxes)} size="sm" />
+            </Box>
           </Box>
         )}
         {p && (
@@ -89,6 +93,7 @@ export default function PortfolioSummary({ p, perf, accounts, portfolioId: pf }:
           <InfoTip label="Cách tính lãi / lỗ">
             {[
               'Tổng lãi / lỗ = giá trị hiện tại − vốn đã đưa vào (nạp − rút + tài sản khai báo đầu kỳ theo giá vốn). Tiền nạp thêm không được tính là lãi.',
+              `Cổ tức đã nhận ${fmtVndShort(perf?.dividends ?? 0)}. Phí + thuế đã trả ${fmtVndShort(perf?.feesAndTaxes ?? 0)}.`,
               ...(perf?.notes ?? []),
             ].join('\n\n')}
           </InfoTip>

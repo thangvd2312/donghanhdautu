@@ -117,7 +117,7 @@ export default function NewsPage() {
 
             {res.items.length === 0 && (
               <EmptyState Icon={SearchOffOutlined} title="Không có tin phù hợp">
-                Thử từ khoá ngắn hơn, bỏ bớt bộ lọc hoặc chọn khoảng thời gian dài hơn.
+                Thử từ khoá ngắn hơn hoặc bỏ bớt bộ lọc.
                 <Stack useFlexGap direction="row" spacing={1} sx={{ mt: 1.5, justifyContent: 'center', flexWrap: 'wrap', rowGap: 1 }}>
                   {res.facets.kind
                     .filter((k) => k.value !== shown.kind && k.count > 0)
@@ -127,10 +127,10 @@ export default function NewsPage() {
                         variant="outlined"
                         onClick={() => update({ kind: k.value as NewsKind, category: null, source: null })}
                       >
-                        Xem {k.count} tin khớp ở mục {KIND_TABS.find((t) => t.value === k.value)?.label}
+                        {k.count} tin ở mục {KIND_TABS.find((t) => t.value === k.value)?.label}
                       </Button>
                     ))}
-                  {filtered && <Button onClick={() => setParams({}, { replace: true })}>Xoá tìm kiếm và bộ lọc</Button>}
+                  {filtered && <Button onClick={() => setParams({}, { replace: true })}>Xoá bộ lọc</Button>}
                 </Stack>
               </EmptyState>
             )}

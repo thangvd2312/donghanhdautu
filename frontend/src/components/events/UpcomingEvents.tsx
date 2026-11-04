@@ -1,5 +1,4 @@
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
@@ -9,7 +8,8 @@ import { dateLine, displayDate, fmtDay, keyLine, relDay, todayVN } from '../../l
 import type { CalendarEvent } from '../../lib/types'
 import AssetAvatar from '../AssetAvatar'
 import { KindChip } from './EventCards'
-import { Panel } from '../ui'
+import { CardLink } from '../home/HomeBlocks'
+import { ChangePill, Panel } from '../ui'
 
 /** Tối đa 3 sự kiện sắp tới, mã đang giữ trước. Không có gì để hiện hoặc lỗi thì ẩn cả khối để trang chủ gọn */
 export default function UpcomingEvents() {
@@ -42,11 +42,7 @@ export default function UpcomingEvents() {
       title="Sự kiện sắp tới"
       subtitle="Mã bạn giữ và theo dõi"
       noPadding
-      action={
-        <Button size="small" component={RouterLink} to="/events" sx={{ minHeight: 40 }}>
-          Xem lịch
-        </Button>
-      }
+      action={<CardLink to="/events">Lịch</CardLink>}
     >
       <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />}>
         {items.map((e) => (
@@ -71,9 +67,9 @@ export default function UpcomingEvents() {
                 {dateLine(e, today) || fmtDay(displayDate(e, today), today)}
               </Typography>
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, textAlign: 'right', maxWidth: 72 }}>
+            <ChangePill color="warning.main" small>
               {relDay(displayDate(e, today), today)}
-            </Typography>
+            </ChangePill>
           </Stack>
         ))}
       </Stack>

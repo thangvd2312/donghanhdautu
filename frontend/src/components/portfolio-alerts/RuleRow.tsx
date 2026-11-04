@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack'
 import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { InfoTip } from '../ui'
 import { timeAgo } from '../../lib/format'
 import { META, type Draft } from '../../lib/portfolioAlerts'
 import type {
@@ -52,14 +53,17 @@ export default function RuleRow({
   return (
     <Box
       data-testid={`palert-${kind}`}
-      sx={{ px: 2, py: 1.75, borderBottom: 1, borderColor: 'divider', opacity: saving ? 0.7 : 1 }}
+      sx={{ px: 2, py: 1.75, borderBottom: 1, borderColor: 'divider', opacity: saving ? 0.7 : 1, '&:last-of-type': { borderBottom: 0 } }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography id={titleId} variant="body2" sx={{ fontWeight: 600 }}>
             {meta.title}
+            <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1.25 }}>
+              <InfoTip label={`${meta.title}: giải thích`}>{meta.desc}</InfoTip>
+            </Box>
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="div">
+          <Typography variant="caption" color="text.secondary" component="div" sx={{ display: { xs: 'none', md: 'block' } }}>
             {meta.desc}
           </Typography>
         </Box>

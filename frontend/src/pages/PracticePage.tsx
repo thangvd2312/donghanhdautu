@@ -141,8 +141,8 @@ export default function PracticePage() {
                   </Box>
                 ) : (
                   <Box data-testid="practice-no-positions">
-                    <EmptyState plain Icon={SchoolOutlined} title="Chưa có vị thế nào">
-                      Bấm “Mua” để thử lệnh đầu tiên, không cần vội.
+                    <EmptyState plain Icon={SchoolOutlined} title="Chưa có vị thế nào" action={<Button variant="outlined" size="small" onClick={() => setOrder({ side: 'buy' })} sx={{ borderRadius: 99 }}>Mua thử</Button>}>
+                      Thử lệnh đầu tiên, không cần vội.
                     </EmptyState>
                   </Box>
                 )
@@ -150,7 +150,7 @@ export default function PracticePage() {
                 <TradeHistory key={state.totals.tradeCount + state.account.startedAt} />
               )}
             </Paper>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
               Giá trị trên đây là tiền ảo, chỉ để học. Kết quả luyện tập không đảm bảo kết quả khi đầu tư thật và không phải khuyến nghị.
             </Typography>
           </>

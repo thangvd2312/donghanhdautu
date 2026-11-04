@@ -131,7 +131,7 @@ export default function PushPanel() {
           </Alert>
         ) : !supported() ? (
           <Typography variant="body2" color="text.secondary">
-            Trình duyệt này không hỗ trợ thông báo đẩy. Hãy dùng Chrome, Edge, Firefox hoặc Safari bản mới.
+            Trình duyệt này chưa hỗ trợ thông báo đẩy. Hãy dùng bản mới của Chrome, Edge, Firefox hoặc Safari.
           </Typography>
         ) : (
           <Stack useFlexGap direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
@@ -174,8 +174,8 @@ export default function PushPanel() {
             <Typography variant="caption" color="text.secondary">
               Gần đây
             </Typography>
-            {s.recent.slice(0, 5).map((r) => (
-              <Stack key={r.id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            {s.recent.slice(0, 5).map((r, i) => (
+              <Stack key={r.id} direction="row" spacing={1} sx={{ alignItems: 'center', display: { xs: i < 2 ? 'flex' : 'none', md: 'flex' } }}>
                 <Chip
                   size="small"
                   variant="outlined"

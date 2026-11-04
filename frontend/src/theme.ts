@@ -122,8 +122,8 @@ export const theme = createTheme({
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: ({ theme }) => ({ backgroundImage: 'none', border: `1px solid ${theme.vars.palette.divider}` }),
-        // Thẻ, menu, hộp thoại bo 14px (mềm hơn shape mặc định của nút, ô nhập)
-        rounded: { borderRadius: 14 },
+        // Thẻ, menu, hộp thoại bo 16px (mềm hơn shape mặc định của nút, ô nhập)
+        rounded: { borderRadius: 16 },
       },
     },
     MuiAppBar: {

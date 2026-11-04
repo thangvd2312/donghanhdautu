@@ -112,7 +112,7 @@ export function SummaryCard({ state, onBuy }: { state: PracticeState; onBuy: () 
       <Typography className="num" sx={{ color, fontWeight: 600, fontSize: 15 }}>
         {sign}
         {fmtVnd(Math.abs(totals.pnl))} ({fmtPct(totals.pnlPct)})
-        <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.75, fontWeight: 400 }}>
+        <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.75, fontWeight: 400, display: { xs: 'none', sm: 'inline' } }}>
           so với vốn ban đầu
         </Typography>
       </Typography>
@@ -137,9 +137,14 @@ export function SummaryCard({ state, onBuy }: { state: PracticeState; onBuy: () 
       </Box>
 
       <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1.25 }}>
-        Bắt đầu từ {fmtDate(toVnDate(account.startedAt))}
-        {' · vốn '}
-        {START_CASH_OPTIONS.find((o) => o.value === account.startCash)?.label ?? fmtVndShort(account.startCash)} · {totals.tradeCount} lệnh · phí đã trả {fmtVnd(totals.feesPaid)}
+        <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+          Bắt đầu từ {fmtDate(toVnDate(account.startedAt))}
+          {' · '}
+        </Box>
+        Vốn {START_CASH_OPTIONS.find((o) => o.value === account.startCash)?.label ?? fmtVndShort(account.startCash)} · {totals.tradeCount} lệnh
+        <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+          {' · '}phí đã trả {fmtVnd(totals.feesPaid)}
+        </Box>
       </Typography>
 
       <Button variant="contained" fullWidth size="large" onClick={onBuy} sx={{ mt: 1.75, minHeight: 48, ...virtualButton }}>
@@ -183,7 +188,7 @@ export function PositionCard({
           </Typography>
           <Typography variant="caption" color="text.secondary" component="div" noWrap>
             {fmtQty(p.quantity)}
-            {p.assetType === 'stock' ? ' cp' : ''} · {fmtPct(p.weightPct, 1, false)} tài sản
+            {p.assetType === 'stock' ? ' cp' : ''} · {fmtPct(p.weightPct, 1, false)}
           </Typography>
         </Box>
         <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
@@ -252,7 +257,7 @@ export function TradeRow({ t }: { t: PracticeTrade }) {
           </Typography>
         </Box>
       </Stack>
-      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5, pl: '44px' }}>
+      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5, pl: '44px' }} noWrap>
         Phí {fmtVnd(t.fee)}
         {t.tax > 0 ? ` · thuế ${fmtVnd(t.tax)}` : ''} · tiền mặt sau lệnh {fmtVnd(t.cashAfter)}
         {t.realizedPnl != null && (

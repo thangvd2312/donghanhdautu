@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { DemoNews, DemoResponse } from '@dautu/contracts';
 import { mentionsCompany } from '../alerts/aliases';
-import { dayChange, reviewPoints } from '../home/today';
+import { dayChange, reviewPoints, targetAllocation } from '../home/today';
 import { MarketService } from '../market/market.service';
 import type { AssetType } from '../market/market.service';
 import { NewsReviewService } from '../news/news-review.service';
@@ -69,6 +69,7 @@ export class DemoService {
         totalPnl: v.totalPnl,
         totalPnlPct: v.totalPnlPct,
         allocationPct: v.allocationPct,
+        target: targetAllocation(SAMPLE_PROFILE.riskType),
         day: dayChange(v),
         stockSessionOpen: this.market.stockSessionOpen,
         dataQuality: v.dataQuality,

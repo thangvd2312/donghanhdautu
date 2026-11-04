@@ -7,6 +7,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
 import Link from '@mui/material/Link'
+import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -20,10 +21,11 @@ import RelatedTransactionsPanel from '../components/plans/RelatedTransactionsPan
 import ReviewForm from '../components/plans/ReviewForm'
 import ReviewLogPanel from '../components/plans/ReviewLogPanel'
 import VersionsPanel from '../components/plans/VersionsPanel'
-import { PageGrid, PageHeader, StatTiles } from '../components/page'
-import { KV, Panel } from '../components/ui'
+import { PageGrid, PageHeader } from '../components/page'
+import { HERO_SX } from '../components/home/HomeBlocks'
+import { ChangePill, KV, Panel } from '../components/ui'
 import { useResource } from '../hooks/useResource'
-import { fmtDate, fmtPrice } from '../lib/format'
+import { changeColor, fmtDate, fmtPct, fmtPrice } from '../lib/format'
 import { planAdvisorQuestion } from '../lib/plans'
 
 export default function PlanDetailPage() {
@@ -85,32 +87,57 @@ export default function PlanDetailPage() {
         }
       />
 
-      <StatTiles
-        items={[
-          {
-            label: 'Mốc chốt lời',
-            value: fmtPrice(p.targetPrice, p.currency),
-            color: p.targetPrice != null ? 'price.up' : undefined,
-          },
-          {
-            label: 'Mốc cắt lỗ',
-            value: fmtPrice(p.stopPrice, p.currency),
-            color: p.stopPrice != null ? 'price.down' : undefined,
-          },
-          {
-            label: 'Xem lại',
-            value: active ? fmtDate(p.nextReviewAt) : '—',
-            hint: active && p.reviewEveryDays ? `mỗi ${p.reviewEveryDays} ngày` : undefined,
-          },
-          { label: 'Dự định nắm giữ', value: p.horizon ?? '—' },
-        ]}
-      />
+      <Paper sx={{ ...HERO_SX, border: 'none', borderRadius: '20px', p: { xs: 2, md: 2.5 } }}>
+        <Stack direction="row" sx={{ alignItems: 'flex-end', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+          <Box>
+            <Typography sx={{ fontSize: 13, color: 'hero.muted' }}>Giá hiện tại</Typography>
+            <Typography className="num" sx={{ fontSize: { xs: 30, sm: 36 }, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+              {fmtPrice(p.price.value, p.currency)}
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            {p.dayChangePct != null && <ChangePill color={changeColor(p.dayChangePct)}>{fmtPct(p.dayChangePct)}</ChangePill>}
+            {p.held?.pnlPct != null && (
+              <Typography variant="caption" sx={{ color: 'hero.muted' }}>
+                Lãi/lỗ <b>{fmtPct(p.held.pnlPct, 1)}</b>
+              </Typography>
+            )}
+          </Stack>
+        </Stack>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(3, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+            gap: 1,
+            mt: 2,
+          }}
+        >
+          {[
+            { l: 'Chốt lời', v: fmtPrice(p.targetPrice, p.currency), c: p.targetPrice != null ? 'hero.up' : undefined },
+            { l: 'Cắt lỗ', v: fmtPrice(p.stopPrice, p.currency), c: p.stopPrice != null ? 'hero.down' : undefined },
+            { l: 'Xem lại', v: active ? fmtDate(p.nextReviewAt) : '—' },
+            { l: 'Nắm giữ', v: p.horizon ?? '—', md: true },
+          ].map((x) => (
+            <Box
+              key={x.l}
+              sx={{ bgcolor: 'hero.chip', borderRadius: '12px', px: 1.25, py: 1, minWidth: 0, display: x.md ? { xs: 'none', md: 'block' } : undefined }}
+            >
+              <Typography sx={{ fontSize: 12, color: 'hero.muted' }} noWrap>
+                {x.l}
+              </Typography>
+              <Typography className="num" noWrap sx={{ fontSize: 14, fontWeight: 600, color: x.c }}>
+                {x.v}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
 
       <PageGrid
         aside={
           <>
             <CurrentDataPanel p={p} />
-            <Panel title="Nhận định của AI" subtitle="Cố vấn xem từng điều kiện bạn đặt đã xảy ra chưa — chỉ để tham khảo">
+            <Panel title="Nhận định của AI" subtitle="Cố vấn kiểm tra từng điều kiện bạn đặt. Chỉ để tham khảo.">
               <Button
                 variant="contained"
                 fullWidth
@@ -125,34 +152,28 @@ export default function PlanDetailPage() {
           </>
         }
       >
-        {p.signals.length > 0 && (
-          <Panel>
-            <Stack spacing={1}>
-              {p.signals.map((s) => (
-                <Stack key={s.kind} direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-                  {s.kind === 'stop' ? (
-                    <ErrorOutlined color="error" sx={{ fontSize: 20 }} />
-                  ) : (
-                    <WarningAmberOutlined color="warning" sx={{ fontSize: 20 }} />
-                  )}
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {s.message}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
-          </Panel>
-        )}
+        {p.signals.map((s) => (
+          <Paper
+            key={s.kind}
+            sx={{ position: 'relative', overflow: 'hidden', py: 1.5, pl: 2.5, pr: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}
+          >
+            <Box aria-hidden sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: s.kind === 'stop' ? 'price.down' : 'warning.main' }} />
+            {s.kind === 'stop' ? <ErrorOutlined color="error" sx={{ fontSize: 20 }} /> : <WarningAmberOutlined color="warning" sx={{ fontSize: 20 }} />}
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              {s.message}
+            </Typography>
+          </Paper>
+        ))}
 
         {active && <ReviewForm plan={p} onDone={() => void load()} />}
 
         <Panel title="Kế hoạch của bạn">
           <Typography variant="caption" color="text.secondary">
-            Vì sao tôi mua / nắm giữ
+            Vì sao tôi mua / giữ
           </Typography>
           <Typography sx={{ whiteSpace: 'pre-line', mb: 2 }}>{p.thesis}</Typography>
           <Typography variant="caption" color="text.secondary">
-            Điều kiện để xem lại hoặc bán
+            Điều kiện xem lại / bán
           </Typography>
           <Typography sx={{ whiteSpace: 'pre-line' }}>{p.exitConditions}</Typography>
           {p.closedReason && (

@@ -91,6 +91,9 @@ function PeriodToggle({ value, onChange }: { value: 'years' | 'quarters'; onChan
   )
 }
 
+/** Điện thoại: chỉ giữ 3 kỳ gần nhất (kỳ mới nhất ở cuối) để bảng vừa màn hình */
+const hideOld = (i: number, n: number) => (i < n - 3 ? { display: { xs: 'none', md: 'table-cell' } } : {})
+
 /** Bảng báo cáo tài chính: khoản mục theo dòng, kỳ theo cột; số âm tô đỏ */
 export function StatementTable({
   rows,
@@ -112,12 +115,12 @@ export function StatementTable({
   const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((k) => k !== 'period')
   return (
     <TableContainer>
-      <Table size="small" sx={{ minWidth: 640 }}>
+      <Table size="small" sx={{ minWidth: { xs: 0, md: 640 } }}>
         <TableHead>
           <TableRow>
             <TableCell>Khoản mục</TableCell>
-            {rows.map((r) => (
-              <TableCell key={String(r.period)} align="right" sx={{ whiteSpace: 'nowrap' }}>
+            {rows.map((r, ci) => (
+              <TableCell key={String(r.period)} align="right" sx={{ whiteSpace: 'nowrap', ...hideOld(ci, rows.length) }}>
                 {String(r.period)}
               </TableCell>
             ))}
@@ -129,7 +132,7 @@ export function StatementTable({
             return (
               <TableRow key={k} hover>
                 <TableCell sx={{ color: strong ? 'text.primary' : 'text.secondary', fontWeight: strong ? 600 : 400 }}>{k}</TableCell>
-                {rows.map((r) => {
+                {rows.map((r, ci) => {
                   const v = r[k]
                   const n = typeof v === 'number' ? v : null
                   return (
@@ -137,7 +140,7 @@ export function StatementTable({
                       key={String(r.period)}
                       align="right"
                       className="num"
-                      sx={{ fontWeight: strong ? 600 : 400, color: n != null && n < 0 ? 'price.down' : undefined }}
+                      sx={{ ...hideOld(ci, rows.length), fontWeight: strong ? 600 : 400, color: n != null && n < 0 ? 'price.down' : undefined }}
                     >
                       {n == null ? '—' : fmtNum(n, digits(k))}
                     </TableCell>

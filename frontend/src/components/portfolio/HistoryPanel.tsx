@@ -264,9 +264,15 @@ export default function HistoryPanel({ refreshKey, portfolioId }: { refreshKey?:
             </Link>
           </Typography>
           {[...(p?.notes ?? []), ...data.notes].length > 0 && (
-            <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
-              {[...(p?.notes ?? []), ...data.notes].join(' ')}
-            </Typography>
+            <>
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1, display: { xs: 'none', md: 'block' } }}>
+                {[...(p?.notes ?? []), ...data.notes].join(' ')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5, display: { xs: 'block', md: 'none' } }}>
+                Ghi chú cách tính{' '}
+                <InfoTip label="Ghi chú cách tính">{[...(p?.notes ?? []), ...data.notes].join('\n\n')}</InfoTip>
+              </Typography>
+            </>
           )}
         </>
       )}

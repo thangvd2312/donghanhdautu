@@ -1,7 +1,6 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
@@ -16,6 +15,7 @@ import ShockControls from '../components/simulate/ShockControls'
 import SimulateEmpty from '../components/simulate/SimulateEmpty'
 import SimulationResult from '../components/simulate/SimulationResult'
 import { PresetCard } from '../components/simulate/SimulateParts'
+import { CardLink } from '../components/home/HomeBlocks'
 import { Panel } from '../components/ui'
 import { useHeldPortfolio } from '../hooks/useHeldPortfolio'
 import { useInView } from '../hooks/useInView'
@@ -107,15 +107,7 @@ export default function SimulatePage() {
       <PageHeader
         eyebrow="Công cụ"
         title="Thử kịch bản"
-        description={
-          <>
-            Xem tài sản đang giữ thay đổi thế nào nếu giá biến động theo giả định bạn chọn. Đây là công cụ để hiểu mức rủi ro, không phải dự
-            báo.{' '}
-            <Link component={RouterLink} to={pf ? `/rebalance?p=${encodeURIComponent(pf)}` : '/rebalance'}>
-              Muốn thử đổi tỷ trọng? Tái cân bằng
-            </Link>
-          </>
-        }
+        description="Xem tài sản thay đổi thế nào nếu giá biến động theo giả định bạn chọn. Để hiểu rủi ro, không phải dự báo."
       />
 
       <PortfolioChips accounts={accounts} value={pf} onChange={setPf} />
@@ -139,7 +131,7 @@ export default function SimulatePage() {
               </Button>
             }
           >
-            Khi bạn ghi cổ phiếu, vàng hoặc crypto vào danh mục, bạn có thể thử xem giá biến động ảnh hưởng thế nào.
+            Ghi cổ phiếu, vàng hoặc crypto vào danh mục để thử kịch bản.
           </SimulateEmpty>
         </>
       ) : onlyCash ? (
@@ -152,8 +144,7 @@ export default function SimulatePage() {
               </Button>
             }
           >
-            Tiền mặt VND không đổi theo giá thị trường nên chưa có gì để mô phỏng. Khi bạn có cổ phiếu, vàng hoặc crypto, kịch bản sẽ hiện ở
-            đây.
+            Tiền mặt không đổi theo giá, nên chưa có gì để thử.
           </SimulateEmpty>
         </>
       ) : (
@@ -168,7 +159,11 @@ export default function SimulatePage() {
             }}
           >
             <Stack spacing={2.5} sx={{ minWidth: 0 }}>
-              <Panel title="Chọn kịch bản mẫu" subtitle="Các mức này chỉ là giả định để thử, không phải điều sắp xảy ra">
+              <Panel
+                title="Chọn kịch bản mẫu"
+                subtitle="Các mức này chỉ là giả định để thử, không phải điều sắp xảy ra"
+                action={<CardLink to={pf ? `/rebalance?p=${encodeURIComponent(pf)}` : '/rebalance'}>Tái cân bằng</CardLink>}
+              >
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)' }, gap: 1 }}>
                   {presets.map((p) => (
                     <PresetCard key={p.id} p={p} active={activePreset === p.id} onPick={() => pickPreset(p.id)} />
@@ -233,7 +228,7 @@ export default function SimulatePage() {
               {noScenario ? (
                 <Box data-testid="sim-hint">
                   <EmptyState Icon={TuneOutlined} title="Chọn một kịch bản để xem kết quả">
-                    Chạm một kịch bản mẫu hoặc kéo một thanh trượt. Kết quả hiện ngay ở đây và không thay đổi sổ của bạn.
+                    Chạm một kịch bản mẫu hoặc kéo thanh trượt.
                   </EmptyState>
                 </Box>
               ) : !res ? (
@@ -256,7 +251,7 @@ export default function SimulatePage() {
             </Stack>
           </Box>
 
-          <Typography variant="caption" color="text.secondary" sx={{ pb: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ pb: 1, display: { xs: 'none', md: 'block' } }}>
             Chỉ là mô phỏng theo giả định bạn chọn, không thay đổi sổ và không phải dự báo.
             {res ? ` Giá tính đến ${fmtDate(res.asOf)}.` : ''}
           </Typography>

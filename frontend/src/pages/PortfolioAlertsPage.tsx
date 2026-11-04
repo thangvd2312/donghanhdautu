@@ -1,3 +1,4 @@
+import Box from '@mui/material/Box'
 import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -18,12 +19,14 @@ export default function PortfolioAlertsPage() {
       <PageGrid
         aside={
           <>
-            <Panel title="Đây là lời nhắc">
-              <Typography variant="body2" color="text.secondary">
-                Cảnh báo chỉ nhắc bạn xem lại danh mục khi vượt ngưỡng bạn đặt, không phải khuyến nghị mua bán.
-              </Typography>
-            </Panel>
-            <Panel title="Báo khi giá một mã chạm mốc?">
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              <Panel title="Đây là lời nhắc">
+                <Typography variant="body2" color="text.secondary">
+                  Cảnh báo chỉ nhắc bạn xem lại danh mục khi vượt ngưỡng bạn đặt, không phải khuyến nghị mua bán.
+                </Typography>
+              </Panel>
+            </Box>
+            <Panel title="Báo giá một mã?">
               <Typography variant="body2" color="text.secondary">
                 Dùng{' '}
                 <Link component={RouterLink} to="/settings">

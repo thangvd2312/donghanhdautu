@@ -11,7 +11,7 @@ import { getTelegramStatus, linkTelegram, testTelegram, unlinkTelegram, updateTe
 import { timeAgo } from '../../lib/format'
 import type { TelegramStatus } from '../../lib/types'
 import ChannelSettings from './ChannelSettings'
-import { Panel } from '../ui'
+import { InfoTip, Panel } from '../ui'
 
 const STATUS_LABEL: Record<string, string> = {
   sent: 'Đã gửi',
@@ -78,8 +78,14 @@ export default function TelegramPanel() {
       ) : !link || !link.active ? (
         <Stack spacing={1.5}>
           <Typography variant="body2" color="text.secondary">
-            Bấm kết nối, Telegram sẽ mở bot @{s.botUsername}; bấm <b>Start</b> là xong. Chỉ gửi những loại tin bạn chọn; mặc định
-            không kèm số dư hay số liệu danh mục.
+            Bấm kết nối, rồi bấm <b>Start</b> trong Telegram.
+            <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+              {' '}
+              Bot @{s.botUsername}. Chỉ gửi những loại tin bạn chọn; mặc định không kèm số dư hay số liệu danh mục.
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', md: 'none' }, ml: 1 }}>
+              <InfoTip>Bot @{s.botUsername}. Chỉ gửi những loại tin bạn chọn; mặc định không kèm số dư hay số liệu danh mục.</InfoTip>
+            </Box>
           </Typography>
           {link && !link.active && (
             <Alert severity="info">Bạn đã tắt nhận tin (hoặc chặn bot). Kết nối lại để bật.</Alert>
@@ -113,8 +119,8 @@ export default function TelegramPanel() {
               <Typography variant="caption" color="text.secondary">
                 Gần đây
               </Typography>
-              {s.recent.slice(0, 5).map((r) => (
-                <Stack key={r.id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              {s.recent.slice(0, 5).map((r, i) => (
+                <Stack key={r.id} direction="row" spacing={1} sx={{ alignItems: 'center', display: { xs: i < 2 ? 'flex' : 'none', md: 'flex' } }}>
                   <Chip
                     size="small"
                     variant="outlined"

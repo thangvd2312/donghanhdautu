@@ -1,6 +1,7 @@
 import ContentPasteOutlined from '@mui/icons-material/ContentPasteOutlined'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
+import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
@@ -61,7 +62,7 @@ export default function TipComposer({ onCreated }: { onCreated: (tip: TipCheck) 
   return (
     <Panel
       title="Soi một lời khuyên"
-      subtitle="Dán tin hô mã từ nhóm Zalo, Telegram, Facebook hay lời môi giới. App đặt nó cạnh dữ liệu thật trước khi bạn xuống tiền."
+      subtitle="Dán tin hô mã từ Zalo, Telegram, Facebook hay môi giới. App đặt nó cạnh dữ liệu thật trước khi bạn xuống tiền."
     >
       <Stack
         component="form"
@@ -94,7 +95,7 @@ export default function TipComposer({ onCreated }: { onCreated: (tip: TipCheck) 
           placeholder="VD: Nhóm VIP anh T"
           value={sourceName}
           onChange={(e) => setSourceName(e.target.value.slice(0, 80))}
-          helperText="Ghi nguồn để sau này xem nguồn nào nói đúng nhiều hơn"
+          helperText={<Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>Ghi nguồn để xem nguồn nào nói đúng nhiều hơn</Box>}
           slotProps={{ htmlInput: { style: { fontSize: 16 } } }}
         />
         <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
@@ -124,7 +125,7 @@ export default function TipComposer({ onCreated }: { onCreated: (tip: TipCheck) 
         <Button type="submit" variant="contained" size="large" disabled={busy} sx={{ minHeight: 48 }}>
           {busy ? 'Đang đọc tin…' : 'Soi'}
         </Button>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
           Tin chỉ dùng để phân tích cho riêng bạn. App không khuyến nghị mua / bán.
         </Typography>
       </Stack>
