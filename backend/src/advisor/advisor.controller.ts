@@ -9,6 +9,8 @@ import { AdvisorService } from './advisor.service';
 import type { AdvisorEvent } from './advisor.service';
 import { ChatDto, FeedbackDto } from './dto/advisor.dto';
 
+const SSE_PING_MS = 15_000;
+
 @UseGuards(JwtAuthGuard)
 @Controller('advisor')
 export class AdvisorController {
@@ -56,11 +58,17 @@ export class AdvisorController {
     const emit = (e: AdvisorEvent) => {
       if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`);
     };
+    // Model suy nghĩ / bộ kiểm tra có thể im lặng 1–2 phút: gửi dòng chú thích SSE định kỳ để proxy, tunnel
+    // và trình duyệt di động không cắt kết nối vì "không có dữ liệu" (client bỏ qua dòng không có "data: ")
+    const ping = setInterval(() => {
+      if (!res.writableEnded) res.write(': ping\n\n');
+    }, SSE_PING_MS);
     try {
       await this.advisor.chat(user.id, dto.conversationId, dto.message, emit, abort.signal);
     } catch (e) {
       emit({ type: 'error', message: (e as Error).message });
     } finally {
+      clearInterval(ping);
       void req;
       res.end();
     }

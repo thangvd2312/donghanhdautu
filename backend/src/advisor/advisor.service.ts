@@ -419,6 +419,9 @@ function nowVn() {
 function friendlyError(err: unknown) {
   if (err instanceof Anthropic.AuthenticationError) return 'API key của Claude không hợp lệ.';
   if (err instanceof Anthropic.RateLimitError) return 'Đang quá tải, bạn thử lại sau ít phút nhé.';
+  // Lỗi mạng / hết thời gian chờ không có mã HTTP (là lớp con của APIError nên phải xét trước)
+  if (err instanceof Anthropic.APIConnectionError)
+    return 'Không kết nối được tới dịch vụ AI (mạng chập chờn). Bạn gửi lại câu hỏi nhé.';
   if (err instanceof Anthropic.APIError) return `Lỗi từ dịch vụ AI (${err.status}). Thử lại sau.`;
   return 'Có lỗi xảy ra, bạn thử lại nhé.';
 }

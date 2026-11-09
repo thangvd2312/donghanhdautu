@@ -3,6 +3,9 @@ import { Ctx } from './chat-context'
 import { streamAdvisorChat } from '../api/advisorChat'
 import type { AdvisorMessage } from './types'
 
+const CONNECTION_LOST =
+  'Mất kết nối khi cố vấn đang trả lời. Câu trả lời có thể vẫn được lưu: mở lại cuộc trò chuyện sau ít phút để xem.'
+
 /** Một tin trên màn hình: tin của API (AdvisorMessage) cộng các trạng thái chỉ giao diện dùng khi đang stream */
 export interface ChatMsg extends AdvisorMessage {
   verifying?: boolean
@@ -50,6 +53,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const patchLast = (f: (m: ChatMsg) => ChatMsg) =>
       setActive((a) => (a ? { ...a, messages: [...a.messages.slice(0, -1), f(a.messages[a.messages.length - 1])] } : a))
 
+    let finished = false
     try {
       await streamAdvisorChat(
         { conversationId, message: text },
@@ -84,17 +88,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               break
             }
             case 'done':
+              finished = true
               if (e.answerId) patchLast((m) => ({ ...m, id: e.answerId ?? undefined }))
               break
             case 'error':
+              finished = true
               patchLast((m) => ({ ...m, error: e.message }))
               break
           }
         },
         ctrl.signal,
       )
+      // Luồng đóng mà chưa có done / error: kết nối bị cắt giữa chừng (mạng, tunnel, máy khoá màn hình)
+      if (!finished && !ctrl.signal.aborted) patchLast((m) => ({ ...m, error: CONNECTION_LOST }))
     } catch (err) {
-      if (!ctrl.signal.aborted) patchLast((m) => ({ ...m, error: (err as Error).message }))
+      if (!ctrl.signal.aborted) {
+        // fetch đứt mạng báo lỗi thô của trình duyệt ("Failed to fetch", "Load failed", "network error")
+        const msg = err instanceof TypeError ? CONNECTION_LOST : (err as Error).message
+        patchLast((m) => ({ ...m, error: msg }))
+      }
     } finally {
       patchLast((m) => ({ ...m, streaming: false, verifying: false }))
       setActive((a) => (a ? { ...a, busy: false } : a))
